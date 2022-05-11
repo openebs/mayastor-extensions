@@ -437,6 +437,8 @@ io_engine:
   tolerations: []
   # -- Set PriorityClass, overrides global
   priorityClassName: ""
+  # -- Runtime class to use. Defaults to cluster standard
+  runtimeClassName: ""
 
 etcd:
   # Configuration for etcd's localpv hostpath storage class.

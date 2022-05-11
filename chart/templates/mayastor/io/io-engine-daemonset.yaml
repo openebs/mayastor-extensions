@@ -31,6 +31,9 @@ spec:
       {{- if $pcName := include "priority_class" (dict "template" . "localPriorityClass" .Values.io_engine.priorityClassName) }}
       priorityClassName: {{ $pcName }}
       {{- end }}
+      {{- if .Values.runtimeClassName }}
+      runetimeClassName: {{ .Values.runtimeClassName | quote }}
+      {{- end }}
       {{- if $tolerations := include "tolerations" (dict "template" . "localTolerations" .Values.io_engine.tolerations) }}
       tolerations: {{ $tolerations }}
       {{- end }}
