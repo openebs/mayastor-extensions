@@ -103,7 +103,7 @@ spec:
         - "-Rhttps://{{ .Release.Name }}-agent-core:50051"
         - "-y/var/local/{{ .Release.Name }}/io-engine/config.yaml"
         - "-l{{ include "cpuFlag" . }}"
-        - "-p={{ .Release.Name }}-etcd:{{ .Values.etcd.service.port }}"{{ if .Values.io_engine.target.nvmf.ptpl }}
+        - "-p={{ include "etcdUrl" . }}"{{ if .Values.io_engine.target.nvmf.ptpl }}
         - "--ptpl-dir=/var/local/{{ .Release.Name }}/io-engine/ptpl/"{{ end }}
         - "--api-versions={{ .Values.io_engine.api }}"{{ if .Values.io_engine.target.nvmf.iface }}
         - "-T={{ .Values.io_engine.target.nvmf.iface }}"{{ end }}{{ if .Values.io_engine.envcontext }}
