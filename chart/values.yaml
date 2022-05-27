@@ -4,7 +4,7 @@ image:
   # image registry's namespace where all Mayastor images exist (default: mayadata)
   repo: mayadata
   # release tag for OpenEBS Mayastor images
-  tag: v1.0.0
+  tag: develop
   # imagePullPolicy for all Mayastor images
   pullPolicy: Always
 
@@ -169,7 +169,7 @@ mayastor:
   cpuCount: "2"
   # node selectors to designate mayastor nodes for diskpool creation
   nodeSelector:
-    openebs.io/engine: io-engine
+    openebs.io/engine: mayastor
     kubernetes.io/arch: amd64
   resources:
     limits:

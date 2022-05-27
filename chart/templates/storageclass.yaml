@@ -6,4 +6,4 @@ parameters:
   repl: '1'
   protocol: 'nvmf'
   ioTimeout: '60'
-provisioner: io.openebs.mayastor
+provisioner: io.openebs.csi-mayastor
