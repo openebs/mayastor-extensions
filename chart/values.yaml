@@ -170,7 +170,6 @@ mayastor:
   # node selectors to designate mayastor nodes for diskpool creation
   nodeSelector:
     openebs.io/engine: mayastor
-    kubernetes.io/arch: amd64
   resources:
     limits:
       # cpu limits for mayastor component

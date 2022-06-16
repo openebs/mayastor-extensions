@@ -23,8 +23,6 @@ spec:
       hostNetwork: true
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
-      nodeSelector:
-        kubernetes.io/arch: amd64
       # NOTE: Each container must have mem/cpu limits defined in order to
       # belong to Guaranteed QoS class, hence can never get evicted in case of
       # pressure unless they exceed those limits. limits and requests must be
@@ -78,7 +76,7 @@ spec:
             cpu: {{ .Values.csi.node.resources.requests.cpu | quote }}
             memory: {{ .Values.csi.node.resources.requests.memory | quote }}
       - name: csi-driver-registrar
-        image: quay.io/k8scsi/csi-node-driver-registrar:v2.1.0
+        image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.1.0
         args:
         - "--csi-address=/csi/csi.sock"
         - "--kubelet-registration-path=/var/lib/kubelet/plugins/io.openebs.mayastor/csi.sock"
