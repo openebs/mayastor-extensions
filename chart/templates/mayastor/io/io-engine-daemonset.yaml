@@ -40,6 +40,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        args:
+        - "-p{{ .Values.mayastor.metricsPollingInterval }}"
         command:
         - metrics-exporter-pool
         ports:
