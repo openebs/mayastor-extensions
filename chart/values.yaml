@@ -162,6 +162,7 @@ csi:
       # nvme_core module io timeout in seconds
       io_timeout: "30"
       io_timeout_enabled: true
+    kubeletDir: /var/lib/kubelet
 
 mayastor:
   # logLevel for the core crate and other dependent crates
