@@ -167,6 +167,9 @@ mayastor:
   # logLevel for the core crate and other dependent crates
   logLevel: info,io_engine=info
   cpuCount: "2"
+  # metrics refresh time
+  # WARNING: Lowering metricsPollingInterval value will affect performance adversely
+  metricsPollingInterval: "5m"
   # node selectors to designate mayastor nodes for diskpool creation
   nodeSelector:
     openebs.io/engine: mayastor
