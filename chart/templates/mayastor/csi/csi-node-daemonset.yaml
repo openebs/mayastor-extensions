@@ -68,7 +68,7 @@ spec:
         - name: plugin-dir
           mountPath: /csi
         - name: kubelet-dir
-          mountPath: /var/lib/kubelet
+          mountPath: {{ .Values.csi.node.kubeletDir }}
           mountPropagation: "Bidirectional"
         resources:
           limits:
@@ -81,7 +81,7 @@ spec:
         image: quay.io/k8scsi/csi-node-driver-registrar:v2.1.0
         args:
         - "--csi-address=/csi/csi.sock"
-        - "--kubelet-registration-path=/var/lib/kubelet/plugins/io.openebs.mayastor/csi.sock"
+        - "--kubelet-registration-path={{ .Values.csi.node.kubeletDir }}/plugins/io.openebs.mayastor/csi.sock"
         volumeMounts:
         - name: plugin-dir
           mountPath: /csi
@@ -114,13 +114,13 @@ spec:
           type: Directory
       - name: registration-dir
         hostPath:
-          path: /var/lib/kubelet/plugins_registry/
+          path: {{ .Values.csi.node.kubeletDir }}/plugins_registry/
           type: Directory
       - name: plugin-dir
         hostPath:
-          path: /var/lib/kubelet/plugins/io.openebs.mayastor/
+          path: {{ .Values.csi.node.kubeletDir }}/plugins/io.openebs.mayastor/
           type: DirectoryOrCreate
       - name: kubelet-dir
         hostPath:
-          path: /var/lib/kubelet
+          path: {{ .Values.csi.node.kubeletDir }}
           type: Directory
