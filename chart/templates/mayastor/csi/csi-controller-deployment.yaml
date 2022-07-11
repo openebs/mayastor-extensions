@@ -23,9 +23,12 @@ spec:
       initContainers:
         {{- include "jaeger_agent_init_container" . }}
         {{- include "rest_agent_init_container" . }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
       containers:
         - name: csi-provisioner
-          image: k8s.gcr.io/sig-storage/csi-provisioner:v2.2.1
+          image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-provisioner:{{ .Values.csi.image.provisionerTag }}"
           args:
             - "--v=2"
             - "--csi-address=$(ADDRESS)"
@@ -35,19 +38,19 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: {{ .Values.csi.image.pullPolicy }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: k8s.gcr.io/sig-storage/csi-attacher:v3.2.1
+          image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-attacher:{{ .Values.csi.image.attacherTag }}"
           args:
             - "--v=2"
             - "--csi-address=$(ADDRESS)"
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: {{ .Values.csi.image.pullPolicy }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
