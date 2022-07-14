@@ -28,6 +28,7 @@ spec:
       initContainers:
         {{- include "base_init_containers" . }}
       containers:
+      {{- if .Values.base.metrics.enabled }}
       - name: metrics-exporter-pool
         image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-metrics-exporter-pool:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -41,13 +42,14 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         args:
-        - "-p{{ .Values.mayastor.metricsPollingInterval }}"
+        - "-p{{ .Values.base.metrics.pollingInterval }}"
         command:
         - metrics-exporter-pool
         ports:
           - containerPort: 9502
             protocol: TCP
             name: metrics
+      {{- end }}
       - name: io-engine
         image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-io-engine:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}

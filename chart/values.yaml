@@ -37,6 +37,13 @@ base:
     secrets:
       - name: login
 
+  metrics:
+    # enable metrics exporter
+    enabled: true
+    # metrics refresh time
+    # WARNING: Lowering pollingInterval value will affect performance adversely
+    pollingInterval: "5m"
+
   jaeger:
     # enable jaeger tracing
     enabled: false
@@ -168,9 +175,6 @@ mayastor:
   # logLevel for the core crate and other dependent crates
   logLevel: info,io_engine=info
   cpuCount: "2"
-  # metrics refresh time
-  # WARNING: Lowering metricsPollingInterval value will affect performance adversely
-  metricsPollingInterval: "5m"
   # node selectors to designate mayastor nodes for diskpool creation
   nodeSelector:
     openebs.io/engine: mayastor
