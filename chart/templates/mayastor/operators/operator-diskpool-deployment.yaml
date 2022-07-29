@@ -43,6 +43,10 @@ spec:
           env:
             - name: RUST_LOG
               value: {{ .Values.operators.pool.logLevel }}
+            {{- if default .Values.base.logSilenceLevel .Values.operators.pool.logSilenceLevel }}
+            - name: RUST_LOG_SILENCE
+              value: {{ default .Values.base.logSilenceLevel .Values.operators.pool.logSilenceLevel }}
+            {{- end }}
             - name: MY_POD_NAME
               valueFrom:
                 fieldRef:

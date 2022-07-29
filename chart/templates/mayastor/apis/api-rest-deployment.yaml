@@ -46,3 +46,7 @@ spec:
           env:
             - name: RUST_LOG
               value: {{ .Values.rest.logLevel }}
+            {{- if default .Values.base.logSilenceLevel .Values.rest.logSilenceLevel }}
+            - name: RUST_LOG_SILENCE
+              value: {{ default .Values.base.logSilenceLevel .Values.rest.logSilenceLevel }}
+            {{- end }}

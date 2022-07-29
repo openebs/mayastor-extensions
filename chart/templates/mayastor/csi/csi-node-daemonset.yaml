@@ -40,6 +40,10 @@ spec:
         env:
         - name: RUST_LOG
           value: {{ .Values.csi.node.logLevel }}
+        {{- if default .Values.base.logSilenceLevel .Values.csi.node.logSilenceLevel }}
+        - name: RUST_LOG_SILENCE
+          value: {{ default .Values.base.logSilenceLevel .Values.csi.node.logSilenceLevel }}
+        {{- end }}
         - name: MY_NODE_NAME
           valueFrom:
             fieldRef:
@@ -56,7 +60,6 @@ spec:
         - "--grpc-endpoint=$(MY_POD_IP):10199"{{ if .Values.csi.node.nvme.io_timeout_enabled }}
         - "--nvme-core-io-timeout={{ .Values.csi.node.nvme.io_timeout }}"{{ end }}
         - "--nvme-nr-io-queues={{ .Values.mayastor.cpuCount }}"
-        - "-v"
         command:
         - csi-node
         volumeMounts:
