@@ -1,14 +1,8 @@
-extern crate bytes;
-extern crate prost;
-extern crate prost_derive;
-extern crate serde;
-extern crate serde_derive;
-extern crate serde_json;
-extern crate tonic;
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unit_arg)]
 #[allow(clippy::redundant_closure)]
 #[allow(clippy::upper_case_acronyms)]
+#[allow(clippy::derive_partial_eq_without_eq)]
 pub mod mayastor {
     use std::str::FromStr;
 

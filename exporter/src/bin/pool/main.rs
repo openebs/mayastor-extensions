@@ -76,7 +76,7 @@ async fn main() -> Result<(), String> {
         .expect("gRPC client not initialized");
 
     tokio::spawn(async move {
-        let _p = cache::store_data(client)
+        cache::store_data(client)
             .await
             .expect("Unable to store data in cache");
     });
