@@ -74,6 +74,10 @@ spec:
           env:
             - name: RUST_LOG
               value: {{ .Values.csi.controller.logLevel }}
+            {{- if default .Values.base.logSilenceLevel .Values.csi.controller.logSilenceLevel }}
+            - name: RUST_LOG_SILENCE
+              value: {{ default .Values.base.logSilenceLevel .Values.csi.controller.logSilenceLevel }}
+            {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/

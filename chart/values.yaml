@@ -20,6 +20,8 @@ base:
   default_req_timeout: 5s
   # cache timeout for core agent & diskpool deployment
   cache_poll_period: 30s
+  # silence specific module components
+  logSilenceLevel:
   initContainers:
     enabled: true
     containers:
@@ -65,8 +67,8 @@ base:
 
 operators:
   pool:
-    # logLevel for mayastor diskpool operator & other dependent crate
-    logLevel: info,operator_diskpool=info
+    # logLevel for diskpool operator & other dependent crate
+    logLevel: info
     resources:
       limits:
         # cpu limits for diskpool operator
@@ -120,21 +122,6 @@ rest:
       # cpu requests for rest
       cpu: "50m"
       # memory requests for rest
-      memory: "32Mi"
-
-license:
-  # logLevel for the licensing crate
-  logLevel: info
-  resources:
-    limits:
-      # cpu limits for license component
-      cpu: "100m"
-      # memory limits for license component
-      memory: "64Mi"
-    requests:
-      # cpu requests for license component
-      cpu: "50m"
-      # memory requests for license component
       memory: "32Mi"
 
 csi:
