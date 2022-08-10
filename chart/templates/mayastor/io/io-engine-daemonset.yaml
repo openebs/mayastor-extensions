@@ -79,6 +79,7 @@ spec:
         - "-y/var/local/io-engine/config.yaml"
         - "-l{{ include "cpuFlag" . }}"
         - "-p={{ .Release.Name }}-etcd:{{ .Values.etcd.service.port }}"
+        - "--api-versions=v0"
         command:
         - io-engine
         securityContext:
