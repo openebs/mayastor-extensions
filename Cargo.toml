@@ -2,4 +2,5 @@
 members = [
     "exporter",
     "rpc",
+    "upgrade-operator",
 ]

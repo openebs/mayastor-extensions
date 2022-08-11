@@ -1,0 +1,14 @@
+[package]
+name = "upgrade-operator"
+description = "Upgrade Operator"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sahil Raja <sahil.raja@datacore.com>"]
+
+[[bin]]
+name = "upgrade-operator"
+path = "controller/src/bin/main.rs"
+
+[lib]
+name = "components"
+path = "components/src/lib.rs"

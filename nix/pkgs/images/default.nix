@@ -13,24 +13,52 @@ let
       contents = [ package ];
       config = {
         Entrypoint = [ package.binary ];
+      } // config;
+    };
+  build-exporter-image = { buildType }: {
+    pool = build-extensions-image rec{
+      inherit buildType;
+      package = extensions.${buildType}.exporters.metrics.pool;
+      pname = package.pname;
+      config = {
         ExposedPorts = {
           "9052/tcp" = { };
         };
-      } // config;
+      };
     };
+  };
+  build-upgrade-operator-image = { buildType }:
+    build-extensions-image rec{
+      inherit buildType;
+      package = extensions.${buildType}.operators.upgrade;
+      pname = package.pname;
+      config = {
+        ExposedPorts = {
+          "8080/tcp" = { };
+        };
+      };
+    };
+
+in
+let
+  build-exporter-images = { buildType }: {
+    metrics = build-exporter-image {
+      inherit buildType;
+    };
+  };
+  build-upgrade-operator-images = { buildType }: {
+    upgrade = build-upgrade-operator-image {
+      inherit buildType;
+    };
+  };
 in
 let
   build-images = { buildType }: {
-    exporters = {
+    exporters = build-exporter-images { inherit buildType; } // {
       recurseForDerivations = true;
-      metrics = {
-        recurseForDerivations = true;
-        pool = build-extensions-image rec {
-          inherit buildType;
-          package = extensions.${buildType}.exporters.metrics.pool;
-          pname = package.pname;
-        };
-      };
+    };
+    operators = build-upgrade-operator-images { inherit buildType; } // {
+      recurseForDerivations = true;
     };
   };
 in
