@@ -47,7 +47,7 @@ let
     "Cargo.toml"
     "exporter"
     "rpc"
-    "upgrade-operator"
+    "operators"
   ];
   buildProps = rec {
     name = "extensions-${version}";
@@ -84,7 +84,7 @@ in
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if allInOne then
-      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p exporter" "-p upgrade-operator" ]; }
+      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p exporter" "-p operators" ]; }
     else
       builder { inherit buildType cargoBuildFlags; };
 }
