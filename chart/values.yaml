@@ -258,9 +258,7 @@ etcd:
   # etcd service parameters defines how the etcd service is exposed
   service:
     # K8s service type
-    # NOTE: Mayastor Supportability tool will work without any network
-    #       workarounds(i.e port-forward) only if type is configured as NodePort
-    type: NodePort
+    type: ClusterIP
 
     # etcd client port
     port: 2379
@@ -341,9 +339,7 @@ loki-stack:
     # Loki service parameters defines how the Loki service is exposed
     service:
       # K8s service type
-      # NOTE: Mayastor Supportability tool will work without any network
-      #       workarounds only if type is configured as NodePort
-      type: NodePort
+      type: ClusterIP
       port: 3100
       # Port where REST endpoints of Loki are accessible from outside cluster
       nodePort: 31001

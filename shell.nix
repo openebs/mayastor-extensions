@@ -19,6 +19,7 @@ mkShell {
   buildInputs = [
     cargo-expand
     cargo-udeps
+    commitlint
     git
     pkg-config
     pre-commit
