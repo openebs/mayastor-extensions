@@ -1,4 +1,4 @@
-{ norust ? false }:
+{ norust ? false, rust-profile ? "nightly" }:
 let
   sources = import ./nix/sources.nix;
   pkgs = import sources.nixpkgs {
@@ -15,7 +15,7 @@ let
     (ps: with ps; [ virtualenv grpcio grpcio-tools black ]);
 in
 mkShell {
-  name = "exporter-shell";
+  name = "extensions-shell";
   buildInputs = [
     cargo-expand
     cargo-udeps
@@ -24,7 +24,7 @@ mkShell {
     pre-commit
     pytest_inputs
     python3
-  ] ++ pkgs.lib.optional (!norust) channel.default_src.nightly;
+  ] ++ pkgs.lib.optional (!norust) channel.default_src.${rust-profile};
 
   PROTOC = "${protobuf}/bin/protoc";
   PROTOC_INCLUDE = "${protobuf}/include";
