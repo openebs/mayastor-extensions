@@ -1,0 +1,13 @@
+[package]
+name = "operators"
+description = "Upgrade Operator"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "upgrade-operator"
+path = "upgrade/src/bin/main.rs"
+
+[lib]
+name = "common"
+path = "common/src/lib.rs"
