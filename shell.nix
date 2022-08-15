@@ -29,6 +29,7 @@ mkShell {
 
   PROTOC = "${protobuf}/bin/protoc";
   PROTOC_INCLUDE = "${protobuf}/include";
+  NODE_PATH = "${nodePackages."@commitlint/config-conventional"}/lib/node_modules";
 
   shellHook = ''
     ${pkgs.lib.optionalString (norust) "cowsay ${norust_moth}"}
