@@ -6,8 +6,29 @@ edition = "2021"
 
 [[bin]]
 name = "upgrade-operator"
-path = "upgrade/src/bin/main.rs"
+path = "src/bin/upgrade/main.rs"
 
 [lib]
-name = "common"
-path = "common/src/lib.rs"
+name = "operators"
+path = "src/lib.rs"
+
+[dependencies]
+lazy_static = "1.4.0"
+semver = "1.0.13"
+regex = "1.6.0"
+
+# k8s-openapi must match the version required by kube and enable a k8s version feature
+k8s-openapi = { version = "0.15.0", default-features = false, features = ["v1_20"] }
+kube = { version = "0.74.0", default-features = true, features = [ "derive", "runtime" ] }
+
+schemars = "0.8.10"
+serde = "1.0.143"
+serde_json = "1.0.83"
+serde_yaml = "0.9.9"
+tokio = {version="1.20.1", features = ["macros", "rt-multi-thread", "time"]}
+validator = {version="0.16.0",features=["derive"]}
+tracing = "0.1.36"
+tracing-subscriber = "0.3.15"
+anyhow = "1.0.61"
+chrono = "0.4.22"
+maplit = "1.0.2"
