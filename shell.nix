@@ -22,12 +22,16 @@ mkShell {
     cargo-udeps
     commitlint
     git
+    clang
     openapi-generator
+    libxfs
+    llvmPackages.libclang
     openssl
     pkg-config
     pre-commit
     pytest_inputs
     python3
+    utillinux
   ] ++ pkgs.lib.optional (!norust) channel.default_src.nightly;
 
   PROTOC = "${protobuf}/bin/protoc";

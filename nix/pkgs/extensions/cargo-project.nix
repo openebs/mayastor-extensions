@@ -5,7 +5,12 @@
 , protobuf
 , sources
 , pkgs
+, clang
+, libxfs
+, llvmPackages
+, openssl
 , git
+, utillinux
 , version
   # with allInOne set to true all components are built as part of the same "cargo build" derivation
   # this allows for a quicker build of all components but slower single components
@@ -58,8 +63,8 @@ let
     src = whitelistSource ../../../. src_list;
 
     inherit PROTOC PROTOC_INCLUDE;
-    nativeBuildInputs = [ pkg-config git ];
-    buildInputs = [ protobuf ];
+    nativeBuildInputs = [ clang pkg-config git ];
+    buildInputs = [ llvmPackages.libclang protobuf openssl utillinux ];
     doCheck = false;
   };
   release_build = { "release" = true; "debug" = false; };
