@@ -5,6 +5,7 @@
 , protobuf
 , sources
 , pkgs
+, openssl
 , git
 , version
   # with allInOne set to true all components are built as part of the same "cargo build" derivation
