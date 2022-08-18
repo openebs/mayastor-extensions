@@ -3,4 +3,5 @@ members = [
     "exporter",
     "rpc",
     "operators",
+    "call-home"
 ]
