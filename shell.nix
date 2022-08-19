@@ -21,6 +21,8 @@ mkShell {
     cargo-udeps
     commitlint
     git
+    openapi-generator
+    openssl
     pkg-config
     pre-commit
     pytest_inputs
