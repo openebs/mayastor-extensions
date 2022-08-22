@@ -8,7 +8,7 @@ use openapi::tower::client::{ApiClient, Configuration};
 use sha256::digest;
 use tokio::time::{sleep, Duration};
 use tracing::{error, info, warn, Level};
-use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
 const PRODUCT: &str = common::constants::PRODUCT;
@@ -17,11 +17,11 @@ const PRODUCT: &str = common::constants::PRODUCT;
 #[clap(author, version, about)]
 pub struct CliArgs {
     /// An URL endpoint to the control plane's rest endpoint.
-    #[clap(short, long,default_value = "http://mayastor-api-rest:8081")]
-    endpoint: String,
+    #[clap(short, long, default_value = "http://mayastor-api-rest:8081")]
+    endpoint: Url,
 
     /// The namespace we are supposed to operate in.
-    #[clap(short, long, value_parser, default_value = "mayastor")]
+    #[clap(short, long, default_value = "mayastor")]
     namespace: String,
 }
 impl CliArgs {
@@ -33,26 +33,23 @@ impl CliArgs {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::ERROR)
+        .with_env_filter(EnvFilter::from_default_env())
         .init();
 
     let args = CliArgs::args();
     let version = clap::crate_version!().to_string();
     let endpoint = args.endpoint;
-    let namespace = args.namespace;
+    let namespace = digest(args.namespace);
 
     let k8s_client = K8sClient::new().await.unwrap();
 
-    let url = Url::parse(endpoint.trim()).expect("endpoint is not a valid URL");
-
-    let config = Configuration::new(url, time::Duration::from_secs(30), None, None, true).map_err(
-        |error| {
+    let config = Configuration::new(endpoint, time::Duration::from_secs(30), None, None, true)
+        .map_err(|error| {
             anyhow::anyhow!(
                 "Failed to create openapi configuration, Error: '{:?}'",
                 error
             )
-        },
-    )?;
+        })?;
     let client = openapi::clients::tower::ApiClient::new(config);
 
     let mut report = generate_report(k8s_client.clone(), client.clone()).await;
@@ -73,8 +70,9 @@ async fn main() -> anyhow::Result<()> {
 
 // TODO: For now this will only log the generated report. Needs a Transmitter
 pub async fn generate_report(k8s_client: K8sClient, http_client: ApiClient) -> Report {
-    let mut report = Report::new();
+    let mut report = Report::default();
     report.product_name = PRODUCT.to_string();
+
     let k8s_node_count = k8s_client.get_nodes().await;
     match k8s_node_count {
         Ok(k8s_node_count) => report.k8s_node_count = k8s_node_count as u8,
@@ -82,6 +80,7 @@ pub async fn generate_report(k8s_client: K8sClient, http_client: ApiClient) -> R
             error!("{:?}", err);
         }
     };
+
     let k8s_cluster_id = k8s_client.get_cluster_id().await;
     match k8s_cluster_id {
         Ok(k8s_cluster_id) => report.k8s_cluster_id = digest(k8s_cluster_id),
@@ -97,6 +96,7 @@ pub async fn generate_report(k8s_client: K8sClient, http_client: ApiClient) -> R
             error!("{:?}", err);
         }
     };
+
     let pools = http_client.pools_api().get_pools().await;
     match pools {
         Ok(pools) => report.pools = Pools::new(pools.into_body()),
@@ -118,6 +118,7 @@ pub async fn generate_report(k8s_client: K8sClient, http_client: ApiClient) -> R
         Some(volumes) => report.volumes = Volumes::new(volumes),
         None => {}
     }
+
     let replicas = http_client.replicas_api().get_replicas().await;
     match replicas {
         Ok(replicas) => report.replicas = Replicas::new(replicas.into_body().len(), volumes),

@@ -12,7 +12,7 @@ __pycache__
 /tests/bdd/openapi/
 /chart/charts/
 /chart/Chart.lock
-/call-home/src/collector/openapi/*
-!/call-home/src/collector/openapi/Cargo.toml
-!/call-home/src/collector/openapi/build.rs
+/openapi/*
+!/openapi/Cargo.toml
+!/openapi/build.rs
 /tests/bdd/autogen/

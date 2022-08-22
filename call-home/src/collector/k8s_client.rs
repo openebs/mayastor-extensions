@@ -31,7 +31,6 @@ impl K8sClient {
     pub async fn get_cluster_id(&self) -> Result<String, K8sResourceError> {
         let namespace_api: Api<Namespace> = Api::all(self.client.clone());
         let kube_system_namespace = namespace_api.get("kube-system").await?;
-        let json_object = serde_json::to_value(&kube_system_namespace)?;
-        Ok(json_object["metadata"]["uid"].to_string())
+        Ok(kube_system_namespace.metadata.uid.unwrap_or_default())
     }
 }

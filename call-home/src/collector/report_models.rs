@@ -1,9 +1,10 @@
 use openapi::models::Volume;
 use serde::Deserialize;
 use serde::Serialize;
+use std::default;
 
 /// Volumes contains volume count, min,max,mean and capacity percentiles
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Volumes {
     pub count: u64,
@@ -13,16 +14,6 @@ pub struct Volumes {
     pub capacity_percentiles_in_bytes: Percentiles,
 }
 impl Volumes {
-    /// Return a volume object with default values
-    pub(crate) fn default() -> Self {
-        Self {
-            count: 0,
-            mean_size_in_bytes: 0,
-            min_size_in_bytes: 0,
-            max_size_in_bytes: 0,
-            capacity_percentiles_in_bytes: Percentiles::default(),
-        }
-    }
     /// Receives a api_models::Volumes object and returns a new report_models::volume object by using the data provided
     pub(crate) fn new(volumes: openapi::models::Volumes) -> Self {
         let volumes_size_vector = get_volumes_size_vector(volumes.entries);
@@ -39,7 +30,7 @@ impl Volumes {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Pools {
     pub count: u64,
@@ -49,16 +40,6 @@ pub struct Pools {
     pub capacity_percentiles_in_bytes: Percentiles,
 }
 impl Pools {
-    /// Returns pools object with default values
-    pub(crate) fn default() -> Self {
-        Self {
-            count: 0,
-            max_size_in_bytes: 0,
-            min_size_in_bytes: 0,
-            mean_size_in_bytes: 0,
-            capacity_percentiles_in_bytes: Percentiles::default(),
-        }
-    }
     /// Receives a vector of api_models::Pools and returns a new Reports::Pools object by using the data provided
     pub(crate) fn new(pools: Vec<openapi::models::Pool>) -> Self {
         let pools_size_vector = get_pools_size_vector(pools);
@@ -75,21 +56,13 @@ impl Pools {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Replicas {
     count: u64,
     count_per_volume_percentiles: Percentiles,
 }
 impl Replicas {
-    /// Returns a replica object with default values
-    pub fn default() -> Self {
-        Self {
-            count: 0,
-            count_per_volume_percentiles: Percentiles::default(),
-        }
-    }
-
     /// Receives a Option<api_models::Volumes> and replica_count and returns a new report_models::replica object by using the data provided
     pub fn new(replica_count: usize, volumes: Option<openapi::models::Volumes>) -> Self {
         let mut replicas = Self::default();
@@ -110,20 +83,20 @@ impl Replicas {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Versions {
     control_plane_version: String,
 }
 impl Versions {
-    pub(crate) fn default() -> Self {
+    pub(crate) fn new(control_plane_version: String) -> Self {
         Self {
-            control_plane_version: String::new(),
+            control_plane_version,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Percentiles {
     #[serde(rename = "50%")]
     pub percentile_50: u64,
@@ -134,14 +107,6 @@ pub struct Percentiles {
 }
 
 impl Percentiles {
-    /// Returns Percentiles with default values
-    pub(crate) fn default() -> Self {
-        Self {
-            percentile_50: 0,
-            percentile_75: 0,
-            percentile_90: 0,
-        }
-    }
     /// Receives  a Vec<u64> and returns Percentiles
     pub(crate) fn new(values: Vec<u64>) -> Self {
         Self {
@@ -151,7 +116,8 @@ impl Percentiles {
         }
     }
 }
-#[derive(Serialize, Deserialize, Debug)]
+
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Report {
     pub k8s_cluster_id: String,
@@ -164,22 +130,6 @@ pub struct Report {
     pub volumes: Volumes,
     pub replicas: Replicas,
     pub versions: Versions,
-}
-impl Report {
-    pub(crate) fn new() -> Self {
-        Self {
-            k8s_cluster_id: String::new(),
-            k8s_node_count: 0,
-            product_name: String::new(),
-            product_version: String::new(),
-            deploy_namespace: String::new(),
-            storage_node_count: 0,
-            pools: Pools::default(),
-            volumes: Volumes::default(),
-            replicas: Replicas::default(),
-            versions: Versions::default(),
-        }
-    }
 }
 
 /// Get maximum value from a vector
@@ -222,6 +172,7 @@ fn get_volumes_size_vector(volumes: Vec<Volume>) -> Vec<u64> {
     }
     volume_size_vector
 }
+
 /// Gets a vector containing replica sizes from Vec<api_models::VolumeStats>
 fn get_replicas_size_vector(volumes: Vec<Volume>) -> Vec<u64> {
     let mut replicas_size_vector = Vec::new();
