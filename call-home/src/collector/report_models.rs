@@ -17,16 +17,13 @@ impl Volumes {
     /// Receives a api_models::Volumes object and returns a new report_models::volume object by using the data provided
     pub(crate) fn new(volumes: openapi::models::Volumes) -> Self {
         let volumes_size_vector = get_volumes_size_vector(volumes.entries);
-        if volumes_size_vector.len() > 0 {
-            return Self {
-                count: volumes_size_vector.len() as u64,
-                max_size_in_bytes: get_max_value(volumes_size_vector.clone()),
-                min_size_in_bytes: get_min_value(volumes_size_vector.clone()),
-                mean_size_in_bytes: get_mean_value(volumes_size_vector.clone()),
-                capacity_percentiles_in_bytes: Percentiles::new(volumes_size_vector),
-            };
+        Self {
+            count: volumes_size_vector.len() as u64,
+            max_size_in_bytes: get_max_value(volumes_size_vector.clone()),
+            min_size_in_bytes: get_min_value(volumes_size_vector.clone()),
+            mean_size_in_bytes: get_mean_value(volumes_size_vector.clone()),
+            capacity_percentiles_in_bytes: Percentiles::new(volumes_size_vector),
         }
-        Self::default()
     }
 }
 
@@ -43,16 +40,13 @@ impl Pools {
     /// Receives a vector of api_models::Pools and returns a new Reports::Pools object by using the data provided
     pub(crate) fn new(pools: Vec<openapi::models::Pool>) -> Self {
         let pools_size_vector = get_pools_size_vector(pools);
-        if pools_size_vector.len() > 0 {
-            return Self {
-                count: pools_size_vector.len() as u64,
-                max_size_in_bytes: get_max_value(pools_size_vector.clone()),
-                min_size_in_bytes: get_min_value(pools_size_vector.clone()),
-                mean_size_in_bytes: get_mean_value(pools_size_vector.clone()),
-                capacity_percentiles_in_bytes: Percentiles::new(pools_size_vector),
-            };
+        Self {
+            count: pools_size_vector.len() as u64,
+            max_size_in_bytes: get_max_value(pools_size_vector.clone()),
+            min_size_in_bytes: get_min_value(pools_size_vector.clone()),
+            mean_size_in_bytes: get_mean_value(pools_size_vector.clone()),
+            capacity_percentiles_in_bytes: Percentiles::new(pools_size_vector),
         }
-        Self::default()
     }
 }
 
@@ -69,12 +63,8 @@ impl Replicas {
         match volumes {
             Some(volumes) => {
                 let replicas_size_vector = get_replicas_size_vector(volumes.entries);
-                if replicas_size_vector.len() > 0 {
-                    replicas.count_per_volume_percentiles =
-                        Percentiles::new(replicas_size_vector.clone());
-                } else {
-                    replicas.count_per_volume_percentiles = Percentiles::default();
-                }
+                replicas.count_per_volume_percentiles =
+                    Percentiles::new(replicas_size_vector.clone());
             }
             None => {}
         };
@@ -134,11 +124,11 @@ pub struct Report {
 
 /// Get maximum value from a vector
 fn get_max_value(values: Vec<u64>) -> u64 {
-    *values.iter().max().unwrap()
+    values.into_iter().max().unwrap_or_default()
 }
 /// Get minimum value from a vector
 fn get_min_value(values: Vec<u64>) -> u64 {
-    *values.iter().min().unwrap()
+    values.into_iter().min().unwrap_or_default()
 }
 /// Get mean of all values from a vector
 fn get_mean_value(values: Vec<u64>) -> u64 {
@@ -151,16 +141,20 @@ fn get_mean_value(values: Vec<u64>) -> u64 {
 
 /// Get percentile value from a vector
 fn get_percentile(mut values: Vec<u64>, percentile: usize) -> u64 {
-    values.sort();
-    let index_as_f64 = (percentile as f64) * (values.len() - 1) as f64 / 100.0;
-    let index = (percentile * (values.len() - 1)) / 100;
+    if values.len() > 0 {
+        values.sort();
+        let index_as_f64 = (percentile as f64) * (values.len() - 1) as f64 / 100.0;
+        let index = (percentile * (values.len() - 1)) / 100;
 
-    if index_as_f64 - index as f64 > 0.0 {
-        (values[index] as f64
-            + (index_as_f64 - index as f64) * (values[index + 1] - values[index]) as f64)
-            as u64
+        if index_as_f64 - index as f64 > 0.0 {
+            (values[index] as f64
+                + (index_as_f64 - index as f64) * (values[index + 1] - values[index]) as f64)
+                as u64
+        } else {
+            values[index]
+        }
     } else {
-        values[index]
+        0
     }
 }
 

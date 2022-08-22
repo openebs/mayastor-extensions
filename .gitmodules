@@ -1,7 +1,6 @@
 [submodule "rpc/api"]
 	path = rpc/api
 	url = https://github.com/openebs/mayastor-api.git
-
-[submodule "call-home/mayastor-control-plane"]
-	path = call-home/mayastor-control-plane
+[submodule "dependencies/control-plane"]
+	path = dependencies/control-plane
 	url = https://github.com/openebs/mayastor-control-plane.git
