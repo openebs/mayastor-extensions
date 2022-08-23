@@ -1,2 +1,2 @@
-pub mod k8s_client;
-pub mod report_models;
+pub(crate) mod k8s_client;
+pub(crate) mod report_models;

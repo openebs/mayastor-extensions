@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
     println!("{:?}", report);
 
     loop {
-        // TODO: For now it loops every 60 sec. Need to change this to 24hr and set the value in constants
+        // TODO: For now it loops every 60 sec. Need to change this to 24hr and set the value in constants.
         sleep(Duration::from_secs(60)).await;
         let mut report = generate_report(k8s_client.clone(), client.clone()).await;
         report.deploy_namespace = namespace.clone();
@@ -68,12 +68,12 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-// TODO: For now this will only log the generated report. Needs a Transmitter
-pub async fn generate_report(k8s_client: K8sClient, http_client: ApiClient) -> Report {
+// TODO: For now this will only log the generated report. Needs a Transmitter.
+async fn generate_report(k8s_client: K8sClient, http_client: ApiClient) -> Report {
     let mut report = Report::default();
     report.product_name = PRODUCT.to_string();
 
-    let k8s_node_count = k8s_client.get_nodes().await;
+    let k8s_node_count = k8s_client.get_node_len().await;
     match k8s_node_count {
         Ok(k8s_node_count) => report.k8s_node_count = k8s_node_count as u8,
         Err(err) => {

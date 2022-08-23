@@ -1,2 +1,2 @@
-pub mod constants;
-pub mod errors;
+pub(crate) mod constants;
+pub(crate) mod errors;
