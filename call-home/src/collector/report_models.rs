@@ -74,12 +74,14 @@ impl Replicas {
     }
 }
 
+/// Versions will contain versions of different mayastor components.
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Versions {
     control_plane_version: String,
 }
 impl Versions {
+    /// Receives a String and returns Versions object.
     pub(crate) fn new(control_plane_version: String) -> Self {
         Self {
             control_plane_version,
@@ -87,6 +89,7 @@ impl Versions {
     }
 }
 
+/// Percentiles contains percentile value at 50%, 75% and 90%.
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub(crate) struct Percentiles {
     #[serde(rename = "50%")]
@@ -98,7 +101,7 @@ pub(crate) struct Percentiles {
 }
 
 impl Percentiles {
-    /// Receives a Vec<u64> and returns Percentiles.
+    /// Receives a Vec<u64> and returns Percentiles object.
     pub(crate) fn new(values: Vec<u64>) -> Self {
         Self {
             percentile_50: get_percentile(values.clone(), 50),
@@ -108,6 +111,7 @@ impl Percentiles {
     }
 }
 
+/// Report contains all the values and objects that we want to include in JSON payload.
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Report {

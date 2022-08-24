@@ -10,12 +10,11 @@ use tokio::time::{sleep, Duration};
 use tracing::{error, info, warn, Level};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
-
-const PRODUCT: &str = common::constants::PRODUCT;
+use common::constants::PRODUCT;
 
 #[derive(Parser)]
 #[clap(author, version, about)]
-pub struct CliArgs {
+struct CliArgs {
     /// An URL endpoint to the control plane's rest endpoint.
     #[clap(short, long, default_value = "http://mayastor-api-rest:8081")]
     endpoint: Url,
@@ -41,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
     let endpoint = args.endpoint;
     let namespace = digest(args.namespace);
 
-    let k8s_client = K8sClient::new().await.unwrap();
+    let k8s_client = K8sClient::new().await?;
 
     let config = Configuration::new(endpoint, time::Duration::from_secs(30), None, None, true)
         .map_err(|error| {
