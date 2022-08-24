@@ -4,13 +4,13 @@ pub mod common;
 use crate::collector::k8s_client::K8sClient;
 use crate::collector::report_models::{Pools, Replicas, Report, Volumes};
 use clap::Parser;
+use common::constants::PRODUCT;
 use openapi::tower::client::{ApiClient, Configuration};
 use sha256::digest;
 use tokio::time::{sleep, Duration};
 use tracing::{error, info, warn, Level};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
-use common::constants::PRODUCT;
 
 #[derive(Parser)]
 #[clap(author, version, about)]

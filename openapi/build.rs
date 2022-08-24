@@ -13,10 +13,10 @@ fn main() {
         panic!("openapi update failed: {:?}", output);
     }
 
+    println!("cargo:rerun-if-changed=../dependencies/control-plane/nix/pkgs/openapi-generator");
     println!(
-        "cargo:rerun-if-changed=../dependencies/control-plane/nix/pkgs/openapi-generator"
+        "cargo:rerun-if-changed=../dependencies/control-plane/control-plane/rest/openapi-specs"
     );
-    println!("cargo:rerun-if-changed=../dependencies/control-plane/control-plane/rest/openapi-specs");
     // seems the internal timestamp is taken before build.rs runs, so we can't set this
     // directive against files created during the build of build.rs??
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed
