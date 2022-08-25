@@ -7,8 +7,16 @@ repos:
     rev: v4.0.1
     hooks:
     -   id: trailing-whitespace
+        exclude: openapi/
 -   repo: local
     hooks:
+    -   id: openapi-check
+        name: OpenApi Code Generator
+        description: Ensures OpenApi bindings are up to date
+        entry: ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh
+        args: ["--spec-changes"]
+        pass_filenames: false
+        language: system
     -   id: rust-lint
         name: Rust lint
         description: Run cargo clippy on files included in the commit.
@@ -20,6 +28,7 @@ repos:
         name: Rust style
         description: Run cargo fmt on files included in the commit.
         entry: nix-shell --pure --run 'cargo fmt --all -- --check'
+        exclude: openapi/
         pass_filenames: true
         types: [file, rust]
         language: system

@@ -4,12 +4,14 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
 
-use crate::client::{
-    grpc_client,
-    grpc_client::GrpcClient,
-    pool::{PoolOperations, Pools},
+use crate::{
+    client::{
+        grpc_client,
+        grpc_client::GrpcClient,
+        pool::{PoolOperations, Pools},
+    },
+    config::ExporterConfig,
 };
-use crate::config::ExporterConfig;
 
 static CACHE: OnceCell<Mutex<Cache>> = OnceCell::new();
 

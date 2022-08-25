@@ -1,8 +1,10 @@
 use std::time;
 pub mod collector;
 pub mod common;
-use crate::collector::k8s_client::K8sClient;
-use crate::collector::report_models::{Pools, Replicas, Report, Volumes};
+use crate::collector::{
+    k8s_client::K8sClient,
+    report_models::{Pools, Replicas, Report, Volumes},
+};
 use clap::Parser;
 use common::constants::PRODUCT;
 use openapi::tower::client::{ApiClient, Configuration};
@@ -58,7 +60,8 @@ async fn main() -> anyhow::Result<()> {
     println!("{:?}", report);
 
     loop {
-        // TODO: For now it loops every 60 sec. Need to change this to 24hr and set the value in constants.
+        // TODO: For now it loops every 60 sec. Need to change this to 24hr and set the value in
+        // constants.
         sleep(Duration::from_secs(60)).await;
         let mut report = generate_report(k8s_client.clone(), client.clone()).await;
         report.deploy_namespace = namespace.clone();

@@ -1,6 +1,5 @@
 use openapi::models::Volume;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Volumes contains volume count, min, max, mean and capacity percentiles.
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -13,7 +12,8 @@ pub(crate) struct Volumes {
     capacity_percentiles_in_bytes: Percentiles,
 }
 impl Volumes {
-    /// Receives a openapi::models::Volumes object and returns a new report_models::volume object by using the data provided.
+    /// Receives a openapi::models::Volumes object and returns a new report_models::volume object by
+    /// using the data provided.
     pub(crate) fn new(volumes: openapi::models::Volumes) -> Self {
         let volumes_size_vector = get_volumes_size_vector(volumes.entries);
         Self {
@@ -37,7 +37,8 @@ pub(crate) struct Pools {
     capacity_percentiles_in_bytes: Percentiles,
 }
 impl Pools {
-    /// Receives a vector of openapi::models::Pool and returns a new report_models::Pools object by using the data provided.
+    /// Receives a vector of openapi::models::Pool and returns a new report_models::Pools object by
+    /// using the data provided.
     pub(crate) fn new(pools: Vec<openapi::models::Pool>) -> Self {
         let pools_size_vector = get_pools_size_vector(pools);
         Self {
@@ -58,7 +59,8 @@ pub(crate) struct Replicas {
     count_per_volume_percentiles: Percentiles,
 }
 impl Replicas {
-    /// Receives a Option<openapi::models::Volumes> and replica_count and returns a new report_models::replica object by using the data provided.
+    /// Receives a Option<openapi::models::Volumes> and replica_count and returns a new
+    /// report_models::replica object by using the data provided.
     pub(crate) fn new(replica_count: usize, volumes: Option<openapi::models::Volumes>) -> Self {
         let mut replicas = Self::default();
         match volumes {
