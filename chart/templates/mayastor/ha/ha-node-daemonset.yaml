@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Release.Name }}-agent-ha-node
+  labels:
+    app: agent-ha-node
+spec:
+  selector:
+    matchLabels:
+      app: agent-ha-node
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  minReadySeconds: 10
+  template:
+    metadata:
+      labels:
+        app: agent-ha-node
+        openebs.io/logging: "true"
+    spec:
+      imagePullSecrets:
+        {{- include "base_pull_secrets" . }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: agent-ha-node
+        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-agent-ha-node:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        securityContext:
+          privileged: true
+        env:
+        - name: RUST_LOG
+          value: {{ .Values.ha.node.logLevel }}
+        {{- if default .Values.base.logSilenceLevel .Values.ha.node.logSilenceLevel }}
+        - name: RUST_LOG_SILENCE
+          value: {{ default .Values.base.logSilenceLevel .Values.ha.node.logSilenceLevel }}
+        {{- end }}
+        - name: MY_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: RUST_BACKTRACE
+          value: "1"
+        args:
+        - "--node-name=$(MY_NODE_NAME)"
+        - "--grpc-endpoint=$(MY_POD_IP):11600"
+        - "--cluster-agent=https://mayastor-agent-ha-cluster:11500"
+        volumeMounts:
+        - name: device
+          mountPath: /dev
+        - name: sys
+          mountPath: /sys
+        - name: run-udev
+          mountPath: /run/udev
+        resources:
+          limits:
+            cpu: {{ .Values.ha.node.resources.limits.cpu | quote }}
+            memory: {{ .Values.ha.node.resources.limits.memory | quote }}
+          requests:
+            cpu: {{ .Values.ha.node.resources.requests.cpu | quote }}
+            memory: {{ .Values.ha.node.resources.requests.memory | quote }}
+        ports:
+          - containerPort: 11600
+            protocol: TCP
+            name: ha-node
+      volumes:
+      - name: device
+        hostPath:
+          path: /dev
+          type: Directory
+      - name: sys
+        hostPath:
+          path: /sys
+          type: Directory
+      - name: run-udev
+        hostPath:
+          path: /run/udev
+          type: Directory
