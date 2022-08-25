@@ -10,8 +10,8 @@ use common::constants::PRODUCT;
 use openapi::tower::client::{ApiClient, Configuration};
 use sha256::digest;
 use tokio::time::{sleep, Duration};
-use tracing::{error, info, warn, Level};
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing::error;
+use tracing_subscriber::EnvFilter;
 use url::Url;
 
 #[derive(Parser)]
@@ -72,8 +72,10 @@ async fn main() -> anyhow::Result<()> {
 
 // TODO: For now this will only log the generated report. Needs a Transmitter.
 async fn generate_report(k8s_client: K8sClient, http_client: ApiClient) -> Report {
-    let mut report = Report::default();
-    report.product_name = PRODUCT.to_string();
+    let mut report = Report {
+        product_name: PRODUCT.to_string(),
+        ..Default::default()
+    };
 
     let k8s_node_count = k8s_client.get_node_len().await;
     match k8s_node_count {

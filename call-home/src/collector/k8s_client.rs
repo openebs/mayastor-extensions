@@ -15,11 +15,6 @@ impl K8sClient {
         Ok(Self { client })
     }
 
-    /// Get a clone of the inner `kube::Client`.
-    pub(crate) fn kube_client(&self) -> kube::Client {
-        self.client.clone()
-    }
-
     /// Get number of nodes present in the cluster.
     pub(crate) async fn get_node_len(&self) -> Result<usize, K8sResourceError> {
         let nodes: Api<Node> = Api::all(self.client.clone());

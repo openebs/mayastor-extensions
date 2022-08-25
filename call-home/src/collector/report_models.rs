@@ -66,8 +66,7 @@ impl Replicas {
         match volumes {
             Some(volumes) => {
                 let replicas_size_vector = get_replicas_size_vector(volumes.entries);
-                replicas.count_per_volume_percentiles =
-                    Percentiles::new(replicas_size_vector.clone());
+                replicas.count_per_volume_percentiles = Percentiles::new(replicas_size_vector);
             }
             None => {}
         };
@@ -81,14 +80,6 @@ impl Replicas {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Versions {
     control_plane_version: String,
-}
-impl Versions {
-    /// Receives a String and returns Versions object.
-    pub(crate) fn new(control_plane_version: String) -> Self {
-        Self {
-            control_plane_version,
-        }
-    }
 }
 
 /// Percentiles contains percentile value at 50%, 75% and 90%.
@@ -150,7 +141,7 @@ fn get_mean_value(values: Vec<u64>) -> u64 {
 
 /// Get percentile value from a vector.
 fn get_percentile(mut values: Vec<u64>, percentile: usize) -> u64 {
-    if values.len() > 0 {
+    if !values.is_empty() {
         values.sort();
         let index_as_f64 = (percentile as f64) * (values.len() - 1) as f64 / 100.0;
         let index = (percentile * (values.len() - 1)) / 100;
