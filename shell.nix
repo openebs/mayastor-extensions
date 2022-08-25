@@ -17,6 +17,7 @@ in
 mkShell {
   name = "exporter-shell";
   buildInputs = [
+    cacert
     cargo-expand
     cargo-udeps
     commitlint
