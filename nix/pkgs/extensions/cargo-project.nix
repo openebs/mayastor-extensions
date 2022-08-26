@@ -48,6 +48,8 @@ let
     "exporter"
     "rpc"
     "operators"
+    "call-home"
+    "openapi"
   ];
   buildProps = rec {
     name = "extensions-${version}";
