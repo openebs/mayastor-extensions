@@ -1,5 +1,4 @@
-use std::fmt::Debug;
-use std::{env, ops::DerefMut};
+use std::{env, fmt::Debug, ops::DerefMut};
 
 use prometheus::{
     core::{Collector, Desc},

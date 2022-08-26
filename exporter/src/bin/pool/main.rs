@@ -1,8 +1,6 @@
-use std::env;
-use std::time::Duration;
+use std::{env, time::Duration};
 
-use actix_web::http::header;
-use actix_web::{middleware, web, HttpResponse, HttpServer, Responder};
+use actix_web::{http::header, middleware, web, HttpResponse, HttpServer, Responder};
 use clap::{App, Arg, ArgMatches};
 use prometheus::{Encoder, Registry};
 

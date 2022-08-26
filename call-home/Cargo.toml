@@ -1,0 +1,24 @@
+[package]
+name = "call-home"
+version = "0.1.0"
+edition = "2021"
+description = "call home"
+
+
+[dependencies]
+openapi = {path = "../openapi"}
+kube = { version = "0.74.0", features = ["runtime", "derive"] }
+k8s-openapi = { version = "0.15.0", features = ["v1_24"] }
+futures = "0.3.21"
+tokio = { version = "1.14.0", features = ["full"] }
+clap = { version = "3.2.16", features = ["cargo", "derive"] }
+serde_json = "1.0.68"
+serde_yaml = "0.8.21"
+serde = { version = "1.0.104", features = ["derive"] }
+sha256 = "1.0.3"
+jsonpath_lib = "0.3.0"
+url = "2.2.2"
+snafu = "0.7.1"
+anyhow = "1.0.60"
+tracing = "0.1.36"
+tracing-subscriber = {version = "0.3.15", features = ["env-filter", "std"]}
