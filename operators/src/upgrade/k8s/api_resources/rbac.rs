@@ -96,10 +96,7 @@ pub fn upgrade_operator_cluster_role(namespace: Option<String>) -> ClusterRole {
             PolicyRule {
                 api_groups: Some(vec!["".to_string()]),
                 resources: Some(vec!["secrets".to_string()]),
-                verbs: vec!["get", "list"]
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect(),
+                verbs: vec!["get", "list"].iter().map(|s| s.to_string()).collect(),
                 ..Default::default()
             },
         ]),
