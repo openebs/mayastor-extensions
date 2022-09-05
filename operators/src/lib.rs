@@ -1,2 +1,3 @@
-/// The upgrade op[erator
+#![warn(missing_docs)]
+/// The upgrade operator.
 pub mod upgrade;

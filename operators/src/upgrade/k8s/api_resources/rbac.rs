@@ -1,14 +1,18 @@
-use crate::upgrade::common::constants::{
-    APP, LABEL, UPGRADE_OPERATOR, UPGRADE_OPERATOR_CLUSTER_ROLE,
-    UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING, UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+use crate::{
+    upgrade::common::constants::{
+        APP, LABEL, UPGRADE_OPERATOR, UPGRADE_OPERATOR_CLUSTER_ROLE,
+        UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING, UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+    },
+    upgrade_labels,
 };
-use crate::upgrade_labels;
-use k8s_openapi::api::core::v1::ServiceAccount;
-use k8s_openapi::api::rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject};
+use k8s_openapi::api::{
+    core::v1::ServiceAccount,
+    rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject},
+};
 use kube::core::ObjectMeta;
 use maplit::btreemap;
 
-/// Defines the upgrade-operator service account
+/// Defines the upgrade-operator service account.
 pub(crate) fn upgrade_operator_service_account(namespace: Option<String>) -> ServiceAccount {
     ServiceAccount {
         metadata: ObjectMeta {
@@ -21,7 +25,7 @@ pub(crate) fn upgrade_operator_service_account(namespace: Option<String>) -> Ser
     }
 }
 
-/// Defines the upgrade-operator cluster role
+/// Defines the upgrade-operator cluster role.
 pub(crate) fn upgrade_operator_cluster_role(namespace: Option<String>) -> ClusterRole {
     ClusterRole {
         metadata: ObjectMeta {
@@ -104,7 +108,7 @@ pub(crate) fn upgrade_operator_cluster_role(namespace: Option<String>) -> Cluste
     }
 }
 
-/// Defines the upgrade-operator cluster role binding
+/// Defines the upgrade-operator cluster role binding.
 pub(crate) fn upgrade_operator_cluster_role_binding(
     namespace: Option<String>,
 ) -> ClusterRoleBinding {

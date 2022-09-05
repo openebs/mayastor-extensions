@@ -1,4 +1,4 @@
-/// Define deployment for upgrade operator
+/// Define deployment for upgrade operator.
 pub mod deployment;
-/// Define rbac
+/// Define rbac.
 pub mod rbac;

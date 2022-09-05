@@ -16,7 +16,7 @@ use k8s_openapi::{
 use kube::core::ObjectMeta;
 use maplit::btreemap;
 
-/// Defines the upgrade-operator deployment
+/// Defines the upgrade-operator deployment.
 pub(crate) fn upgrade_operator_deployment(
     namespace: Option<String>,
     upgrade_image: String,
@@ -62,7 +62,7 @@ pub(crate) fn upgrade_operator_deployment(
     }
 }
 
-/// Defines the upgrade-operator service
+/// Defines the upgrade-operator service.
 pub(crate) fn upgrade_operator_service(namespace: Option<String>) -> Service {
     Service {
         metadata: ObjectMeta {

@@ -36,19 +36,21 @@ use validator::Validate;
     printcolumn = r#"{"name":"Current Version", "type":"string", "jsonPath":".spec.current_version"}"#
 )]
 
+/// Define spec for upgrade action.
 pub struct UpgradeActionSpec {
-    /// Records the current version of the product
+    /// Records the current version of the product.
     #[validate(required, regex = "SEMVER_RE")]
     current_version: Option<String>,
-    /// Records the desired version of the product
+    /// Records the desired version of the product.
     #[validate(required, regex = "SEMVER_RE")]
     target_version: Option<String>,
-    /// Records all the components present for the product
+    /// Records all the components present for the product.
     #[validate(required)]
     components: Option<HashMap<String, Vec<String>>>,
 }
 
 impl UpgradeActionSpec {
+    /// Create a new upgrade action spec.
     pub fn new(
         current_version: Option<Version>,
         target_version: Option<Version>,
@@ -61,37 +63,38 @@ impl UpgradeActionSpec {
         }
     }
 
-    /// Returns the current version of the product
+    /// Returns the current version of the product.
     pub fn current_version(&self) -> Option<Version> {
         self.current_version
             .as_ref()
             .map(|v| Version::from_str(v).unwrap())
     }
 
-    /// Returns the desired version of the product
+    /// Returns the desired version of the product.
     pub fn target_version(&self) -> Option<Version> {
         self.target_version
             .as_ref()
             .map(|v| Version::from_str(v).unwrap())
     }
 
-    /// Returns all the components
+    /// Returns all the components.
     pub fn components(&self) -> Option<HashMap<String, Vec<String>>> {
         self.components.clone()
     }
 }
 
-/// 'UpgradePhase' defines the status of each components
+/// 'UpgradePhase' defines the status of each components.
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub enum UpgradePhase {
+    /// Components in Waiting phase.
     Waiting,
-
+    /// Components in Updating phase.
     Updating,
-
+    /// Components in Verifying phase which comnes after updationg.
     Verifying,
-
+    /// Components in Completed phase which denotes updateion is complete.
     Completed,
-
+    /// Components in Error phase.
     Error,
 }
 
@@ -101,7 +104,7 @@ impl Default for UpgradePhase {
     }
 }
 
-/// converts the Upgrade phase into a string
+/// converts the Upgrade phase into a string.
 impl ToString for UpgradePhase {
     fn to_string(&self) -> String {
         match self {
@@ -114,24 +117,25 @@ impl ToString for UpgradePhase {
         .to_string()
     }
 }
-/// Upgrade phase into a string
+/// Upgrade phase into a string.
 impl From<UpgradePhase> for String {
     fn from(u: UpgradePhase) -> Self {
         u.to_string()
     }
 }
 
-/// 'UpgradeState' defines the status of upgradeaction resource
+/// 'UpgradeState' defines the status of upgradeaction resource.
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub enum UpgradeState {
+    /// Upgrade in NotStarted phase, which denotes cr is created.
     NotStarted,
-
+    /// Upgrade in Updating phase, which denotes upgrade has been started.
     Updating,
-
+    /// Upgrade in VerifyingUpdate phase, which denotes components has completed updating phase.
     VerifyingUpdate,
-
+    /// Upgrade in SuccessfullUpdate phase, which denotes upgrade has been successfully verified.
     SuccessfullUpdate,
-
+    /// Upgrade in Error state.
     Error,
 }
 
@@ -141,7 +145,7 @@ impl Default for UpgradeState {
     }
 }
 
-/// converts the Upgrade Condition Type into a string
+/// Converts the Upgrade Condition Type into a string.
 impl ToString for UpgradeState {
     fn to_string(&self) -> String {
         match self {
@@ -154,36 +158,39 @@ impl ToString for UpgradeState {
         .to_string()
     }
 }
-/// Upgrade Condition Type into a string
+/// Upgrade Condition Type into a string.
 impl From<UpgradeState> for String {
     fn from(u: UpgradeState) -> Self {
         u.to_string()
     }
 }
 
+/// Upgrade action status.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq, JsonSchema)]
 pub struct UpgradeActionStatus {
-    /// UpgradeAction state
+    /// UpgradeAction state.
     state: Option<UpgradeState>,
     /// Last time the condition transit from one status to another.
     last_transition_time: String,
-    /// Components State
+    /// Components State.
     #[validate(required)]
-    components_state: Option<HashMap<String, HashMap<String, UpgradePhase>>>,
+    components_state: HashMap<String, HashMap<String, UpgradePhase>>,
 }
 
-/// 'UpgradeActionStatus' defines the current state of upgrade, the status is updated by the operator
+/// 'UpgradeActionStatus' defines the current state of upgrade, the status is updated by the operator.
 impl UpgradeActionStatus {
+    /// Current state of upgrade.
     pub fn state(&self) -> Option<UpgradeState> {
         self.state.clone()
     }
 
+    /// Last transition time of upgrade.
     pub fn last_transition_time(&self) -> String {
         self.last_transition_time.clone()
     }
 
-    /// Records components state
-    pub fn components_state(&self) -> Option<HashMap<String, HashMap<String, UpgradePhase>>> {
+    /// Records components state.
+    pub fn components_state(&self) -> HashMap<String, HashMap<String, UpgradePhase>> {
         self.components_state.clone()
     }
 }

@@ -1217,6 +1217,7 @@ checksum = "10a35a97730320ffe8e2d410b5d3b69279b98d2c14bdb8b70ea89ecf7888d41e"
 dependencies = [
  "autocfg",
  "hashbrown",
+ "serde",
 ]
 
 [[package]]
@@ -1761,6 +1762,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
+ "serde_valid",
  "serde_yaml 0.9.11",
  "tokio",
  "tracing",
@@ -2270,6 +2272,9 @@ name = "semver"
 version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93f6841e709003d68bb2deee8c343572bf446003ec20a583e76f7b15cebf3711"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "serde"
@@ -2334,6 +2339,50 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "serde_valid"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18cf1991670d55fe63ce71bbe8c131e7d830ea96f3ff00d730bab25909ea18ce"
+dependencies = [
+ "indexmap",
+ "itertools",
+ "num-traits",
+ "once_cell",
+ "paste",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_valid_derive",
+ "serde_valid_literal",
+ "thiserror",
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "serde_valid_derive"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "268996eff6fca8a9b9978909cf33d82d5c09f03c8b1954532c02a7a0075bd2a5"
+dependencies = [
+ "paste",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "strsim 0.10.0",
+ "syn",
+]
+
+[[package]]
+name = "serde_valid_literal"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f8a1b851b609d606bf6255811362a9265a9ed136d3f73fc4e3da2957357e9ef"
+dependencies = [
+ "paste",
+ "regex",
 ]
 
 [[package]]

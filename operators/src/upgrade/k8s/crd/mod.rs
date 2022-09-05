@@ -1,6 +1,8 @@
+/// CRD definiton.
+pub mod v0;
+
 use lazy_static::lazy_static;
 pub use semver::Version;
-pub mod v0;
 
 lazy_static! {
     // Regex gathered from semver.org as the recommended semver validation regex.
