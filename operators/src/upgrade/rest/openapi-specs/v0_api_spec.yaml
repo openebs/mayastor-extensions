@@ -1,0 +1,89 @@
+openapi: 3.0.3
+info:
+  title: IoEngine RESTful API
+  version: v0
+servers:
+  - url: /v0
+paths:
+  /upgrade:
+    get:
+      tags:
+        - Upgrades
+      operationId: get_upgrades
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/upgrades'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - Upgrades
+      operationId: put_upgrades
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUpgradeBody'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/upgrades'
+        '4XX':
+          $ref: '#/components/responses/ClientError'
+        '5XX':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  schemas:
+    upgrades:
+    CreateUpgradeBody:
+      example:
+        namespace: 'mayastor'
+        chartName: 'mayastor'
+      description: Create Upgrade body JSON
+      type: object
+      properties:
+        disks:
+          description: disk device paths or URIs to be claimed by the pool
+          type: array
+          items:
+            example: 'malloc:///disk?size_mb=100'
+            description: |-
+              Pool device URI
+               Can be specified in the form of a file path or a URI
+               eg: /dev/sda, aio:///dev/sda, malloc:///disk?size_mb=100
+            type: string
+        labels:
+          description: labels to be set on the pools
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - disks
+  responses:
+    ClientError:
+      description: Client side error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RestJsonError'
+    ServerError:
+      description: Server side error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RestJsonError'
