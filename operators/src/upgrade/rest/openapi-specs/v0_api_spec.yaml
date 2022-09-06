@@ -50,6 +50,20 @@ paths:
 components:
   schemas:
     upgrades:
+      description: Upgrade object, comprised of a spec and a state
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UpgradeID'
+        spec:
+          $ref: '#/components/schemas/UpgradeSpec'
+        state:
+          $ref: '#/components/schemas/UpgradeState'
+      required:
+        - id
+        - spec
+        - state
+      minProperties: 1
     CreateUpgradeBody:
       example:
         namespace: 'mayastor'
@@ -57,23 +71,29 @@ components:
       description: Create Upgrade body JSON
       type: object
       properties:
-        disks:
-          description: disk device paths or URIs to be claimed by the pool
-          type: array
+        namespace:
+          description: namespace where product is installed
+          type: string
           items:
-            example: 'malloc:///disk?size_mb=100'
+            example: 'mayastor'
             description: |-
-              Pool device URI
-               Can be specified in the form of a file path or a URI
-               eg: /dev/sda, aio:///dev/sda, malloc:///disk?size_mb=100
+              Product namespace
+               Can be specified in the form of a string
+               eg: "mayastor"
             type: string
-        labels:
-          description: labels to be set on the pools
-          type: object
-          additionalProperties:
+        chartName:
+          description: helm chart name used for product installation
+          type: string
+          items:
+            example: 'mayastor'
+            description: |-
+              Helm chart name
+               Can be specified in the form of a string
+               eg: "mayastor"
             type: string
       required:
-        - disks
+        - namespace
+        - chartName
   responses:
     ClientError:
       description: Client side error
