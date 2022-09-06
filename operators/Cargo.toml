@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "upgrade-operator"
+name = "operator-upgrade"
 path = "src/upgrade/main.rs"
 
 [dependencies]
