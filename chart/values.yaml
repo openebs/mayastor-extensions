@@ -131,6 +131,21 @@ rest:
       # memory requests for rest
       memory: "32Mi"
 
+ha:
+  node:
+    logLevel: info
+    resources:
+      limits:
+        # cpu limits for ha node agent
+        cpu: "100m"
+        # memory limits for ha node agent
+        memory: "64Mi"
+      requests:
+        # cpu requests for ha node agent
+        cpu: "100m"
+        # memory requests for ha node agent
+        memory: "64Mi"
+
 csi:
   image:
     # image registry to pull all CSI Sidecar images
