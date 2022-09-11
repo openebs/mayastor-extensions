@@ -10,6 +10,8 @@
 , llvmPackages
 , openssl
 , git
+, openapi-generator
+, which
 , utillinux
 , version
   # with allInOne set to true all components are built as part of the same "cargo build" derivation
@@ -55,6 +57,8 @@ let
     "operators"
     "call-home"
     "openapi"
+    "scripts"
+    "dependencies"
   ];
   buildProps = rec {
     name = "extensions-${version}";
@@ -63,7 +67,7 @@ let
     src = whitelistSource ../../../. src_list;
 
     inherit PROTOC PROTOC_INCLUDE;
-    nativeBuildInputs = [ clang pkg-config git ];
+    nativeBuildInputs = [ clang pkg-config git openapi-generator which ];
     buildInputs = [ llvmPackages.libclang protobuf openssl utillinux ];
     doCheck = false;
   };
@@ -74,12 +78,20 @@ let
     naersk.buildPackage (buildProps // {
       release = release_build.${buildType};
       cargoBuildOptions = attrs: attrs ++ cargoBuildFlags;
+      preBuild = ''
+        # don't run during the dependency build phase
+        if [ ! -f build.rs ]; then
+          patchShebangs ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh
+          ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh
+        fi
+      '';
       doCheck = false;
       usePureFromTOML = true;
     });
   build_with_default = { buildType, cargoBuildFlags }:
     rustPlatform.buildRustPackage (buildProps // {
       inherit buildType cargoBuildFlags;
+      preBuild = "patchShebangs ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh";
       cargoLock = {
         lockFile = ../../../Cargo.lock;
       };
@@ -91,7 +103,7 @@ in
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if allInOne then
-      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p exporter" "-p operators" ]; }
+      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p exporter" "-p operators" "-p call-home" ]; }
     else
       builder { inherit buildType cargoBuildFlags; };
 }
