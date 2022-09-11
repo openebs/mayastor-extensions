@@ -44,6 +44,19 @@ let
         pname = "upgrade-operator";
       };
     };
+    obs = rec {
+      recurseForDerivations = true;
+      obs_builder = { buildType, builder, cargoBuildFlags ? [ "-p call-home" ] }: builder.build { inherit buildType cargoBuildFlags; };
+      obs_installer = { pname, src }: installer { inherit pname src; };
+      callhome = obs_installer {
+        src =
+          if allInOne then
+            obs_builder { inherit buildType builder; cargoBuildFlags = [ "-p call-home" ]; }
+          else
+            obs_builder { inherit buildType builder; cargoBuildFlags = [ "--bin obs-callhome" ]; };
+        pname = "obs-callhome";
+      };
+    };
   };
 in
 {
