@@ -68,6 +68,9 @@ spec:
             - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
             - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"{{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ .Values.base.jaeger.agent.name }}:{{ .Values.base.jaeger.agent.port }}"{{ end }}
+            {{- range $key, $val := .Values.csi.node.topology.segments }}
+            - "--node-selector={{ $key }}={{ $val }}"
+            {{- end }}
           env:
             - name: RUST_LOG
               value: {{ .Values.csi.controller.logLevel }}
