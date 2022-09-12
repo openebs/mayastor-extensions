@@ -165,6 +165,8 @@ csi:
     topology:
       segments:
         openebs.io/csi-node: mayastor
+      # add topology segments to the csi-node daemonset node selector
+      nodeSelector: false
     resources:
       limits:
         # cpu limits for csi node plugin

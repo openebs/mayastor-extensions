@@ -25,9 +25,15 @@ spec:
       hostNetwork: true
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
-      {{- if .Values.nodeSelector }}
-      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
-      {{- end }}
+      nodeSelector:
+        {{- if .Values.nodeSelector }}
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+        {{- end }}
+        {{- if .Values.csi.node.topology.nodeSelector }}
+        {{- range $key, $val := .Values.csi.node.topology.segments }}
+        {{ $key }}: {{ $val }}
+        {{- end }}
+        {{- end }}
       # NOTE: Each container must have mem/cpu limits defined in order to
       # belong to Guaranteed QoS class, hence can never get evicted in case of
       # pressure unless they exceed those limits. limits and requests must be
