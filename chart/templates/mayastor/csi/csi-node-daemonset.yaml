@@ -3,7 +3,9 @@ kind: DaemonSet
 metadata:
   name: {{ .Release.Name }}-csi-node
   labels:
-    openebs.io/engine: io-engine
+    {{- range $key, $val := .Values.csi.node.topology.segments }}
+    {{ $key }}: {{ $val }}
+    {{- end }}
 spec:
   selector:
     matchLabels:
@@ -60,6 +62,9 @@ spec:
         - "--grpc-endpoint=$(MY_POD_IP):10199"{{ if .Values.csi.node.nvme.io_timeout_enabled }}
         - "--nvme-core-io-timeout={{ .Values.csi.node.nvme.io_timeout }}"{{ end }}
         - "--nvme-nr-io-queues={{ .Values.mayastor.cpuCount }}"
+        {{- range $key, $val := .Values.csi.node.topology.segments }}
+        - "--node-selector={{ $key }}={{ $val }}"
+        {{- end }}
         command:
         - csi-node
         volumeMounts:

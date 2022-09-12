@@ -162,6 +162,9 @@ csi:
         memory: "64Mi"
   node:
     logLevel: info
+    topology:
+      segments:
+        openebs.io/csi-node: mayastor
     resources:
       limits:
         # cpu limits for csi node plugin
