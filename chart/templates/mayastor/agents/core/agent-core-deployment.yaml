@@ -27,11 +27,11 @@ spec:
         - name: agent-core
           resources:
             limits:
-              cpu: {{ .Values.core.resources.limits.cpu | quote }}
-              memory: {{ .Values.core.resources.limits.memory | quote }}
+              cpu: {{ .Values.agents.core.resources.limits.cpu | quote }}
+              memory: {{ .Values.agents.core.resources.limits.memory | quote }}
             requests:
-              cpu: {{ .Values.core.resources.requests.cpu | quote }}
-              memory: {{ .Values.core.resources.requests.memory | quote }}
+              cpu: {{ .Values.agents.core.resources.requests.cpu | quote }}
+              memory: {{ .Values.agents.core.resources.requests.memory | quote }}
           image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-agent-core:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
@@ -44,10 +44,10 @@ spec:
             - containerPort: 50051
           env:
             - name: RUST_LOG
-              value: {{ .Values.core.logLevel }}
-            {{- if default .Values.base.logSilenceLevel .Values.core.logSilenceLevel }}
+              value: {{ .Values.agents.core.logLevel }}
+            {{- if default .Values.base.logSilenceLevel .Values.agents.core.logSilenceLevel }}
             - name: RUST_LOG_SILENCE
-              value: {{ default .Values.base.logSilenceLevel .Values.core.logSilenceLevel }}
+              value: {{ default .Values.base.logSilenceLevel .Values.agents.core.logSilenceLevel }}
             {{- end }}
             - name: MY_POD_NAME
               valueFrom:

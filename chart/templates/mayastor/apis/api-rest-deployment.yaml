@@ -26,11 +26,11 @@ spec:
         - name: api-rest
           resources:
             limits:
-              cpu: {{ .Values.rest.resources.limits.cpu | quote }}
-              memory: {{ .Values.rest.resources.limits.memory | quote }}
+              cpu: {{ .Values.apis.rest.resources.limits.cpu | quote }}
+              memory: {{ .Values.apis.rest.resources.limits.memory | quote }}
             requests:
-              cpu: {{ .Values.rest.resources.requests.cpu | quote }}
-              memory: {{ .Values.rest.resources.requests.memory | quote }}
+              cpu: {{ .Values.apis.rest.resources.requests.cpu | quote }}
+              memory: {{ .Values.apis.rest.resources.requests.memory | quote }}
           image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-api-rest:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
@@ -45,8 +45,8 @@ spec:
             - containerPort: 8081
           env:
             - name: RUST_LOG
-              value: {{ .Values.rest.logLevel }}
-            {{- if default .Values.base.logSilenceLevel .Values.rest.logSilenceLevel }}
+              value: {{ .Values.apis.rest.logLevel }}
+            {{- if default .Values.base.logSilenceLevel .Values.apis.rest.logSilenceLevel }}
             - name: RUST_LOG_SILENCE
-              value: {{ default .Values.base.logSilenceLevel .Values.rest.logSilenceLevel }}
+              value: {{ default .Values.base.logSilenceLevel .Values.apis.rest.logSilenceLevel }}
             {{- end }}

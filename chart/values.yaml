@@ -101,50 +101,52 @@ jaeger-operator:
     # create a clusterRole for Jaeger
     clusterRole: true
 
-core:
-  # logLevel for the core crate
-  logLevel: info
-  resources:
-    limits:
-      # cpu limits for core agents
-      cpu: "1000m"
-      # memory limits for core agents
-      memory: "32Mi"
-    requests:
-      # cpu requests for core agents
-      cpu: "500m"
-      # memory requests for core agents
-      memory: "16Mi"
-
-rest:
-  # logLevel for the core crate
-  logLevel: info
-  resources:
-    limits:
-      # cpu limits for rest
-      cpu: "100m"
-      # memory limits for rest
-      memory: "64Mi"
-    requests:
-      # cpu requests for rest
-      cpu: "50m"
-      # memory requests for rest
-      memory: "32Mi"
-
-ha:
-  node:
+agents:
+  core:
+    # logLevel for the core crate
     logLevel: info
     resources:
       limits:
-        # cpu limits for ha node agent
+        # cpu limits for core agents
+        cpu: "1000m"
+        # memory limits for core agents
+        memory: "32Mi"
+      requests:
+        # cpu requests for core agents
+        cpu: "500m"
+        # memory requests for core agents
+        memory: "16Mi"
+  ha:
+    enabled: true
+    node:
+      logLevel: info
+      resources:
+        limits:
+          # cpu limits for ha node agent
+          cpu: "100m"
+          # memory limits for ha node agent
+          memory: "64Mi"
+        requests:
+          # cpu requests for ha node agent
+          cpu: "100m"
+          # memory requests for ha node agent
+          memory: "64Mi"
+
+apis:
+  rest:
+    # logLevel for the core crate
+    logLevel: info
+    resources:
+      limits:
+        # cpu limits for rest
         cpu: "100m"
-        # memory limits for ha node agent
+        # memory limits for rest
         memory: "64Mi"
       requests:
-        # cpu requests for ha node agent
-        cpu: "100m"
-        # memory requests for ha node agent
-        memory: "64Mi"
+        # cpu requests for rest
+        cpu: "50m"
+        # memory requests for rest
+        memory: "32Mi"
 
 csi:
   image:
