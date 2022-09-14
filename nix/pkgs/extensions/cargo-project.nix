@@ -53,7 +53,7 @@ let
     "exporter"
     "rpc"
     "operators"
-    "call-home"
+    "callhome"
     "openapi"
   ];
   buildProps = rec {
