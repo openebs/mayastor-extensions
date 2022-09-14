@@ -134,7 +134,7 @@ agents:
 
 apis:
   rest:
-    # logLevel for the core crate
+    # logLevel for the rest crate
     logLevel: info
     resources:
       limits:
@@ -189,12 +189,12 @@ csi:
         # cpu limits for csi node plugin
         cpu: "100m"
         # memory limits for csi node plugin
-        memory: "50Mi"
+        memory: "128Mi"
       requests:
         # cpu requests for csi node plugin
         cpu: "100m"
         # memory requests for csi node plugin
-        memory: "50Mi"
+        memory: "64Mi"
     nvme:
       # nvme_core module io timeout in seconds
       io_timeout: "30"
