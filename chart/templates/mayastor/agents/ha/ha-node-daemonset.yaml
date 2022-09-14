@@ -1,3 +1,4 @@
+{{- if .Values.agents.ha.enabled }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -21,9 +22,15 @@ spec:
     spec:
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
-      {{- if .Values.nodeSelector }}
-      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
-      {{- end }}
+      nodeSelector:
+        {{- if .Values.nodeSelector }}
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+        {{- end }}
+        {{- if .Values.csi.node.topology.nodeSelector }}
+        {{- range $key, $val := .Values.csi.node.topology.segments }}
+        {{ $key }}: {{ $val }}
+        {{- end }}
+        {{- end }}
       containers:
       - name: agent-ha-node
         image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-agent-ha-node:{{ .Values.image.tag }}"
@@ -32,10 +39,10 @@ spec:
           privileged: true
         env:
         - name: RUST_LOG
-          value: {{ .Values.ha.node.logLevel }}
-        {{- if default .Values.base.logSilenceLevel .Values.ha.node.logSilenceLevel }}
+          value: {{ .Values.agents.ha.node.logLevel }}
+        {{- if default .Values.base.logSilenceLevel .Values.agents.ha.node.logSilenceLevel }}
         - name: RUST_LOG_SILENCE
-          value: {{ default .Values.base.logSilenceLevel .Values.ha.node.logSilenceLevel }}
+          value: {{ default .Values.base.logSilenceLevel .Values.agents.ha.node.logSilenceLevel }}
         {{- end }}
         - name: MY_NODE_NAME
           valueFrom:
@@ -60,11 +67,11 @@ spec:
           mountPath: /run/udev
         resources:
           limits:
-            cpu: {{ .Values.ha.node.resources.limits.cpu | quote }}
-            memory: {{ .Values.ha.node.resources.limits.memory | quote }}
+            cpu: {{ .Values.agents.ha.node.resources.limits.cpu | quote }}
+            memory: {{ .Values.agents.ha.node.resources.limits.memory | quote }}
           requests:
-            cpu: {{ .Values.ha.node.resources.requests.cpu | quote }}
-            memory: {{ .Values.ha.node.resources.requests.memory | quote }}
+            cpu: {{ .Values.agents.ha.node.resources.requests.cpu | quote }}
+            memory: {{ .Values.agents.ha.node.resources.requests.memory | quote }}
         ports:
           - containerPort: 11600
             protocol: TCP
@@ -82,3 +89,4 @@ spec:
         hostPath:
           path: /run/udev
           type: Directory
+{{- end }}
