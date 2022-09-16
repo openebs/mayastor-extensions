@@ -421,3 +421,20 @@ loki-stack:
               - __meta_kubernetes_pod_uid
               - __meta_kubernetes_pod_container_name
               target_label: __path__
+obs:
+  callhome:
+    # Enable callhome
+    enabled: true
+    # logLevel for callhome
+    logLevel: "info"
+    resources:
+      limits:
+        # cpu limits for callhome
+        cpu: "100m"
+        # memory limits for callhome
+        memory: "32Mi"
+      requests:
+        # cpu requests for callhome
+        cpu: "50m"
+        # memory requests for callhome
+        memory: "16Mi"
