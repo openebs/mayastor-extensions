@@ -117,7 +117,7 @@ agents:
         # memory requests for core agents
         memory: "16Mi"
   ha:
-    enabled: true
+    enabled: false
     node:
       logLevel: info
       resources:
