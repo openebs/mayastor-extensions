@@ -4,8 +4,7 @@ use kube::CustomResource;
 use schemars::JsonSchema;
 pub use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 use validator::Validate;
 
 #[derive(
@@ -177,7 +176,8 @@ pub struct UpgradeActionStatus {
     components_state: HashMap<String, HashMap<String, UpgradePhase>>,
 }
 
-/// 'UpgradeActionStatus' defines the current state of upgrade, the status is updated by the operator.
+/// 'UpgradeActionStatus' defines the current state of upgrade, the status is updated by the
+/// operator.
 impl UpgradeActionStatus {
     /// Current state of upgrade.
     pub fn state(&self) -> Option<UpgradeState> {
