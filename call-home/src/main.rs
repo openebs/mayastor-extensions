@@ -1,16 +1,22 @@
-use std::time;
-pub mod collector;
-pub mod common;
-use crate::collector::{
-    k8s_client::K8sClient,
-    report_models::{Pools, Replicas, Report, Volumes},
+mod collector;
+mod common;
+mod transmitter;
+
+use crate::{
+    client::Receiver,
+    collector::{
+        k8s_client::K8sClient,
+        report_models::{Pools, Replicas, Report, Volumes},
+    },
+    common::constants::*,
+    transmitter::*,
 };
 use clap::Parser;
-use common::constants::PRODUCT;
 use openapi::tower::client::{ApiClient, Configuration};
 use sha256::digest;
-use tokio::time::{sleep, Duration};
-use tracing::error;
+use std::time;
+use tokio::time::sleep;
+use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
@@ -32,62 +38,97 @@ impl CliArgs {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
+    if let Err(error) = run().await {
+        tracing::error!(?error, " failed call-home");
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> anyhow::Result<()> {
     let args = CliArgs::args();
     let version = clap::crate_version!().to_string();
     let endpoint = args.endpoint;
     let namespace = digest(args.namespace);
 
-    let k8s_client = K8sClient::new().await?;
+    let sleep_duration = get_call_home_frequency();
+    let encryption_dir = get_encryption_dir();
+    let key_filepath = get_key_filepath();
 
+    // Generate kubernetes client.
+    let k8s_client = K8sClient::new()
+        .await
+        .map_err(|error| anyhow::anyhow!("failed to generate kubernetes client: {:?}", error))?;
+
+    // Generate SHA256 hash of kube-system namespace UID.
+    let k8s_cluster_id = k8s_client.get_cluster_id().await.map_err(|error| {
+        anyhow::anyhow!("failed to generate kubernetes cluster ID: {:?}", error)
+    })?;
+
+    // Generate receiver API client.
+    let receiver = Receiver::new(&k8s_cluster_id).await.map_err(|error| {
+        anyhow::anyhow!("failed to generate metrics receiver client: {:?}", error)
+    })?;
+
+    // Generate Mayastor REST client.
     let config = Configuration::new(endpoint, time::Duration::from_secs(30), None, None, true)
-        .map_err(|error| {
-            anyhow::anyhow!(
-                "Failed to create openapi configuration, Error: '{:?}'",
-                error
-            )
-        })?;
+        .map_err(|error| anyhow::anyhow!("failed to create openapi configuration: {:?}", error))?;
     let client = openapi::clients::tower::ApiClient::new(config);
 
-    let mut report = generate_report(k8s_client.clone(), client.clone()).await;
-    report.deploy_namespace = namespace.clone();
-    report.product_version = version.clone();
-
-    println!("{:?}", report);
-
     loop {
-        // TODO: For now it loops every 60 sec. Need to change this to 24hr and set the value in
-        // constants.
-        sleep(Duration::from_secs(60)).await;
-        let mut report = generate_report(k8s_client.clone(), client.clone()).await;
-        report.deploy_namespace = namespace.clone();
-        report.product_version = version.clone();
-        println!("{:?}", report);
+        // Generate report.
+        let report = generate_report(
+            k8s_client.clone(),
+            client.clone(),
+            k8s_cluster_id.clone(),
+            namespace.clone(),
+            version.clone(),
+        )
+        .await;
+
+        // Encrypt data.
+        let encryption_dir = encryption_dir.clone();
+        let key_filepath = key_filepath.clone();
+        let output = tokio::task::spawn_blocking(move || {
+            encryption::encrypt(&report, &encryption_dir, &key_filepath)
+        })
+        .await?;
+        let output = output.map_err(|error| anyhow::anyhow!("encryption failed: {:?}", error))?;
+
+        // POST data to receiver API.
+        let response = receiver
+            .post(output)
+            .await
+            .map_err(|error| anyhow::anyhow!("failed HTTP POST request: {:?}", error))?;
+        info!("HTTP Response:\n{:#?}", response);
+
+        // Block till next transmission window.
+        sleep(sleep_duration).await;
     }
 }
 
-// TODO: For now this will only log the generated report. Needs a Transmitter.
-async fn generate_report(k8s_client: K8sClient, http_client: ApiClient) -> Report {
+async fn generate_report(
+    k8s_client: K8sClient,
+    http_client: ApiClient,
+    k8s_cluster_id: String,
+    deploy_namespace: String,
+    product_version: String,
+) -> Report {
     let mut report = Report {
         product_name: PRODUCT.to_string(),
+        k8s_cluster_id,
+        deploy_namespace,
+        product_version,
         ..Default::default()
     };
 
     let k8s_node_count = k8s_client.get_node_len().await;
     match k8s_node_count {
         Ok(k8s_node_count) => report.k8s_node_count = k8s_node_count as u8,
-        Err(err) => {
-            error!("{:?}", err);
-        }
-    };
-
-    let k8s_cluster_id = k8s_client.get_cluster_id().await;
-    match k8s_cluster_id {
-        Ok(k8s_cluster_id) => report.k8s_cluster_id = digest(k8s_cluster_id),
         Err(err) => {
             error!("{:?}", err);
         }

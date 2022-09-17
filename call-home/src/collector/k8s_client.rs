@@ -22,7 +22,7 @@ impl K8sClient {
         Ok(list.items.len())
     }
 
-    /// Get kube-system namespace uuid.
+    /// Get kube-system namespace uid.
     pub(crate) async fn get_cluster_id(&self) -> Result<String, K8sResourceError> {
         let namespace_api: Api<Namespace> = Api::all(self.client.clone());
         let kube_system_namespace = namespace_api.get("kube-system").await?;
