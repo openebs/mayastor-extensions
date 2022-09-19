@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use core::ops::Deref;
 use chrono::Utc;
+use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
 use kube::api::{ListParams, PostParams, PatchParams, Patch};
 use kube::runtime::finalizer;
 use kube::{Client, Api, ResourceExt, CustomResourceExt};
@@ -192,8 +193,8 @@ impl ResourceContext{
 /// running is not an option as the operator would be "running" and the only way to know something
 /// is wrong would be to consult the logs.
 async fn ensure_crd(k8s: Client) {
-    let ua: Api<k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition> = Api::all(k8s);
-    let lp = ListParams::default().fields(&format!("metadata.name={}", "diskpools.openebs.io"));
+    let ua: Api<CustomResourceDefinition> = Api::all(k8s);
+    let lp = ListParams::default().fields(&format!("metadata.name={}", "upgradeactions.openebs.io"));
     let crds = ua.list(&lp).await.expect("failed to list CRDS");
 
     // the CRD has not been installed yet, to avoid overwriting (and create upgrade issues) only
@@ -251,6 +252,7 @@ fn error_policy(error: &Error, _ctx: Arc<ControllerContext>) -> Action {
 }
 
 async fn reconcile(ua:Arc<UpgradeAction>, ctx:Arc<ControllerContext>)-> Result<Action, Error>{
+    ensure_crd(ctx.k8s);
     let ua = ctx.upsert(ctx.clone(), ua).await;
 
     let _ = ua.finalizer().await;
@@ -290,4 +292,8 @@ async fn reconcile(ua:Arc<UpgradeAction>, ctx:Arc<ControllerContext>)-> Result<A
         // perhaps should) use the finalizer callback.
         None => ua.start().await,
     }
+}
+
+pub async fn upgrade_controller(){
+    
 }

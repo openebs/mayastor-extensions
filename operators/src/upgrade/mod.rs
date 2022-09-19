@@ -4,3 +4,5 @@ pub mod common;
 pub mod k8s;
 /// Upgrade controller.
 pub mod controller;
+
+pub mod phases;
