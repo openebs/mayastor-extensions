@@ -162,7 +162,7 @@ impl From<UpgradeState> for String {
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq, JsonSchema)]
 pub struct UpgradeActionStatus {
     /// UpgradeAction state.
-    state: Option<UpgradeState>,
+    state: UpgradeState,
     /// Last time the condition transit from one status to another.
     last_transition_time: String,
     /// Components State.
@@ -173,7 +173,7 @@ pub struct UpgradeActionStatus {
 /// operator.
 impl UpgradeActionStatus {
     /// Current state of upgrade.
-    pub fn state(&self) -> Option<UpgradeState> {
+    pub fn state(&self) -> UpgradeState {
         self.state.clone()
     }
 
