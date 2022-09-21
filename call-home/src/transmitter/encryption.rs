@@ -5,6 +5,7 @@ use serde_json::json;
 use std::{
     fs,
     io::{Error, ErrorKind},
+    path::Path,
     process::Command,
 };
 use tracing::debug;
@@ -36,7 +37,10 @@ pub(crate) fn encrypt(
         .take(32)
         .map(char::from)
         .collect();
-    let output_filepath = encryption_dir.clone() + "/" + &random_name + ".gpg";
+    let output_filepath = Path::new(encryption_dir)
+        .join(random_name + ".gpg")
+        .to_string_lossy()
+        .to_string();
 
     // TODO: Use a library instead of the gpg binary.
     let command = format!("gpg --yes --trust-model=always --homedir={} --keyring={} --recipient=product-health-report@caringo.com --no-default-keyring --encrypt -z=9 --output={} {}",
