@@ -48,3 +48,28 @@ impl From<reqwest_middleware::Error> for ReceiverError {
         Self::HttpClientWithMiddlewareError { source }
     }
 }
+
+/// EncryptError is a custom error enum which is returned by the
+/// crate::transmitter::encryption::encrypt() function.
+#[derive(Debug, Snafu)]
+#[snafu(visibility(pub), context(suffix(false)))]
+#[allow(clippy::enum_variant_names)]
+pub(crate) enum EncryptError {
+    #[snafu(display("error during JSON marshalling: {}", source))]
+    SerdeSerializeError { source: serde_json::Error },
+
+    #[snafu(display("file io error: {}", source))]
+    IoError { source: std::io::Error },
+}
+
+impl From<serde_json::Error> for EncryptError {
+    fn from(source: serde_json::Error) -> Self {
+        Self::SerdeSerializeError { source }
+    }
+}
+
+impl From<std::io::Error> for EncryptError {
+    fn from(source: std::io::Error) -> Self {
+        Self::IoError { source }
+    }
+}
