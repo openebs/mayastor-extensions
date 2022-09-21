@@ -55,9 +55,9 @@ async fn run() -> anyhow::Result<()> {
     let endpoint = args.endpoint;
     let namespace = digest(args.namespace);
 
-    let sleep_duration = get_call_home_frequency();
-    let encryption_dir = get_encryption_dir();
-    let key_filepath = get_key_filepath();
+    let sleep_duration = call_home_frequency();
+    let encryption_dir = encryption_dir();
+    let key_filepath = key_filepath();
 
     // Generate kubernetes client.
     let k8s_client = K8sClient::new()
