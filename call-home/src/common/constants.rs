@@ -1,4 +1,7 @@
-use std::env;
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 
 /// PRODUCT is the name of the project for which this call-home component is deployed.
 pub(crate) const PRODUCT: &str = "Mayastor";
@@ -8,20 +11,40 @@ pub(crate) const PRODUCT: &str = "Mayastor";
 /// The function encryption_dir() returns the user defined directory path for the encryption
 /// dir as an &str.
 const DEFAULT_ENCRYPTION_DIR_PATH: &str = "./";
-pub(crate) fn encryption_dir() -> String {
-    match env::var("ENCRYPTION_DIR") {
-        Ok(input) => input,
-        Err(_) => DEFAULT_ENCRYPTION_DIR_PATH.to_string(),
+pub(crate) fn encryption_dir() -> PathBuf {
+    const KEY: &str = "ENCRYPTION_DIR";
+    match env::var(KEY) {
+        Ok(input) => {
+            let path = Path::new(&input);
+            // Validate path.
+            match path.exists() && path.is_dir() {
+                true => path.to_path_buf(),
+                false => {
+                    panic!("validation failed for {} value \"{}\": path must exist and must be that of a directory", KEY, &input);
+                }
+            }
+        }
+        Err(_) => Path::new(DEFAULT_ENCRYPTION_DIR_PATH).to_path_buf(),
     }
 }
 
 /// DEFAULT_ENCRYPTION_KEY_FILEPATH is the path to the encryption key.
 /// The function key_filepath() returns the user defined path for the encryption key.
 const DEFAULT_ENCRYPTION_KEY_FILEPATH: &str = "./castor.gpg";
-pub(crate) fn key_filepath() -> String {
-    match env::var("KEY_FILEPATH") {
-        Ok(input) => input,
-        Err(_) => DEFAULT_ENCRYPTION_KEY_FILEPATH.to_string(),
+pub(crate) fn key_filepath() -> PathBuf {
+    const KEY: &str = "KEY_FILEPATH";
+    match env::var(KEY) {
+        Ok(input) => {
+            let path = Path::new(&input);
+            // Validate path.
+            match path.exists() && path.is_file() {
+                true => path.to_path_buf(),
+                false => {
+                    panic!("validation failed for {} value \"{}\": path must exist and must be that of a file", KEY, &input);
+                }
+            }
+        }
+        Err(_) => Path::new(DEFAULT_ENCRYPTION_KEY_FILEPATH).to_path_buf(),
     }
 }
 

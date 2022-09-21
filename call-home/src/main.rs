@@ -44,7 +44,7 @@ async fn main() {
         .init();
 
     if let Err(error) = run().await {
-        tracing::error!(?error, " failed call-home");
+        error!(?error, "failed call-home");
         std::process::exit(1);
     }
 }
@@ -104,7 +104,7 @@ async fn run() -> anyhow::Result<()> {
             .post(output)
             .await
             .map_err(|error| anyhow::anyhow!("failed HTTP POST request: {:?}", error))?;
-        info!("HTTP Response:\n{:#?}", response);
+        info!(?response, "HTTP Response");
 
         // Block till next transmission window.
         sleep(sleep_duration).await;
