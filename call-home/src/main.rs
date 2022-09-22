@@ -65,9 +65,9 @@ async fn run() -> anyhow::Result<()> {
         .map_err(|error| anyhow::anyhow!("failed to generate kubernetes client: {:?}", error))?;
 
     // Generate SHA256 hash of kube-system namespace UID.
-    let k8s_cluster_id = k8s_client.get_cluster_id().await.map_err(|error| {
+    let k8s_cluster_id = digest(k8s_client.get_cluster_id().await.map_err(|error| {
         anyhow::anyhow!("failed to generate kubernetes cluster ID: {:?}", error)
-    })?;
+    })?);
 
     // Generate receiver API client.
     let receiver = Receiver::new(&k8s_cluster_id).await.map_err(|error| {
@@ -106,7 +106,7 @@ async fn run() -> anyhow::Result<()> {
             .map_err(|error| anyhow::anyhow!("failed HTTP POST request: {:?}", error))?;
         info!(?response, "HTTP Response");
 
-        // Block till next transmission window.
+        // Block until next transmission window.
         sleep(sleep_duration).await;
     }
 }
