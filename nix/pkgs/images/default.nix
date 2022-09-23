@@ -43,13 +43,13 @@ let
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.obs.callhome;
-      contents = [ busybox gnupg ];
+      contents = [ ./../../../call-home/assets busybox gnupg ];
       extraCommands = ''
         mkdir -p encryption_dir
       '';
       pname = package.pname;
       config = {
-        Env = [ "KEY_FILEPATH=/key/castor.gpg" "ENCRYPTION_DIR=/encryption_dir" ];
+        Env = [ "KEY_FILEPATH=/key/public.gpg" "ENCRYPTION_DIR=/encryption_dir" ];
       };
     };
 
