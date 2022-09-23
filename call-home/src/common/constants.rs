@@ -30,7 +30,7 @@ pub(crate) fn encryption_dir() -> PathBuf {
 
 /// DEFAULT_ENCRYPTION_KEY_FILEPATH is the path to the encryption key.
 /// The function key_filepath() returns the user defined path for the encryption key.
-const DEFAULT_ENCRYPTION_KEY_FILEPATH: &str = "./castor.gpg";
+const DEFAULT_ENCRYPTION_KEY_FILEPATH: &str = "./public.gpg";
 pub(crate) fn key_filepath() -> PathBuf {
     const KEY: &str = "KEY_FILEPATH";
     match env::var(KEY) {
@@ -49,7 +49,7 @@ pub(crate) fn key_filepath() -> PathBuf {
 }
 
 /// RECEIVER_API_ENDPOINT is the URL to anonymous call-home metrics collection endpoint.
-pub(crate) const RECEIVER_ENDPOINT: &str = "";
+pub(crate) const RECEIVER_ENDPOINT: &str = "https://openebs.phonehome.datacore.com/openebs/report";
 
 /// CALL_HOME_FREQUENCY_IN_HOURS is the frequency of call-home metrics transmission, in hours.
 /// The function call_home_frequency() returns the frequency as an std::time::Duration.
