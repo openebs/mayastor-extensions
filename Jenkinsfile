@@ -40,6 +40,7 @@ def mainBranches() {
 
 run_linter = true
 rust_test = true
+helm_test = true
 bdd_test = true
 
 // Will ABORT current job for cases when we don't want to build
@@ -47,6 +48,7 @@ if (currentBuild.getBuildCauses('jenkins.branch.BranchIndexingCause') && mainBra
     print "INFO: Branch Indexing, skip tests and push the new images."
     run_linter = false
     rust_test = false
+    helm_test = false
     bdd_test = false
     build_images = true
 }
@@ -107,7 +109,6 @@ pipeline {
         not {
           anyOf {
             branch 'master'
-            branch 'hotfix-*'
           }
         }
       }
@@ -123,6 +124,16 @@ pipeline {
             }
             sh 'printenv'
             sh 'nix-shell --run "cargo test"'
+          }
+        }
+        stage('chart publish test') {
+          when {
+            expression { helm_test == true }
+          }
+          agent { label 'nixos-mayastor' }
+          steps {
+            sh 'printenv'
+            sh 'nix-shell --pure --run "./scripts/helm/test-publish-chart-yaml.sh" ./scripts/helm/shell.nix'
           }
         }
         stage('image build test') {
