@@ -30,6 +30,10 @@ impl CliArgs {
     pub fn args() -> Self {
         CliArgs::parse()
     }
+
+    // pub fn retries(&self)->u32{
+    //     self.retries
+    // }
 }
 
 /// Upgrade operator config that can be passed through arguments.
@@ -62,7 +66,6 @@ impl UpgradeOperatorConfig {
         let rest_client = ApiClient::new(config_rest);
         let namespace = args.namespace;
         let chart_name = args.chart_name;
-
         let helm_client = HelmClient::new()
             .await?
             .with_chart(chart_name.to_string(), namespace.to_string())?;

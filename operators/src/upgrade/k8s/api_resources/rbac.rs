@@ -63,7 +63,7 @@ pub(crate) fn upgrade_operator_cluster_role(namespace: Option<String>) -> Cluste
                 ..Default::default()
             },
             PolicyRule {
-                api_groups: Some(vec!["apps".to_string()]),
+                api_groups: Some(vec!["apps/v1".to_string()]),
                 resources: Some(vec!["deployments".to_string()]),
                 verbs: vec![
                     "create",

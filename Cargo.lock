@@ -833,6 +833,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "file"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "072420e920a41e95a021116fb47c331d1199aab0f12ca1f77903d5c0ec65c37a"
+
+[[package]]
 name = "firestorm"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1797,12 +1803,17 @@ dependencies = [
  "anyhow",
  "chrono",
  "clap 3.2.20",
+ "file",
+ "futures",
+ "humantime",
  "k8s-openapi",
  "kube",
  "lazy_static",
  "maplit",
+ "mktemp",
  "once_cell",
  "openapi",
+ "rand",
  "regex",
  "schemars",
  "semver",

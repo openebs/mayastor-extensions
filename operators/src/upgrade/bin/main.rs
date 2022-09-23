@@ -1,5 +1,4 @@
 use actix_web::{middleware, HttpServer};
-
 use operators::upgrade::{
     common::error::Error,
     config::{CliArgs, UpgradeOperatorConfig},

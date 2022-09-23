@@ -1,4 +1,5 @@
 use crate::upgrade::k8s::crd::SEMVER_RE;
+use chrono::{DateTime, Utc};
 use kube::CustomResource;
 use schemars::JsonSchema;
 pub use semver::Version;
@@ -162,7 +163,7 @@ impl From<UpgradeState> for String {
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq, JsonSchema)]
 pub struct UpgradeActionStatus {
     /// UpgradeAction state.
-    state: Option<UpgradeState>,
+    pub state: UpgradeState,
     /// Last time the condition transit from one status to another.
     last_transition_time: String,
     /// Components State.
@@ -173,7 +174,7 @@ pub struct UpgradeActionStatus {
 /// operator.
 impl UpgradeActionStatus {
     /// Current state of upgrade.
-    pub fn state(&self) -> Option<UpgradeState> {
+    pub fn state(&self) -> UpgradeState {
         self.state.clone()
     }
 
@@ -185,5 +186,18 @@ impl UpgradeActionStatus {
     /// Records components state.
     pub fn components_state(&self) -> HashMap<String, HashMap<String, UpgradePhase>> {
         self.components_state.clone()
+    }
+
+    pub fn new(
+        state: UpgradeState,
+        state_transition_timestamp: DateTime<Utc>,
+        components_state: HashMap<String, HashMap<String, UpgradePhase>>,
+    ) -> Self {
+        let state_transition_timestamp = state_transition_timestamp.to_rfc3339();
+        Self {
+            state,
+            last_transition_time: state_transition_timestamp,
+            components_state,
+        }
     }
 }

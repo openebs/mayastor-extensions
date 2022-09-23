@@ -35,3 +35,8 @@ clap = { version = "3.2.16", features = ["cargo", "derive"] }
 url = "2.3.1"
 actix-web = "4.2.1"
 thiserror = "1.0.37"
+humantime = "2.1.0"
+file = "1.1.2"
+futures = "0.3.24"
+mktemp = "0.4.1"
+rand = "0.8.5"

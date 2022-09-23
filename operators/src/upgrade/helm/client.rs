@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::{
     ffi::OsStr,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Output},
 };
 
@@ -10,7 +10,8 @@ use crate::upgrade::common::error::Error;
 /// Helm arguments that are required to run helm commands.
 #[derive(Debug, Clone, Default)]
 struct HelmArgs {
-    name: Option<String>,
+    release_name: String,
+    chart_name: String,
     opts: Vec<(String, String)>,
     namespace: Option<String>,
     values: Vec<PathBuf>,
@@ -18,8 +19,14 @@ struct HelmArgs {
 
 impl HelmArgs {
     /// Set a name.
-    fn with_name(mut self, name: Option<String>) -> Self {
-        self.name = name;
+    fn with_release_name(mut self, name: String) -> Self {
+        self.release_name = name;
+        self
+    }
+
+    /// Set chart name.
+    fn with_chart_name(mut self, name: String) -> Self {
+        self.chart_name = name;
         self
     }
 
@@ -53,9 +60,14 @@ impl HelmArgs {
         self
     }
 
-    /// Get a name.
-    fn name(&self) -> Option<String> {
-        self.name.clone()
+    /// Get release name.
+    fn release_name(&self) -> &String {
+        &self.release_name
+    }
+
+    /// Get chart name.
+    fn chart_name(&self) -> &String {
+        &self.chart_name
     }
 
     /// Get options.
@@ -75,9 +87,6 @@ impl HelmArgs {
 
     /// Apply arguments for helm command.
     fn apply_args(&self, command: &mut Command) {
-        if self.name().is_some() {
-            command.arg(self.name().as_ref().unwrap());
-        }
         if self.namespace().is_some() {
             command
                 .arg("--namespace")
@@ -85,7 +94,7 @@ impl HelmArgs {
         }
 
         for value_path in self.values() {
-            command.arg("--values").arg(value_path);
+            command.arg("-f").arg(value_path);
         }
 
         for (key, val) in self.opts() {
@@ -94,13 +103,19 @@ impl HelmArgs {
     }
 
     /// Run upgrade command.
-    fn upgrade(self) -> Result<Output, Error> {
-        self.run(["upgrade", "--output=json"])
+    fn upgrade(&self) -> Result<Output, Error> {
+        self.run([
+            "upgrade",
+            self.release_name(),
+            Path::new("/home/sahil-ubuntu/mayastor-extensions/chart")
+                .to_str()
+                .unwrap(),
+            "--wait",
+        ])
     }
-
     /// Run get values command.
-    fn get_values(self) -> Result<Output, Error> {
-        self.run(["get", "values", "--output=json"])
+    fn get_values(&self) -> Result<Output, Error> {
+        self.run(["get", "values", self.release_name(), "--output=yaml"])
     }
 
     /// Run helm version command.
@@ -114,7 +129,7 @@ impl HelmArgs {
     }
 
     /// Create helm command and run.
-    fn run<I, S>(self, args: I) -> Result<Output, Error>
+    fn run<I, S>(&self, args: I) -> Result<Output, Error>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
@@ -131,7 +146,7 @@ impl HelmArgs {
                 if !out.stderr.is_empty() {
                     let stderr = String::from_utf8(out.stderr)
                         .map_err(|error| Error::Utf8 { source: error })?;
-
+                    println!("{:?}", stderr);
                     return Err(Error::HelmStd(stderr));
                 }
                 Ok(out)
@@ -242,14 +257,15 @@ impl HelmClient {
     }
 
     /// Helm upgrade command.
-    pub(crate) fn upgrade(
+    pub(crate) async fn upgrade(
         &mut self,
         values: Vec<PathBuf>,
         opts: Vec<(String, String)>,
     ) -> Result<(), Error> {
         self.args()
-            .with_name(Some(self.chart.name.clone()))
+            .with_release_name(self.chart.name.clone())
             .with_namespace(Some(self.chart.namespace.clone()))
+            .with_chart_name(self.chart.chart.clone())
             .with_values(values)
             .with_opts(opts)
             .upgrade()?;
@@ -258,15 +274,16 @@ impl HelmClient {
     }
 
     /// Command to get values of the installed chart.
-    pub(crate) fn get_values(&mut self) -> Result<(), Error> {
+    pub(crate) fn get_values(&mut self) -> Result<String, Error> {
         let output = self
             .args()
-            .with_name(Some(self.chart.name.clone()))
+            .with_release_name(self.chart.name.clone())
             .with_namespace(Some(self.chart.namespace.clone()))
+            .with_chart_name(self.chart.chart.clone())
             .get_values()?;
 
-        let _x = String::from_utf8(output.stdout).map_err(|error| Error::Utf8 { source: error })?;
-
-        Ok(())
+        let output =
+            String::from_utf8(output.stdout).map_err(|error| Error::Utf8 { source: error })?;
+        Ok(output)
     }
 }
