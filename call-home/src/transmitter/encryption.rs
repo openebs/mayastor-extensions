@@ -33,7 +33,7 @@ pub(crate) fn encrypt(
     let output_filepath = Path::new(encryption_dir).join(random_name + ".gpg");
 
     // TODO: Use a library instead of the gpg binary.
-    let command = format!("gpg --yes --trust-model=always --homedir={} --keyring={} --recipient=product-health-report@caringo.com --no-default-keyring --encrypt -z=9 --output={} {}",
+    let command = format!("gpg --yes --trust-model=always --homedir={} --keyring={} --recipient=openebs-phonehome@datacore.com --no-default-keyring --encrypt -z=9 --output={} {}",
                           encryption_dir.to_string_lossy(),
                           key_filepath.to_string_lossy(),
                           output_filepath.to_string_lossy(),
