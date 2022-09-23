@@ -124,10 +124,20 @@ impl HelmArgs {
             command.arg(arg.as_ref());
         }
         self.apply_args(&mut command);
-        let output = command
-            .output()
-            .map_err(|_| Error::HelmStd("Error while running helm get command".to_string()))?;
-        Ok(output)
+        let output = command.output();
+
+        match output {
+            Ok(out) => {
+                if !out.stderr.is_empty() {
+                    let stderr = String::from_utf8(out.stderr)
+                        .map_err(|error| Error::Utf8 { source: error })?;
+
+                    return Err(Error::HelmStd(stderr));
+                }
+                Ok(out)
+            }
+            Err(error) => Err(Error::HelmCommandNotExecutable { source: error }),
+        }
     }
 }
 
@@ -164,7 +174,7 @@ impl Chart {
             .map_err(|_| Error::HelmStd("Error while running helm ls command".to_string()))?;
 
         let chart: Vec<Chart> = serde_json::from_slice(&output.stdout)
-            .map_err(|_| Error::SerdeDeserialization("Deserialization error".to_string()))?;
+            .map_err(|error| Error::SerdeDeserialization { source: error })?;
 
         if chart.is_empty() {
             return Err(Error::HelmChartNotFound(
@@ -177,7 +187,7 @@ impl Chart {
 }
 
 /// Helm client.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct HelmClient {
     chart: Chart,
     version: String,
@@ -186,21 +196,21 @@ pub(crate) struct HelmClient {
 
 impl HelmClient {
     /// Create a new helm client if helm is installed.
-    pub(crate) fn new() -> Result<HelmClient, Error> {
+    pub(crate) async fn new() -> Result<HelmClient, Error> {
         let output = HelmArgs::default()
             .version()
             .map_err(|_| Error::HelmNotInstalled("Helm not installed".to_string()))?;
 
         // Convert command output into a string.
-        let out_str = String::from_utf8(output.stdout)
-            .map_err(|_| Error::Utf8("Unable to convert into string".to_string()))?;
+        let out_str =
+            String::from_utf8(output.stdout).map_err(|error| Error::Utf8 { source: error })?;
 
         // Check that the version command gives a version.
         if !out_str.starts_with("v3.") {
-            return Err(Error::HelmVersionNotFound(
-                "Helm version 3 not installed, installed version:{}".to_string(),
-                out_str,
-            ));
+            return Err(Error::HelmVersionNotFound {
+                error: "Helm version 3 not installed. Installed Version: {".to_string(),
+                version: out_str,
+            });
         }
 
         // If checks succeed, create Helm client.
@@ -255,8 +265,7 @@ impl HelmClient {
             .with_namespace(Some(self.chart.namespace.clone()))
             .get_values()?;
 
-        let _x = String::from_utf8(output.stdout)
-            .map_err(|_| Error::Utf8("Unable to parse values into string".to_string()))?;
+        let _x = String::from_utf8(output.stdout).map_err(|error| Error::Utf8 { source: error })?;
 
         Ok(())
     }
