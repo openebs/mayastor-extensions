@@ -2,15 +2,16 @@
 # avoid dependency on docker tool chain. Though the maturity of OCI
 # builder in nixpkgs is questionable which is why we postpone this step.
 
-{ dockerTools, lib, extensions }:
+{ dockerTools, lib, extensions, busybox, gnupg }:
 let
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
-  build-extensions-image = { pname, buildType, package, config ? { } }:
+  build-extensions-image = { pname, buildType, package, extraCommands ? '''', contents ? [ ], config ? { } }:
     dockerTools.buildImage {
+      inherit extraCommands;
       tag = extensions.version;
       created = "now";
       name = "mayadata/mayastor-${pname}${image_suffix.${buildType}}";
-      contents = [ package ];
+      contents = [ package ] ++ contents;
       config = {
         Entrypoint = [ package.binary ];
       } // config;
@@ -38,6 +39,19 @@ let
         };
       };
     };
+  build-obs-callhome-image = { buildType }:
+    build-extensions-image rec{
+      inherit buildType;
+      package = extensions.${buildType}.obs.callhome;
+      contents = [ ./../../../call-home/assets busybox gnupg ];
+      extraCommands = ''
+        mkdir -p encryption_dir
+      '';
+      pname = package.pname;
+      config = {
+        Env = [ "KEY_FILEPATH=/key/public.gpg" "ENCRYPTION_DIR=/encryption_dir" ];
+      };
+    };
 
 in
 let
@@ -51,6 +65,11 @@ let
       inherit buildType;
     };
   };
+  build-obs-images = { buildType }: {
+    callhome = build-obs-callhome-image {
+      inherit buildType;
+    };
+  };
 in
 let
   build-images = { buildType }: {
@@ -58,6 +77,9 @@ let
       recurseForDerivations = true;
     };
     operators = build-upgrade-operator-images { inherit buildType; } // {
+      recurseForDerivations = true;
+    };
+    obs = build-obs-images { inherit buildType; } // {
       recurseForDerivations = true;
     };
   };

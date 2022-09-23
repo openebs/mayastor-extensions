@@ -1,4 +1,3 @@
-use serde_json::Error;
 use snafu::Snafu;
 
 /// Contains Errors that may generate while execution of k8s_client.
@@ -8,6 +7,7 @@ use snafu::Snafu;
 pub(crate) enum K8sResourceError {
     #[snafu(display("Json Parse Error : {}", source))]
     SerdeError { source: serde_json::Error },
+
     #[snafu(display("K8Client Error: {}", source))]
     ClientError { source: kube::Error },
 }
@@ -18,8 +18,58 @@ impl From<kube::Error> for K8sResourceError {
     }
 }
 
-impl From<Error> for K8sResourceError {
-    fn from(source: Error) -> Self {
+impl From<serde_json::Error> for K8sResourceError {
+    fn from(source: serde_json::Error) -> Self {
         Self::SerdeError { source }
+    }
+}
+
+/// ReceiverError is a custom error enum which is returned when building
+/// an instance of crate::transmitter::client::Receiver.
+#[derive(Debug, Snafu)]
+#[snafu(visibility(pub), context(suffix(false)))]
+#[allow(clippy::enum_variant_names)]
+pub(crate) enum ReceiverError {
+    #[snafu(display("HTTP client error: {}", source))]
+    HttpClientError { source: reqwest::Error },
+
+    #[snafu(display("HTTP client (with middleware) error: {}", source))]
+    HttpClientWithMiddlewareError { source: reqwest_middleware::Error },
+}
+
+impl From<reqwest::Error> for ReceiverError {
+    fn from(source: reqwest::Error) -> Self {
+        Self::HttpClientError { source }
+    }
+}
+
+impl From<reqwest_middleware::Error> for ReceiverError {
+    fn from(source: reqwest_middleware::Error) -> Self {
+        Self::HttpClientWithMiddlewareError { source }
+    }
+}
+
+/// EncryptError is a custom error enum which is returned by the
+/// crate::transmitter::encryption::encrypt() function.
+#[derive(Debug, Snafu)]
+#[snafu(visibility(pub), context(suffix(false)))]
+#[allow(clippy::enum_variant_names)]
+pub(crate) enum EncryptError {
+    #[snafu(display("error during JSON marshalling: {}", source))]
+    SerdeSerializeError { source: serde_json::Error },
+
+    #[snafu(display("file io error: {}", source))]
+    IoError { source: std::io::Error },
+}
+
+impl From<serde_json::Error> for EncryptError {
+    fn from(source: serde_json::Error) -> Self {
+        Self::SerdeSerializeError { source }
+    }
+}
+
+impl From<std::io::Error> for EncryptError {
+    fn from(source: std::io::Error) -> Self {
+        Self::IoError { source }
     }
 }

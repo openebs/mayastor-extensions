@@ -2,8 +2,11 @@
 name = "call-home"
 version = "0.1.0"
 edition = "2021"
-description = "call home"
+description = "Call-home for observability"
 
+[[bin]]
+name = "obs-callhome"
+path = "src/main.rs"
 
 [dependencies]
 openapi = {path = "../openapi"}
@@ -22,3 +25,10 @@ snafu = "0.7.1"
 anyhow = "1.0.60"
 tracing = "0.1.36"
 tracing-subscriber = {version = "0.3.15", features = ["env-filter", "std"]}
+reqwest = "0.11.11"
+reqwest-middleware = "0.1.6"
+reqwest-retry = "0.1.5"
+chrono = "0.4.22"
+rand = "0.8.5"
+mktemp = "0.4.1"
+humantime = "2.1.0"
