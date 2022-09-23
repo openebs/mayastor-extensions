@@ -1,2 +1,2 @@
 /// Helm client.
-pub mod client;
+pub(crate) mod client;
