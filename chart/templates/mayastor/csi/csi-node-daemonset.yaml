@@ -34,6 +34,9 @@ spec:
         {{ $key }}: {{ $val }}
         {{- end }}
         {{- end }}
+        {{- if .Values.csi.node.topology.pinToIoEngineDs }}
+        {{- toYaml .Values.mayastor.nodeSelector | nindent 8 }}
+        {{- end }}
       # NOTE: Each container must have mem/cpu limits defined in order to
       # belong to Guaranteed QoS class, hence can never get evicted in case of
       # pressure unless they exceed those limits. limits and requests must be

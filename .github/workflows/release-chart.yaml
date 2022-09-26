@@ -20,7 +20,7 @@ jobs:
           if [ "${{ github.ref_type }}" == "tag" ]; then
             tag="${{ github.ref_name }}"
             # Publish the Chart.yaml locally
-            # Note this does not commit the Chart.yaml changes this the branch
+            # Note this does not commit the Chart.yaml changes to the branch
             nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag "$tag"" ./scripts/helm/shell.nix
           else
             echo "Only tag pushes are supported!"
