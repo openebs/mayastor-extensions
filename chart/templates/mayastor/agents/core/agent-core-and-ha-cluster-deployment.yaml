@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-agent-core
+  name: {{ .Release.Name }}-agent-core-and-ha-cluster
   labels:
-    app: agent-core
+    app: agent-core-and-ha-cluster
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: agent-core
+      app: agent-core-and-ha-cluster
   template:
     metadata:
       labels:
-        app: agent-core
+        app: agent-core-and-ha-cluster
         openebs.io/logging: "true"
     spec:
       serviceAccount: {{ .Release.Name }}-service-account
@@ -42,6 +42,37 @@ spec:
             - "--grpc-server-addr=0.0.0.0:50051"
           ports:
             - containerPort: 50051
+          env:
+            - name: RUST_LOG
+              value: {{ .Values.agents.core.logLevel }}
+            {{- if default .Values.base.logSilenceLevel .Values.agents.core.logSilenceLevel }}
+            - name: RUST_LOG_SILENCE
+              value: {{ default .Values.base.logSilenceLevel .Values.agents.core.logSilenceLevel }}
+            {{- end }}
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+        - name: agent-ha-cluster
+          resources:
+            limits:
+              cpu: {{ .Values.agents.ha.cluster.resources.limits.cpu | quote }}
+              memory: {{ .Values.agents.ha.cluster.resources.limits.memory | quote }}
+            requests:
+              cpu: {{ .Values.agents.ha.cluster.resources.requests.cpu | quote }}
+              memory: {{ .Values.agents.ha.cluster.resources.requests.memory | quote }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-agent-ha-cluster:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - "-g=0.0.0.0:11500"
+            - "--store {{ .Release.Name }}-etcd:{{ .Values.etcd.service.port }}"
+            - "--core-grpc=0.0.0.0:50051"
+          ports:
+            - containerPort: 11500
           env:
             - name: RUST_LOG
               value: {{ .Values.agents.core.logLevel }}

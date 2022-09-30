@@ -1,13 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-agent-core
+  name: {{ .Release.Name }}-agent-core-and-ha-cluster
   labels:
-    app: agent-core
+    app: agent-core-and-ha-cluster
 spec:
   clusterIP: None
   selector:
-    app: agent-core
+    app: agent-core-and-ha-cluster
   ports:
     - name: grpc
       port: 50051
+    - name: ha-cluster
+      port: 11500
