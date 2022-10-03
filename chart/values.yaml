@@ -141,7 +141,7 @@ agents:
           memory: "32Mi"
         requests:
           # cpu requests for ha cluster agent
-          cpu: "500m"
+          cpu: "100m"
           # memory requests for ha cluster agent
           memory: "16Mi"
 
