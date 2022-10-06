@@ -10,7 +10,7 @@ let
       inherit extraCommands;
       tag = extensions.version;
       created = "now";
-      name = "mayadata/mayastor-${pname}${image_suffix.${buildType}}";
+      name = "openebs/mayastor-${pname}${image_suffix.${buildType}}";
       contents = [ package ] ++ contents;
       config = {
         Entrypoint = [ package.binary ];
