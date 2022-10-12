@@ -2,13 +2,13 @@
 # avoid dependency on docker tool chain. Though the maturity of OCI
 # builder in nixpkgs is questionable which is why we postpone this step.
 
-{ dockerTools, lib, extensions, busybox, gnupg }:
+{ dockerTools, lib, extensions, busybox, gnupg, img_tag ? "" }:
 let
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
   build-extensions-image = { pname, buildType, package, extraCommands ? '''', contents ? [ ], config ? { } }:
     dockerTools.buildImage {
       inherit extraCommands;
-      tag = extensions.version;
+      tag = if img_tag != "" then img_tag else extensions.version;
       created = "now";
       name = "mayadata/mayastor-${pname}${image_suffix.${buildType}}";
       contents = [ package ] ++ contents;
