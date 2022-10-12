@@ -131,6 +131,19 @@ agents:
           cpu: "100m"
           # memory requests for ha node agent
           memory: "64Mi"
+    cluster:
+      logLevel: info
+      resources:
+        limits:
+          # cpu limits for ha cluster agent
+          cpu: "100m"
+          # memory limits for ha cluster agent
+          memory: "32Mi"
+        requests:
+          # cpu requests for ha cluster agent
+          cpu: "100m"
+          # memory requests for ha cluster agent
+          memory: "16Mi"
 
 apis:
   rest:
