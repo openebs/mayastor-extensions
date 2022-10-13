@@ -25,6 +25,17 @@ Usage:
 {{- end -}}
 
 {{/*
+Renders the HA NODE AGENT init container, if enabled
+Usage:
+{{ include "base_init_ha_node_containers" . }}
+*/}}
+{{- define "base_init_ha_node_containers" -}}
+    {{- if .Values.base.initHaNodeContainers.enabled }}
+    {{- include "render" (dict "value" .Values.base.initHaNodeContainers.containers "context" $) | nindent 8 }}
+    {{- end }}
+{{- end -}}
+
+{{/*
 Renders the base init containers for all deployments, if any
 Usage:
 {{ include "base_init_containers" . }}

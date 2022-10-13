@@ -57,3 +57,35 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+        - name: agent-ha-cluster
+          resources:
+            limits:
+              cpu: {{ .Values.agents.ha.cluster.resources.limits.cpu | quote }}
+              memory: {{ .Values.agents.ha.cluster.resources.limits.memory | quote }}
+            requests:
+              cpu: {{ .Values.agents.ha.cluster.resources.requests.cpu | quote }}
+              memory: {{ .Values.agents.ha.cluster.resources.requests.memory | quote }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-agent-ha-cluster:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - "-g=0.0.0.0:50052"
+            - "--store=http://{{ .Release.Name }}-etcd:{{ .Values.etcd.service.port }}"
+            - "--core-grpc=https://{{ .Release.Name }}-agent-core:50051"{{ if .Values.base.jaeger.enabled }}
+            - "--jaeger={{ .Values.base.jaeger.agent.name }}:{{ .Values.base.jaeger.agent.port }}"{{ end }}
+          ports:
+            - containerPort: 50052
+          env:
+            - name: RUST_LOG
+              value: {{ .Values.agents.core.logLevel }}
+            {{- if default .Values.base.logSilenceLevel .Values.agents.core.logSilenceLevel }}
+            - name: RUST_LOG_SILENCE
+              value: {{ default .Values.base.logSilenceLevel .Values.agents.core.logSilenceLevel }}
+            {{- end }}
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace

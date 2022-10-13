@@ -31,6 +31,13 @@ base:
       - name: etcd-probe
         image: busybox:latest
         command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{ .Values.etcd.service.port }}; do date; echo "Waiting for etcd..."; sleep 1; done;' ]
+  
+  initHaNodeContainers:
+    enabled: true
+    containers:
+      - name: agent-cluster-grpc-probe
+        image: busybox:latest
+        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50052; do date; echo "Waiting for agent-cluster-grpc services..."; sleep 1; done;' ]
 
   initCoreContainers:
     enabled: true
@@ -131,6 +138,19 @@ agents:
           cpu: "100m"
           # memory requests for ha node agent
           memory: "64Mi"
+    cluster:
+      logLevel: info
+      resources:
+        limits:
+          # cpu limits for ha cluster agent
+          cpu: "100m"
+          # memory limits for ha cluster agent
+          memory: "32Mi"
+        requests:
+          # cpu requests for ha cluster agent
+          cpu: "100m"
+          # memory requests for ha cluster agent
+          memory: "16Mi"
 
 apis:
   rest:

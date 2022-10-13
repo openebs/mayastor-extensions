@@ -68,6 +68,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        - name: NEXUS_NVMF_ANA_ENABLE
+          value: "1"
+        - name: NEXUS_NVMF_RESV_ENABLE
+          value: "1"
         args:
         # The -l argument accepts cpu-list. Indexing starts at zero.
         # For example -l 1,2,10-20 means use core 1, 2, 10 to 20.
