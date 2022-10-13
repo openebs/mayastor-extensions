@@ -11,5 +11,3 @@ spec:
   ports:
     - name: grpc
       port: 50051
-    - name: ha-cluster
-      port: 11500
