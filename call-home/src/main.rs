@@ -3,7 +3,6 @@ mod common;
 mod transmitter;
 
 use crate::{
-    client::Receiver,
     collector::{
         k8s_client::K8sClient,
         report_models::{Pools, Replicas, Report, Volumes},
@@ -70,9 +69,11 @@ async fn run() -> anyhow::Result<()> {
     })?);
 
     // Generate receiver API client.
-    let receiver = Receiver::new(&k8s_cluster_id).await.map_err(|error| {
-        anyhow::anyhow!("failed to generate metrics receiver client: {:?}", error)
-    })?;
+    let receiver = client::Receiver::new(&k8s_cluster_id)
+        .await
+        .map_err(|error| {
+            anyhow::anyhow!("failed to generate metrics receiver client: {:?}", error)
+        })?;
 
     // Generate Mayastor REST client.
     let config = Configuration::new(endpoint, time::Duration::from_secs(30), None, None, true)
@@ -100,11 +101,10 @@ async fn run() -> anyhow::Result<()> {
         let output = output.map_err(|error| anyhow::anyhow!("encryption failed: {:?}", error))?;
 
         // POST data to receiver API.
-        let response = receiver
-            .post(output)
-            .await
-            .map_err(|error| anyhow::anyhow!("failed HTTP POST request: {:?}", error))?;
-        info!(?response, "HTTP Response");
+        match receiver.post(output).await {
+            Ok(response) => info!(?response, "Success"),
+            Err(e) => error!(?e, "failed HTTP POST request"),
+        }
 
         // Block until next transmission window.
         sleep(sleep_duration).await;
