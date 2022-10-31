@@ -31,7 +31,7 @@ base:
       - name: etcd-probe
         image: busybox:latest
         command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{ .Values.etcd.service.port }}; do date; echo "Waiting for etcd..."; sleep 1; done;' ]
-  
+
   initHaNodeContainers:
     enabled: true
     containers:
@@ -218,7 +218,8 @@ csi:
     nvme:
       # nvme_core module io timeout in seconds
       io_timeout: "30"
-      io_timeout_enabled: true
+      # ctrl_loss_tmo (controller loss timeout) in seconds
+      ctrl_loss_tmo: "1980"
     kubeletDir: /var/lib/kubelet
 
 mayastor:
