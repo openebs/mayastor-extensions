@@ -198,7 +198,8 @@ csi:
     nvme:
       # nvme_core module io timeout in seconds
       io_timeout: "30"
-      io_timeout_enabled: true
+      # ctrl_loss_tmo (controller loss timeout) in seconds
+      ctrl_loss_tmo: "1980"
     kubeletDir: /var/lib/kubelet
 
 mayastor:
