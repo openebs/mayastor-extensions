@@ -9,9 +9,7 @@ spec:
     matchLabels:
       app: io-engine
   updateStrategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 1
+    type: OnDelete
   minReadySeconds: 10
   template:
     metadata:
