@@ -2,7 +2,7 @@
 **/*.tfstate*
 **/rust-tags.*
 **/target
-/.idea
+**/.idea
 /default.etcd/
 /node_modules/
 /package-lock.json
