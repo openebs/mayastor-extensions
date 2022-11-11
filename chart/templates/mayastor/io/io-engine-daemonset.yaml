@@ -81,7 +81,7 @@ spec:
         - "-y/var/local/io-engine/config.yaml"
         - "-l{{ include "cpuFlag" . }}"
         - "-p={{ .Release.Name }}-etcd:{{ .Values.etcd.service.port }}"
-        - "--api-versions=v0"{{ if .Values.mayastor.target.nvmf.iface }}
+        - "--api-versions={{ .Values.mayastor.api }}"{{ if .Values.mayastor.target.nvmf.iface }}
         - "-T={{ .Values.mayastor.target.nvmf.iface }}"{{ end }}
         command:
         - io-engine
