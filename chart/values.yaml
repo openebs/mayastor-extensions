@@ -230,6 +230,8 @@ mayastor:
     nvmf:
       # NVMF target interface (ip, mac, name or subnet)
       iface: ""
+      # Reservations Persist Through Power Loss State
+      ptpl: true
   cpuCount: "2"
   # node selectors to designate mayastor nodes for diskpool creation
   # Note that if multi-arch images support 'kubernetes.io/arch: amd64'
