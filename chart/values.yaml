@@ -205,6 +205,7 @@ csi:
 mayastor:
   # logLevel for the core crate and other dependent crates
   logLevel: info,io_engine=info
+  api: "v0"
   target:
     nvmf:
       # NVMF target interface (ip, mac, name or subnet)
