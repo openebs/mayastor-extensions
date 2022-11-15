@@ -80,8 +80,10 @@ spec:
         - "-Rhttps://{{ .Release.Name }}-agent-core:50051"
         - "-y/var/local/io-engine/config.yaml"
         - "-l{{ include "cpuFlag" . }}"
-        - "-p={{ .Release.Name }}-etcd:{{ .Values.etcd.service.port }}"
-        - "--api-versions=v0"
+        - "-p={{ .Release.Name }}-etcd:{{ .Values.etcd.service.port }}"{{ if .Values.mayastor.target.nvmf.ptpl }}
+        - "--ptpl-dir=/var/local/io-engine/ptpl/"{{ end }}
+        - "--api-versions={{ .Values.mayastor.api }}"{{ if .Values.mayastor.target.nvmf.iface }}
+        - "-T={{ .Values.mayastor.target.nvmf.iface }}"{{ end }}
         command:
         - io-engine
         securityContext:
