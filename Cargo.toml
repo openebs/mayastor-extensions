@@ -3,5 +3,8 @@ members = [
     "exporter",
     "rpc",
     "operators",
-    "call-home"
+    "call-home",
+    "k8s/plugin"
 ]
+
+exclude = [ "./dependencies/control-plane" ]

@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+
 use std::{str::FromStr, time::Duration};
 
 use actix_web::http;
