@@ -119,7 +119,7 @@ pipeline {
           }
           agent { label 'nixos-mayastor' }
           steps {
-            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+            withCredentials([usernamePassword(credentialsId: 'OPENEBS_DOCKERHUB', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
               sh 'echo $PASSWORD | docker login -u $USERNAME --password-stdin'
             }
             sh 'printenv'
@@ -152,7 +152,7 @@ pipeline {
         }
       }
       steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+        withCredentials([usernamePassword(credentialsId: 'OPENEBS_DOCKERHUB', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
             sh 'echo $PASSWORD | docker login -u $USERNAME --password-stdin'
         }
         sh 'printenv'

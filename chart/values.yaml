@@ -1,8 +1,8 @@
 image:
   # image registry to pull Mayastor images
   registry: docker.io
-  # image registry's namespace where all Mayastor images exist (default: mayadata)
-  repo: mayadata
+  # image registry's namespace where all Mayastor images exist (default: openebs)
+  repo: openebs
   # release tag for OpenEBS Mayastor images
   tag: develop
   # imagePullPolicy for all Mayastor images
