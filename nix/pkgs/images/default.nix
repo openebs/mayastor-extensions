@@ -2,8 +2,9 @@
 # avoid dependency on docker tool chain. Though the maturity of OCI
 # builder in nixpkgs is questionable which is why we postpone this step.
 
-{ dockerTools, lib, extensions, busybox, gnupg, img_tag ? "" }:
+{ dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, runCommand, img_tag ? "" }:
 let
+  helm_chart_src = builtins.filterSource (path: type: true ) ../../../chart;
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
   build-extensions-image = { pname, buildType, package, extraCommands ? '''', contents ? [ ], config ? { } }:
     dockerTools.buildImage {
@@ -32,11 +33,16 @@ let
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.operators.upgrade;
+      contents = [ helm_chart_src kubernetes-helm-wrapped busybox ];
+      extraCommands = ''
+        mkdir -p chart && cp -drf --preserve=mode ${helm_chart_src}/* chart/
+      '';
       pname = package.pname;
       config = {
         ExposedPorts = {
           "8080/tcp" = { };
         };
+        Env = [ "CHART_DIR=/chart" ];
       };
     };
   build-obs-callhome-image = { buildType }:

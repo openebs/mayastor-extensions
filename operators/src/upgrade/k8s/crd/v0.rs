@@ -1,4 +1,5 @@
 use crate::upgrade::k8s::crd::SEMVER_RE;
+use chrono::{DateTime, Utc};
 use kube::CustomResource;
 use schemars::JsonSchema;
 pub use semver::Version;
@@ -51,12 +52,12 @@ impl UpgradeActionSpec {
     pub fn new(
         current_version: Version,
         target_version: Version,
-        componens: HashMap<String, Vec<String>>,
+        components: HashMap<String, Vec<String>>,
     ) -> Self {
         UpgradeActionSpec {
             current_version: current_version.to_string(),
             target_version: target_version.to_string(),
-            components: componens,
+            components,
         }
     }
 
@@ -122,12 +123,15 @@ impl From<UpgradePhase> for String {
 pub enum UpgradeState {
     /// Upgrade in NotStarted phase, which denotes cr is created.
     NotStarted,
-    /// Upgrade in Updating phase, which denotes upgrade has been started.
-    Updating,
+    /// Upgrade in UpdatingControlPlane phase, which denotes helm chart upgrade has been started.
+    UpdatingControlPlane,
+    /// Upgrade in UpdatingDataPlane phase, which denotes that the io-engine
+    /// DaemonSet pods are being restarted.
+    UpdatingDataPlane,
     /// Upgrade in VerifyingUpdate phase, which denotes components has completed updating phase.
     VerifyingUpdate,
-    /// Upgrade in SuccessfullUpdate phase, which denotes upgrade has been successfully verified.
-    SuccessfullUpdate,
+    /// Upgrade in SuccessfulUpdate phase, which denotes upgrade has been successfully verified.
+    SuccessfulUpdate,
     /// Upgrade in Error state.
     Error,
 }
@@ -143,9 +147,10 @@ impl ToString for UpgradeState {
     fn to_string(&self) -> String {
         match self {
             UpgradeState::NotStarted => "NotStarted",
-            UpgradeState::Updating => "Updating",
+            UpgradeState::UpdatingControlPlane => "UpdatingControlPlane",
+            UpgradeState::UpdatingDataPlane => "UpdatingDataPlane",
             UpgradeState::VerifyingUpdate => "VerifyingUpdate",
-            UpgradeState::SuccessfullUpdate => "SuccessfullUpdate",
+            UpgradeState::SuccessfulUpdate => "SuccessfulUpdate",
             UpgradeState::Error => "Error",
         }
         .to_string()
@@ -162,7 +167,7 @@ impl From<UpgradeState> for String {
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq, JsonSchema)]
 pub struct UpgradeActionStatus {
     /// UpgradeAction state.
-    state: Option<UpgradeState>,
+    pub state: UpgradeState,
     /// Last time the condition transit from one status to another.
     last_transition_time: String,
     /// Components State.
@@ -173,7 +178,7 @@ pub struct UpgradeActionStatus {
 /// operator.
 impl UpgradeActionStatus {
     /// Current state of upgrade.
-    pub fn state(&self) -> Option<UpgradeState> {
+    pub fn state(&self) -> UpgradeState {
         self.state.clone()
     }
 
@@ -185,5 +190,18 @@ impl UpgradeActionStatus {
     /// Records components state.
     pub fn components_state(&self) -> HashMap<String, HashMap<String, UpgradePhase>> {
         self.components_state.clone()
+    }
+
+    pub fn new(
+        state: UpgradeState,
+        state_transition_timestamp: DateTime<Utc>,
+        components_state: HashMap<String, HashMap<String, UpgradePhase>>,
+    ) -> Self {
+        let state_transition_timestamp = state_transition_timestamp.to_rfc3339();
+        Self {
+            state,
+            last_transition_time: state_transition_timestamp,
+            components_state,
+        }
     }
 }

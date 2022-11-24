@@ -22,6 +22,7 @@ mkShell {
     cargo-udeps
     commitlint
     git
+    kubernetes-helm-wrapped
     clang
     openapi-generator
     libxfs

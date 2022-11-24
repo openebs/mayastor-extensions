@@ -3,6 +3,7 @@ use clap::Parser;
 use core::time;
 use once_cell::sync::OnceCell;
 use openapi::tower::client::{ApiClient, Configuration};
+use tracing::error;
 use url::Url;
 
 use super::{helm::client::HelmClient, k8s::client::K8sClient};
@@ -44,7 +45,10 @@ pub struct UpgradeOperatorConfig {
 impl UpgradeOperatorConfig {
     /// Initialize operator configs.
     pub async fn initialize(args: CliArgs) -> Result<(), Error> {
-        let k8s_client = K8sClient::new().await?;
+        let k8s_client = K8sClient::new().await.map_err(|error| {
+            error!(?error, "failed to generate kube API client");
+            error
+        })?;
         let rest_endpoint = args.rest_endpoint;
         let config_rest = Configuration::new(
             rest_endpoint,
@@ -62,7 +66,6 @@ impl UpgradeOperatorConfig {
         let rest_client = ApiClient::new(config_rest);
         let namespace = args.namespace;
         let chart_name = args.chart_name;
-
         let helm_client = HelmClient::new()
             .await?
             .with_chart(chart_name.to_string(), namespace.to_string())?;
