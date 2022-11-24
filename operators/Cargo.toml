@@ -24,7 +24,7 @@ serde_yaml = "0.9.9"
 tokio = {version="1.20.1", features = ["macros", "rt-multi-thread", "time"]}
 validator = {version="0.16.0",features=["derive"]}
 tracing = "0.1.36"
-tracing-subscriber = "0.3.15"
+tracing-subscriber = {version = "0.3.15", features = ["env-filter", "std"]}
 anyhow = "1.0.61"
 chrono = "0.4.22"
 maplit = "1.0.2"
@@ -40,3 +40,4 @@ file = "1.1.2"
 futures = "0.3.24"
 mktemp = "0.4.1"
 rand = "0.8.5"
+either = "1.8.0"

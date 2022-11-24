@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::upgrade::{
     common::constants::components,
     config::UpgradeOperatorConfig,
@@ -15,21 +13,25 @@ use kube::{
     Api, Client, CustomResourceExt,
 };
 use semver::Version;
+use std::time::Duration;
+use tracing::{error, info};
 
 use crate::upgrade::common::{constants::NODE_LABEL, error::Error};
 
+/// K8sClient is used to talk to the kube-apiserver.
 #[derive(Clone)]
 pub(crate) struct K8sClient {
     client: kube::Client,
 }
 
 impl K8sClient {
-    /// Create a new K8sClient from default configuration.
+    /// Create a new K8sClient with default configuration.
     pub(crate) async fn new() -> Result<Self, Error> {
         let client = Client::try_default().await?;
         Ok(Self { client })
     }
 
+    /// This is a getter for K8sClient.client.
     pub(crate) fn client(&self) -> kube::Client {
         self.client.clone()
     }
@@ -48,16 +50,18 @@ impl K8sClient {
         Ok(uas)
     }
 
-    pub(crate) async fn get_crds(&self) -> ObjectList<CustomResourceDefinition> {
+    /// Lists UpgradeAction CustomResources from the k8s cluster's kube-apiserver.
+    pub(crate) async fn get_crds(&self) -> Result<ObjectList<CustomResourceDefinition>, Error> {
         let ua: Api<CustomResourceDefinition> = Api::all(self.client.clone());
         let lp =
             ListParams::default().fields(&format!("metadata.name={}", "upgradeactions.openebs.io"));
-        ua.list(&lp).await.expect("failed to list CRDS")
+        Ok(ua.list(&lp).await?)
     }
 
+    /// Creates UpgradeAction CustomResource
     pub(crate) async fn create_upgrade_action_crd(&self) -> Result<(), Error> {
         let ua: Api<CustomResourceDefinition> = Api::all(self.client.clone());
-        let crds = self.get_crds().await;
+        let crds = self.get_crds().await?;
 
         if crds.iter().count() == 0 {
             let crd = UpgradeAction::crd();
@@ -73,11 +77,12 @@ impl K8sClient {
                 }
             }
         } else {
-            println!("UpgradeAction CRD already present in the cluster")
+            info!("UpgradeAction CustomResourceDefinition already present in the cluster")
         }
         Ok(())
     }
 
+    /// GETs UpgradeAction CustomResource from kube-apiserver.
     pub(crate) async fn get_upgrade_action_resource(&self) -> Result<UpgradeAction, Error> {
         let uas: Api<UpgradeAction> = Api::namespaced(
             self.client.clone(),
@@ -87,12 +92,13 @@ impl K8sClient {
         match uas.get("upgrade").await {
             Ok(u) => Ok(u),
             Err(e) => {
-                println!("Upgradeaction CR not present");
+                info!("UpgradeAction CustomResource not present");
                 Err(Error::K8sClientError { source: e })
             }
         }
     }
 
+    /// get_upgrade_action_resource creates UpgradeAction CustomResource.
     pub(crate) async fn create_upgrade_action_resource(&self) -> Result<UpgradeAction, Error> {
         let uas: Api<UpgradeAction> = Api::namespaced(
             self.client.clone(),
@@ -103,8 +109,7 @@ impl K8sClient {
                 return Ok(u);
             }
             Err(_) => {
-                println!("Upgradeaction CR not present");
-                //Err(Error::K8sClientError { source: e })
+                info!("UpgradeAction CustomResource is not present");
             }
         }
 
@@ -112,17 +117,17 @@ impl K8sClient {
             "upgrade",
             UpgradeActionSpec::new(Version::new(1, 2, 0), Version::new(2, 0, 0), components()),
         );
-        //info!("Applying cr: \n{}");
+
         match uas.create(&PostParams::default(), &ua).await {
             Ok(o) => {
                 tokio::time::sleep(Duration::from_secs(5)).await;
                 Ok(o)
             }
 
-            Err(e) => {
-                println!("failed to create CR error {}", e);
+            Err(error) => {
+                error!(?error, "Failed to create CustomResource");
                 tokio::time::sleep(Duration::from_secs(1)).await;
-                Err(Error::K8sClientError { source: e })
+                Err(Error::K8sClientError { source: error })
             }
         }
     }

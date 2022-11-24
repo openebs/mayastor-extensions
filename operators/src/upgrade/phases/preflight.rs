@@ -20,7 +20,7 @@ async fn check_node_health() -> Result<bool, Error> {
                 }
                 None => {
                     return Err(Error::NodeConditionNotPresent {
-                        node: n.metadata.name.unwrap(),
+                        node: n.metadata.name.unwrap_or_default(),
                     });
                 }
             },

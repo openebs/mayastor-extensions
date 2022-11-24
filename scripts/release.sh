@@ -54,6 +54,7 @@ Examples:
 EOF
 }
 
+SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
 DOCKER="docker"
 NIX_BUILD="nix-build"
 NIX_EVAL="nix eval$(nix_experimental)"
@@ -65,6 +66,7 @@ BRANCH=`git rev-parse --abbrev-ref HEAD`
 BRANCH=${BRANCH////-}
 IMAGES=
 DEFAULT_IMAGES="exporters.metrics.pool operators.upgrade obs.callhome"
+IMAGES_THAT_REQUIRE_HELM_CHART=("operators.upgrade")
 UPLOAD=
 SKIP_PUBLISH=
 SKIP_BUILD=
@@ -206,12 +208,32 @@ if [ -n "$OVERRIDE_COMMIT_HASH" ]; then
   alias_tag=
 fi
 
+# This variable will be used to flag if the helm chart dependencies have been
+# been updated.
+_helm_dependencies_updated=false
 for name in $IMAGES; do
   image_basename=$($NIX_EVAL -f . images.$BUILD_TYPE.$name.imageName | xargs)
   image=$image_basename
   if [ -n "$REGISTRY" ]; then
     image="${REGISTRY}/${image}"
   fi
+
+  if [ "$_helm_dependencies_updated" = false ]; then
+    for helm_chart_user in ${IMAGES_THAT_REQUIRE_HELM_CHART[@]}; do
+      if [ "$name" = "$helm_chart_user" ]; then
+        echo "Updating helm chart dependencies..."
+        # Helm chart directory path -- /scripts --> /chart
+        CHART_DIR="${SCRIPT_DIR}/../chart"
+        
+        nix-shell --run "helm dependency update ${CHART_DIR}"
+        
+        # Set flag to true
+        _helm_dependencies_updated=true
+        break
+      fi
+    done
+  fi
+
   # If we're skipping the build, then we just want to upload
   # the images we already have locally.
   if [ -z $SKIP_BUILD ]; then

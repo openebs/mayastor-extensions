@@ -52,12 +52,12 @@ impl UpgradeActionSpec {
     pub fn new(
         current_version: Version,
         target_version: Version,
-        componens: HashMap<String, Vec<String>>,
+        components: HashMap<String, Vec<String>>,
     ) -> Self {
         UpgradeActionSpec {
             current_version: current_version.to_string(),
             target_version: target_version.to_string(),
-            components: componens,
+            components,
         }
     }
 
@@ -123,12 +123,15 @@ impl From<UpgradePhase> for String {
 pub enum UpgradeState {
     /// Upgrade in NotStarted phase, which denotes cr is created.
     NotStarted,
-    /// Upgrade in Updating phase, which denotes upgrade has been started.
-    Updating,
+    /// Upgrade in UpdatingControlPlane phase, which denotes helm chart upgrade has been started.
+    UpdatingControlPlane,
+    /// Upgrade in UpdatingDataPlane phase, which denotes that the io-engine
+    /// DaemonSet pods are being restarted.
+    UpdatingDataPlane,
     /// Upgrade in VerifyingUpdate phase, which denotes components has completed updating phase.
     VerifyingUpdate,
-    /// Upgrade in SuccessfullUpdate phase, which denotes upgrade has been successfully verified.
-    SuccessfullUpdate,
+    /// Upgrade in SuccessfulUpdate phase, which denotes upgrade has been successfully verified.
+    SuccessfulUpdate,
     /// Upgrade in Error state.
     Error,
 }
@@ -144,9 +147,10 @@ impl ToString for UpgradeState {
     fn to_string(&self) -> String {
         match self {
             UpgradeState::NotStarted => "NotStarted",
-            UpgradeState::Updating => "Updating",
+            UpgradeState::UpdatingControlPlane => "UpdatingControlPlane",
+            UpgradeState::UpdatingDataPlane => "UpdatingDataPlane",
             UpgradeState::VerifyingUpdate => "VerifyingUpdate",
-            UpgradeState::SuccessfullUpdate => "SuccessfullUpdate",
+            UpgradeState::SuccessfulUpdate => "SuccessfulUpdate",
             UpgradeState::Error => "Error",
         }
         .to_string()

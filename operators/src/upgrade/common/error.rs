@@ -154,11 +154,13 @@ pub struct RestError {
 }
 
 impl RestError {
+    /// Changes the error ID, for use with a default RestError.
     pub(crate) fn with_id(mut self, id: u32) -> Self {
         self.id = id;
         self
     }
 
+    /// Changes the error String, for use with a default RestError.
     pub(crate) fn with_error(mut self, error: String) -> Self {
         self.error = error;
         self

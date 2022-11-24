@@ -1,11 +1,12 @@
 use serde::Deserialize;
 use std::{
     ffi::OsStr,
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::{Command, Output},
 };
 
-use crate::upgrade::common::error::Error;
+use crate::upgrade::common::{constants::chart_dir_path, error::Error};
+use tracing::error;
 
 /// Helm arguments that are required to run helm commands.
 #[derive(Debug, Clone, Default)]
@@ -19,42 +20,49 @@ struct HelmArgs {
 
 impl HelmArgs {
     /// Set a name.
+    #[must_use]
     fn with_release_name(mut self, name: String) -> Self {
         self.release_name = name;
         self
     }
 
     /// Set chart name.
+    #[must_use]
     fn with_chart_name(mut self, name: String) -> Self {
         self.chart_name = name;
         self
     }
 
     /// Set a single option.
+    #[must_use]
     fn with_opt(mut self, key: String, value: String) -> Self {
         self.opts.push((key, value));
         self
     }
 
     /// Reset array of options.
+    #[must_use]
     fn with_opts(mut self, options: Vec<(String, String)>) -> Self {
         self.opts = options;
         self
     }
 
     /// Set namespace.
+    #[must_use]
     fn with_namespace(mut self, ns: Option<String>) -> Self {
         self.namespace = ns;
         self
     }
 
     /// Set values.
+    #[must_use]
     fn with_values(mut self, values: Vec<PathBuf>) -> Self {
         self.values = values;
         self
     }
 
     /// Set one value.
+    #[must_use]
     fn with_value(mut self, value: PathBuf) -> Self {
         self.values.push(value);
         self
@@ -107,9 +115,7 @@ impl HelmArgs {
         self.run([
             "upgrade",
             self.release_name(),
-            Path::new("/home/sahil-ubuntu/mayastor-extensions/chart")
-                .to_str()
-                .unwrap(),
+            chart_dir_path().to_str().unwrap(),
             "--wait",
         ])
     }
@@ -146,7 +152,7 @@ impl HelmArgs {
                 if !out.stderr.is_empty() {
                     let stderr = String::from_utf8(out.stderr)
                         .map_err(|error| Error::Utf8 { source: error })?;
-                    println!("{:?}", stderr);
+                    error!("{:?}", stderr);
                     return Err(Error::HelmStd(stderr));
                 }
                 Ok(out)

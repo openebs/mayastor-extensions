@@ -13,6 +13,7 @@ use actix_web::{
 use kube::ResourceExt;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
+use tracing::{error, info};
 
 /// Upgrade to be returned for get calls.
 #[derive(Serialize, Deserialize, Default)]
@@ -25,18 +26,27 @@ pub(crate) struct Upgrade {
 }
 
 impl Upgrade {
+    /// This adds a name to the Upgrade instance.
     fn with_name(mut self, name: String) -> Self {
         self.name = name;
         self
     }
 
+    /// This adds a source version to the Upgrade instance.
     fn with_current_version(mut self, current_version: String) -> Self {
         self.current_version = current_version;
         self
     }
 
+    /// This adds a target version to the Upgrade instance.
     fn with_target_version(mut self, target_version: String) -> Self {
         self.target_version = target_version;
+        self
+    }
+
+    /// This adds a state to the Upgrade instance.
+    fn with_state(mut self, state: String) -> Self {
+        self.state = state;
         self
     }
 }
@@ -87,12 +97,12 @@ pub async fn apply_upgrade() -> Result<HttpResponse, RestError> {
         .await
     {
         Ok(()) => {
-            println!("UpgradeAction CRD created");
+            info!("UpgradeAction CRD created");
         }
-        Err(err) => {
-            println!("Error:{} ", err);
+        Err(error) => {
+            error!(?error, "failed to create UpgradeAction CRD");
             let err =
-                RestError::default().with_error("unable to create upgradeaction crd".to_string());
+                RestError::default().with_error("unable to create UpgradeAction crd".to_string());
             return Err(err);
         }
     }
@@ -103,26 +113,36 @@ pub async fn apply_upgrade() -> Result<HttpResponse, RestError> {
         .await
     {
         Ok(u) => {
+            info!(
+                name = u.metadata.name.as_ref().unwrap(),
+                namespace = u.metadata.namespace.as_ref().unwrap(),
+                "Created UpgradeAction CustomResource"
+            );
             let res = Upgrade::default()
                 .with_name(u.name_any())
                 .with_current_version(u.spec.current_version().to_string())
                 .with_target_version(u.spec.target_version().to_string());
-            let res_body = serde_json::to_string(&res)
-                .map_err(|err| Error::SerdeDeserialization { source: err })
-                .unwrap();
+            let res_body = serde_json::to_string(&res).map_err(|error| {
+                RestError::default().with_error(format!(
+                    "error: {}",
+                    Error::SerdeDeserialization { source: error }
+                ))
+            })?;
 
-            upgrade_controller()
-                .await
-                .expect("Error while running controller");
+            info!("Starting Upgrade controller...");
+            upgrade_controller().await.map_err(|error| {
+                error!(?error, "failed to run Upgrade controller");
+                RestError::default().with_error("failed to run Upgrade controller".to_string())
+            })?;
 
             return Ok(HttpResponse::Ok()
                 .content_type(ContentType::json())
-                .body(res_body));
+                .json(res_body));
         }
-        Err(err) => {
-            println!("Error:{} ", err);
+        Err(error) => {
+            error!(?error, "failed to create UpgradeAction resource");
             let err = RestError::default()
-                .with_error("unable to create upgradeaction resource".to_string());
+                .with_error("unable to create UpgradeAction resource".to_string());
             Err(err)
         }
     }
@@ -137,16 +157,22 @@ pub async fn get_upgrade() -> impl Responder {
         .await
     {
         Ok(u) => {
+            let status = match &u.status {
+                Some(status) => status.state().to_string(),
+                None => "<Empty>".to_string(),
+            };
+
             let res = Upgrade::default()
                 .with_name(u.name_any())
                 .with_current_version(u.spec.current_version().to_string())
-                .with_target_version(u.spec.target_version().to_string());
+                .with_target_version(u.spec.target_version().to_string())
+                .with_state(status);
             Ok(res)
         }
-        Err(e) => {
-            println!("Error:{} ", e);
+        Err(error) => {
+            error!(?error, "failed to GET UpgradeAction resource");
             let err = RestError::default()
-                .with_error("unable to create upgradeaction resource".to_string());
+                .with_error("unable to create UpgradeAction resource".to_string());
             Err(err)
         }
     }

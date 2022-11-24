@@ -5,9 +5,7 @@ use crate::upgrade::k8s::crd::v0::UpgradePhase;
 /// Core components state.
 pub struct ComponentsState {
     core: CoreComponentsState,
-
     supportability: SupportabilityComponentsState,
-
     tracing: TracingComponentsState,
 }
 
@@ -17,12 +15,12 @@ impl ComponentsState {
         self.core.clone()
     }
 
-    /// Supportability components state.
+    /// Supportability components' state.
     pub(crate) fn supportability(&self) -> SupportabilityComponentsState {
         self.supportability.clone()
     }
 
-    /// tracing components state.
+    /// Tracing components' state.
     pub(crate) fn tracing(&self) -> TracingComponentsState {
         self.tracing.clone()
     }
@@ -56,7 +54,8 @@ pub struct CoreComponentsState {
     rest_api: UpgradePhase,
     csi_controller: UpgradePhase,
     csi_node: UpgradePhase,
-    io_agent: UpgradePhase,
+    ha_node: UpgradePhase,
+    io_engine: UpgradePhase,
     metrics_exporter_pool: UpgradePhase,
     disk_pool_operator: UpgradePhase,
 }
@@ -82,9 +81,14 @@ impl CoreComponentsState {
         self.csi_node.clone()
     }
 
+    /// HA node state.
+    pub(crate) fn ha_node(&self) -> UpgradePhase {
+        self.ha_node.clone()
+    }
+
     /// Io agent state.
-    pub(crate) fn io_agent(&self) -> UpgradePhase {
-        self.io_agent.clone()
+    pub(crate) fn io_engine(&self) -> UpgradePhase {
+        self.io_engine.clone()
     }
 
     /// Metrics exporter state.
@@ -98,55 +102,62 @@ impl CoreComponentsState {
     }
 
     /// Initialize core agent state.
-    pub(crate) fn with_core_agent_phase(mut self, upgrade_phase: UpgradePhase) -> Self {
+    pub(crate) fn with_core_agent(mut self, upgrade_phase: UpgradePhase) -> Self {
         self.core_agent = upgrade_phase;
         self
     }
 
     /// Initialize rest api state.
-    pub(crate) fn with_rest_api_phase(mut self, upgrade_phase: UpgradePhase) -> Self {
+    pub(crate) fn with_rest_api(mut self, upgrade_phase: UpgradePhase) -> Self {
         self.rest_api = upgrade_phase;
         self
     }
 
     /// Initialize csi controller state.
-    pub(crate) fn with_csi_controller_phase(mut self, upgrade_phase: UpgradePhase) -> Self {
+    pub(crate) fn with_csi_controller(mut self, upgrade_phase: UpgradePhase) -> Self {
         self.csi_controller = upgrade_phase;
         self
     }
 
     /// Initialize csi node state.
-    pub(crate) fn with_csi_node_phase(mut self, upgrade_phase: UpgradePhase) -> Self {
+    pub(crate) fn with_csi_node(mut self, upgrade_phase: UpgradePhase) -> Self {
         self.csi_node = upgrade_phase;
         self
     }
 
+    /// Initialize HA node state.
+    pub(crate) fn with_ha_node(mut self, upgrade_phase: UpgradePhase) -> Self {
+        self.ha_node = upgrade_phase;
+        self
+    }
+
     /// Initialize io agent state.
-    pub(crate) fn with_io_agent_phase(mut self, upgrade_phase: UpgradePhase) -> Self {
-        self.io_agent = upgrade_phase;
+    pub(crate) fn with_io_engine(mut self, upgrade_phase: UpgradePhase) -> Self {
+        self.io_engine = upgrade_phase;
         self
     }
 
     /// Initialize metrics exporter state.
-    pub(crate) fn with_metrics_exporter_pool_phase(mut self, upgrade_phase: UpgradePhase) -> Self {
+    pub(crate) fn with_metrics_exporter_pool(mut self, upgrade_phase: UpgradePhase) -> Self {
         self.metrics_exporter_pool = upgrade_phase;
         self
     }
 
     /// Initialize disk pool operator state.
-    pub(crate) fn with_disk_pool_operator_phase(mut self, upgrade_phase: UpgradePhase) -> Self {
+    pub(crate) fn with_disk_pool_operator(mut self, upgrade_phase: UpgradePhase) -> Self {
         self.disk_pool_operator = upgrade_phase;
         self
     }
 
-    /// Initialize core componentss state.
+    /// Initialize core components' state.
     pub(crate) fn with_state(upgrade_phase: UpgradePhase) -> Self {
         Self {
             core_agent: upgrade_phase.clone(),
             rest_api: upgrade_phase.clone(),
             csi_controller: upgrade_phase.clone(),
             csi_node: upgrade_phase.clone(),
-            io_agent: upgrade_phase.clone(),
+            ha_node: upgrade_phase.clone(),
+            io_engine: upgrade_phase.clone(),
             metrics_exporter_pool: upgrade_phase.clone(),
             disk_pool_operator: upgrade_phase,
         }
@@ -159,6 +170,7 @@ impl CoreComponentsState {
         h.insert("rest_api".to_string(), self.rest_api());
         h.insert("csi_controller".to_string(), self.csi_controller());
         h.insert("csi_node".to_string(), self.csi_node());
+        h.insert("ha_node".to_string(), self.ha_node());
         h.insert(
             "metrics_exporter_pool".to_string(),
             self.metrics_exporter_pool(),
@@ -215,7 +227,7 @@ impl SupportabilityComponentsState {
     }
 }
 
-// Tracing components state.
+/// Tracing components' state.
 #[derive(Clone)]
 pub struct TracingComponentsState {
     jaeger: UpgradePhase,

@@ -1,9 +1,12 @@
 use chrono::Utc;
 use core::ops::Deref;
 use futures::StreamExt;
-use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
+use k8s_openapi::{
+    api::core::v1::Pod,
+    apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition,
+};
 use kube::{
-    api::{ListParams, Patch, PatchParams, PostParams},
+    api::{DeleteParams, ListParams, Patch, PatchParams, PostParams},
     runtime::{controller::Action, finalizer, Controller},
     Api, Client, CustomResourceExt, ResourceExt,
 };
@@ -12,7 +15,10 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 use tracing::{debug, error, info, trace, warn};
 
 use crate::upgrade::{
-    common::{constants::UPGRADE_OPERATOR, error::Error},
+    common::{
+        constants::{IO_ENGINE_POD_LABEL, UPGRADE_ACTION_FINALIZER, UPGRADE_OPERATOR},
+        error::Error,
+    },
     config::UpgradeOperatorConfig,
     k8s::crd::v0::{UpgradeAction, UpgradeActionStatus, UpgradePhase, UpgradeState},
     phases::{init::ComponentsState, updating::components_update},
@@ -38,10 +44,12 @@ impl Deref for ResourceContext {
     }
 }
 
+/// ControllerContext is used to control create/update/remove UpgradeAction CustomResource to/from
+/// the work queue.
 pub struct ControllerContext {
-    /// Reference to our k8s client
+    /// Reference to our k8s client.
     k8s: Client,
-    /// Hashtable of name and the full last seen CRD
+    /// Hashtable of name and the full last seen CRD.
     inventory: tokio::sync::RwLock<HashMap<String, ResourceContext>>,
 }
 
@@ -61,7 +69,7 @@ impl ControllerContext {
         };
 
         let mut i = self.inventory.write().await;
-        debug!(count = ?i.keys().count(), "current number of CRDS");
+        debug!(count = i.keys().count(), "current number of CRDs");
 
         match i.get_mut(&resource.name_any()) {
             Some(p) => {
@@ -79,7 +87,7 @@ impl ControllerContext {
                 let p = i
                     .insert(resource.name_any(), resource.clone())
                     .expect("existing resource should be present");
-                info!(name = ?p.name_any(), "new resource_version inserted");
+                info!(name = p.name_any(), "new resource_version inserted");
                 resource
             }
 
@@ -91,7 +99,7 @@ impl ControllerContext {
         }
     }
 
-    /// Remove the resource from the operator
+    /// Remove the resource from the operator.
     pub(crate) async fn remove(&self, name: String) -> Option<ResourceContext> {
         let mut i = self.inventory.write().await;
         let removed = i.remove(&name);
@@ -105,29 +113,30 @@ impl ControllerContext {
 
 impl ResourceContext {
     /// Called when putting our finalizer on top of the resource.
-    #[tracing::instrument(fields(name = ?ua.name_any()))]
+    #[tracing::instrument(fields(name = ua.name_any()))]
     pub(crate) async fn put_finalizer(ua: Arc<UpgradeAction>) -> Result<Action, Error> {
         Ok(Action::await_change())
     }
 
-    #[tracing::instrument(fields(name = ?resource.name_any()) skip(resource))]
+    /// delete_finalizer deletes the finalizer of the UpgradeAction resource.
+    #[tracing::instrument(fields(name = resource.name_any()) skip(resource))]
     pub(crate) async fn delete_finalizer(resource: ResourceContext) -> Result<Action, Error> {
         let ctx = resource.ctx.clone();
         ctx.remove(resource.name_any()).await;
         Ok(Action::await_change())
     }
 
-    /// Clone the inner value of this resource
+    /// Clone the inner value of this resource.
     fn inner(&self) -> Arc<UpgradeAction> {
         self.inner.clone()
     }
 
-    /// Construct an API handle for the resource
+    /// Construct an API handle for the resource.
     fn api(&self) -> Api<UpgradeAction> {
         Api::namespaced(self.ctx.k8s.clone(), &self.namespace().unwrap())
     }
 
-    // Patch status.
+    /// This patches the Status of an UpgradeAction resource.
     async fn patch_status(&self, status: UpgradeActionStatus) -> Result<UpgradeAction, Error> {
         let status = json!({ "status": status });
 
@@ -139,7 +148,7 @@ impl ResourceContext {
             .await
             .map_err(|source| Error::K8sClientError { source })?;
 
-        debug!(name = ?o.name_any(), old = ?self.status, new =?o.status, "status changed");
+        debug!(name = o.name_any(), old = ?self.status, new = ?o.status, "status changed");
 
         Ok(o)
     }
@@ -155,7 +164,7 @@ impl ResourceContext {
             ))
             .await?;
 
-        error!(name = ?self.name_any(),"status set to error");
+        error!(name = self.name_any(), "status set to error");
         Ok(Action::await_change())
     }
 
@@ -175,12 +184,12 @@ impl ResourceContext {
     async fn updating(&self) -> Result<Action, Error> {
         let _ = self
             .patch_status(UpgradeActionStatus::new(
-                UpgradeState::Updating,
+                UpgradeState::UpdatingControlPlane,
                 Utc::now(),
                 ComponentsState::with_state(UpgradePhase::Updating).convert_into_hash(),
             ))
             .await?;
-        let opts: Vec<(String, String)> = vec![("image.tag".to_string(), "2.0.0".to_string())];
+        let opts: Vec<(String, String)> = vec![("image.tag".to_string(), "develop".to_string())];
 
         match components_update(opts).await {
             Ok(_) => Ok(Action::await_change()),
@@ -192,6 +201,41 @@ impl ResourceContext {
                 })
             }
         }
+    }
+
+    /// This manually deletes io-engine DaemonSet pods because the
+    /// the DaemonSet update strategy is set is 'OnDelete'.
+    /// Ref: https://github.com/openebs/mayastor-extensions/blob/HEAD/chart/templates/mayastor/io/io-engine-daemonset.yaml
+    async fn restart_io_engine(&self) -> Result<Action, Error> {
+        let _ = self
+            .patch_status(UpgradeActionStatus::new(
+                UpgradeState::UpdatingDataPlane,
+                Utc::now(),
+                ComponentsState::with_state(UpgradePhase::Updating).convert_into_hash(),
+            ))
+            .await?;
+
+        let pods: Api<Pod> = Api::namespaced(
+            UpgradeOperatorConfig::get_config().k8s_client().client(),
+            UpgradeOperatorConfig::get_config().namespace(),
+        );
+        info!("Restarting io-engine pods...");
+        match pods
+            .delete_collection(
+                &DeleteParams::default(),
+                &ListParams::default().labels(IO_ENGINE_POD_LABEL),
+            )
+            .await?
+        {
+            either::Left(list) => {
+                let names: Vec<_> = list.iter().map(ResourceExt::name_any).collect();
+                debug!(?names, "Deleting collection of pods");
+            }
+            either::Right(status) => {
+                debug!(?status, "Deleted collection of pods: status");
+            }
+        }
+        Ok(Action::await_change())
     }
 
     /// Starts verifying phase.
@@ -210,9 +254,7 @@ impl ResourceContext {
             .get_nodes()
             .await;
         match nodes {
-            Ok(_) => {
-                Ok(Action::await_change())
-            }
+            Ok(_) => Ok(Action::await_change()),
             Err(_) => {
                 self.mark_error(UpgradePhase::Error).await?;
                 // we updated the resource as an error stop reconciliation
@@ -223,11 +265,11 @@ impl ResourceContext {
         }
     }
 
-    /// Starts successfull update phase.
-    async fn successfull_update(&self) -> Result<Action, Error> {
+    /// Starts successful update phase.
+    async fn successful_update(&self) -> Result<Action, Error> {
         let _ = self
             .patch_status(UpgradeActionStatus::new(
-                UpgradeState::SuccessfullUpdate,
+                UpgradeState::SuccessfulUpdate,
                 Utc::now(),
                 ComponentsState::with_state(UpgradePhase::Completed).convert_into_hash(),
             ))
@@ -245,7 +287,7 @@ impl ResourceContext {
     async fn finalizer(&self) -> Result<Action, Error> {
         let _ = finalizer(
             &self.api(),
-            "openebs.io/upgrade-protection",
+            UPGRADE_ACTION_FINALIZER,
             self.inner(),
             |event| async move {
                 match event {
@@ -255,13 +297,13 @@ impl ResourceContext {
             },
         )
         .await
-        .map_err(|e| error!(?e));
+        .map_err(|error| error!(?error, "Failed to create/delete finalizer"));
 
         Ok(Action::await_change())
     }
 }
 
-/// ensure the CRD is installed. This creates a chicken and egg problem. When the CRD is removed,
+/// Ensure the CRD is installed. This creates a chicken and egg problem. When the CRD is removed,
 /// the operator will fail to list the CRD going into a error loop.
 ///
 /// To prevent that, we will simply panic, and hope we can make progress after restart. Keep
@@ -285,14 +327,14 @@ async fn ensure_crd(k8s: Client) {
         let pp = PostParams::default();
         match ua.create(&pp, &crd).await {
             Ok(o) => {
-                info!(crd = ?o.name_any(), "created");
+                info!(crd = o.name_any(), "created");
                 // let the CRD settle this purely to avoid errors messages in the console
                 // that are harmless but can cause some confusion maybe.
                 tokio::time::sleep(Duration::from_secs(5)).await;
             }
 
-            Err(e) => {
-                error!("failed to create CRD error {}", e);
+            Err(error) => {
+                error!(?error, "Failed to create CRD");
                 tokio::time::sleep(Duration::from_secs(1)).await;
                 std::process::exit(1);
             }
@@ -339,17 +381,22 @@ async fn reconcile(ua: Arc<UpgradeAction>, ctx: Arc<ControllerContext>) -> Resul
         }) => ua.updating().await,
 
         Some(UpgradeActionStatus {
-            state: UpgradeState::Updating,
+            state: UpgradeState::UpdatingControlPlane,
+            ..
+        }) => ua.restart_io_engine().await,
+
+        Some(UpgradeActionStatus {
+            state: UpgradeState::UpdatingDataPlane,
             ..
         }) => ua.verifying().await,
 
         Some(UpgradeActionStatus {
             state: UpgradeState::VerifyingUpdate,
             ..
-        }) => ua.successfull_update().await,
+        }) => ua.successful_update().await,
 
         Some(UpgradeActionStatus {
-            state: UpgradeState::SuccessfullUpdate,
+            state: UpgradeState::SuccessfulUpdate,
             ..
         }) => ua.delete().await,
 
@@ -357,7 +404,7 @@ async fn reconcile(ua: Arc<UpgradeAction>, ctx: Arc<ControllerContext>) -> Resul
             state: UpgradeState::Error,
             ..
         }) => {
-            error!(upgrade = ?ua.name_any(), "entered error as final state");
+            error!(upgrade = ua.name_any(), "entered error as final state");
             Err(Error::ReconcileError {
                 name: ua.name_any(),
             })

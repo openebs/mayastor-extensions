@@ -1,10 +1,10 @@
+use mktemp::Temp;
+use rand::{distributions::Alphanumeric, Rng};
 use std::{
     fs,
     path::{Path, PathBuf},
 };
-
-use mktemp::Temp;
-use rand::{distributions::Alphanumeric, Rng};
+use tracing::debug;
 
 use crate::upgrade::{
     common::{constants::DEFAULT_VALUES_PATH, error::Error},
@@ -32,9 +32,9 @@ pub async fn components_update(opts: Vec<(String, String)>) -> Result<(), Error>
         .helm_client()
         .get_values()
         .unwrap();
-    println!("{:?}", output);
+    debug!("{:?}", output);
 
-    fs::write(output_filepath.clone(), output).expect("Unable to write values in the yaml file");
+    fs::write(output_filepath.clone(), output)?;
 
     match UpgradeOperatorConfig::get_config()
         .helm_client()
