@@ -30,7 +30,7 @@ chrono = "0.4.22"
 maplit = "1.0.2"
 serde_valid = "0.9.0"
 once_cell = "1.14.0"
-openapi = {path = "../openapi"}
+openapi = {path = "../dependencies/control-plane/openapi"}
 clap = { version = "3.2.16", features = ["cargo", "derive"] }
 url = "2.3.1"
 actix-web = "4.2.1"
