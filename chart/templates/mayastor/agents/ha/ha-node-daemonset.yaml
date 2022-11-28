@@ -60,6 +60,7 @@ spec:
           value: "1"
         args:
         - "--node-name=$(MY_NODE_NAME)"
+        - "--csi-socket={{ .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--grpc-endpoint=$(MY_POD_IP):50053"
         - "--cluster-agent=https://{{ .Release.Name }}-agent-core:50052"{{ if .Values.base.jaeger.enabled }}
         - "--jaeger={{ .Values.base.jaeger.agent.name }}:{{ .Values.base.jaeger.agent.port }}"{{ end }}
@@ -70,6 +71,8 @@ spec:
           mountPath: /sys
         - name: run-udev
           mountPath: /run/udev
+        - name: plugin-dir
+          mountPath: {{ .Values.csi.node.pluginMounthPath }}
         resources:
           limits:
             cpu: {{ .Values.agents.ha.node.resources.limits.cpu | quote }}
@@ -94,4 +97,8 @@ spec:
         hostPath:
           path: /run/udev
           type: Directory
+      - name: plugin-dir
+        hostPath:
+          path: {{ .Values.csi.node.kubeletDir }}/plugins/io.openebs.mayastor/
+          type: DirectoryOrCreate
 {{- end }}

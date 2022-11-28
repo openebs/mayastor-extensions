@@ -221,6 +221,8 @@ csi:
       # ctrl_loss_tmo (controller loss timeout) in seconds
       ctrl_loss_tmo: "1980"
     kubeletDir: /var/lib/kubelet
+    pluginMounthPath: /csi
+    socketPath: csi.sock
 
 mayastor:
   # logLevel for the core crate and other dependent crates
