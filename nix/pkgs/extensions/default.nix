@@ -2,11 +2,16 @@
 let
   versionDrv = import ../../lib/version.nix { inherit lib stdenv git; };
   version = builtins.readFile "${versionDrv}";
+  gitVersions = {
+    "version" = version;
+    "long" = builtins.readFile "${versionDrv.long}";
+    "tag_or_long" = builtins.readFile "${versionDrv.tag_or_long}";
+  };
   project-builder =
-    pkgs.callPackage ../extensions/cargo-project.nix { inherit version allInOne incremental; };
+    pkgs.callPackage ../extensions/cargo-project.nix { inherit gitVersions allInOne incremental; };
   installer = { pname, src, suffix ? "" }:
     stdenv.mkDerivation rec {
-      inherit src pname;
+      inherit pname src;
       name = "${pname}-${version}";
       binary = "${pname}${suffix}";
       installPhase = ''
@@ -62,7 +67,7 @@ in
 {
   PROTOC = project-builder.PROTOC;
   PROTOC_INCLUDE = project-builder.PROTOC_INCLUDE;
-  inherit version;
+  inherit version gitVersions project-builder;
 
   release = components { builder = project-builder; buildType = "release"; };
   debug = components { builder = project-builder; buildType = "debug"; };

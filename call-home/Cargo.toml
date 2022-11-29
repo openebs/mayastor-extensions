@@ -9,7 +9,7 @@ name = "obs-callhome"
 path = "src/main.rs"
 
 [dependencies]
-openapi = {path = "../openapi"}
+openapi = {path = "../dependencies/control-plane/openapi"}
 kube = { version = "0.74.0", features = ["runtime", "derive"] }
 k8s-openapi = { version = "0.15.0", features = ["v1_20"] }
 futures = "0.3.21"

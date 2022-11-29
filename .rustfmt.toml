@@ -12,5 +12,5 @@ spaces_around_ranges = true
 edition = "2018"
 
 ignore = [
-    "openapi"
+    "dependencies/control-plane/openapi"
 ]

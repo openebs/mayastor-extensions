@@ -10,10 +10,10 @@
 , llvmPackages
 , openssl
 , git
+, gitVersions
 , openapi-generator
 , which
 , utillinux
-, version
   # with allInOne set to true all components are built as part of the same "cargo build" derivation
   # this allows for a quicker build of all components but slower single components
   # with allInOne set to false each component gets its own "cargo build" derivation allowing for faster
@@ -48,6 +48,7 @@ let
       src;
   PROTOC = "${protobuf}/bin/protoc";
   PROTOC_INCLUDE = "${protobuf}/include";
+  version = gitVersions.version;
   src_list = [
     ".git"
     "Cargo.lock"
@@ -56,15 +57,16 @@ let
     "rpc"
     "operators"
     "call-home"
-    "openapi"
     "scripts"
     "dependencies"
+    "k8s"
   ];
+  src = whitelistSource ../../../. src_list;
   buildProps = rec {
     name = "extensions-${version}";
-    inherit version;
-
-    src = whitelistSource ../../../. src_list;
+    inherit version src;
+    GIT_VERSION_LONG = "${gitVersions.long}";
+    GIT_VERSION = "${gitVersions.tag_or_long}";
 
     inherit PROTOC PROTOC_INCLUDE;
     nativeBuildInputs = [ clang pkg-config git openapi-generator which ];
@@ -99,7 +101,7 @@ let
   builder = if incremental then build_with_naersk else build_with_default;
 in
 {
-  inherit PROTOC PROTOC_INCLUDE version src_list;
+  inherit PROTOC PROTOC_INCLUDE version src_list src;
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if allInOne then
