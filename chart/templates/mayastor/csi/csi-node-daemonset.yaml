@@ -63,7 +63,7 @@ spec:
         - name: RUST_BACKTRACE
           value: "1"
         args:
-        - "--csi-socket=/csi/csi.sock"
+        - "--csi-socket={{ .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--node-name=$(MY_NODE_NAME)"
         - "--grpc-endpoint=$(MY_POD_IP):10199"{{ if .Values.csi.node.nvme.io_timeout }}
         - "--nvme-core-io-timeout={{ .Values.csi.node.nvme.io_timeout }}"{{ end }}{{ if .Values.csi.node.nvme.ctrl_loss_tmo }}
@@ -82,7 +82,7 @@ spec:
         - name: run-udev
           mountPath: /run/udev
         - name: plugin-dir
-          mountPath: /csi
+          mountPath: {{ .Values.csi.node.pluginMounthPath }}
         - name: kubelet-dir
           mountPath: {{ .Values.csi.node.kubeletDir }}
           mountPropagation: "Bidirectional"
@@ -97,11 +97,11 @@ spec:
         image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-node-driver-registrar:{{ .Values.csi.image.registrarTag }}"
         imagePullPolicy: {{ .Values.csi.image.pullPolicy }}
         args:
-        - "--csi-address=/csi/csi.sock"
+        - "--csi-address={{ .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--kubelet-registration-path={{ .Values.csi.node.kubeletDir }}/plugins/io.openebs.mayastor/csi.sock"
         volumeMounts:
         - name: plugin-dir
-          mountPath: /csi
+          mountPath: {{ .Values.csi.node.pluginMounthPath }}
         - name: registration-dir
           mountPath: /registration
         resources:
