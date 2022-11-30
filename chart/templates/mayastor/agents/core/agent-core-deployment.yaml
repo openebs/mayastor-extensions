@@ -23,6 +23,8 @@ spec:
       {{- if .Values.nodeSelector }}
       nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}
+      tolerations: {{- toYaml .Values.earlyEvictionTolerations | nindent 8}}
+      priorityClassName: {{ .Release.Name }}-priority-class
       containers:
         - name: agent-core
           resources:

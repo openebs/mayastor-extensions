@@ -15,6 +15,16 @@ image:
 nodeSelector:
   kubernetes.io/arch: amd64
 
+earlyEvictionTolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 5
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 5
+
 base:
   # request timeout for rest & core agents
   default_req_timeout: 5s
@@ -156,6 +166,8 @@ apis:
   rest:
     # logLevel for the rest crate
     logLevel: info
+    # number of replicas of rest
+    replicaCount: 1
     resources:
       limits:
         # cpu limits for rest

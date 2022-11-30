@@ -5,7 +5,7 @@ metadata:
   labels:
     app: api-rest
 spec:
-  replicas: 1
+  replicas: {{ .Values.apis.rest.replicaCount }}
   selector:
     matchLabels:
       app: api-rest
@@ -22,6 +22,8 @@ spec:
       {{- if .Values.nodeSelector }}
       nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}
+      tolerations: {{- toYaml .Values.earlyEvictionTolerations | nindent 8 }}
+      priorityClassName: {{ .Release.Name }}-priority-class
       containers:
         - name: api-rest
           resources:
