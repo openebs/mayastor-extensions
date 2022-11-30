@@ -338,3 +338,85 @@ make Rest, Loki and etcd service available outside the cluster. One way to acces
   kubectl port-forward service/mayastor-etcd 2379:2379 -n mayastor
   ```
 </details>
+
+
+<details>
+<summary> Upgrade operations </summary>
+
+```sh
+kubectl-mayastor-install
+`Install` upgrade operator
+
+USAGE:
+    kubectl-mayastor install [OPTIONS] <SUBCOMMAND>
+
+OPTIONS:
+    -h, --help
+            Print help information
+
+    -j, --jaeger <JAEGER>
+            Trace rest requests to the Jaeger endpoint agent
+
+    -k, --kube-config-path <KUBE_CONFIG_PATH>
+            Path to kubeconfig file
+
+    -n, --namespace <NAMESPACE>
+            Kubernetes namespace of mayastor service, defaults to mayastor [default: mayastor]
+
+    -o, --output <OUTPUT>
+            The Output, viz yaml, json [default: none]
+
+    -r, --rest <REST>
+            The rest endpoint to connect to
+
+SUBCOMMANDS:
+    help                Print this message or the help of the given subcommand(s)
+    upgrade-operator    Install, Uninstall upgrade resources
+
+kubectl-mayastor-uninstall
+`Uninstall` upgrade operator
+
+USAGE:
+    kubectl-mayastor uninstall [OPTIONS] <SUBCOMMAND>
+
+OPTIONS:
+    -h, --help
+            Print help information
+
+    -j, --jaeger <JAEGER>
+            Trace rest requests to the Jaeger endpoint agent
+
+    -k, --kube-config-path <KUBE_CONFIG_PATH>
+            Path to kubeconfig file
+
+    -n, --namespace <NAMESPACE>
+            Kubernetes namespace of mayastor service, defaults to mayastor [default: mayastor]
+
+    -o, --output <OUTPUT>
+            The Output, viz yaml, json [default: none]
+
+    -r, --rest <REST>
+            The rest endpoint to connect to
+
+SUBCOMMANDS:
+    help                Print this message or the help of the given subcommand(s)
+    upgrade-operator    Install, Uninstall upgrade resources
+```
+
+**Note**: Each subcommand supports `--help` option to know various other options.
+
+
+**Examples**:
+
+1. To install upgrade resources need for executing upgrade operation
+   ```sh
+   ## Command
+   kubectl mayastor install upgrade-operator -n <mayastor_namespace>
+   ```
+
+2. To install upgrade resources need for executing upgrade operation
+   ```sh
+   ## Command
+   kubectl mayastor uninstall upgrade-operator -n <mayastor_namespace>
+   ```
+</details>
