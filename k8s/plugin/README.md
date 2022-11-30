@@ -338,3 +338,22 @@ make Rest, Loki and etcd service available outside the cluster. One way to acces
   kubectl port-forward service/mayastor-etcd 2379:2379 -n mayastor
   ```
 </details>
+
+
+<details>
+<summary> Upgrade operations </summary>
+
+**Examples**:
+
+1. To install upgrade resources need for executing upgrade operation
+   ```sh
+   ## Command
+   kubectl mayastor install upgrade-operator -n <mayastor_namespace>
+   ```
+
+2. To uninstall upgrade resources need for executing upgrade operation
+   ```sh
+   ## Command
+   kubectl mayastor uninstall upgrade-operator -n <mayastor_namespace>
+   ```
+</details>

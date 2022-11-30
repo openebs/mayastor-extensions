@@ -13,7 +13,11 @@ use plugin::{
 use std::{env, path::PathBuf};
 
 mod resources;
-use resources::Operations;
+use resources::{
+    upgrade::{UpgradeOperator, UpgradeResources},
+    Operations,
+};
+pub mod constant;
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
@@ -140,6 +144,16 @@ async fn execute(cli_args: CliArgs) {
                     });
                 println!("Completed collection of dump !!");
             }
+            Operations::Install(resource) => match resource {
+                UpgradeOperator::UpgradeOperator => {
+                    UpgradeResources::install(&cli_args.namespace).await;
+                }
+            },
+            Operations::Uninstall(resource) => match resource {
+                UpgradeOperator::UpgradeOperator => {
+                    UpgradeResources::uninstall(&cli_args.namespace).await;
+                }
+            },
         };
     };
 
