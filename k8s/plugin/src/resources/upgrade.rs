@@ -1,8 +1,8 @@
 use crate::{
     constant::{
-        UPGRADE_CONTROLLER_DEPLOYMENT, UPGRADE_IMAGE, UPGRADE_OPERATOR_CLUSTER_ROLE,
-        UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING, UPGRADE_OPERATOR_SERVICE,
-        UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+        UPGRADE_CONTROLLER_DEPLOYMENT, UPGRADE_IMAGE,
+        UPGRADE_OPERATOR_CLUSTER_ROLE, UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
+        UPGRADE_OPERATOR_SERVICE, UPGRADE_OPERATOR_SERVICE_ACCOUNT,
     },
     resources::objects,
 };
@@ -14,7 +14,7 @@ use k8s_openapi::api::{
     rbac::v1::{ClusterRole, ClusterRoleBinding},
 };
 use kube::{
-    api::{Api, DeleteParams, ListParams, PostParams},
+    api::{Api, ListParams, PostParams, DeleteParams},
     core::ObjectList,
     Client,
 };
@@ -276,7 +276,30 @@ impl UpgradeResources {
             Err(e) => println!("Failed to uninstall. Error {}", e),
         };
     }
+    /// Upgrades the cluster
+    async fn apply(
+        &self,
+        kube_config_path: Option<PathBuf>,
+        timeout: humantime::Duration,
+        uri: Option<String>,
+    ) {
+        let uoc_m = upgradeoperatorclient::UpgradeOperatorClient::new(
+            uri,
+            kube_config_path,
+            "mayastor".to_string(),
+            timeout,
+        )
+        .await;
 
+        if let Some(mut uoc) = uoc_m {
+            if let Err(err) = uoc.apply_upgrade().await {
+                println!("Error while  upgrading {:?}", err);
+            }
+        }
+    }
+    
+    
+    /// List service account
     pub async fn get_service_account(&self) -> ObjectList<ServiceAccount> {
         let lp = ListParams::default().fields(&format!(
             "metadata.name={}",
@@ -288,6 +311,7 @@ impl UpgradeResources {
             .expect("failed to list service accounts")
     }
 
+      /// List cluster role
     pub async fn get_cluster_role(&self) -> ObjectList<ClusterRole> {
         let lp = ListParams::default()
             .fields(&format!("metadata.name={}", UPGRADE_OPERATOR_CLUSTER_ROLE));
@@ -297,6 +321,7 @@ impl UpgradeResources {
             .expect("failed to list cluster role")
     }
 
+    /// List cluster role binding
     pub async fn get_cluster_role_binding(&self) -> ObjectList<ClusterRoleBinding> {
         let lp = ListParams::default().fields(&format!(
             "metadata.name={}",
@@ -308,6 +333,7 @@ impl UpgradeResources {
             .expect("failed to list cluster role binding")
     }
 
+    /// List deployment
     pub async fn get_deployment(&self) -> ObjectList<Deployment> {
         let lp = ListParams::default()
             .fields(&format!("metadata.name={}", UPGRADE_CONTROLLER_DEPLOYMENT));
@@ -317,6 +343,7 @@ impl UpgradeResources {
             .expect("failed to list deployment")
     }
 
+      /// List service
     pub async fn get_service(&self) -> ObjectList<Service> {
         let lp =
             ListParams::default().fields(&format!("metadata.name={}", UPGRADE_OPERATOR_SERVICE));

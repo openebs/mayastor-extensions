@@ -154,6 +154,9 @@ async fn execute(cli_args: CliArgs) {
                     UpgradeResources::uninstall(&cli_args.namespace).await;
                 }
             },
+            Operations::Upgrade =>  {
+                    UpgradeResources::uninstall(&cli_args.namespace).await;
+            },
         };
     };
 

@@ -32,4 +32,6 @@ pub enum Operations {
     /// `Uninstall` upgrade operator.
     #[clap(subcommand)]
     Uninstall(UpgradeOperator),
+    /// `Upgrade` the operator.
+    Upgrade,
 }
