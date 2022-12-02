@@ -2,7 +2,6 @@
 members = [
     "call-home",
     "exporter",
-    "rpc",
     "operators",
     "k8s/plugin"
 ]

@@ -41,6 +41,7 @@ spec:
               fieldPath: status.podIP
         args:
         - "-p{{ .Values.base.metrics.pollingInterval }}"
+        - "--api-versions={{ .Values.mayastor.api }}"
         command:
         - metrics-exporter-pool
         ports:

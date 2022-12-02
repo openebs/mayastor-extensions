@@ -4,8 +4,9 @@ use prometheus::{
     core::{Collector, Desc},
     GaugeVec, Opts,
 };
+use tracing::error;
 
-use crate::{cache::Cache, client::pool::Pool};
+use crate::pool::{cache::Cache, client::pool::Pool, error::ExporterError};
 
 /// PoolsCollector contains the list of custom metrics that has to be exposed by exporter.
 #[derive(Clone, Debug)]
@@ -23,7 +24,7 @@ impl Default for PoolsCollector {
 }
 
 impl PoolsCollector {
-    /// Initialize all the metrics to be defined for pools collector
+    /// Initialize all the metrics to be defined for pools collector.
     pub fn new() -> Self {
         let pool_total_size_opts = Opts::new("total_size_bytes", "Total size of the pool in bytes")
             .subsystem("disk_pool")
@@ -56,7 +57,7 @@ impl PoolsCollector {
     }
 }
 
-/// prometheus collector implementation
+/// Prometheus collector implementation
 impl Collector for PoolsCollector {
     fn desc(&self) -> Vec<&prometheus::core::Desc> {
         self.descs.iter().collect()
@@ -65,8 +66,8 @@ impl Collector for PoolsCollector {
     fn collect(&self) -> Vec<prometheus::proto::MetricFamily> {
         let mut c = match Cache::get_cache().lock() {
             Ok(c) => c,
-            Err(err) => {
-                println!("Error while getting cache resource:{}", err);
+            Err(error) => {
+                error!(%error,"Error while getting cache resource");
                 return Vec::new();
             }
         };
@@ -74,8 +75,8 @@ impl Collector for PoolsCollector {
         let mut metric_family = Vec::with_capacity(3 * cp.data_mut().pools().pools.capacity());
         let node_name = match get_node_name() {
             Ok(name) => name,
-            Err(_) => {
-                println!("Unable to get node name");
+            Err(error) => {
+                error!(?error, "Unable to get node name");
                 return metric_family;
             }
         };
@@ -88,8 +89,8 @@ impl Collector for PoolsCollector {
                 .get_metric_with_label_values(&[node_name.clone().as_str(), p.name().as_str()])
             {
                 Ok(pool_total_size) => pool_total_size,
-                Err(_) => {
-                    println!("Error while creating metrics(pool_total_size) with label values:");
+                Err(error) => {
+                    error!(%error,"Error while creating metrics(pool_total_size) with label values:");
                     return metric_family;
                 }
             };
@@ -102,8 +103,8 @@ impl Collector for PoolsCollector {
                 .get_metric_with_label_values(&[node_name.clone().as_str(), p.name().as_str()])
             {
                 Ok(pool_used_size) => pool_used_size,
-                Err(_) => {
-                    println!("Error while creating metrics(pool_used_size) with label values:");
+                Err(error) => {
+                    error!(%error,"Error while creating metrics(pool_used_size) with label values:");
                     return metric_family;
                 }
             };
@@ -116,8 +117,8 @@ impl Collector for PoolsCollector {
                 .get_metric_with_label_values(&[node_name.clone().as_str(), p.name().as_str()])
             {
                 Ok(pool_status) => pool_status,
-                Err(_) => {
-                    println!("Error while creating metrics(pool_status) with label values:");
+                Err(error) => {
+                    error!(%error,"Error while creating metrics(pool_status) with label values:");
                     return metric_family;
                 }
             };
@@ -129,7 +130,8 @@ impl Collector for PoolsCollector {
     }
 }
 
-/// get node name from pod spec
-pub fn get_node_name() -> Result<String, String> {
-    env::var("MY_NODE_NAME").map_err(|_| "Unable to get node name".to_string())
+/// Get node name from pod spec.
+pub fn get_node_name() -> Result<String, ExporterError> {
+    env::var("MY_NODE_NAME")
+        .map_err(|_| ExporterError::GetNodeError("Unable to get node name".to_string()))
 }
