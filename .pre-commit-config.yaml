@@ -21,7 +21,7 @@ repos:
         name: Rust style
         description: Run cargo fmt on files included in the commit.
         entry: nix-shell --pure --run 'cargo-fmt --all -- --check'
-        pass_filenames: true
+        pass_filenames: false
         types: [file, rust]
         language: system
     -   id: commit-lint

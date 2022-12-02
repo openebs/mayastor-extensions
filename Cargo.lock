@@ -1712,6 +1712,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "kube-proxy"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "kube",
+ "kube-forward",
+ "openapi",
+ "tower",
+ "utils",
+]
+
+[[package]]
 name = "kube-runtime"
 version = "0.74.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1745,13 +1757,13 @@ dependencies = [
  "humantime",
  "k8s-openapi",
  "kube",
- "kube-proxy",
+ "kube-proxy 1.0.0",
  "maplit",
  "openapi",
  "opentelemetry",
  "rest-plugin",
  "shutdown",
- "supportability",
+ "supportability 0.1.0",
  "tokio",
  "tracing",
  "utils",
@@ -3193,7 +3205,42 @@ dependencies = [
  "k8s-openapi",
  "k8s-operators",
  "kube",
- "kube-proxy",
+ "kube-proxy 0.1.0",
+ "lazy_static",
+ "once_cell",
+ "openapi",
+ "prettytable-rs",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_yaml 0.8.26",
+ "tar",
+ "tokio",
+ "tower",
+ "urlencoding",
+ "uuid",
+ "yaml-rust",
+]
+
+[[package]]
+name = "supportability"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "clap 3.2.23",
+ "common-lib",
+ "downcast-rs",
+ "flate2",
+ "futures",
+ "http",
+ "humantime",
+ "hyper",
+ "k8s-openapi",
+ "k8s-operators",
+ "kube",
+ "kube-proxy 1.0.0",
  "lazy_static",
  "once_cell",
  "openapi",
