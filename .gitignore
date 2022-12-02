@@ -17,3 +17,4 @@ __pycache__
 /tests/bdd/autogen/
 /rust-toolchain.toml
 /.rust-toolchain
+/kubectl-plugin
