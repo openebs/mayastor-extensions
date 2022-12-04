@@ -3,8 +3,9 @@ use plugin::resources::{CordonResources, DrainResources, GetResources, ScaleReso
 use supportability::DumpArgs;
 
 pub mod objects;
+pub mod uo_client;
 pub mod upgrade;
-use upgrade::UpgradeOperator;
+use upgrade::{UpgradeOperator, UpgradeStatus};
 
 /// The types of operations that are supported.
 #[derive(Parser, Debug)]
@@ -34,4 +35,7 @@ pub enum Operations {
     Uninstall(UpgradeOperator),
     /// `Upgrade` the operator.
     Upgrade,
+    /// `Fetch` upgrade operator.
+    #[clap(subcommand)]
+    Fetch(UpgradeStatus),
 }

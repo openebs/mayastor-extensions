@@ -14,7 +14,7 @@ use std::{env, path::PathBuf};
 
 mod resources;
 use resources::{
-    upgrade::{UpgradeOperator, UpgradeResources},
+    upgrade::{UpgradeOperator, UpgradeStatus,  UpgradeResources},
     Operations,
 };
 pub mod constant;
@@ -49,6 +49,11 @@ struct CliArgs {
     /// Kubernetes namespace of mayastor service, defaults to mayastor
     #[clap(global = true, long, short = 'n', default_value = "mayastor")]
     namespace: String,
+
+    /// Endpoint of upgrade operator service, if left empty then it will try to parse endpoint
+    /// from upgrade operator service(K8s service resource),
+    #[clap(global = true, short, long)]
+    upgrade_operator_endpoint: Option<String>,
 }
 impl CliArgs {
     fn args() -> Self {
@@ -154,8 +159,25 @@ async fn execute(cli_args: CliArgs) {
                     UpgradeResources::uninstall(&cli_args.namespace).await;
                 }
             },
-            Operations::Upgrade =>  {
-                    UpgradeResources::uninstall(&cli_args.namespace).await;
+            Operations::Fetch(resource) => match resource {
+                UpgradeStatus::UpgradeStatus =>  {
+                    UpgradeResources::get(
+                        cli_args.upgrade_operator_endpoint,
+                        &cli_args.namespace,
+                        cli_args.kube_config_path,
+                        cli_args.timeout,
+                    )
+                    .await;
+                }
+            },
+            Operations::Upgrade => {
+                UpgradeResources::apply(
+                    cli_args.upgrade_operator_endpoint,
+                    &cli_args.namespace,
+                    cli_args.kube_config_path,
+                    cli_args.timeout,
+                )
+                .await;
             },
         };
     };

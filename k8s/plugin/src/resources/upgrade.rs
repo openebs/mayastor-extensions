@@ -1,12 +1,11 @@
 use crate::{
     constant::{
-        UPGRADE_CONTROLLER_DEPLOYMENT, UPGRADE_IMAGE,
-        UPGRADE_OPERATOR_CLUSTER_ROLE, UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
-        UPGRADE_OPERATOR_SERVICE, UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+        UPGRADE_CONTROLLER_DEPLOYMENT, UPGRADE_IMAGE, UPGRADE_OPERATOR_CLUSTER_ROLE,
+        UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING, UPGRADE_OPERATOR_SERVICE,
+        UPGRADE_OPERATOR_SERVICE_ACCOUNT,
     },
-    resources::objects,
+    resources::{objects, uo_client::UpgradeOperatorClient},
 };
-
 use anyhow::Error;
 use k8s_openapi::api::{
     apps::v1::Deployment,
@@ -14,17 +13,22 @@ use k8s_openapi::api::{
     rbac::v1::{ClusterRole, ClusterRoleBinding},
 };
 use kube::{
-    api::{Api, ListParams, PostParams, DeleteParams},
+    api::{Api, DeleteParams, ListParams, PostParams},
     core::ObjectList,
     Client,
 };
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 /// The types of resources that support the upgrade operator.
 #[derive(clap::Subcommand, Debug)]
 pub enum UpgradeOperator {
     /// Install, Uninstall upgrade resources.
     UpgradeOperator,
+}
+#[derive(clap::Subcommand, Debug)]
+pub enum UpgradeStatus {
+    /// Get the upgrade status.
+    UpgradeStatus,
 }
 
 /// K8s resources needed for upgrade operator
@@ -276,29 +280,41 @@ impl UpgradeResources {
             Err(e) => println!("Failed to uninstall. Error {}", e),
         };
     }
+
     /// Upgrades the cluster
-    async fn apply(
-        &self,
+    pub async fn apply(
+        uri: Option<String>,
+        namespace: &str,
         kube_config_path: Option<PathBuf>,
         timeout: humantime::Duration,
-        uri: Option<String>,
     ) {
-        let uoc_m = upgradeoperatorclient::UpgradeOperatorClient::new(
-            uri,
-            kube_config_path,
-            "mayastor".to_string(),
-            timeout,
-        )
-        .await;
+        let client_m =
+            UpgradeOperatorClient::new(uri, namespace.to_string(), kube_config_path, timeout).await;
 
-        if let Some(mut uoc) = uoc_m {
-            if let Err(err) = uoc.apply_upgrade().await {
+        if let Some(mut client) = client_m {
+            if let Err(err) = client.apply_upgrade().await {
                 println!("Error while  upgrading {:?}", err);
             }
         }
     }
-    
-    
+
+    /// Upgrades the cluster
+    pub async fn get(
+        uri: Option<String>,
+        namespace: &str,
+        kube_config_path: Option<PathBuf>,
+        timeout: humantime::Duration,
+    ) {
+        let client_m =
+            UpgradeOperatorClient::new(uri, namespace.to_string(), kube_config_path, timeout).await;
+
+        if let Some(mut client) = client_m {
+            if let Err(err) = client.get_upgrade().await {
+                println!("Error while  getting upgrade {:?}", err);
+            }
+        }
+    }
+
     /// List service account
     pub async fn get_service_account(&self) -> ObjectList<ServiceAccount> {
         let lp = ListParams::default().fields(&format!(
@@ -311,7 +327,7 @@ impl UpgradeResources {
             .expect("failed to list service accounts")
     }
 
-      /// List cluster role
+    /// List cluster role
     pub async fn get_cluster_role(&self) -> ObjectList<ClusterRole> {
         let lp = ListParams::default()
             .fields(&format!("metadata.name={}", UPGRADE_OPERATOR_CLUSTER_ROLE));
@@ -343,7 +359,7 @@ impl UpgradeResources {
             .expect("failed to list deployment")
     }
 
-      /// List service
+    /// List service
     pub async fn get_service(&self) -> ObjectList<Service> {
         let lp =
             ListParams::default().fields(&format!("metadata.name={}", UPGRADE_OPERATOR_SERVICE));

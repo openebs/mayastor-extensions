@@ -7,7 +7,7 @@ use crate::{
     },
     upgrade_labels,
 };
-
+use common_lib::IntoVec;
 use k8s_openapi::{
     api::{
         apps::v1::{Deployment, DeploymentSpec, DeploymentStrategy},
@@ -47,73 +47,138 @@ pub(crate) fn upgrade_operator_cluster_role(namespace: Option<String>) -> Cluste
         },
         rules: Some(vec![
             PolicyRule {
-                api_groups: Some(vec!["apiextensions.k8s.io".to_string()]),
-                resources: Some(vec!["customresourcedefinitions".to_string()]),
-                verbs: vec!["create", "list"]
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect(),
+                api_groups: Some(vec!["apiextensions.k8s.io"].into_vec()),
+                resources: Some(vec!["customresourcedefinitions"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
                 ..Default::default()
             },
             PolicyRule {
-                api_groups: Some(vec!["openebs.io".to_string()]),
-                resources: Some(vec!["upgradeactions".to_string()]),
+                api_groups: Some(vec!["openebs.io"].into_vec()),
+                resources: Some(vec!["upgradeactions"].into_vec()),
                 verbs: vec![
                     "get", "create", "list", "watch", "update", "replace", "patch",
                 ]
-                .iter()
-                .map(|s| s.to_string())
-                .collect(),
+                .into_vec(),
                 ..Default::default()
             },
             PolicyRule {
-                api_groups: Some(vec!["openebs.io".to_string()]),
-                resources: Some(vec!["upgradeactions/status".to_string()]),
-                verbs: vec!["update", "patch"]
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect(),
+                api_groups: Some(vec!["openebs.io"].into_vec()),
+                resources: Some(vec!["upgradeactions/status"].into_vec()),
+                verbs: vec!["update", "patch"].into_vec(),
                 ..Default::default()
             },
             PolicyRule {
-                api_groups: Some(vec!["apps".to_string()]),
-                resources: Some(vec!["deployments".to_string()]),
+                api_groups: Some(vec!["apps"].into_vec()),
+                resources: Some(vec!["deployments"].into_vec()),
+                verbs: vec!["create", "delete", "get", "list", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["apps"].into_vec()),
+                resources: Some(vec!["statefulsets"].into_vec()),
+                verbs: vec!["create", "delete", "get", "list", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["apps"].into_vec()),
+                resources: Some(vec!["daemonsets"].into_vec()),
+                verbs: vec!["create", "delete", "get", "list", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["apps"].into_vec()),
+                resources: Some(vec!["replicasets"].into_vec()),
+                verbs: vec!["create", "delete", "get", "list", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec![""].into_vec()),
+                resources: Some(vec!["serviceaccounts"].into_vec()),
+                verbs: vec!["create", "get", "list", "delete", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec![""].into_vec()),
+                resources: Some(vec!["pods"].into_vec()),
                 verbs: vec![
+                    "create",
+                    "get",
+                    "list",
+                    "delete",
+                    "patch",
+                    "deletecollection",
+                ]
+                .into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec![""].into_vec()),
+                resources: Some(vec!["nodes"].into_vec()),
+                verbs: vec!["get", "list"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec![""].into_vec()),
+                resources: Some(vec!["secrets"].into_vec()),
+                verbs: vec![
+                    "get",
+                    "list",
+                    "watch",
                     "create",
                     "delete",
                     "deletecollection",
-                    "get",
-                    "list",
                     "patch",
                     "update",
                 ]
-                .iter()
-                .map(|s| s.to_string())
-                .collect(),
+                .into_vec(),
                 ..Default::default()
             },
             PolicyRule {
-                api_groups: Some(vec!["".to_string()]),
-                resources: Some(vec!["pods".to_string()]),
-                verbs: vec!["get", "list", "watch", "delete"]
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect(),
+                api_groups: Some(vec!["rbac.authorization.k8s.io"].into_vec()),
+                resources: Some(vec!["roles"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
                 ..Default::default()
             },
             PolicyRule {
-                api_groups: Some(vec!["".to_string()]),
-                resources: Some(vec!["nodes".to_string()]),
-                verbs: vec!["get", "list", "patch"]
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect(),
+                api_groups: Some(vec!["rbac.authorization.k8s.io"].into_vec()),
+                resources: Some(vec!["rolebindings"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
                 ..Default::default()
             },
             PolicyRule {
-                api_groups: Some(vec!["".to_string()]),
-                resources: Some(vec!["secrets".to_string()]),
-                verbs: vec!["get", "list"].iter().map(|s| s.to_string()).collect(),
+                api_groups: Some(vec!["rbac.authorization.k8s.io"].into_vec()),
+                resources: Some(vec!["clusterroles"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["rbac.authorization.k8s.io"].into_vec()),
+                resources: Some(vec!["clusterrolebindings"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec![""].into_vec()),
+                resources: Some(vec!["services"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["storage.k8s.io"].into_vec()),
+                resources: Some(vec!["storageclasses"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec![""].into_vec()),
+                resources: Some(vec!["configmaps"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["scheduling.k8s.io"].into_vec()),
+                resources: Some(vec!["priorityclasses"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
                 ..Default::default()
             },
         ]),

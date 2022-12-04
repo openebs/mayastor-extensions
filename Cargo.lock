@@ -1742,8 +1742,12 @@ name = "kubectl-plugin"
 version = "1.0.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "clap 3.2.23",
+ "common-lib",
+ "http",
  "humantime",
+ "hyper",
  "k8s-openapi",
  "kube",
  "kube-proxy",
@@ -1751,9 +1755,12 @@ dependencies = [
  "openapi",
  "opentelemetry",
  "rest-plugin",
+ "serde",
+ "serde_json",
  "shutdown",
  "supportability",
  "tokio",
+ "tower",
  "tracing",
  "utils",
 ]
