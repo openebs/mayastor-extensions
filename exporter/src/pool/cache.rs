@@ -81,7 +81,7 @@ pub async fn store_pool_data(client: GrpcClient) {
             let mut cache = match Cache::get_cache().lock() {
                 Ok(cache) => cache,
                 Err(error) => {
-                    error!(error=%error, "Error while getting cache resource");
+                    error!(%error, "Error while getting cache resource");
                     continue;
                 }
             };
@@ -94,7 +94,7 @@ pub async fn store_pool_data(client: GrpcClient) {
                 }
                 // invalidate cache in case of error
                 Err(error) => {
-                    error!(error=?error, "Error getting pools data, invalidating pools cache");
+                    error!(?error, "Error getting pools data, invalidating pools cache");
                     pools_cache.data_mut().invalidate_pools();
                 }
             };

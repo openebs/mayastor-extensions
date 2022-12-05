@@ -43,7 +43,7 @@ async fn initialize_cache() {
 }
 
 #[derive(Parser, Debug)]
-#[clap(name = utils::package_description ! (), version = utils::version_info_str ! ())]
+#[clap(name = utils::package_description!(), version = utils::version_info_str!())]
 struct Cli {
     /// TCP address where prometheus endpoint will listen to
     #[clap(long, short, default_value = "0.0.0.0:9502")]
@@ -117,20 +117,20 @@ async fn metrics_handlers() -> impl Responder {
     let registry = Registry::default();
     // Register pools collector in the registry
     if let Err(error) = Registry::register(&registry, Box::new(pools_collector)) {
-        warn!(error=%error, "Pools collector already registered");
+        warn!(%error, "Pools collector already registered");
     }
     let mut buffer = Vec::new();
 
     let encoder = prometheus::TextEncoder::new();
     // Starts collecting metrics via calling gatherers
     if let Err(error) = encoder.encode(&registry.gather(), &mut buffer) {
-        error!(eror=%error, "Could not encode custom metrics");
+        error!(%error, "Could not encode custom metrics");
     };
 
     let res_custom = match String::from_utf8(buffer.clone()) {
         Ok(v) => v,
         Err(error) => {
-            error!(error=%error, "Prometheus metrics could not be parsed from_utf8'd");
+            error!(%error, "Prometheus metrics could not be parsed from_utf8'd");
             String::default()
         }
     };

@@ -24,6 +24,6 @@ serde = "1.0.136"
 mime = "0.3.16"
 rpc = { path = "../dependencies/control-plane/rpc" }
 utils = { path = "../dependencies/control-plane/utils/utils-lib" }
-strum = "0.24.1"
-strum_macros = "0.24.1"
+strum = "0.21.0"
+strum_macros = "0.21.0"
 tracing = "0.1.37"
