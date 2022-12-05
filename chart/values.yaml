@@ -234,6 +234,8 @@ mayastor:
       iface: ""
       # Reservations Persist Through Power Loss State
       ptpl: true
+  # Workaorund for mayastor io-engine on Intel Xeon E-2278G CPU @ 3.40GHz
+  envcontext: ""
   cpuCount: "2"
   # node selectors to designate mayastor nodes for diskpool creation
   # Note that if multi-arch images support 'kubernetes.io/arch: amd64'

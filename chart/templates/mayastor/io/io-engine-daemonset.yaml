@@ -84,6 +84,7 @@ spec:
         - "--ptpl-dir=/var/local/io-engine/ptpl/"{{ end }}
         - "--api-versions={{ .Values.mayastor.api }}"{{ if .Values.mayastor.target.nvmf.iface }}
         - "-T={{ .Values.mayastor.target.nvmf.iface }}"{{ end }}
+        - "--env-context=--{{ .Values.mayastor.envcontext }}"
         command:
         - io-engine
         securityContext:
