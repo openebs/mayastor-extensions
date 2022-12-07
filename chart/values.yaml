@@ -183,7 +183,7 @@ apis:
 csi:
   image:
     # image registry to pull all CSI Sidecar images
-    registry: k8s.gcr.io
+    registry: registry.k8s.io
     # image registry's namespace
     repo: sig-storage
     # imagePullPolicy for all CSI Sidecar images
