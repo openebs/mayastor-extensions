@@ -2,6 +2,10 @@ use clap::Parser;
 use plugin::resources::{CordonResources, DrainResources, GetResources, ScaleResources};
 use supportability::DumpArgs;
 
+pub mod objects;
+pub mod upgrade;
+use upgrade::UpgradeOperator;
+
 /// The types of operations that are supported.
 #[derive(Parser, Debug)]
 pub enum Operations {
@@ -22,4 +26,10 @@ pub enum Operations {
     Uncordon(CordonResources),
     /// `Dump` resources.
     Dump(DumpArgs),
+    /// `Install` upgrade operator.
+    #[clap(subcommand)]
+    Install(UpgradeOperator),
+    /// `Uninstall` upgrade operator.
+    #[clap(subcommand)]
+    Uninstall(UpgradeOperator),
 }

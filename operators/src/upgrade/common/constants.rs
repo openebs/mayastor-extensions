@@ -4,31 +4,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-/// macros to define group used in the upgrade crd.
-#[macro_export]
-macro_rules! upgrade_group {
-    () => {
-        "openebs.io"
-    };
-    ($s:literal) => {
-        concat!(upgrade_group!(), "/", $s)
-    };
-}
-
-/// macros to define labels for upgrade operator.
-#[macro_export]
-macro_rules! upgrade_labels {
-    ($s:expr) => {
-        btreemap! {
-            APP => $s,
-            LABEL => $s,
-        }
-        .iter()
-        .map(|(k, v)| (k.to_string(), v.to_string()))
-        .collect()
-    };
-}
-
 /// Upgrade operator.
 pub(crate) const UPGRADE_OPERATOR: &str = "upgrade-operator";
 
