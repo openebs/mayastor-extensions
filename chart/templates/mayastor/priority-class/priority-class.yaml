@@ -2,6 +2,8 @@ apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:
   name: {{ .Release.Name }}-priority-class
+  labels:
+    helm-release: {{ .Release.Name }}
 value: 1000000
 globalDefault: false
 description: "This priority class would put corresponding mayastor component pod ahead in scheduling queue."

@@ -4,6 +4,7 @@ metadata:
   name: {{ .Release.Name }}-agent-core
   labels:
     app: agent-core
+    helm-release: {{ .Release.Name }}
 spec:
   clusterIP: None
   selector:

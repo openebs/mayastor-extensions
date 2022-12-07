@@ -5,6 +5,7 @@ metadata:
   name: {{ .Release.Name }}-metrics-exporter-pool
   labels:
     app: metrics-exporter-pool
+    helm-release: {{ .Release.Name }}
 spec:
   clusterIP: None
   ports:
