@@ -4,15 +4,18 @@ metadata:
   name: {{ .Release.Name }}-api-rest
   labels:
     app: api-rest
+    helm-release: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.apis.rest.replicaCount }}
   selector:
     matchLabels:
       app: api-rest
+      helm-release: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app: api-rest
+        helm-release: {{ .Release.Name }}
         openebs.io/logging: "true"
     spec:
       imagePullSecrets:

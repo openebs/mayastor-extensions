@@ -5,15 +5,18 @@ metadata:
   name: {{ .Release.Name }}-obs-callhome
   labels:
     app: obs-callhome
+    helm-release: {{ .Release.Name }}
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: obs-callhome
+      helm-release: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app: obs-callhome
+        helm-release: {{ .Release.Name }}
     spec:
       serviceAccount: {{ .Release.Name }}-service-account
       imagePullSecrets:

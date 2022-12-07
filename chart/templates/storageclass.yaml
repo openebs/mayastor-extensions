@@ -2,6 +2,8 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: {{ .Release.Name }}-single-replica
+  labels:
+    helm-release: {{ .Release.Name }}
 parameters:
   repl: '1'
   protocol: 'nvmf'

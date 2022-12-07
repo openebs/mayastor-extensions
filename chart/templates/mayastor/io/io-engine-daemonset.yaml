@@ -3,11 +3,13 @@ kind: DaemonSet
 metadata:
   name: {{ .Release.Name }}-io-engine
   labels:
-    openebs.io/engine: io-engine
+    app: io-engine
+    helm-release: {{ .Release.Name }}
 spec:
   selector:
     matchLabels:
       app: io-engine
+      helm-release: {{ .Release.Name }}
   updateStrategy:
     type: OnDelete
   minReadySeconds: 10
@@ -15,6 +17,7 @@ spec:
     metadata:
       labels:
         app: io-engine
+        helm-release: {{ .Release.Name }}
         openebs.io/logging: "true"
     spec:
       imagePullSecrets:

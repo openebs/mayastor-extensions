@@ -4,15 +4,18 @@ metadata:
   name: {{ .Release.Name }}-csi-controller
   labels:
     app: csi-controller
+    helm-release: {{ .Release.Name }}
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: csi-controller
+      helm-release: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app: csi-controller
+        helm-release: {{ .Release.Name }}
         openebs.io/logging: "true"
     spec:
       hostNetwork: true

@@ -3,6 +3,8 @@ kind: DaemonSet
 metadata:
   name: {{ .Release.Name }}-csi-node
   labels:
+    app: csi-node
+    helm-release: {{ .Release.Name }}
     {{- range $key, $val := .Values.csi.node.topology.segments }}
     {{ $key }}: {{ $val }}
     {{- end }}
@@ -10,6 +12,7 @@ spec:
   selector:
     matchLabels:
       app: csi-node
+      helm-release: {{ .Release.Name }}
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -19,6 +22,7 @@ spec:
     metadata:
       labels:
         app: csi-node
+        helm-release: {{ .Release.Name }}
         openebs.io/logging: "true"
     spec:
       serviceAccount: {{ .Release.Name }}-service-account
