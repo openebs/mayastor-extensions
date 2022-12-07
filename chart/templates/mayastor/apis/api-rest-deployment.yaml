@@ -36,7 +36,7 @@ spec:
             requests:
               cpu: {{ .Values.apis.rest.resources.requests.cpu | quote }}
               memory: {{ .Values.apis.rest.resources.requests.memory | quote }}
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-api-rest:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-api-rest:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "--dummy-certificates"

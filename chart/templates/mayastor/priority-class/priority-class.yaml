@@ -6,5 +6,5 @@ metadata:
     helm-release: {{ .Release.Name }}
 value: 1000000
 globalDefault: false
-description: "This priority class would put corresponding mayastor component pod ahead in scheduling queue."
+description: "This priority class would put corresponding {{ .Chart.Name }} component pod ahead in scheduling queue."
 
