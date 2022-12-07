@@ -35,7 +35,7 @@ spec:
             requests:
               cpu: {{ .Values.operators.pool.resources.requests.cpu | quote }}
               memory: {{ .Values.operators.pool.resources.requests.memory | quote }}
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-operator-diskpool:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-operator-diskpool:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "-e http://{{ .Release.Name }}-api-rest:8081"

@@ -40,7 +40,7 @@ spec:
         {{- end }}
       containers:
       - name: agent-ha-node
-        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-agent-ha-node:{{ .Values.image.tag }}"
+        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-agent-ha-node:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         securityContext:
           privileged: true

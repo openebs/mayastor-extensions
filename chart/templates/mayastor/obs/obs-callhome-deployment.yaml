@@ -26,7 +26,7 @@ spec:
       {{- end }}
       containers:
         - name: obs-callhome
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-obs-callhome:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-obs-callhome:{{ .Values.image.tag }}"
           args:
             - "-e http://{{ .Release.Name }}-api-rest:8081"
             - "-n {{ .Release.Namespace }}"

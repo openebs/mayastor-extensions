@@ -65,7 +65,7 @@ spec:
             requests:
               cpu: {{ .Values.csi.controller.resources.requests.cpu | quote }}
               memory: {{ .Values.csi.controller.resources.requests.memory | quote }}
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-csi-controller:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-csi-controller:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
