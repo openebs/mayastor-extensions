@@ -43,14 +43,16 @@ let
     builtins.filterSource
       (path: type:
         lib.any
-          (allowedPrefix: lib.hasPrefix (toString (src + "/${allowedPrefix}")) path)
+          (allowedPrefix:
+            (lib.hasPrefix (toString (src + "/${allowedPrefix}")) path) ||
+            (type == "directory" && lib.hasPrefix path (toString (src + "/${allowedPrefix}")))
+          )
           allowedPrefixes)
       src;
   PROTOC = "${protobuf}/bin/protoc";
   PROTOC_INCLUDE = "${protobuf}/include";
   version = gitVersions.version;
   src_list = [
-    ".git"
     "Cargo.lock"
     "Cargo.toml"
     "exporter"
@@ -58,7 +60,15 @@ let
     "operators"
     "call-home"
     "scripts"
-    "dependencies"
+    "dependencies/control-plane/openapi/Cargo.toml"
+    "dependencies/control-plane/openapi/build.rs"
+    "dependencies/control-plane/control-plane/plugin"
+    "dependencies/control-plane/control-plane/rest/openapi-specs"
+    "dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh"
+    "dependencies/control-plane/common"
+    "dependencies/control-plane/utils"
+    "dependencies/control-plane/rpc"
+    "dependencies/control-plane/k8s" # remove when we purge proxy+support from ctrlplane
     "k8s"
   ];
   src = whitelistSource ../../../. src_list;
@@ -101,7 +111,7 @@ let
   builder = if incremental then build_with_naersk else build_with_default;
 in
 {
-  inherit PROTOC PROTOC_INCLUDE version src_list src;
+  inherit PROTOC PROTOC_INCLUDE version src;
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if allInOne then

@@ -16,6 +16,13 @@ let
     cargo = channel.stable;
   };
   naersk_cross = naersk_package channel.windows_cross;
+  preBuildOpenApi = ''
+    # don't run during the dependency build phase
+    if [ ! -f build.rs ]; then
+      patchShebangs ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh
+      ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh --skip-git-diff
+    fi
+  '';
 
   components = { release ? false }: {
     windows-gnu = {
@@ -23,12 +30,7 @@ let
         inherit release src version singleStep GIT_VERSION_LONG GIT_VERSION;
         name = "kubectl-plugin";
 
-        preBuild = ''
-          # don't run during the dependency build phase
-          if [ ! -f build.rs ]; then
-            patchShebangs ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh
-            ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh --skip-git-diff
-          fi
+        preBuild = preBuildOpenApi + ''
           export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS="-C link-args=''$(echo $NIX_LDFLAGS | tr ' ' '\n' | grep -- '^-L' | tr '\n' ' ')"
           export NIX_LDFLAGS=
           export NIX_LDFLAGS_FOR_BUILD=
@@ -60,12 +62,7 @@ let
         inherit release src version singleStep GIT_VERSION_LONG GIT_VERSION check_assert;
         name = "kubectl-plugin";
 
-        preBuild = ''
-          # don't run during the dependency build phase
-          if [ ! -f build.rs ]; then
-            patchShebangs ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh
-            ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh --skip-git-diff
-          fi
+        preBuild = preBuildOpenApi + ''
           export OPENSSL_STATIC=1
         '';
         inherit LIBCLANG_PATH PROTOC PROTOC_INCLUDE;
@@ -92,13 +89,7 @@ let
         inherit release src version singleStep GIT_VERSION_LONG GIT_VERSION check_assert;
         name = "kubectl-plugin";
 
-        preBuild = ''
-          # don't run during the dependency build phase
-          if [ ! -f build.rs ]; then
-            patchShebangs ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh
-            ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh --skip-git-diff
-          fi
-        '';
+        preBuild = preBuildOpenApi;
         inherit LIBCLANG_PATH PROTOC PROTOC_INCLUDE;
         cargoBuildOptions = attrs: attrs ++ [ "-p" "kubectl-plugin" ];
         nativeBuildInputs = with pkgs; [ clang openapi-generator which git openssl.dev ];

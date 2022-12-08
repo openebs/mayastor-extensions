@@ -316,30 +316,6 @@ SUBCOMMANDS:
       kubectl mayastor dump volume volume-1 -d /mayastor-dump -r http://127.0.0.1:30011 -l http://127.0.0.1:3100 -e http://127.0.0.1:2379 -n mayastor
       ```
 
-**Note**: As of now endpoint(s) of Rest, Loki & mayastor-etcd services are mandatory
-only if tool is running outside of cluster nodes(where nodes are in private
-network/node ports are not exposed outside cluster).
-
-### Tip
-To run `kubectl mayastor` command line tool outside Kubernetes cluster then it is recommended to
-make Rest, Loki and etcd service available outside the cluster. One way to access applications running inside the cluster is by using [kubectl port-forward](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/)
-- Command to forward traffic from local system to Rest service inside the
-    cluster
-  ```sh
-  kubectl port-forward service/rest 8081:8081 -n mayastor
-  ```
-- Command to forward traffic from local system to Loki service inside the cluster
-  ```sh
-  kubectl port-forward service/mayastor-loki 3100:3100 -n mayastor
-  ```
-
-- Command to forward traffic from local system to etcd service inside the cluster
-  ```sh
-  kubectl port-forward service/mayastor-etcd 2379:2379 -n mayastor
-  ```
-</details>
-
-
 <details>
 <summary> Upgrade operations </summary>
 
