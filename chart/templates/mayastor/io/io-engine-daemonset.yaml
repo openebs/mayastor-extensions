@@ -3,11 +3,13 @@ kind: DaemonSet
 metadata:
   name: {{ .Release.Name }}-io-engine
   labels:
-    openebs.io/engine: io-engine
+    app: io-engine
+    helm-release: {{ .Release.Name }}
 spec:
   selector:
     matchLabels:
       app: io-engine
+      helm-release: {{ .Release.Name }}
   updateStrategy:
     type: OnDelete
   minReadySeconds: 10
@@ -15,6 +17,7 @@ spec:
     metadata:
       labels:
         app: io-engine
+        helm-release: {{ .Release.Name }}
         openebs.io/logging: "true"
     spec:
       imagePullSecrets:
@@ -28,7 +31,7 @@ spec:
       containers:
       {{- if .Values.base.metrics.enabled }}
       - name: metrics-exporter-pool
-        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-metrics-exporter-pool:{{ .Values.image.tag }}"
+        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-metrics-exporter-pool:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
         - name: MY_NODE_NAME
@@ -50,7 +53,7 @@ spec:
             name: metrics
       {{- end }}
       - name: io-engine
-        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-io-engine:{{ .Values.image.tag }}"
+        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-io-engine:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
         - name: RUST_LOG

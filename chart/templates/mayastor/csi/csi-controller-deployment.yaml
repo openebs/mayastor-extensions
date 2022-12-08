@@ -4,15 +4,18 @@ metadata:
   name: {{ .Release.Name }}-csi-controller
   labels:
     app: csi-controller
+    helm-release: {{ .Release.Name }}
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: csi-controller
+      helm-release: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app: csi-controller
+        helm-release: {{ .Release.Name }}
         openebs.io/logging: "true"
     spec:
       hostNetwork: true
@@ -62,7 +65,7 @@ spec:
             requests:
               cpu: {{ .Values.csi.controller.resources.requests.cpu | quote }}
               memory: {{ .Values.csi.controller.resources.requests.memory | quote }}
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-csi-controller:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-csi-controller:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"

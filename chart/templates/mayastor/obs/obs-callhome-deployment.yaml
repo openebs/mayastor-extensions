@@ -5,15 +5,18 @@ metadata:
   name: {{ .Release.Name }}-obs-callhome
   labels:
     app: obs-callhome
+    helm-release: {{ .Release.Name }}
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: obs-callhome
+      helm-release: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app: obs-callhome
+        helm-release: {{ .Release.Name }}
     spec:
       serviceAccount: {{ .Release.Name }}-service-account
       imagePullSecrets:
@@ -23,7 +26,7 @@ spec:
       {{- end }}
       containers:
         - name: obs-callhome
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-obs-callhome:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-obs-callhome:{{ .Values.image.tag }}"
           args:
             - "-e http://{{ .Release.Name }}-api-rest:8081"
             - "-n {{ .Release.Namespace }}"

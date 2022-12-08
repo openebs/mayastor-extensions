@@ -5,10 +5,12 @@ metadata:
   name: {{ .Release.Name }}-agent-ha-node
   labels:
     app: agent-ha-node
+    helm-release: {{ .Release.Name }}
 spec:
   selector:
     matchLabels:
       app: agent-ha-node
+      helm-release: {{ .Release.Name }}
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -18,6 +20,7 @@ spec:
     metadata:
       labels:
         app: agent-ha-node
+        helm-release: {{ .Release.Name }}
         openebs.io/logging: "true"
     spec:
       hostNetwork: true
@@ -37,7 +40,7 @@ spec:
         {{- end }}
       containers:
       - name: agent-ha-node
-        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-agent-ha-node:{{ .Values.image.tag }}"
+        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-agent-ha-node:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         securityContext:
           privileged: true

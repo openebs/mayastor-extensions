@@ -4,15 +4,18 @@ metadata:
   name: {{ .Release.Name }}-api-rest
   labels:
     app: api-rest
+    helm-release: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.apis.rest.replicaCount }}
   selector:
     matchLabels:
       app: api-rest
+      helm-release: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app: api-rest
+        helm-release: {{ .Release.Name }}
         openebs.io/logging: "true"
     spec:
       imagePullSecrets:
@@ -33,7 +36,7 @@ spec:
             requests:
               cpu: {{ .Values.apis.rest.resources.requests.cpu | quote }}
               memory: {{ .Values.apis.rest.resources.requests.memory | quote }}
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/mayastor-api-rest:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-api-rest:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "--dummy-certificates"

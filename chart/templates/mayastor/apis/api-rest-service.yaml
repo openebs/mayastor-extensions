@@ -4,6 +4,7 @@ metadata:
   name: {{ .Release.Name }}-api-rest
   labels:
     app: api-rest
+    helm-release: {{ .Release.Name }}
 spec:
   type: NodePort
   selector:
