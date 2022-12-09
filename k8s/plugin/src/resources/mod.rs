@@ -3,8 +3,17 @@ use plugin::resources::{CordonResources, DrainResources, GetResources, ScaleReso
 use supportability::DumpArgs;
 
 pub mod objects;
+pub mod uo_client;
 pub mod upgrade;
 use upgrade::UpgradeOperator;
+
+#[derive(clap::Subcommand, Debug)]
+pub enum GetResourcesK8s {
+    #[clap(flatten)]
+    Rest(GetResources),
+    /// Get upgrade status
+    UpgradeStatus,
+}
 
 /// The types of operations that are supported.
 #[derive(Parser, Debug)]
@@ -14,7 +23,7 @@ pub enum Operations {
     Drain(DrainResources),
     /// 'Get' resources.
     #[clap(subcommand)]
-    Get(GetResources),
+    Get(GetResourcesK8s),
     /// 'Scale' resources.
     #[clap(subcommand)]
     Scale(ScaleResources),
@@ -32,4 +41,6 @@ pub enum Operations {
     /// `Uninstall` upgrade operator.
     #[clap(subcommand)]
     Uninstall(UpgradeOperator),
+    /// `Upgrade` the operator.
+    Upgrade,
 }

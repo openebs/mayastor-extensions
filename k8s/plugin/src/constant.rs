@@ -23,6 +23,8 @@ macro_rules! upgrade_labels {
     };
 }
 
+/// Upgrade endpoint
+pub(crate) const UPGRADE_OPERATOR_END_POINT: &str = "/upgrade";
 /// label used for upgrade operator.
 pub(crate) const APP: &str = "app.kubernetes.io/component";
 /// label used for upgrade operator.

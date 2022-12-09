@@ -332,4 +332,16 @@ SUBCOMMANDS:
    ## Command
    kubectl mayastor uninstall upgrade-operator -n <mayastor_namespace>
    ```
+
+3. To upgrade the installation
+   ```sh
+   ## Command
+   kubectl mayastor upgrade
+   ```
+
+4. To get the upgrade status
+   ```sh
+   ## Command
+   kubectl mayastor get upgrade-status
+   ```
 </details>

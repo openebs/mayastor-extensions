@@ -1701,18 +1701,6 @@ dependencies = [
 
 [[package]]
 name = "kube-proxy"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "kube",
- "kube-forward",
- "openapi",
- "tower",
- "utils",
-]
-
-[[package]]
-name = "kube-proxy"
 version = "1.0.0"
 dependencies = [
  "anyhow",
@@ -1752,20 +1740,27 @@ name = "kubectl-plugin"
 version = "1.0.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "clap 3.2.23",
  "common-lib",
+ "http",
  "humantime",
+ "hyper",
  "k8s-openapi",
  "kube",
- "kube-proxy 1.0.0",
+ "kube-proxy",
  "maplit",
  "openapi",
  "opentelemetry",
  "rest-plugin",
+ "serde",
+ "serde_json",
  "shutdown",
- "supportability 0.1.0",
+ "supportability",
  "tokio",
+ "tower",
  "tracing",
+ "url",
  "utils",
 ]
 
@@ -3189,41 +3184,6 @@ dependencies = [
 
 [[package]]
 name = "supportability"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "clap 3.2.23",
- "common-lib",
- "downcast-rs",
- "flate2",
- "futures",
- "http",
- "humantime",
- "hyper",
- "k8s-openapi",
- "k8s-operators",
- "kube",
- "kube-proxy 0.1.0",
- "lazy_static",
- "once_cell",
- "openapi",
- "prettytable-rs",
- "schemars",
- "serde",
- "serde_json",
- "serde_yaml 0.8.26",
- "tar",
- "tokio",
- "tower",
- "urlencoding",
- "uuid",
- "yaml-rust",
-]
-
-[[package]]
-name = "supportability"
 version = "1.0.0"
 dependencies = [
  "anyhow",
@@ -3240,7 +3200,7 @@ dependencies = [
  "k8s-openapi",
  "k8s-operators",
  "kube",
- "kube-proxy 1.0.0",
+ "kube-proxy",
  "lazy_static",
  "once_cell",
  "openapi",
