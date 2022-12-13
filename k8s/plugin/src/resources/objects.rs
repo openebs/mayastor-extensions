@@ -20,9 +20,9 @@ use k8s_openapi::{
     apimachinery::pkg::{apis::meta::v1::LabelSelector, util::intstr::IntOrString},
 };
 
-use common_lib::IntoVec;
 use kube::core::ObjectMeta;
 use maplit::btreemap;
+use openapi::apis::IntoVec;
 
 /// Defines the upgrade-operator service account.
 pub(crate) fn upgrade_operator_service_account(namespace: Option<String>) -> ServiceAccount {

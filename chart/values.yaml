@@ -232,6 +232,8 @@ csi:
       io_timeout: "30"
       # ctrl_loss_tmo (controller loss timeout) in seconds
       ctrl_loss_tmo: "1980"
+      # kato (keep alive timeout) in seconds
+      keep_alive_tmo: ""
     kubeletDir: /var/lib/kubelet
     pluginMounthPath: /csi
     socketPath: csi.sock

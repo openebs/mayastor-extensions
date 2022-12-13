@@ -1742,7 +1742,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap 3.2.23",
- "common-lib",
  "http",
  "humantime",
  "hyper",
