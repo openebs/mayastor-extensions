@@ -11,8 +11,9 @@ use plugin::{
     rest_wrapper::RestClient,
 };
 use std::{env, path::PathBuf};
-
 mod resources;
+use crate::resources::GetResourcesK8s;
+use http::Uri;
 use resources::{
     upgrade::{UpgradeOperator, UpgradeResources},
     Operations,
@@ -49,6 +50,11 @@ struct CliArgs {
     /// Kubernetes namespace of mayastor service, defaults to mayastor
     #[clap(global = true, long, short = 'n', default_value = "mayastor")]
     namespace: String,
+
+    /// Endpoint of upgrade operator service, if left empty then it will try to parse endpoints
+    /// from upgrade operator service(K8s service resource).
+    #[clap(global = true, short, long)]
+    upgrade_operator_endpoint: Option<Uri>,
 }
 impl CliArgs {
     fn args() -> Self {
@@ -76,34 +82,45 @@ async fn execute(cli_args: CliArgs) {
     let fut = async move {
         match cli_args.operations {
             Operations::Get(resource) => match resource {
-                GetResources::Cordon(get_cordon_resource) => match get_cordon_resource {
-                    GetCordonArgs::Node { id: node_id } => {
-                        cordon::NodeCordon::get(&node_id, &cli_args.output).await
+                GetResourcesK8s::Rest(resource) => match resource {
+                    GetResources::Cordon(get_cordon_resource) => match get_cordon_resource {
+                        GetCordonArgs::Node { id: node_id } => {
+                            cordon::NodeCordon::get(&node_id, &cli_args.output).await
+                        }
+                        GetCordonArgs::Nodes => cordon::NodeCordons::list(&cli_args.output).await,
+                    },
+                    GetResources::Drain(get_drain_resource) => match get_drain_resource {
+                        GetDrainArgs::Node { id: node_id } => {
+                            drain::NodeDrain::get(&node_id, &cli_args.output).await
+                        }
+                        GetDrainArgs::Nodes => drain::NodeDrains::list(&cli_args.output).await,
+                    },
+                    GetResources::Volumes => volume::Volumes::list(&cli_args.output).await,
+                    GetResources::Volume { id } => volume::Volume::get(&id, &cli_args.output).await,
+                    GetResources::VolumeReplicaTopology { id } => {
+                        volume::Volume::topology(&id, &cli_args.output).await
                     }
-                    GetCordonArgs::Nodes => cordon::NodeCordons::list(&cli_args.output).await,
-                },
-                GetResources::Drain(get_drain_resource) => match get_drain_resource {
-                    GetDrainArgs::Node { id: node_id } => {
-                        drain::NodeDrain::get(&node_id, &cli_args.output).await
+                    GetResources::Pools => pool::Pools::list(&cli_args.output).await,
+                    GetResources::Pool { id } => pool::Pool::get(&id, &cli_args.output).await,
+                    GetResources::Nodes => node::Nodes::list(&cli_args.output).await,
+                    GetResources::Node(args) => {
+                        node::Node::get(&args.node_id(), &cli_args.output).await
                     }
-                    GetDrainArgs::Nodes => drain::NodeDrains::list(&cli_args.output).await,
+                    GetResources::BlockDevices(bdargs) => {
+                        blockdevice::BlockDevice::get_blockdevices(
+                            &bdargs.node_id(),
+                            &bdargs.all(),
+                            &cli_args.output,
+                        )
+                        .await
+                    }
                 },
-                GetResources::Volumes => volume::Volumes::list(&cli_args.output).await,
-                GetResources::Volume { id } => volume::Volume::get(&id, &cli_args.output).await,
-                GetResources::VolumeReplicaTopology { id } => {
-                    volume::Volume::topology(&id, &cli_args.output).await
-                }
-                GetResources::Pools => pool::Pools::list(&cli_args.output).await,
-                GetResources::Pool { id } => pool::Pool::get(&id, &cli_args.output).await,
-                GetResources::Nodes => node::Nodes::list(&cli_args.output).await,
-                GetResources::Node(args) => {
-                    node::Node::get(&args.node_id(), &cli_args.output).await
-                }
-                GetResources::BlockDevices(bdargs) => {
-                    blockdevice::BlockDevice::get_blockdevices(
-                        &bdargs.node_id(),
-                        &bdargs.all(),
-                        &cli_args.output,
+                GetResourcesK8s::UpgradeStatus => {
+                    UpgradeResources::get(
+                        cli_args.upgrade_operator_endpoint,
+                        &cli_args.namespace,
+                        cli_args.kube_config_path,
+                        cli_args.timeout,
                     )
                     .await
                 }
@@ -154,6 +171,15 @@ async fn execute(cli_args: CliArgs) {
                     UpgradeResources::uninstall(&cli_args.namespace).await;
                 }
             },
+            Operations::Upgrade => {
+                UpgradeResources::apply(
+                    cli_args.upgrade_operator_endpoint,
+                    &cli_args.namespace,
+                    cli_args.kube_config_path,
+                    cli_args.timeout,
+                )
+                .await;
+            }
         };
     };
 

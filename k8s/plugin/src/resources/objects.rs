@@ -171,8 +171,14 @@ pub(crate) fn upgrade_operator_cluster_role(namespace: Option<String>) -> Cluste
                 ..Default::default()
             },
             PolicyRule {
-                api_groups: Some(vec!["storage.k8s.io"].into_vec()),
+                api_groups: Some(vec![""].into_vec()),
                 resources: Some(vec!["configmaps"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["scheduling.k8s.io"].into_vec()),
+                resources: Some(vec!["priorityclasses"].into_vec()),
                 verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
                 ..Default::default()
             },

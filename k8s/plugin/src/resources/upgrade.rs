@@ -4,10 +4,10 @@ use crate::{
         UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING, UPGRADE_OPERATOR_SERVICE,
         UPGRADE_OPERATOR_SERVICE_ACCOUNT,
     },
-    resources::objects,
+    resources::{objects, uo_client::UpgradeOperatorClient},
 };
-
 use anyhow::Error;
+use http::Uri;
 use k8s_openapi::api::{
     apps::v1::Deployment,
     core::v1::{Service, ServiceAccount},
@@ -18,7 +18,7 @@ use kube::{
     core::ObjectList,
     Client,
 };
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 /// The types of resources that support the upgrade operator.
 #[derive(clap::Subcommand, Debug)]
@@ -251,10 +251,6 @@ impl UpgradeResources {
                                 .await
                             {
                                 Ok(_) => {
-                                    // wait unit the deployment is deleted.
-                                    while duo.get_deployment().await.iter().count() != 0 {
-                                        tokio::time::sleep(Duration::from_secs(5)).await;
-                                    }
                                     println!("deployment deleted");
                                 }
                                 Err(e) => {
@@ -387,6 +383,50 @@ impl UpgradeResources {
             }
             Err(e) => println!("Failed to uninstall. Error {}", e),
         };
+    }
+
+    /// Upgrades the cluster
+    pub async fn apply(
+        uri: Option<Uri>,
+        namespace: &str,
+        kube_config_path: Option<PathBuf>,
+        timeout: humantime::Duration,
+    ) {
+        match UpgradeOperatorClient::new(uri, namespace.to_string(), kube_config_path, timeout)
+            .await
+        {
+            Ok(mut client) => {
+                if let Err(err) = client.apply_upgrade().await {
+                    println!("Error while  upgrading {:?}", err);
+                }
+            }
+            Err(e) => {
+                println!("Failed to create client for upgrade {:?}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+
+    /// Upgrades the cluster
+    pub async fn get(
+        uri: Option<Uri>,
+        namespace: &str,
+        kube_config_path: Option<PathBuf>,
+        timeout: humantime::Duration,
+    ) {
+        match UpgradeOperatorClient::new(uri, namespace.to_string(), kube_config_path, timeout)
+            .await
+        {
+            Ok(mut client) => {
+                if let Err(err) = client.get_upgrade().await {
+                    println!("Error while  upgrading {:?}", err);
+                }
+            }
+            Err(e) => {
+                println!("Failed to create client for upgrade {:?}", e);
+                std::process::exit(1);
+            }
+        }
     }
 
     /// Return results as list of service accounts.
