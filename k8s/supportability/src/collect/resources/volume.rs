@@ -133,7 +133,7 @@ impl VolumeClientWrapper {
             let volumes_api_resp = self
                 .rest_client
                 .volumes_api()
-                .get_volumes(max_entries, next_token)
+                .get_volumes(max_entries, None, next_token)
                 .await?
                 .into_body();
             volumes.extend(volumes_api_resp.entries);

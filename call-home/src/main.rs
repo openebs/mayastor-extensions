@@ -150,7 +150,7 @@ async fn generate_report(
         }
     };
 
-    let volumes = http_client.volumes_api().get_volumes(0, None).await;
+    let volumes = http_client.volumes_api().get_volumes(0, None, None).await;
     let volumes = match volumes {
         Ok(volumes) => Some(volumes.into_body()),
         Err(err) => {

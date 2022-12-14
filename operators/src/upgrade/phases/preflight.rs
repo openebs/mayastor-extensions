@@ -39,7 +39,7 @@ async fn check_volume_targets() -> Result<bool, Error> {
     let volumes = UpgradeOperatorConfig::get_config()
         .rest_client()
         .volumes_api()
-        .get_volumes(0, None)
+        .get_volumes(0, None, None)
         .await;
 
     match volumes {
