@@ -260,6 +260,7 @@ impl ResourceDumper {
                 ));
                 e
             })?;
+        log("Completed collection of etcd dump information".to_string());
 
         if matches!(self.output_format, OutputFormat::Tar) {
             self.archive
