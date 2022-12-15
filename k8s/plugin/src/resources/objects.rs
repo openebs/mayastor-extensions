@@ -1,11 +1,11 @@
 use crate::{
     constant::{
-        APP, LABEL, UPGRADE_CONTROLLER_DEPLOYMENT, UPGRADE_OPERATOR, UPGRADE_OPERATOR_CLUSTER_ROLE,
-        UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING, UPGRADE_OPERATOR_HTTP_PORT,
-        UPGRADE_OPERATOR_INTERNAL_PORT, UPGRADE_OPERATOR_SERVICE, UPGRADE_OPERATOR_SERVICE_ACCOUNT,
-        UPGRADE_OPERATOR_SERVICE_PORT,
+        upgrade_group, APP, LABEL, UPGRADE_CONTROLLER_DEPLOYMENT, UPGRADE_OPERATOR,
+        UPGRADE_OPERATOR_CLUSTER_ROLE, UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
+        UPGRADE_OPERATOR_HTTP_PORT, UPGRADE_OPERATOR_INTERNAL_PORT, UPGRADE_OPERATOR_SERVICE,
+        UPGRADE_OPERATOR_SERVICE_ACCOUNT, UPGRADE_OPERATOR_SERVICE_PORT,
     },
-    upgrade_labels,
+    upgrade_labels, CliArgs,
 };
 
 use k8s_openapi::{
@@ -20,16 +20,24 @@ use k8s_openapi::{
     apimachinery::pkg::{apis::meta::v1::LabelSelector, util::intstr::IntOrString},
 };
 
+use plugin::rest_wrapper::RestClient;
+
 use kube::core::ObjectMeta;
 use maplit::btreemap;
 use openapi::apis::IntoVec;
 
 /// Defines the upgrade-operator service account.
-pub(crate) fn upgrade_operator_service_account(namespace: Option<String>) -> ServiceAccount {
+pub(crate) fn upgrade_operator_service_account(
+    namespace: Option<String>,
+    release_name: String,
+) -> ServiceAccount {
     ServiceAccount {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
-            name: Some(UPGRADE_OPERATOR_SERVICE_ACCOUNT.to_string()),
+            name: Some(upgrade_group(
+                &release_name,
+                UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+            )),
             namespace,
             ..Default::default()
         },
@@ -38,11 +46,14 @@ pub(crate) fn upgrade_operator_service_account(namespace: Option<String>) -> Ser
 }
 
 /// Defines the upgrade-operator cluster role.
-pub(crate) fn upgrade_operator_cluster_role(namespace: Option<String>) -> ClusterRole {
+pub(crate) fn upgrade_operator_cluster_role(
+    namespace: Option<String>,
+    release_name: String,
+) -> ClusterRole {
     ClusterRole {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
-            name: Some(UPGRADE_OPERATOR_CLUSTER_ROLE.to_string()),
+            name: Some(upgrade_group(&release_name, UPGRADE_OPERATOR_CLUSTER_ROLE)),
             namespace,
             ..Default::default()
         },
@@ -190,22 +201,26 @@ pub(crate) fn upgrade_operator_cluster_role(namespace: Option<String>) -> Cluste
 /// Defines the upgrade-operator cluster role binding.
 pub(crate) fn upgrade_operator_cluster_role_binding(
     namespace: Option<String>,
+    release_name: String,
 ) -> ClusterRoleBinding {
     ClusterRoleBinding {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
-            name: Some(UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING.to_string()),
+            name: Some(upgrade_group(
+                &release_name,
+                UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
+            )),
             namespace: namespace.clone(),
             ..Default::default()
         },
         role_ref: RoleRef {
             api_group: "rbac.authorization.k8s.io".to_string(),
             kind: "ClusterRole".to_string(),
-            name: UPGRADE_OPERATOR_CLUSTER_ROLE.to_string(),
+            name: upgrade_group(&release_name, UPGRADE_OPERATOR_CLUSTER_ROLE),
         },
         subjects: Some(vec![Subject {
             kind: "ServiceAccount".to_string(),
-            name: UPGRADE_OPERATOR_SERVICE_ACCOUNT.to_string(),
+            name: upgrade_group(&release_name, UPGRADE_OPERATOR_SERVICE_ACCOUNT),
             namespace,
             ..Default::default()
         }]),
@@ -216,11 +231,15 @@ pub(crate) fn upgrade_operator_cluster_role_binding(
 pub(crate) fn upgrade_operator_deployment(
     namespace: Option<String>,
     upgrade_image: String,
+    release_name: String,
 ) -> Deployment {
+    let rest_endpoint_arg = format!("--rest-endpoint={}", RestClient::get_or_panic().uri());
+    let namespace_arg = format!("--namespace={}", CliArgs::args().namespace);
+    let chart_name_arg = format!("--chart-name={}", &release_name);
     Deployment {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
-            name: Some(UPGRADE_CONTROLLER_DEPLOYMENT.to_string()),
+            name: Some(upgrade_group(&release_name, UPGRADE_CONTROLLER_DEPLOYMENT)),
             namespace: namespace.clone(),
             ..Default::default()
         },
@@ -242,6 +261,7 @@ pub(crate) fn upgrade_operator_deployment(
                 }),
                 spec: Some(PodSpec {
                     containers: vec![Container {
+                        args: Some(vec![rest_endpoint_arg, namespace_arg, chart_name_arg]),
                         image: Some(upgrade_image),
                         image_pull_policy: Some("Always".to_string()),
                         name: UPGRADE_OPERATOR.to_string(),
@@ -258,7 +278,10 @@ pub(crate) fn upgrade_operator_deployment(
                         }]),
                         ..Default::default()
                     }],
-                    service_account_name: Some(UPGRADE_OPERATOR_SERVICE_ACCOUNT.to_string()),
+                    service_account_name: Some(upgrade_group(
+                        &release_name,
+                        UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+                    )),
                     ..Default::default()
                 }),
             },
@@ -269,11 +292,11 @@ pub(crate) fn upgrade_operator_deployment(
 }
 
 /// Defines the upgrade-operator service.
-pub(crate) fn upgrade_operator_service(namespace: Option<String>) -> Service {
+pub(crate) fn upgrade_operator_service(namespace: Option<String>, release_name: String) -> Service {
     Service {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
-            name: Some(UPGRADE_OPERATOR_SERVICE.to_string()),
+            name: Some(upgrade_group(&release_name, UPGRADE_OPERATOR_SERVICE)),
             namespace,
             ..Default::default()
         },
