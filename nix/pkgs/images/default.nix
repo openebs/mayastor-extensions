@@ -4,7 +4,7 @@
 
 { dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, runCommand, img_tag ? "" }:
 let
-  helm_chart_src = builtins.filterSource (path: type: true ) ../../../chart;
+  helm_chart_src = builtins.filterSource (path: type: true) ../../../chart;
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
   build-extensions-image = { pname, buildType, package, extraCommands ? '''', contents ? [ ], config ? { } }:
     dockerTools.buildImage {
