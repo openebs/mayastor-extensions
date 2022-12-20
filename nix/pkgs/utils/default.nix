@@ -23,6 +23,9 @@ let
       ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh --skip-git-diff
     fi
   '';
+  static_ssl = (pkgs.openssl.override {
+    static = true;
+  });
 
   components = { release ? false }: {
     windows-gnu = {
@@ -79,20 +82,33 @@ let
     # Can only be built on apple-darwin
     apple-darwin = rec {
       target = channel.makeRustTarget pkgs.pkgsStatic.hostPlatform;
-      x86_64-apple-darwin = channel.makeRustTarget pkgs.pkgsCross.x86_64-darwin.hostPlatform;
       naersk = naersk_package (channel.static {
         inherit target;
       });
-      check_assert = lib.asserts.assertMsg (target == x86_64-apple-darwin) "This may only be built on ${x86_64-apple-darwin}";
+      check_assert = lib.asserts.assertMsg (pkgs.hostPlatform.isDarwin == true) "This may only be built on darwin";
 
       kubectl-plugin = naersk.buildPackage {
         inherit release src version singleStep GIT_VERSION_LONG GIT_VERSION check_assert;
         name = "kubectl-plugin";
 
-        preBuild = preBuildOpenApi;
+        preBuild = preBuildOpenApi + ''
+          export OPENSSL_STATIC=1
+          export OPENSSL_LIB_DIR=${static_ssl.out}/lib
+          export OPENSSL_INCLUDE_DIR=${static_ssl.dev}/include
+        '';
         inherit LIBCLANG_PATH PROTOC PROTOC_INCLUDE;
         cargoBuildOptions = attrs: attrs ++ [ "-p" "kubectl-plugin" ];
-        nativeBuildInputs = with pkgs; [ clang openapi-generator which git openssl.dev ];
+        nativeBuildInputs = with pkgs; [
+          clang
+          openapi-generator
+          which
+          git
+          pkg-config
+          (libiconv.override {
+            enableStatic = true;
+            enableShared = false;
+          })
+        ];
         doCheck = false;
         usePureFromTOML = true;
 
