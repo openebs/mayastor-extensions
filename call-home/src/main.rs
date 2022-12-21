@@ -76,7 +76,10 @@ async fn run() -> anyhow::Result<()> {
         })?;
 
     // Generate Mayastor REST client.
-    let config = Configuration::new(endpoint, time::Duration::from_secs(30), None, None, true)
+    let config = Configuration::builder()
+        .with_timeout(time::Duration::from_secs(30))
+        .with_tracing(true)
+        .build_url(endpoint)
         .map_err(|error| anyhow::anyhow!("failed to create openapi configuration: {:?}", error))?;
     let client = openapi::clients::tower::ApiClient::new(config);
 

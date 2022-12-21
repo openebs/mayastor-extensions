@@ -50,19 +50,16 @@ impl UpgradeOperatorConfig {
             error
         })?;
         let rest_endpoint = args.rest_endpoint;
-        let config_rest = Configuration::new(
-            rest_endpoint,
-            time::Duration::from_secs(30),
-            None,
-            None,
-            true,
-        )
-        .map_err(|error| Error::OpenapiClientConfigurationErr {
-            source: anyhow::anyhow!(
-                "Failed to create openapi configuration, Error: '{:?}'",
-                error
-            ),
-        })?;
+        let config_rest = Configuration::builder()
+            .with_timeout(time::Duration::from_secs(30))
+            .with_tracing(true)
+            .build_url(rest_endpoint)
+            .map_err(|error| Error::OpenapiClientConfigurationErr {
+                source: anyhow::anyhow!(
+                    "Failed to create openapi configuration, Error: '{:?}'",
+                    error
+                ),
+            })?;
         let rest_client = ApiClient::new(config_rest);
         let namespace = args.namespace;
         let chart_name = args.chart_name;
