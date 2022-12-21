@@ -227,7 +227,11 @@ impl ConfigBuilder<ApiRest> {
         let client = kube::Client::try_from(config)?;
         let proxy = kube_forward::HttpProxy::new(client);
 
-        let config = Configuration::new_with_client(uri, proxy, self.timeout, self.jwt, true)
+        let config = Configuration::builder()
+            .with_timeout(self.timeout)
+            .with_bearer_token(self.jwt)
+            .with_tracing(true)
+            .build_with_svc(uri, proxy)
             .map_err(|e| anyhow!("Failed to Create OpenApi config: {:?}", e))?;
         Ok(config)
     }
@@ -243,9 +247,17 @@ impl ConfigBuilder<ApiRest> {
         let (scheme, certificate) = self.scheme.parts();
         let url = Url::parse(&format!("{}://localhost:{}", scheme, port))?;
 
-        let config = Configuration::new(url, timeout, self.jwt, certificate, true)
-            .map_err(|e| anyhow!("Failed to Create OpenApi config: {:?}", e))?;
-        Ok(config)
+        let config = Configuration::builder()
+            .with_timeout(timeout)
+            .with_bearer_token(self.jwt)
+            .with_tracing(true);
+        // todo: fix client to receive option...
+        match certificate {
+            Some(certificate) => config.with_certificate(certificate),
+            None => config,
+        }
+        .build_url(url)
+        .map_err(|e| anyhow!("Failed to Create OpenApi config: {:?}", e))
     }
 }
 

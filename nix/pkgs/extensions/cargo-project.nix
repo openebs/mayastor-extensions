@@ -68,7 +68,8 @@ let
     "dependencies/control-plane/common"
     "dependencies/control-plane/utils"
     "dependencies/control-plane/rpc"
-    "dependencies/control-plane/k8s" # remove when we purge proxy+support from ctrlplane
+    "dependencies/control-plane/k8s/forward"
+    "dependencies/control-plane/k8s/operators"
     "k8s"
   ];
   src = whitelistSource ../../../. src_list;

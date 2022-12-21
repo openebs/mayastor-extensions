@@ -14,9 +14,6 @@ let
   channel = import ./nix/lib/rust.nix { inherit sources; };
   rust_chan = channel.default_src;
   rust = rust_chan.${rust-profile};
-  # python environment for tests/bdd
-  pytest_inputs = python3.withPackages
-    (ps: with ps; [ virtualenv grpcio grpcio-tools black ]);
 in
 mkShell {
   name = "extensions-shell";
@@ -24,22 +21,23 @@ mkShell {
     cacert
     cargo-expand
     cargo-udeps
+    clang
     commitlint
     cowsay
     git
     kubernetes-helm-wrapped
-    clang
-    openapi-generator
-    libxfs
     llvmPackages.libclang
+    nixpkgs-fmt
+    openapi-generator
     openssl
     pkg-config
     pre-commit
-    pytest_inputs
     python3
     utillinux
     which
-  ] ++ pkgs.lib.optional (!norust) channel.default_src.nightly;
+    niv
+  ] ++ pkgs.lib.optional (!norust) channel.default_src.nightly
+  ++ pkgs.lib.optional (system == "aarch64-darwin") darwin.apple_sdk.frameworks.Security;
 
   PROTOC = "${protobuf}/bin/protoc";
   PROTOC_INCLUDE = "${protobuf}/include";
