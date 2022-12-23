@@ -83,7 +83,7 @@ spec:
         - "-p={{ .Release.Name }}-etcd:{{ .Values.etcd.service.port }}"{{ if .Values.mayastor.target.nvmf.ptpl }}
         - "--ptpl-dir=/var/local/io-engine/ptpl/"{{ end }}
         - "--api-versions={{ .Values.mayastor.api }}"{{ if .Values.mayastor.target.nvmf.iface }}
-        - "-T={{ .Values.mayastor.target.nvmf.iface }}"{{ end }}{{ if .Values.mayastor.target.nvmf.iface }}
+        - "-T={{ .Values.mayastor.target.nvmf.iface }}"{{ end }}{{ if .Values.mayastor.envcontext }}
         - "--env-context=--{{ .Values.mayastor.envcontext }}"{{ end }}
         command:
         - io-engine
