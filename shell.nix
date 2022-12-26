@@ -27,15 +27,17 @@ mkShell {
     git
     kubernetes-helm-wrapped
     llvmPackages.libclang
+    niv
     nixpkgs-fmt
     openapi-generator
     openssl
     pkg-config
     pre-commit
     python3
+    semver-tool
     utillinux
     which
-    niv
+    yq-go
   ] ++ pkgs.lib.optional (!norust) channel.default_src.nightly
   ++ pkgs.lib.optional (system == "aarch64-darwin") darwin.apple_sdk.frameworks.Security;
 
