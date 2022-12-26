@@ -3,6 +3,8 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+**'
+    branches:
+      - 'release/**'
 
 jobs:
   release-chart:
@@ -22,12 +24,14 @@ jobs:
             # Publish the Chart.yaml locally
             # Note this does not commit the Chart.yaml changes this the branch
             nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag "$tag"" ./scripts/helm/shell.nix
+            echo "PUBLISH_CHART=1" >> $GITHUB_ENV
           else
-            echo "Only tag pushes are supported!"
-            exit 1
+            branch="${{ github.ref_name }}"
+            nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch"" ./scripts/helm/shell.nix
           fi
       - name: Publish Mayastor Helm chart
         uses: stefanprodan/helm-gh-pages@v1.5.0
+        if: ${{ env.PUBLISH_CHART }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           charts_dir: .

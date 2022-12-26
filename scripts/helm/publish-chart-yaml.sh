@@ -85,13 +85,14 @@ help() {
 Usage: $(basename "$0") [OPTIONS]
 
 Options:
-  -d, --dry-run                             Output actions that would be taken, but don't run them.
-  -h, --help                                Display this text.
-  --check-chart    <branch>                 Check if the chart version/app version is correct for the branch.
-  --app-tag        <tag>                    The appVersion tag.
-  --override-index <latest_version>         Override the latest chart version from the published chart's index.
-  --index-file     <index_yaml>             Use the provided index.yaml instead of fetching from the git branch.
-  --override-chart <version> <app_version>  Override the Chart.yaml version and app version.
+  -d, --dry-run                                   Output actions that would be taken, but don't run them.
+  -h, --help                                      Display this text.
+  --check-chart          <branch>                 Check if the chart version/app version is correct for the branch.
+    --develop-to-release                            Also upgrade the chart to the release version matching the branch.
+  --app-tag              <tag>                    The appVersion tag.
+  --override-index       <latest_version>         Override the latest chart version from the published chart's index.
+  --index-file           <index_yaml>             Use the provided index.yaml instead of fetching from the git branch.
+  --override-chart       <version> <app_version>  Override the Chart.yaml version and app version.
 
 Examples:
   $(basename "$0") --app-tag v2.0.0-alpha.0
@@ -102,6 +103,7 @@ SCRIPTDIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
 ROOTDIR="$SCRIPTDIR/../.."
 CHART_FILE=${CHART_FILE:-"$ROOTDIR/chart/Chart.yaml"}
 CHART_VALUES=${CHART_VALUES:-"$ROOTDIR/chart/values.yaml"}
+CHART_DOC=${CHART_DOC:-"$ROOTDIR/chart/doc.yaml"}
 CHART_NAME="mayastor"
 # Tag that has been pushed
 APP_TAG=
@@ -223,6 +225,7 @@ if [ -n "$CHECK_BRANCH" ]; then
         sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
         sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
         yq -i ".image.tag |= \"v$newChartAppVersion\"" "$CHART_VALUES"
+        yq -i ".chart.version |= \"v$newChartVersion\"" "$CHART_DOC"
       fi
     fi
     exit 0
@@ -300,4 +303,5 @@ if [ -z "$DRY_RUN" ]; then
   sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
   sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
   yq -i ".image.tag |= \"v$newChartAppVersion\"" "$CHART_VALUES"
+  yq -i ".chart.version |= \"v$newChartVersion\"" "$CHART_DOC"
 fi

@@ -1,0 +1,26 @@
+name: Develop to Release Chart
+on:
+  push:
+    branches:
+      - 'release/**'
+jobs:
+  prepareReleaseBranch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v18
+      - name: Pre-populate nix-shell
+        run: |
+          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+          nix-shell --pure --run "echo" ./scripts/helm/shell.nix
+      - name: Check if the chart is publishable
+        run: |
+          branch="${{ github.ref_name }}"
+          nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch" --develop-to-release" ./scripts/helm/shell.nix
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          commit-message: "chore(ci): update helm chart versions"
+          title: Prepare Helm Chart for release branch
+          signoff: true
