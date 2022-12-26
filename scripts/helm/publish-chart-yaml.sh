@@ -80,6 +80,20 @@ index_yaml()
   fi
 }
 
+# yq-go eats up blank lines
+# this function gets around that using diff with --ignore-blank-lines
+yq_ibl() {
+  yq_out=$(yq "$1" "$2")
+  set +e
+  diff_out=$(echo "$yq_out" | diff -B "$2" -)
+  error=$?
+  if [ "$error" != "0" ] && [ "$error" != "1" ]; then
+    exit "$error"
+  fi
+  echo "$diff_out" | patch --quiet "$2" -
+  set -euo pipefail
+}
+
 help() {
   cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
@@ -224,8 +238,8 @@ if [ -n "$CHECK_BRANCH" ]; then
       if [ -z "$DRY_RUN" ]; then
         sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
         sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
-        yq -i ".image.tag |= \"v$newChartAppVersion\"" "$CHART_VALUES"
-        yq -i ".chart.version |= \"v$newChartVersion\"" "$CHART_DOC"
+        yq_ibl ".image.tag |= \"v$newChartAppVersion\"" "$CHART_VALUES"
+        yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
       fi
     fi
     exit 0
@@ -302,6 +316,6 @@ echo "NEW_CHART_APP_VERSION: $newChartAppVersion"
 if [ -z "$DRY_RUN" ]; then
   sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
   sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
-  yq -i ".image.tag |= \"v$newChartAppVersion\"" "$CHART_VALUES"
-  yq -i ".chart.version |= \"v$newChartVersion\"" "$CHART_DOC"
+  yq_ibl ".image.tag |= \"v$newChartAppVersion\"" "$CHART_VALUES"
+  yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
 fi
