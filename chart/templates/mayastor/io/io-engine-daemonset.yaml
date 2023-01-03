@@ -88,7 +88,8 @@ spec:
         - "--ptpl-dir=/var/local/io-engine/ptpl/"{{ end }}
         - "--api-versions={{ .Values.mayastor.api }}"{{ if .Values.mayastor.target.nvmf.iface }}
         - "-T={{ .Values.mayastor.target.nvmf.iface }}"{{ end }}{{ if .Values.mayastor.envcontext }}
-        - "--env-context=--{{ .Values.mayastor.envcontext }}"{{ end }}
+        - "--env-context=--{{ .Values.mayastor.envcontext }}"{{ end }}{{ if .Values.mayastor.reactorFreezeDetection.enabled }}
+        - "--reactor-freeze-detection"{{ end }}
         command:
         - io-engine
         securityContext:

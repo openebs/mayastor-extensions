@@ -246,9 +246,12 @@ mayastor:
       # Reservations Persist Through Power Loss State
       ptpl: true
   # Pass additional arguments to the Environment Abstraction Layer.
-  # as a workaorund for mayastor io-engine on Intel Xeon E-2278G CPU @ 3.40GHz 
+  # as a workaorund for mayastor io-engine on Intel Xeon E-2278G CPU @ 3.40GHz
   # Example: --set {product}.envcontext=iova-mode=pa
   envcontext: ""
+  # Pass additional command line arguments to io-engine container
+  reactorFreezeDetection:
+    enabled: false
   cpuCount: "2"
   # node selectors to designate mayastor nodes for diskpool creation
   # Note that if multi-arch images support 'kubernetes.io/arch: amd64'
