@@ -1,0 +1,38 @@
+name: Release Helm Chart
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+**'
+    branches:
+      - 'release/**'
+
+jobs:
+  release-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v18
+      - name: Pre-populate nix-shell
+        run: |
+          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+          nix-shell --pure --run "echo" ./scripts/helm/shell.nix
+      - name: Publish locally in the workspace
+        run: |
+          if [ "${{ github.ref_type }}" == "tag" ]; then
+            tag="${{ github.ref_name }}"
+            # Publish the Chart.yaml locally
+            # Note this does not commit the Chart.yaml changes this the branch
+            nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag "$tag"" ./scripts/helm/shell.nix
+            echo "PUBLISH_CHART=1" >> $GITHUB_ENV
+          else
+            branch="${{ github.ref_name }}"
+            nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch"" ./scripts/helm/shell.nix
+          fi
+      - name: Publish Mayastor Helm chart
+        uses: stefanprodan/helm-gh-pages@v1.5.0
+        if: ${{ env.PUBLISH_CHART }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          charts_dir: .
+

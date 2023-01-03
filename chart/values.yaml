@@ -37,24 +37,22 @@ base:
     containers:
       - name: agent-core-grpc-probe
         image: busybox:latest
-        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50051; do date; echo "Waiting for agent-core-grpc services..."; sleep 1; done;' ]
+        command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50051; do date; echo "Waiting for agent-core-grpc services..."; sleep 1; done;']
       - name: etcd-probe
         image: busybox:latest
-        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{ .Values.etcd.service.port }}; do date; echo "Waiting for etcd..."; sleep 1; done;' ]
-
+        command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{ .Values.etcd.service.port }}; do date; echo "Waiting for etcd..."; sleep 1; done;']
   initHaNodeContainers:
     enabled: true
     containers:
       - name: agent-cluster-grpc-probe
         image: busybox:latest
-        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50052; do date; echo "Waiting for agent-cluster-grpc services..."; sleep 1; done;' ]
-
+        command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50052; do date; echo "Waiting for agent-cluster-grpc services..."; sleep 1; done;']
   initCoreContainers:
     enabled: true
     containers:
       - name: etcd-probe
         image: busybox:latest
-        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{ .Values.etcd.service.port }}; do date; echo "Waiting for etcd..."; sleep 1; done;' ]
+        command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{ .Values.etcd.service.port }}; do date; echo "Waiting for etcd..."; sleep 1; done;']
   # docker-secrets required to pull images if the container registry from image.Registry is protected
   imagePullSecrets:
     # enable imagePullSecrets for pulling Mayastor container images
@@ -80,8 +78,7 @@ base:
       initContainer:
         - name: jaeger-probe
           image: busybox:latest
-          command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 -u {{.Values.base.jaeger.agent.name}} {{.Values.base.jaeger.agent.port}}; do date; echo "Waiting for jaeger..."; sleep 1; done;' ]
-
+          command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 -u {{.Values.base.jaeger.agent.name}} {{.Values.base.jaeger.agent.port}}; do date; echo "Waiting for jaeger..."; sleep 1; done;']
   initRestContainer:
     enabled: true
     initContainer:
@@ -196,7 +193,7 @@ csi:
     registrarTag: v2.1.0
 
   controller:
-  # logLevel for the csi controller
+    # logLevel for the csi controller
     logLevel: info
     resources:
       limits:
@@ -394,8 +391,8 @@ loki-stack:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        - mountPath: /data
-          name: storage
+          - mountPath: /data
+            name: storage
     config:
       # Compactor is a MayastorDB(loki term) Shipper specific service that reduces the index
       # size by deduping the index and merging all the files to a single file per table.
@@ -443,9 +440,9 @@ loki-stack:
       # The Loki address to post logs to
       lokiAddress: http://{{ .Release.Name }}-loki:3100/loki/api/v1/push
       snippets:
-          # Promtail will export logs to loki only based on based on below
-          # configuration, below scrape config will export only mayastor services
-          # which are labeled with openebs.io/logging=true
+        # Promtail will export logs to loki only based on based on below
+        # configuration, below scrape config will export only mayastor services
+        # which are labeled with openebs.io/logging=true
         scrapeConfigs: |
           - job_name: mayastor-pods-name
             pipeline_stages:

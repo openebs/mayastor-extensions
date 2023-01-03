@@ -41,7 +41,7 @@ def mainBranches() {
 // TODO: Use multiple choices
 run_linter = true
 rust_test = true
-bdd_test = true
+helm_test = true
 run_tests = params.run_tests
 build_images = params.build_images
 
@@ -123,6 +123,16 @@ pipeline {
             }
             sh 'printenv'
             sh 'nix-shell --run "cargo test"'
+          }
+        }
+        stage('chart publish test') {
+          when {
+            expression { helm_test == true }
+          }
+          agent { label 'nixos-mayastor' }
+          steps {
+            sh 'printenv'
+            sh 'nix-shell --pure --run "./scripts/helm/test-publish-chart-yaml.sh" ./scripts/helm/shell.nix'
           }
         }
         stage('image build test') {

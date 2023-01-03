@@ -1,0 +1,28 @@
+name: Develop Helm Chart
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'chart/**'
+
+jobs:
+  release-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v18
+      - name: Pre-populate nix-shell
+        run: |
+          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+          nix-shell --pure --run "echo" ./scripts/helm/shell.nix
+      - name: Check if the chart is publishable
+        run: |
+          branch="${{ github.ref_name }}"
+          nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch"" ./scripts/helm/shell.nix
+      - name: Publish Mayastor Helm chart
+        uses: stefanprodan/helm-gh-pages@v1.5.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          charts_dir: .
