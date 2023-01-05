@@ -1,0 +1,7 @@
+/.rust-toolchain
+/rust-toolchain.toml
+/result
+/kubectl-plugin
+/target
+/dependencies
+/chart
