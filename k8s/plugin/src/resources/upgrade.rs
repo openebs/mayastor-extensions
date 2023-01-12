@@ -19,13 +19,22 @@ use kube::{
     core::ObjectList,
     Client,
 };
-use std::{path::PathBuf, time::Duration};
+use std::path::PathBuf;
 
 /// The types of resources that support the upgrade operator.
 #[derive(clap::Subcommand, Debug)]
 pub enum UpgradeOperator {
     /// Install, Uninstall upgrade resources.
     UpgradeOperator,
+}
+
+#[derive(clap::Subcommand, Debug)]
+/// Actions to be performed.
+pub enum Actions {
+    /// Action to create object.
+    Create,
+    /// Action to delete object.
+    Delete,
 }
 
 /// K8s resources needed for upgrade operator.
@@ -54,186 +63,376 @@ impl UpgradeResources {
         })
     }
 
+    /// Create/Delete ServiceAction
+    pub async fn service_account_actions(
+        &self,
+        ns: &str,
+        action: Actions,
+    ) -> Result<(), kube::Error> {
+        if let Some(sa) = self
+            .service_account
+            .get_opt(&upgrade_group(
+                &self.release_name,
+                UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+            ))
+            .await?
+        {
+            match action {
+                Actions::Create => {
+                    println!(
+                        "ServiceAccount: {} in namespace: {} already exist.",
+                        sa.metadata.name.as_ref().unwrap(),
+                        sa.metadata.namespace.as_ref().unwrap()
+                    );
+                }
+                Actions::Delete => {
+                    match self
+                        .service_account
+                        .delete(
+                            &upgrade_group(&self.release_name, UPGRADE_OPERATOR_SERVICE_ACCOUNT),
+                            &DeleteParams::default(),
+                        )
+                        .await
+                    {
+                        Ok(_) => {
+                            println!("ServiceAccount deleted");
+                        }
+                        Err(error) => {
+                            return Err(error);
+                        }
+                    }
+                }
+            }
+        } else {
+            match action {
+                Actions::Create => {
+                    let ns = Some(ns.to_string());
+                    let service_account =
+                        objects::upgrade_operator_service_account(ns, self.release_name.clone());
+                    let pp = PostParams::default();
+                    match self.service_account.create(&pp, &service_account).await {
+                        Ok(sa) => {
+                            println!(
+                                "ServiceAccount: {} created in namespace: {}",
+                                sa.metadata.name.unwrap(),
+                                sa.metadata.namespace.unwrap()
+                            )
+                        }
+                        Err(error) => {
+                            return Err(error);
+                        }
+                    }
+                }
+                Actions::Delete => {
+                    println!("ServiceAccount does not exist");
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Create/Delete cluster role
+    pub async fn cluster_role_actions(&self, ns: &str, action: Actions) -> Result<(), kube::Error> {
+        if let Some(cr) = self
+            .cluster_role
+            .get_opt(&upgrade_group(
+                &self.release_name,
+                UPGRADE_OPERATOR_CLUSTER_ROLE,
+            ))
+            .await?
+        {
+            match action {
+                Actions::Create => {
+                    println!(
+                        "ClusterRole: {} already exist",
+                        cr.metadata.name.as_ref().unwrap()
+                    );
+                }
+                Actions::Delete => {
+                    match self
+                        .cluster_role
+                        .delete(
+                            &upgrade_group(&self.release_name, UPGRADE_OPERATOR_CLUSTER_ROLE),
+                            &DeleteParams::default(),
+                        )
+                        .await
+                    {
+                        Ok(_) => {
+                            println!("ClusterRole deleted");
+                        }
+                        Err(error) => {
+                            return Err(error);
+                        }
+                    }
+                }
+            }
+        } else {
+            match action {
+                Actions::Create => {
+                    let ns = Some(ns.to_string());
+                    let role =
+                        objects::upgrade_operator_cluster_role(ns, self.release_name.clone());
+                    let pp = PostParams::default();
+                    match self.cluster_role.create(&pp, &role).await {
+                        Ok(cr) => {
+                            println!("Cluster Role: {} created", cr.metadata.name.unwrap());
+                        }
+                        Err(error) => {
+                            return Err(error);
+                        }
+                    }
+                }
+                Actions::Delete => {
+                    println!("cluster role does not exist");
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Create/Delete cluster role binding
+    pub async fn cluster_role_binding_actions(
+        &self,
+        ns: &str,
+        action: Actions,
+    ) -> Result<(), kube::Error> {
+        if let Some(crb) = self
+            .cluster_role_binding
+            .get_opt(&upgrade_group(
+                &self.release_name,
+                UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
+            ))
+            .await?
+        {
+            match action {
+                Actions::Create => {
+                    println!(
+                        "ClusterRoleBinding: {} already exist",
+                        crb.metadata.name.as_ref().unwrap()
+                    );
+                }
+                Actions::Delete => {
+                    match self
+                        .cluster_role_binding
+                        .delete(
+                            &upgrade_group(
+                                &self.release_name,
+                                UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
+                            ),
+                            &DeleteParams::default(),
+                        )
+                        .await
+                    {
+                        Ok(_) => {
+                            println!("ClusterRoleBinding deleted");
+                        }
+                        Err(error) => {
+                            return Err(error);
+                        }
+                    }
+                }
+            }
+        } else {
+            match action {
+                Actions::Create => {
+                    let ns = Some(ns.to_string());
+                    let role_binding = objects::upgrade_operator_cluster_role_binding(
+                        ns,
+                        self.release_name.clone(),
+                    );
+                    let pp = PostParams::default();
+                    match self.cluster_role_binding.create(&pp, &role_binding).await {
+                        Ok(crb) => {
+                            println!("ClusterRoleBinding: {} created", crb.metadata.name.unwrap());
+                        }
+                        Err(error) => {
+                            return Err(error);
+                        }
+                    }
+                }
+                Actions::Delete => {
+                    println!("ClusterRoleBinding does not exist");
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Create/Delete deployment
+    pub async fn deployment_actions(&self, ns: &str, action: Actions) -> Result<(), kube::Error> {
+        if let Some(deployment) = self
+            .deployment
+            .get_opt(&upgrade_group(
+                &self.release_name,
+                UPGRADE_CONTROLLER_DEPLOYMENT,
+            ))
+            .await?
+        {
+            match action {
+                Actions::Create => {
+                    println!(
+                        "Deployment: {} in namespace: {} already exist",
+                        deployment.metadata.name.as_ref().unwrap(),
+                        deployment.metadata.namespace.as_ref().unwrap()
+                    );
+                }
+                Actions::Delete => {
+                    match self
+                        .deployment
+                        .delete(
+                            &upgrade_group(&self.release_name, UPGRADE_CONTROLLER_DEPLOYMENT),
+                            &DeleteParams::default(),
+                        )
+                        .await
+                    {
+                        Ok(_) => {
+                            println!("Deployment deleted");
+                        }
+                        Err(error) => {
+                            return Err(error);
+                        }
+                    }
+                }
+            }
+        } else {
+            match action {
+                Actions::Create => {
+                    let ns = Some(ns.to_string());
+                    let upgrade_deploy = objects::upgrade_operator_deployment(
+                        ns,
+                        UPGRADE_IMAGE.to_string(),
+                        self.release_name.clone(),
+                    );
+                    match self
+                        .deployment
+                        .create(&PostParams::default(), &upgrade_deploy)
+                        .await
+                    {
+                        Ok(dep) => {
+                            println!(
+                                "Deployment: {} created in namespace: {}",
+                                dep.metadata.name.unwrap(),
+                                dep.metadata.namespace.unwrap()
+                            );
+                        }
+                        Err(error) => {
+                            return Err(error);
+                        }
+                    }
+                }
+                Actions::Delete => {
+                    println!("Deployment does not exist");
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Create/Delete service
+    pub async fn service_actions(&self, ns: &str, action: Actions) -> Result<(), kube::Error> {
+        if let Some(svc) = self
+            .service
+            .get_opt(&upgrade_group(&self.release_name, UPGRADE_OPERATOR_SERVICE))
+            .await?
+        {
+            match action {
+                Actions::Create => {
+                    println!(
+                        "Service: {} in namespace: {} already exist",
+                        svc.metadata.name.as_ref().unwrap(),
+                        svc.metadata.namespace.as_ref().unwrap()
+                    );
+                }
+                Actions::Delete => {
+                    match self
+                        .service
+                        .delete(
+                            &upgrade_group(&self.release_name, UPGRADE_OPERATOR_SERVICE),
+                            &DeleteParams::default(),
+                        )
+                        .await
+                    {
+                        Ok(_) => {
+                            println!("Service deleted");
+                        }
+                        Err(error) => {
+                            return Err(error);
+                        }
+                    }
+                }
+            }
+        } else {
+            match action {
+                Actions::Create => {
+                    let ns = Some(ns.to_string());
+                    let service = objects::upgrade_operator_service(ns, self.release_name.clone());
+                    match self.service.create(&PostParams::default(), &service).await {
+                        Ok(svc) => {
+                            println!(
+                                "Service: {} created in namespace: {}",
+                                svc.metadata.name.unwrap(),
+                                svc.metadata.namespace.unwrap()
+                            );
+                        }
+                        Err(error) => {
+                            return Err(error);
+                        }
+                    }
+                }
+                Actions::Delete => {
+                    println!("Service does not exist");
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Install the upgrade resources
     pub async fn install(ns: &str) {
         match UpgradeResources::new(ns).await {
             Ok(uo) => {
-                let pp = PostParams::default();
-                // Create a service account
-                match uo.get_service_account().await {
-                    Ok(sa) => {
-                        if sa.iter().count() == 0 {
-                            let ns = Some(ns.to_string());
-                            let service_account = objects::upgrade_operator_service_account(
-                                ns,
-                                uo.release_name.clone(),
-                            );
-                            let pp = PostParams::default();
-                            match uo.service_account.create(&pp, &service_account).await {
-                                Ok(sa) => {
-                                    println!(
-                                        "Service Account : {} created in namespace : {}.",
-                                        sa.metadata.name.unwrap(),
-                                        sa.metadata.namespace.unwrap(),
-                                    );
-                                }
-                                Err(e) => {
-                                    println!("Failed in creating service account  {:?}", e);
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                    std::process::exit(1);
-                                }
-                            }
-                        } else {
-                            println!(
-                                "Service Account : {} in namespace : {} already exist.",
-                                sa.items[0].metadata.name.as_ref().unwrap(),
-                                sa.items[0].metadata.namespace.as_ref().unwrap(),
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed in fetching service account {:?}", e);
-                        std::process::exit(1);
+                // Create Service Account
+                match uo.service_account_actions(ns, Actions::Create).await {
+                    Ok(_) => (),
+                    Err(error) => {
+                        println!("Failed in creating ServiceAccount {}", error);
+                        std::process::exit(1)
                     }
                 }
 
                 // Create Cluser role
-                match uo.get_cluster_role().await {
-                    Ok(cr) => {
-                        if cr.iter().count() == 0 {
-                            let ns = Some(ns.to_string());
-                            let role =
-                                objects::upgrade_operator_cluster_role(ns, uo.release_name.clone());
-                            match uo.cluster_role.create(&pp, &role).await {
-                                Ok(cr) => {
-                                    println!(
-                                        "Cluster Role : {} created.",
-                                        cr.metadata.name.unwrap(),
-                                    );
-                                }
-                                Err(e) => {
-                                    println!("Failed in creating cluster role {:?}", e);
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                    std::process::exit(1);
-                                }
-                            }
-                        } else {
-                            println!(
-                                "Cluster Role : {} already exist.",
-                                cr.items[0].metadata.name.as_ref().unwrap(),
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed in fetching cluster role {:?}", e);
-                        std::process::exit(1);
+                match uo.cluster_role_actions(ns, Actions::Create).await {
+                    Ok(_) => (),
+                    Err(error) => {
+                        println!("Failed in creating ClusterRole {}", error);
+                        std::process::exit(1)
                     }
                 }
 
                 // Create Cluster role binding
-                match uo.get_cluster_role_binding().await {
-                    Ok(crb) => {
-                        if crb.iter().count() == 0 {
-                            let ns = Some(ns.to_string());
-                            let role_binding = objects::upgrade_operator_cluster_role_binding(
-                                ns,
-                                uo.release_name.clone(),
-                            );
-                            match uo.cluster_role_binding.create(&pp, &role_binding).await {
-                                Ok(crb) => {
-                                    println!(
-                                        "Cluster Role Binding : {} created.",
-                                        crb.metadata.name.unwrap(),
-                                    );
-                                }
-                                Err(e) => {
-                                    println!("Failed in creating cluster role binding {:?}", e);
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                    std::process::exit(1);
-                                }
-                            }
-                        } else {
-                            println!(
-                                "Cluster Role Binding : {} already exist.",
-                                crb.items[0].metadata.name.as_ref().unwrap(),
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed in fetching cluster role binding {:?}", e);
-                        std::process::exit(1);
+                match uo.cluster_role_binding_actions(ns, Actions::Create).await {
+                    Ok(_) => (),
+                    Err(error) => {
+                        println!("Failed in creating ClusterRoleBinding {}", error);
+                        std::process::exit(1)
                     }
                 }
 
                 // Create Deployment
-                match uo.get_deployment().await {
-                    Ok(deployment) => {
-                        if deployment.iter().count() == 0 {
-                            let ns = Some(ns.to_string());
-                            let upgrade_deploy = objects::upgrade_operator_deployment(
-                                ns,
-                                UPGRADE_IMAGE.to_string(),
-                                uo.release_name.clone(),
-                            );
-                            match uo.deployment.create(&pp, &upgrade_deploy).await {
-                                Ok(dep) => {
-                                    println!(
-                                        "Deployment : {} created in namespace : {}.",
-                                        dep.metadata.name.unwrap(),
-                                        dep.metadata.namespace.unwrap(),
-                                    );
-                                }
-                                Err(e) => {
-                                    println!("Failed in creating deployment {}", e);
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                    std::process::exit(1);
-                                }
-                            }
-                        } else {
-                            println!(
-                                "Deployment : {} in namespace : {} already exist.",
-                                deployment.items[0].metadata.name.as_ref().unwrap(),
-                                deployment.items[0].metadata.namespace.as_ref().unwrap(),
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed in fetching deployment {:?}", e);
-                        std::process::exit(1);
+                match uo.deployment_actions(ns, Actions::Create).await {
+                    Ok(_) => (),
+                    Err(error) => {
+                        println!("Failed in creating Deployment {}", error);
+                        std::process::exit(1)
                     }
                 }
 
                 // Create Service
-                match uo.get_service().await {
-                    Ok(svc) => {
-                        if svc.iter().count() == 0 {
-                            let ns = Some(ns.to_string());
-                            let service = objects::upgrade_operator_service(ns, uo.release_name);
-                            match uo.service.create(&pp, &service).await {
-                                Ok(svc) => {
-                                    println!(
-                                        "Service : {} created in namespace : {}.",
-                                        svc.metadata.name.unwrap(),
-                                        svc.metadata.namespace.unwrap(),
-                                    );
-                                }
-                                Err(e) => {
-                                    println!("Failed in creating service {:?}", e);
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                    std::process::exit(1);
-                                }
-                            }
-                        } else {
-                            println!(
-                                "Service : {} in namespace : {} already exist.",
-                                svc.items[0].metadata.name.as_ref().unwrap(),
-                                svc.items[0].metadata.namespace.as_ref().unwrap(),
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed in fetching service {:?}", e);
-                        std::process::exit(1);
+                match uo.service_actions(ns, Actions::Create).await {
+                    Ok(_) => (),
+                    Err(error) => {
+                        println!("Failed in creating Service {}", error);
+                        std::process::exit(1)
                     }
                 }
             }
@@ -243,173 +442,49 @@ impl UpgradeResources {
     /// Uninstall the upgrade resources
     pub async fn uninstall(ns: &str) {
         match UpgradeResources::new(ns).await {
-            Ok(duo) => {
-                let dp = DeleteParams::default();
-
-                // delete deployment
-                match duo.get_deployment().await {
-                    Ok(deployment) => {
-                        if deployment.iter().count() == 1 {
-                            match duo
-                                .deployment
-                                .delete(
-                                    &upgrade_group(
-                                        &duo.release_name,
-                                        UPGRADE_CONTROLLER_DEPLOYMENT,
-                                    ),
-                                    &dp,
-                                )
-                                .await
-                            {
-                                Ok(_) => {
-                                    println!("deployment deleted");
-                                }
-                                Err(e) => {
-                                    println!("Failed in deleting deployment {:?}", e);
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                    std::process::exit(1);
-                                }
-                            }
-                        } else {
-                            println!("deployment does not exist!");
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed in fetching deployment {:?}", e);
-                        std::process::exit(1);
+            Ok(uo) => {
+                // Delete deployment
+                match uo.deployment_actions(ns, Actions::Delete).await {
+                    Ok(_) => (),
+                    Err(error) => {
+                        println!("Failed in creating Deployment {}", error);
+                        std::process::exit(1)
                     }
                 }
 
-                // delete service
-                match duo.get_service().await {
-                    Ok(svc) => {
-                        if svc.iter().count() == 1 {
-                            match duo
-                                .service
-                                .delete(
-                                    &upgrade_group(&duo.release_name, UPGRADE_OPERATOR_SERVICE),
-                                    &dp,
-                                )
-                                .await
-                            {
-                                Ok(_) => {
-                                    println!("service deleted");
-                                }
-                                Err(e) => {
-                                    println!("Failed in deleting service {:?}", e);
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                    std::process::exit(1);
-                                }
-                            }
-                        } else {
-                            println!("service does not exist!");
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed in fetching service {:?}", e);
-                        std::process::exit(1);
+                // Delete service
+                match uo.service_actions(ns, Actions::Delete).await {
+                    Ok(_) => (),
+                    Err(error) => {
+                        println!("Failed in deleting Service {}", error);
+                        std::process::exit(1)
                     }
                 }
 
-                // delete cluster role binding\
-                match duo.get_cluster_role_binding().await {
-                    Ok(crb) => {
-                        if crb.iter().count() == 1 {
-                            match duo
-                                .cluster_role_binding
-                                .delete(
-                                    &upgrade_group(
-                                        &duo.release_name,
-                                        UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
-                                    ),
-                                    &dp,
-                                )
-                                .await
-                            {
-                                Ok(_) => {
-                                    println!("cluster role binding deleted");
-                                }
-                                Err(e) => {
-                                    println!("Failed in deleting cluster role binding {:?}", e);
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                    std::process::exit(1);
-                                }
-                            }
-                        } else {
-                            println!("cluster role binding does not exist!");
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed in fetching cluster role binding  {:?}", e);
-                        std::process::exit(1);
+                // Delete cluster role binding
+                match uo.cluster_role_binding_actions(ns, Actions::Delete).await {
+                    Ok(_) => (),
+                    Err(error) => {
+                        println!("Failed in deleting ClusterRoleBinding {}", error);
+                        std::process::exit(1)
                     }
                 }
 
-                // delete cluster role
-                match duo.get_cluster_role().await {
-                    Ok(cr) => {
-                        if cr.iter().count() == 1 {
-                            match duo
-                                .cluster_role
-                                .delete(
-                                    &upgrade_group(
-                                        &duo.release_name,
-                                        UPGRADE_OPERATOR_CLUSTER_ROLE,
-                                    ),
-                                    &dp,
-                                )
-                                .await
-                            {
-                                Ok(_) => {
-                                    println!("cluster role deleted");
-                                }
-                                Err(e) => {
-                                    println!("Failed in deleting cluster role {:?}", e);
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                    std::process::exit(1);
-                                }
-                            }
-                        } else {
-                            println!("cluster role does not exist!");
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed in fetching cluster role {:?}", e);
-                        std::process::exit(1);
+                // Delete cluster role
+                match uo.cluster_role_actions(ns, Actions::Delete).await {
+                    Ok(_) => (),
+                    Err(error) => {
+                        println!("Failed in deleting ClusterRole {}", error);
+                        std::process::exit(1)
                     }
                 }
 
-                // delete service account
-                match duo.get_service_account().await {
-                    Ok(svca) => {
-                        if svca.iter().count() == 1 {
-                            match duo
-                                .service_account
-                                .delete(
-                                    &upgrade_group(
-                                        &duo.release_name,
-                                        UPGRADE_OPERATOR_SERVICE_ACCOUNT,
-                                    ),
-                                    &dp,
-                                )
-                                .await
-                            {
-                                Ok(_) => {
-                                    println!("service account deleted");
-                                }
-                                Err(e) => {
-                                    println!("Failed in deleting service account {:?}", e);
-                                    tokio::time::sleep(Duration::from_secs(1)).await;
-                                    std::process::exit(1);
-                                }
-                            }
-                        } else {
-                            println!("service account does not exist!");
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed in fetching deployment {:?}", e);
-                        std::process::exit(1);
+                // Delete service account
+                match uo.service_account_actions(ns, Actions::Delete).await {
+                    Ok(_) => (),
+                    Err(error) => {
+                        println!("Failed in deleting ServiceAccount {}", error);
+                        std::process::exit(1)
                     }
                 }
             }
@@ -459,51 +534,6 @@ impl UpgradeResources {
                 std::process::exit(1);
             }
         }
-    }
-
-    /// Return results as list of service accounts.
-    pub async fn get_service_account(&self) -> Result<ObjectList<ServiceAccount>, Error> {
-        let lp = ListParams::default().fields(&format!(
-            "metadata.name={}",
-            upgrade_group(&self.release_name, UPGRADE_OPERATOR_SERVICE_ACCOUNT)
-        ));
-        Ok(self.service_account.list(&lp).await?)
-    }
-
-    /// Return results as list of cluster role.
-    pub async fn get_cluster_role(&self) -> Result<ObjectList<ClusterRole>, Error> {
-        let lp = ListParams::default().fields(&format!(
-            "metadata.name={}",
-            upgrade_group(&self.release_name, UPGRADE_OPERATOR_CLUSTER_ROLE)
-        ));
-        Ok(self.cluster_role.list(&lp).await?)
-    }
-
-    /// Return results as list of cluster role binding.
-    pub async fn get_cluster_role_binding(&self) -> Result<ObjectList<ClusterRoleBinding>, Error> {
-        let lp = ListParams::default().fields(&format!(
-            "metadata.name={}",
-            &upgrade_group(&self.release_name, UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING)
-        ));
-        Ok(self.cluster_role_binding.list(&lp).await?)
-    }
-
-    /// Return results as list of deployments.
-    pub async fn get_deployment(&self) -> Result<ObjectList<Deployment>, Error> {
-        let lp = ListParams::default().fields(&format!(
-            "metadata.name={}",
-            &upgrade_group(&self.release_name, UPGRADE_CONTROLLER_DEPLOYMENT)
-        ));
-        Ok(self.deployment.list(&lp).await?)
-    }
-
-    /// Return results as list of service.
-    pub async fn get_service(&self) -> Result<ObjectList<Service>, Error> {
-        let lp = ListParams::default().fields(&format!(
-            "metadata.name={}",
-            &upgrade_group(&self.release_name, UPGRADE_OPERATOR_SERVICE)
-        ));
-        Ok(self.service.list(&lp).await?)
     }
 }
 
