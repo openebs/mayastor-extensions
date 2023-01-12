@@ -4,7 +4,7 @@ image:
   # image registry's namespace where all Mayastor images exist (default: openebs)
   repo: openebs
   # release tag for OpenEBS Mayastor images
-  tag: develop
+  tag: v2.0.0
   # imagePullPolicy for all Mayastor images
   pullPolicy: Always
 
