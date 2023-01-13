@@ -14,5 +14,6 @@ mkShell {
     git
     semver-tool
     yq-go
+    helm-docs
   ];
 }
