@@ -238,7 +238,7 @@ csi:
     pluginMounthPath: /csi
     socketPath: csi.sock
 
-mayastor:
+io_engine:
   # -- Log level for the io-engine service
   logLevel: info,io_engine=info
   api: "v1"
@@ -450,7 +450,7 @@ loki-stack:
         # configuration, below scrape config will export only our services
         # which are labeled with openebs.io/logging=true
         scrapeConfigs: |
-          - job_name: our-pods-name
+          - job_name: {{ .Release.Name }}-pods-name
             pipeline_stages:
               - docker: {}
             kubernetes_sd_configs:
@@ -466,7 +466,7 @@ loki-stack:
               source_labels:
               - __meta_kubernetes_pod_label_openebs_io_logging
               regex: true
-              target_label: our_component
+              target_label: {{ .Release.Name }}_component
             - action: replace
               replacement: $1
               separator: /
