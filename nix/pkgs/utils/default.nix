@@ -19,7 +19,7 @@ let
   preBuildOpenApi = ''
     # don't run during the dependency build phase
     if [ ! -f build.rs ]; then
-      patchShebangs ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh
+      patchShebangs ./dependencies/control-plane/scripts/rust/
       ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh --skip-git-diff
     fi
   '';
