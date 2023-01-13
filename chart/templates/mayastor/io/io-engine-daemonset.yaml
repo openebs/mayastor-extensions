@@ -25,7 +25,7 @@ spec:
       hostNetwork: true
       # To resolve services in the namespace
       dnsPolicy: ClusterFirstWithHostNet
-      nodeSelector: {{- .Values.mayastor.nodeSelector | toYaml | nindent 8 }}
+      nodeSelector: {{- .Values.io_engine.nodeSelector | toYaml | nindent 8 }}
       initContainers:
         {{- include "base_init_containers" . }}
       containers:
@@ -44,7 +44,7 @@ spec:
               fieldPath: status.podIP
         args:
         - "-p{{ .Values.base.metrics.pollingInterval }}"
-        - "--api-versions={{ .Values.mayastor.api }}"
+        - "--api-versions={{ .Values.io_engine.api }}"
         command:
         - metrics-exporter-pool
         ports:
@@ -57,7 +57,7 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
         - name: RUST_LOG
-          value: {{ .Values.mayastor.logLevel }}
+          value: {{ .Values.io_engine.logLevel }}
         - name: NVME_QPAIR_CONNECT_ASYNC
           value: "true"
         - name: NVMF_TCP_MAX_QUEUE_DEPTH
@@ -84,11 +84,11 @@ spec:
         - "-Rhttps://{{ .Release.Name }}-agent-core:50051"
         - "-y/var/local/io-engine/config.yaml"
         - "-l{{ include "cpuFlag" . }}"
-        - "-p={{ .Release.Name }}-etcd:{{ .Values.etcd.service.port }}"{{ if .Values.mayastor.target.nvmf.ptpl }}
+        - "-p={{ .Release.Name }}-etcd:{{ .Values.etcd.service.port }}"{{ if .Values.io_engine.target.nvmf.ptpl }}
         - "--ptpl-dir=/var/local/io-engine/ptpl/"{{ end }}
-        - "--api-versions={{ .Values.mayastor.api }}"{{ if .Values.mayastor.target.nvmf.iface }}
-        - "-T={{ .Values.mayastor.target.nvmf.iface }}"{{ end }}{{ if .Values.mayastor.envcontext }}
-        - "--env-context=--{{ .Values.mayastor.envcontext }}"{{ end }}{{ if .Values.mayastor.reactorFreezeDetection.enabled }}
+        - "--api-versions={{ .Values.io_engine.api }}"{{ if .Values.io_engine.target.nvmf.iface }}
+        - "-T={{ .Values.io_engine.target.nvmf.iface }}"{{ end }}{{ if .Values.io_engine.envcontext }}
+        - "--env-context=--{{ .Values.io_engine.envcontext }}"{{ end }}{{ if .Values.io_engine.reactorFreezeDetection.enabled }}
         - "--reactor-freeze-detection"{{ end }}
         command:
         - io-engine
@@ -107,13 +107,13 @@ spec:
           mountPath: /dev/hugepages
         resources:
           limits:
-            cpu: {{ .Values.mayastor.resources.limits.cpu | default .Values.mayastor.cpuCount | quote }}
-            memory: {{ .Values.mayastor.resources.limits.memory | quote }}
-            hugepages-2Mi: {{ .Values.mayastor.resources.limits.hugepages2Mi | quote }}
+            cpu: {{ .Values.io_engine.resources.limits.cpu | default .Values.io_engine.cpuCount | quote }}
+            memory: {{ .Values.io_engine.resources.limits.memory | quote }}
+            hugepages-2Mi: {{ .Values.io_engine.resources.limits.hugepages2Mi | quote }}
           requests:
-            cpu: {{ .Values.mayastor.resources.requests.cpu | default .Values.mayastor.cpuCount | quote }}
-            memory: {{ .Values.mayastor.resources.requests.memory | quote }}
-            hugepages-2Mi: {{ .Values.mayastor.resources.requests.hugepages2Mi | quote }}
+            cpu: {{ .Values.io_engine.resources.requests.cpu | default .Values.io_engine.cpuCount | quote }}
+            memory: {{ .Values.io_engine.resources.requests.memory | quote }}
+            hugepages-2Mi: {{ .Values.io_engine.resources.requests.hugepages2Mi | quote }}
         ports:
         - containerPort: 10124
           protocol: TCP

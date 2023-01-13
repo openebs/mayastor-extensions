@@ -65,6 +65,7 @@ let
     "dependencies/control-plane/control-plane/plugin"
     "dependencies/control-plane/control-plane/rest/openapi-specs"
     "dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh"
+    "dependencies/control-plane/scripts/rust/branch_ancestor.sh"
     "dependencies/control-plane/common"
     "dependencies/control-plane/utils"
     "dependencies/control-plane/rpc"
@@ -94,8 +95,8 @@ let
       preBuild = ''
         # don't run during the dependency build phase
         if [ ! -f build.rs ]; then
-          patchShebangs ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh
-          ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh
+          patchShebangs ./dependencies/control-plane/scripts/rust/
+          ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh --skip-git-diff
         fi
       '';
       doCheck = false;
@@ -104,7 +105,7 @@ let
   build_with_default = { buildType, cargoBuildFlags }:
     rustPlatform.buildRustPackage (buildProps // {
       inherit buildType cargoBuildFlags;
-      preBuild = "patchShebangs ./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh";
+      preBuild = "patchShebangs ./dependencies/control-plane/scripts/rust/";
       cargoLock = {
         lockFile = ../../../Cargo.lock;
       };
