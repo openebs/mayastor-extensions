@@ -100,7 +100,7 @@ Usage:
 
 {{/* Generate CPU list specification based on CPU count (-l param of mayastor) */}}
 {{- define "cpuFlag" -}}
-{{- range $i, $e := until (int .Values.mayastor.cpuCount) }}
+{{- range $i, $e := until (int .Values.io_engine.cpuCount) }}
 {{- if gt $i 0 }}
     {{- printf "," }}
 {{- end }}
