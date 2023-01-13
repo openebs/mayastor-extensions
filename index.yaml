@@ -3,13 +3,11 @@ entries:
   mayastor:
   - apiVersion: v2
     appVersion: 0.0.0
-    created: "2023-01-13T11:46:37.696054409Z"
+    created: "2023-01-13T18:01:22.191655584Z"
     dependencies:
     - name: etcd
-      repository: https://raw.githubusercontent.com/bitnami/charts/eb5f9a9513d987b519f0ecd732e7031241c50328/bitnami
-      tags:
-      - bitnami-etcd
-      version: 6.2.3
+      repository: https://charts.bitnami.com/bitnami
+      version: 8.6.0
     - condition: base.jaeger.enabled
       name: jaeger-operator
       repository: https://jaegertracing.github.io/helm-charts
@@ -19,10 +17,10 @@ entries:
       repository: https://grafana.github.io/helm-charts
       version: 2.6.4
     description: Mayastor Helm chart for Kubernetes
-    digest: 1f7f6f47280f9a9c90938bc1690ff5c3c1c3e0779c27eee2f31c9c4cd02c3434
+    digest: 872e4fb8c6c9c7f1581a624340d0789a898ffb7a4b04c9aaa608e48fb4e47c24
     name: mayastor
     type: application
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0.tgz
     version: 0.0.0
-generated: "2023-01-13T11:46:37.66961509Z"
+generated: "2023-01-13T18:01:22.168657982Z"
