@@ -325,6 +325,7 @@ etcd:
 
   auth:
     rbac:
+      create: false
       enabled: false
       allowNoneAuthentication: true
   # Init containers parameters:
