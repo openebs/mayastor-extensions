@@ -83,14 +83,15 @@ index_yaml()
 # yq-go eats up blank lines
 # this function gets around that using diff with --ignore-blank-lines
 yq_ibl() {
-  yq_out=$(yq "$1" "$2")
   set +e
-  diff_out=$(echo "$yq_out" | diff -B "$2" -)
+  diff_out=$(diff -B <(yq '.' "$2") <(yq "$1" "$2"))
   error=$?
   if [ "$error" != "0" ] && [ "$error" != "1" ]; then
     exit "$error"
   fi
-  echo "$diff_out" | patch --quiet "$2" -
+  if [ -n "$diff_out" ]; then
+    echo "$diff_out" | patch --quiet "$2" -
+  fi
   set -euo pipefail
 }
 
@@ -238,7 +239,10 @@ if [ -n "$CHECK_BRANCH" ]; then
       if [ -z "$DRY_RUN" ]; then
         sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
         sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
-        yq_ibl ".image.tag |= \"v$newChartAppVersion\"" "$CHART_VALUES"
+        # point image tag to the release branch images
+        yq_ibl ".image.tag |= \"${CHECK_BRANCH////-}\"" "$CHART_VALUES"
+        # always pull since image changes with commits to the branch
+        yq_ibl ".image.pullPolicy |= \"Always\"" "$CHART_VALUES"
         yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
       fi
     fi
@@ -317,5 +321,7 @@ if [ -z "$DRY_RUN" ]; then
   sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
   sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
   yq_ibl ".image.tag |= \"v$newChartAppVersion\"" "$CHART_VALUES"
+  # tags are stable so we don't need to pull always
+  yq_ibl ".image.pullPolicy |= \"IfNotPresent\"" "$CHART_VALUES"
   yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
 fi

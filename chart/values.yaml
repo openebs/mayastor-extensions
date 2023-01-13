@@ -106,13 +106,13 @@ jaeger-operator:
   # Name of jaeger operator
   name: "{{ .Release.Name }}"
   crd:
-    # install jaeger CRDs
+    # Install jaeger CRDs
     install: false
   jaeger:
-    # install jaeger-operator
+    # Install jaeger-operator
     create: false
   rbac:
-    # create a clusterRole for Jaeger
+    # Create a clusterRole for Jaeger
     clusterRole: true
 
 agents:
