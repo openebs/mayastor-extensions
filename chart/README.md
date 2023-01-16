@@ -36,7 +36,7 @@ $ helm install mayastor . -n <mayastor-namespace>
 To install the chart with the release name `my-release`:
 
 ```console
-$ helm repo add openebs https://openebs.github.io/mayastor-charts/
+$ helm repo add openebs https://openebs.github.io/mayastor-extensions/
 $ helm install my-release openebs/mayastor
 ```
 
