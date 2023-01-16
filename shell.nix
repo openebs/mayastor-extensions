@@ -25,6 +25,7 @@ mkShell {
     commitlint
     cowsay
     git
+    helm-docs
     kubernetes-helm-wrapped
     llvmPackages.libclang
     niv
