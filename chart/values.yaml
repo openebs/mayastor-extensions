@@ -4,7 +4,7 @@ image:
   # -- Image registry's namespace
   repo: openebs
   # -- Release tag for our images
-  tag: develop
+  tag: release-2.0
   # -- ImagePullPolicy for our images
   pullPolicy: Always
 
