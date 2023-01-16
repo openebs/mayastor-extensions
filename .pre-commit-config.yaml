@@ -31,3 +31,10 @@ repos:
         entry: bash -c 'nix-shell --pure --run "cat $1 | grep -v '^#' | commitlint"'
         args: [$1]
         stages: [commit-msg]
+    -   id: helm-docs
+        name: Helm Docs
+        description: Auto generate the helm docs README.
+        language: system
+        entry: bash -c 'nix-shell --pure --run "./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix'
+        types: [file]
+

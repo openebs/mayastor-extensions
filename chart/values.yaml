@@ -1,14 +1,14 @@
 image:
-  # image registry to pull Mayastor images
+  # -- Image registry to pull our product images
   registry: docker.io
-  # image registry's namespace where all Mayastor images exist (default: openebs)
+  # -- Image registry's namespace
   repo: openebs
-  # release tag for OpenEBS Mayastor images
+  # -- Release tag for our images
   tag: develop
-  # imagePullPolicy for all Mayastor images
+  # -- ImagePullPolicy for our images
   pullPolicy: Always
 
-# Node labels for pod assignment
+# -- Node labels for pod assignment
 # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 # Note that if multi-arch images support 'kubernetes.io/arch: amd64'
 # should be removed and set 'nodeSelector' to empty '{}' as default value.
@@ -26,11 +26,11 @@ earlyEvictionTolerations:
     tolerationSeconds: 5
 
 base:
-  # request timeout for rest & core agents
+  # -- Request timeout for rest & core agents
   default_req_timeout: 5s
-  # cache timeout for core agent & diskpool deployment
+  # -- Cache timeout for core agent & diskpool deployment
   cache_poll_period: 30s
-  # silence specific module components
+  # -- Silence specific module components
   logSilenceLevel:
   initContainers:
     enabled: true
@@ -55,21 +55,21 @@ base:
         command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{ .Values.etcd.service.port }}; do date; echo "Waiting for etcd..."; sleep 1; done;']
   # docker-secrets required to pull images if the container registry from image.Registry is protected
   imagePullSecrets:
-    # enable imagePullSecrets for pulling Mayastor container images
+    # -- Enable imagePullSecrets for pulling our container images
     enabled: false
-    # name of the imagePullSecret in the mayastor-namespace
+    # Name of the imagePullSecret in the installed namespace
     secrets:
       - name: login
 
   metrics:
-    # enable metrics exporter
+    # -- Enable the metrics exporter
     enabled: true
     # metrics refresh time
     # WARNING: Lowering pollingInterval value will affect performance adversely
     pollingInterval: "5m"
 
   jaeger:
-    # enable jaeger tracing
+    # -- Enable jaeger tracing
     enabled: false
     initContainer: true
     agent:
@@ -88,169 +88,174 @@ base:
 
 operators:
   pool:
-    # logLevel for diskpool operator & other dependent crate
+    # -- Log level for diskpool operator service
     logLevel: info
     resources:
       limits:
-        # cpu limits for diskpool operator
+        # -- Cpu limits for diskpool operator
         cpu: "100m"
-        # memory limits for diskpool operator
+        # -- Memory limits for diskpool operator
         memory: "32Mi"
       requests:
-        # cpu requests for diskpool operator
+        # -- Cpu requests for diskpool operator
         cpu: "50m"
-        # memory requests for diskpool operator
+        # -- Memory requests for diskpool operator
         memory: "16Mi"
 
 jaeger-operator:
-  # name of jaeger operator
+  # Name of jaeger operator
   name: "{{ .Release.Name }}"
   crd:
-    # install jaeger CRDs
+    # Install jaeger CRDs
     install: false
   jaeger:
-    # install jaeger-operator
+    # Install jaeger-operator
     create: false
   rbac:
-    # create a clusterRole for Jaeger
+    # Create a clusterRole for Jaeger
     clusterRole: true
 
 agents:
   core:
-    # logLevel for the core crate
+    # -- Log level for the core service
     logLevel: info
     resources:
       limits:
-        # cpu limits for core agents
+        # -- Cpu limits for core agents
         cpu: "1000m"
-        # memory limits for core agents
+        # -- Memory limits for core agents
         memory: "32Mi"
       requests:
-        # cpu requests for core agents
+        # -- Cpu requests for core agents
         cpu: "500m"
-        # memory requests for core agents
+        # -- Memory requests for core agents
         memory: "16Mi"
   ha:
     enabled: true
     node:
+      # -- Log level for the ha node service
       logLevel: info
       resources:
         limits:
-          # cpu limits for ha node agent
+          # -- Cpu limits for ha node agent
           cpu: "100m"
-          # memory limits for ha node agent
+          # -- Memory limits for ha node agent
           memory: "64Mi"
         requests:
-          # cpu requests for ha node agent
+          # -- Cpu requests for ha node agent
           cpu: "100m"
-          # memory requests for ha node agent
+          # -- Memory requests for ha node agent
           memory: "64Mi"
     cluster:
+      # -- Log level for the ha cluster service
       logLevel: info
       resources:
         limits:
-          # cpu limits for ha cluster agent
+          # -- Cpu limits for ha cluster agent
           cpu: "100m"
-          # memory limits for ha cluster agent
+          # -- Memory limits for ha cluster agent
           memory: "32Mi"
         requests:
-          # cpu requests for ha cluster agent
+          # -- Cpu requests for ha cluster agent
           cpu: "100m"
-          # memory requests for ha cluster agent
+          # -- Memory requests for ha cluster agent
           memory: "16Mi"
 
 apis:
   rest:
-    # logLevel for the rest crate
+    # -- Log level for the rest service
     logLevel: info
-    # number of replicas of rest
+    # -- Number of replicas of rest
     replicaCount: 1
     resources:
       limits:
-        # cpu limits for rest
+        # -- Cpu limits for rest
         cpu: "100m"
-        # memory limits for rest
+        # -- Memory limits for rest
         memory: "64Mi"
       requests:
-        # cpu requests for rest
+        # -- Cpu requests for rest
         cpu: "50m"
-        # memory requests for rest
+        # -- Memory requests for rest
         memory: "32Mi"
 
 csi:
   image:
-    # image registry to pull all CSI Sidecar images
+    # -- Image registry to pull all CSI Sidecar images
     registry: registry.k8s.io
-    # image registry's namespace
+    # -- Image registry's namespace
     repo: sig-storage
-    # imagePullPolicy for all CSI Sidecar images
+    # -- imagePullPolicy for all CSI Sidecar images
     pullPolicy: IfNotPresent
-    # csi-provisioner image release tag
+    # -- csi-provisioner image release tag
     provisionerTag: v2.2.1
-    # csi-attacher image release tag
+    # -- csi-attacher image release tag
     attacherTag: v3.2.1
-    # csi-node-driver-registrar image release tag
+    # -- csi-node-driver-registrar image release tag
     registrarTag: v2.1.0
 
   controller:
-    # logLevel for the csi controller
+    # -- Log level for the csi controller
     logLevel: info
     resources:
       limits:
-        # cpu limits for csi controller
+        # -- Cpu limits for csi controller
         cpu: "32m"
-        # memory limits for csi controller
+        # -- Memory limits for csi controller
         memory: "128Mi"
       requests:
-        # cpu requests for csi controller
+        # -- Cpu requests for csi controller
         cpu: "16m"
-        # memory requests for csi controller
+        # -- Memory requests for csi controller
         memory: "64Mi"
   node:
     logLevel: info
     topology:
       segments:
         openebs.io/csi-node: mayastor
-      # add topology segments to the csi-node daemonset node selector
+      # -- Add topology segments to the csi-node daemonset node selector
       nodeSelector: false
     resources:
       limits:
-        # cpu limits for csi node plugin
+        # -- Cpu limits for csi node plugin
         cpu: "100m"
-        # memory limits for csi node plugin
+        # -- Memory limits for csi node plugin
         memory: "128Mi"
       requests:
-        # cpu requests for csi node plugin
+        # -- Cpu requests for csi node plugin
         cpu: "100m"
-        # memory requests for csi node plugin
+        # -- Memory requests for csi node plugin
         memory: "64Mi"
     nvme:
-      # nvme_core module io timeout in seconds
+      # -- The nvme_core module io timeout in seconds
       io_timeout: "30"
-      # ctrl_loss_tmo (controller loss timeout) in seconds
+      # -- The ctrl_loss_tmo (controller loss timeout) in seconds
       ctrl_loss_tmo: "1980"
-      # kato (keep alive timeout) in seconds
+      # Kato (keep alive timeout) in seconds
       keep_alive_tmo: ""
+    # -- The kubeletDir directory for the csi-node plugin
     kubeletDir: /var/lib/kubelet
     pluginMounthPath: /csi
     socketPath: csi.sock
 
-mayastor:
-  # logLevel for the core crate and other dependent crates
+io_engine:
+  # -- Log level for the io-engine service
   logLevel: info,io_engine=info
   api: "v1"
   target:
     nvmf:
-      # NVMF target interface (ip, mac, name or subnet)
+      # -- NVMF target interface (ip, mac, name or subnet)
       iface: ""
-      # Reservations Persist Through Power Loss State
+      # -- Reservations Persist Through Power Loss State
       ptpl: true
-  # Pass additional arguments to the Environment Abstraction Layer.
-  # as a workaorund for mayastor io-engine on Intel Xeon E-2278G CPU @ 3.40GHz 
+  # -- Pass additional arguments to the Environment Abstraction Layer.
   # Example: --set {product}.envcontext=iova-mode=pa
   envcontext: ""
+  reactorFreezeDetection:
+    enabled: false
+  # -- The number of cpu that each io-engine instance will bind to.
   cpuCount: "2"
-  # node selectors to designate mayastor nodes for diskpool creation
+  # -- Node selectors to designate storage nodes for diskpool creation
   # Note that if multi-arch images support 'kubernetes.io/arch: amd64'
   # should be removed.
   nodeSelector:
@@ -258,28 +263,28 @@ mayastor:
     kubernetes.io/arch: amd64
   resources:
     limits:
-      # cpu limits for mayastor component
+      # -- Cpu limits for the io-engine
       cpu: ""
-      # memory limits for mayastor component
+      # -- Memory limits for the io-engine
       memory: "1Gi"
-      # hugepage size available on the nodes
+      # -- Hugepage size available on the nodes
       hugepages2Mi: "2Gi"
     requests:
-      # cpu requests for mayastor component
+      # -- Cpu requests for the io-engine
       cpu: ""
-      # memory requests for csi node plugin
+      # -- Memory requests for the io-engine
       memory: "1Gi"
-      # hugepage size available on the nodes
+      # -- Hugepage size available on the nodes
       hugepages2Mi: "2Gi"
 
 etcd:
-  # etcd pod labels; okay to remove the openebs logging label if required
+  # Pod labels; okay to remove the openebs logging label if required
   podLabels:
     app: etcd
     openebs.io/logging: "true"
-  # number of replicas of etcd
+  # -- Number of replicas of etcd
   replicaCount: 3
-  # kubernetes Cluster Domain
+  # Kubernetes Cluster Domain
   clusterDomain: cluster.local
   # TLS authentication for client-to-server communications
   # ref: https://etcd.io/docs/current/op-guide/security/
@@ -291,21 +296,21 @@ etcd:
     secureTransport: false
   # Enable persistence using Persistent Volume Claims
   persistence:
-    # If true, use a Persistent Volume Claim. If false, use emptyDir.
+    # -- If true, use a Persistent Volume Claim. If false, use emptyDir.
     enabled: true
-    # storageClass will define which storageClass to use in etcd's StatefulSets
+    # -- Will define which storageClass to use in etcd's StatefulSets
     # a `manual` storageClass will provision a hostpath PV on the same node
     # an empty storageClass will use the default StorageClass on the cluster
     storageClass: ""
-    # etcd volume size
+    # -- Volume size
     size: 2Gi
-    # etcd's PVC's reclaimPolicy
+    # -- PVC's reclaimPolicy
     reclaimPolicy: "Delete"
-  # Use a PreStop hook to remove the etcd members from the etcd cluster on container termination
+  # -- Use a PreStop hook to remove the etcd members from the etcd cluster on container termination
   # Ignored if lifecycleHooks is set or replicaCount=1
   removeMemberOnContainerTermination: false
 
-  # AutoCompaction
+  # -- AutoCompaction
   # Since etcd keeps an exact history of its keyspace, this history should be
   # periodically compacted to avoid performance degradation
   # and eventual storage space exhaustion.
@@ -313,15 +318,16 @@ etcd:
   # - 'periodic' for duration based retention, defaulting to hours if no time unit is provided (e.g. 5m).
   # - 'revision' for revision number based retention.
   autoCompactionMode: revision
-  # Auto compaction retention length. 0 means disable auto compaction.
+  # -- Auto compaction retention length. 0 means disable auto compaction.
   autoCompactionRetention: 100
   extraEnvVars:
-    # Raise alarms when backend size exceeds the given quota.
+    # -- Raise alarms when backend size exceeds the given quota.
     - name: ETCD_QUOTA_BACKEND_BYTES
-      value: "8589934592" # 8GiB
+      value: "8589934592"
 
   auth:
     rbac:
+      create: false
       enabled: false
       allowNoneAuthentication: true
   # Init containers parameters:
@@ -354,25 +360,25 @@ etcd:
       peerPort: ""
 
 loki-stack:
-  # enable loki log collection for Mayastor components
+  # -- Enable loki log collection for our components
   enabled: true
   loki:
     rbac:
-      # create rbac roles for loki
+      # -- Create rbac roles for loki
       create: true
       pspEnabled: false
-    # enable loki installation as part of loki-stack
+    # -- Enable loki installation as part of loki-stack
     enabled: true
-    # install loki with persistence storage
+    # Install loki with persistence storage
     persistence:
-      # enable persistence storage for the logs
+      # -- Enable persistence storage for the logs
       enabled: true
-      # storageClass for Loki's centralised log storage
+      # -- StorageClass for Loki's centralised log storage
       # empty storageClass implies cluster default storageClass & `manual` creates a static hostpath PV
       storageClassName: ""
-      # loki pvc's ReclaimPolicy, can be Delete or Retain
+      # -- PVC's ReclaimPolicy, can be Delete or Retain
       reclaimPolicy: "Delete"
-      # size of Loki's persistence storage
+      # -- Size of Loki's persistence storage
       size: 10Gi
     # loki process run & file permissions, required if sc=manual
     securityContext:
@@ -394,7 +400,7 @@ loki-stack:
           - mountPath: /data
             name: storage
     config:
-      # Compactor is a MayastorDB(loki term) Shipper specific service that reduces the index
+      # Compactor is a BoltDB(loki term) Shipper specific service that reduces the index
       # size by deduping the index and merging all the files to a single file per table.
       # Ref: https://grafana.com/docs/loki/latest/operations/storage/retention/
       compactor:
@@ -432,19 +438,19 @@ loki-stack:
       # create rbac roles for promtail
       create: true
       pspEnabled: false
-    # enabled enables promtail for scraping logs from nodes
+    # -- Enables promtail for scraping logs from nodes
     enabled: true
-    # Disallow promtail from running on the master node
+    # -- Disallow promtail from running on the master node
     tolerations: []
     config:
-      # The Loki address to post logs to
+      # -- The Loki address to post logs to
       lokiAddress: http://{{ .Release.Name }}-loki:3100/loki/api/v1/push
       snippets:
         # Promtail will export logs to loki only based on based on below
-        # configuration, below scrape config will export only mayastor services
+        # configuration, below scrape config will export only our services
         # which are labeled with openebs.io/logging=true
         scrapeConfigs: |
-          - job_name: mayastor-pods-name
+          - job_name: {{ .Release.Name }}-pods-name
             pipeline_stages:
               - docker: {}
             kubernetes_sd_configs:
@@ -460,7 +466,7 @@ loki-stack:
               source_labels:
               - __meta_kubernetes_pod_label_openebs_io_logging
               regex: true
-              target_label: mayastor_component
+              target_label: {{ .Release.Name }}_component
             - action: replace
               replacement: $1
               separator: /
@@ -483,18 +489,18 @@ loki-stack:
               target_label: __path__
 obs:
   callhome:
-    # Enable callhome
+    # -- Enable callhome
     enabled: true
-    # logLevel for callhome
+    # -- Log level for callhome
     logLevel: "info"
     resources:
       limits:
-        # cpu limits for callhome
+        # -- Cpu limits for callhome
         cpu: "100m"
-        # memory limits for callhome
+        # -- Memory limits for callhome
         memory: "32Mi"
       requests:
-        # cpu requests for callhome
+        # -- Cpu requests for callhome
         cpu: "50m"
-        # memory requests for callhome
+        # -- Memory requests for callhome
         memory: "16Mi"

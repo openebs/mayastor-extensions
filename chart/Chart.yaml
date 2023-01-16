@@ -26,10 +26,8 @@ appVersion: "0.0.0"
 
 dependencies:
   - name: etcd
-    repository: https://raw.githubusercontent.com/bitnami/charts/eb5f9a9513d987b519f0ecd732e7031241c50328/bitnami
-    tags:
-      - bitnami-etcd
-    version: 6.2.3
+    repository: https://charts.bitnami.com/bitnami
+    version: 8.6.0
   - name: jaeger-operator
     version: 2.25.0
     repository: https://jaegertracing.github.io/helm-charts

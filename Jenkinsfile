@@ -58,7 +58,7 @@ String cron_schedule = mainBranches() ? "0 2 * * *" : ""
 pipeline {
   agent none
   options {
-    timeout(time: 1, unit: 'HOURS')
+    timeout(time: 2, unit: 'HOURS')
   }
   parameters {
     booleanParam(defaultValue: false, name: 'build_images')
@@ -133,6 +133,16 @@ pipeline {
           steps {
             sh 'printenv'
             sh 'nix-shell --pure --run "./scripts/helm/test-publish-chart-yaml.sh" ./scripts/helm/shell.nix'
+          }
+        }
+        stage('chart doc test') {
+          when {
+            expression { helm_test == true }
+          }
+          agent { label 'nixos-mayastor' }
+          steps {
+            sh 'printenv'
+            sh 'nix-shell --pure --run "./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix'
           }
         }
         stage('image build test') {
