@@ -178,6 +178,16 @@ apis:
         cpu: "50m"
         # -- Memory requests for rest
         memory: "32Mi"
+    # Rest service parameters define how the rest service is exposed
+    service:
+      # -- Rest K8s service type
+      type: ClusterIP
+      # Ports from where rest endpoints are accessible from outside the cluster, only valid if type is NodePort
+      nodePorts:
+        # NodePort associated with http port
+        http: 30011
+        # NodePort associated with https port
+        https: 30010
 
 csi:
   image:
