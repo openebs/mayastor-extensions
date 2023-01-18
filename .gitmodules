@@ -1,3 +1,4 @@
 [submodule "dependencies/control-plane"]
 	path = dependencies/control-plane
 	url = https://github.com/openebs/mayastor-control-plane.git
+    branch = release/2.0
