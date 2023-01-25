@@ -39,7 +39,7 @@ pub(crate) const UPGRADE_OPERATOR_SERVICE: &str = "operator-upgrade";
 pub(crate) const UPGRADE_OPERATOR_SERVICE_PORT: i32 = 8080;
 /// Service internal port constant for upgrade operator.
 pub(crate) const UPGRADE_OPERATOR_INTERNAL_PORT: i32 = 8080;
-/// Upgrade image tag
+/// This is the upgrade-operator container image.
 pub(crate) const UPGRADE_IMAGE: &str = "openebs/mayastor-operator-upgrade:develop";
 /// The service port for upgrade operator.
 pub const UPGRADE_OPERATOR_HTTP_PORT: &str = "http";

@@ -62,7 +62,7 @@ impl UpgradeOperatorClient {
         })
     }
 
-    /// Function to appply the upgrade.
+    /// Function to apply the upgrade.
     pub async fn apply_upgrade(&mut self) -> Result<Option<Vec<String>>, UpgradeClientError> {
         self.upgrade_actions(Method::PUT).await
     }

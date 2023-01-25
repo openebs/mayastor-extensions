@@ -5,7 +5,7 @@ use crate::{
         UPGRADE_OPERATOR_HTTP_PORT, UPGRADE_OPERATOR_INTERNAL_PORT, UPGRADE_OPERATOR_SERVICE,
         UPGRADE_OPERATOR_SERVICE_ACCOUNT, UPGRADE_OPERATOR_SERVICE_PORT,
     },
-    upgrade_labels, CliArgs,
+    upgrade_labels,
 };
 
 use k8s_openapi::{
@@ -19,8 +19,6 @@ use k8s_openapi::{
     },
     apimachinery::pkg::{apis::meta::v1::LabelSelector, util::intstr::IntOrString},
 };
-
-use plugin::rest_wrapper::RestClient;
 
 use kube::core::ObjectMeta;
 use maplit::btreemap;
@@ -160,7 +158,7 @@ pub(crate) fn upgrade_operator_cluster_role(
             PolicyRule {
                 api_groups: Some(vec!["rbac.authorization.k8s.io"].into_vec()),
                 resources: Some(vec!["clusterroles"].into_vec()),
-                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                verbs: vec!["create", "list", "delete", "get", "patch", "escalate"].into_vec(),
                 ..Default::default()
             },
             PolicyRule {
@@ -190,6 +188,12 @@ pub(crate) fn upgrade_operator_cluster_role(
             PolicyRule {
                 api_groups: Some(vec!["scheduling.k8s.io"].into_vec()),
                 resources: Some(vec!["priorityclasses"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["policy"].into_vec()),
+                resources: Some(vec!["poddisruptionbudgets"].into_vec()),
                 verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
                 ..Default::default()
             },
@@ -229,18 +233,21 @@ pub(crate) fn upgrade_operator_cluster_role_binding(
 
 /// Defines the upgrade-operator deployment.
 pub(crate) fn upgrade_operator_deployment(
-    namespace: Option<String>,
+    namespace: &str,
     upgrade_image: String,
     release_name: String,
 ) -> Deployment {
-    let rest_endpoint_arg = format!("--rest-endpoint={}", RestClient::get_or_panic().uri());
-    let namespace_arg = format!("--namespace={}", CliArgs::args().namespace);
-    let chart_name_arg = format!("--chart-name={}", &release_name);
+    let rest_endpoint_clusterip_url = format!("http://{}-api-rest:8081", &release_name);
+    let rest_endpoint_arg = format!("--rest-endpoint={}", rest_endpoint_clusterip_url);
+
+    let namespace_arg = format!("--namespace={}", namespace);
+    let chart_release_name_arg = format!("--release-name={}", &release_name);
+
     Deployment {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
             name: Some(upgrade_group(&release_name, UPGRADE_CONTROLLER_DEPLOYMENT)),
-            namespace: namespace.clone(),
+            namespace: Some(namespace.to_string()),
             ..Default::default()
         },
         spec: Some(DeploymentSpec {
@@ -256,12 +263,15 @@ pub(crate) fn upgrade_operator_deployment(
             template: PodTemplateSpec {
                 metadata: Some(ObjectMeta {
                     labels: Some(btreemap! { LABEL.to_string() => UPGRADE_OPERATOR.to_string()}),
-                    namespace,
                     ..Default::default()
                 }),
                 spec: Some(PodSpec {
                     containers: vec![Container {
-                        args: Some(vec![rest_endpoint_arg, namespace_arg, chart_name_arg]),
+                        args: Some(vec![
+                            rest_endpoint_arg,
+                            namespace_arg,
+                            chart_release_name_arg,
+                        ]),
                         image: Some(upgrade_image),
                         image_pull_policy: Some("Always".to_string()),
                         name: UPGRADE_OPERATOR.to_string(),
