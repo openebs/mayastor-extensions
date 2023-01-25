@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr};
 use validator::Validate;
 
+/// Define spec for upgrade action.
 #[derive(
     CustomResource,
     Serialize,
@@ -34,8 +35,6 @@ use validator::Validate;
     printcolumn = r#"{"name":"Target Version", "type":"string", "jsonPath":".spec.target_version"}"#,
     printcolumn = r#"{"name":"Current Version", "type":"string", "jsonPath":".spec.current_version"}"#
 )]
-
-/// Define spec for upgrade action.
 pub struct UpgradeActionSpec {
     /// Records the current version of the product.
     #[validate(regex = "SEMVER_RE")]
@@ -80,15 +79,15 @@ impl UpgradeActionSpec {
 /// 'UpgradePhase' defines the status of each components.
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub enum UpgradePhase {
-    /// Components in Waiting phase.
+    // Components in Waiting phase.
     Waiting,
-    /// Components in Updating phase.
+    // Components in Updating phase.
     Updating,
-    /// Components in Verifying phase which comnes after updationg.
+    // Components in Verifying phase which comes after update.
     Verifying,
-    /// Components in Completed phase which denotes updateion is complete.
+    // Components in Completed phase which denotes update is complete.
     Completed,
-    /// Components in Error phase.
+    // Components in Error phase.
     Error,
 }
 
@@ -121,18 +120,18 @@ impl From<UpgradePhase> for String {
 /// 'UpgradeState' defines the status of upgradeaction resource.
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub enum UpgradeState {
-    /// Upgrade in NotStarted phase, which denotes cr is created.
+    // Upgrade in NotStarted phase, which denotes cr is created.
     NotStarted,
-    /// Upgrade in UpdatingControlPlane phase, which denotes helm chart upgrade has been started.
+    // Upgrade in UpdatingControlPlane phase, which denotes helm chart upgrade has been started.
     UpdatingControlPlane,
-    /// Upgrade in UpdatingDataPlane phase, which denotes that the io-engine
-    /// DaemonSet pods are being restarted.
+    // Upgrade in UpdatingDataPlane phase, which denotes that the io-engine
+    // DaemonSet pods are being restarted.
     UpdatingDataPlane,
-    /// Upgrade in VerifyingUpdate phase, which denotes components has completed updating phase.
+    // Upgrade in VerifyingUpdate phase, which denotes components has completed updating phase.
     VerifyingUpdate,
-    /// Upgrade in SuccessfulUpdate phase, which denotes upgrade has been successfully verified.
+    // Upgrade in SuccessfulUpdate phase, which denotes upgrade has been successfully verified.
     SuccessfulUpdate,
-    /// Upgrade in Error state.
+    // Upgrade in Error state.
     Error,
 }
 

@@ -1,13 +1,10 @@
 use tracing::log::error;
 
-use crate::upgrade::{common::error::Error, config::UpgradeOperatorConfig};
+use crate::upgrade::{common::error::Error, config::UpgradeConfig};
 
 /// check node status.
 async fn check_node_health() -> Result<bool, Error> {
-    let nodes = UpgradeOperatorConfig::get_config()
-        .k8s_client()
-        .get_nodes()
-        .await?;
+    let nodes = UpgradeConfig::get_config().k8s_client().get_nodes().await?;
     for n in nodes {
         match n.status {
             Some(status) => match status.conditions {
@@ -36,7 +33,7 @@ async fn check_node_health() -> Result<bool, Error> {
 
 /// check volume targets.
 async fn check_volume_targets() -> Result<bool, Error> {
-    let volumes = UpgradeOperatorConfig::get_config()
+    let volumes = UpgradeConfig::get_config()
         .rest_client()
         .volumes_api()
         .get_volumes(0, None, None)
