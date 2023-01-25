@@ -297,7 +297,6 @@ impl UpgradeResources {
         } else {
             match action {
                 Actions::Create => {
-                    let ns = Some(ns.to_string());
                     let upgrade_deploy = objects::upgrade_operator_deployment(
                         ns,
                         UPGRADE_IMAGE.to_string(),

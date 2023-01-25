@@ -1,11 +1,10 @@
+use crate::upgrade::common::{constants::chart_dir_path, error::Error};
 use serde::Deserialize;
 use std::{
     ffi::OsStr,
     path::PathBuf,
     process::{Command, Output},
 };
-
-use crate::upgrade::common::{constants::chart_dir_path, error::Error};
 use tracing::error;
 
 /// Helm arguments that are required to run helm commands.
@@ -132,6 +131,11 @@ impl HelmArgs {
     /// Run helm ls command.
     fn ls(self, exact_match: &String) -> Result<Output, Error> {
         self.run(["ls", "--filter", exact_match, "--output=json"])
+    }
+
+    /// Run helm show chart command
+    fn show_chart(&self) -> Result<Output, Error> {
+        self.run(["show", "chart", chart_dir_path().to_str().unwrap()])
     }
 
     /// Create helm command and run.

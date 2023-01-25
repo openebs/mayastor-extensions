@@ -1,7 +1,6 @@
 use crate::upgrade::{
     common::error::{Error, RestError},
-    config::UpgradeOperatorConfig,
-    controller::reconciler::upgrade_controller,
+    config::UpgradeConfig,
     k8s::crd::v0::UpgradePhase,
 };
 use actix_web::{
@@ -91,23 +90,7 @@ impl Display for RestError {
 /// Put request for upgrade.
 #[put("/upgrade")]
 pub async fn apply_upgrade() -> Result<HttpResponse, RestError> {
-    match UpgradeOperatorConfig::get_config()
-        .k8s_client()
-        .create_upgrade_action_crd()
-        .await
-    {
-        Ok(()) => {
-            info!("UpgradeAction CRD created");
-        }
-        Err(error) => {
-            error!(?error, "failed to create UpgradeAction CRD");
-            let err =
-                RestError::default().with_error("unable to create UpgradeAction crd".to_string());
-            return Err(err);
-        }
-    }
-
-    match UpgradeOperatorConfig::get_config()
+    match UpgradeConfig::get_config()
         .k8s_client()
         .create_upgrade_action_resource()
         .await
@@ -129,20 +112,14 @@ pub async fn apply_upgrade() -> Result<HttpResponse, RestError> {
                 ))
             })?;
 
-            info!("Starting Upgrade controller...");
-            upgrade_controller().await.map_err(|error| {
-                error!(?error, "failed to run Upgrade controller");
-                RestError::default().with_error("failed to run Upgrade controller".to_string())
-            })?;
-
             return Ok(HttpResponse::Ok()
                 .content_type(ContentType::json())
-                .json(res_body));
+                .body(res_body));
         }
         Err(error) => {
-            error!(?error, "failed to create UpgradeAction resource");
+            error!(?error, "Failed to create UpgradeAction resource");
             let err = RestError::default()
-                .with_error("unable to create UpgradeAction resource".to_string());
+                .with_error("Unable to create UpgradeAction resource".to_string());
             Err(err)
         }
     }
@@ -151,7 +128,7 @@ pub async fn apply_upgrade() -> Result<HttpResponse, RestError> {
 /// Get  upgrade.
 #[get("/upgrade")]
 pub async fn get_upgrade() -> impl Responder {
-    match UpgradeOperatorConfig::get_config()
+    match UpgradeConfig::get_config()
         .k8s_client()
         .get_upgrade_action_resource()
         .await
@@ -170,9 +147,9 @@ pub async fn get_upgrade() -> impl Responder {
             Ok(res)
         }
         Err(error) => {
-            error!(?error, "failed to GET UpgradeAction resource");
+            error!(?error, "Failed to GET UpgradeAction resource");
             let err = RestError::default()
-                .with_error("unable to create UpgradeAction resource".to_string());
+                .with_error("Unable to create UpgradeAction resource".to_string());
             Err(err)
         }
     }

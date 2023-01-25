@@ -6,12 +6,16 @@ use k8s_openapi::{
     apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition,
 };
 use kube::{
-    api::{DeleteParams, ListParams, Patch, PatchParams, PostParams},
+    api::{DeleteParams, ListParams, ObjectList, Patch, PatchParams, PostParams},
     runtime::{controller::Action, finalizer, Controller},
     Api, Client, CustomResourceExt, ResourceExt,
 };
 use serde_json::json;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+    time::Duration,
+};
 use tracing::{debug, error, info, trace, warn};
 
 use crate::upgrade::{
@@ -19,7 +23,8 @@ use crate::upgrade::{
         constants::{IO_ENGINE_POD_LABEL, UPGRADE_ACTION_FINALIZER, UPGRADE_OPERATOR},
         error::Error,
     },
-    config::UpgradeOperatorConfig,
+    config::UpgradeConfig,
+    controller::utils::*,
     k8s::crd::v0::{UpgradeAction, UpgradeActionStatus, UpgradePhase, UpgradeState},
     phases::{init::ComponentsState, updating::components_update},
 };
@@ -118,7 +123,7 @@ impl ResourceContext {
         Ok(Action::await_change())
     }
 
-    /// delete_finalizer deletes the finalizer of the UpgradeAction resource.
+    /// Deletes the finalizer of the UpgradeAction resource.
     #[tracing::instrument(fields(name = resource.name_any()) skip(resource))]
     pub(crate) async fn delete_finalizer(resource: ResourceContext) -> Result<Action, Error> {
         let ctx = resource.ctx.clone();
@@ -216,15 +221,48 @@ impl ResourceContext {
             .await?;
 
         let pods: Api<Pod> = Api::namespaced(
-            UpgradeOperatorConfig::get_config().k8s_client().client(),
-            UpgradeOperatorConfig::get_config().namespace(),
+            UpgradeConfig::get_config().k8s_client().client(),
+            UpgradeConfig::get_config().namespace(),
         );
+
+        let io_engine_listparam = ListParams::default().labels(IO_ENGINE_POD_LABEL);
+        let initial_io_engine_pod_list: ObjectList<Pod> = pods.list(&io_engine_listparam).await?;
+
+        let mut initial_io_engine_pod_uids: HashSet<&String> =
+            HashSet::with_capacity(initial_io_engine_pod_list.iter().count());
+        for pod in initial_io_engine_pod_list.iter() {
+            match pod.metadata.uid.as_ref() {
+                Some(uid) => {
+                    // Building a set of io-engine Pod uid values. These values may be used to check
+                    // for io-engine Pod restarts.
+                    initial_io_engine_pod_uids.insert(uid);
+                }
+                None => {
+                    // All kubernetes objects should have uids.
+                    error!("Could not list all io-engine Pods' metadata.uids before restart");
+                    return Err(Error::K8sApiError {
+                        name: self.name_any(),
+                        reason: format!(
+                            "Pod '{}' in the namespace '{}' does not have a 'metadata.uid'",
+                            pod.name_any(),
+                            UpgradeConfig::get_config().namespace()
+                        ),
+                    });
+                }
+            }
+        }
+
+        // Checking to see if all volumes are unpublished before proceeding.
+        if at_least_one_volume_is_published(UpgradeConfig::get_config().rest_client()).await? {
+            return Err(Error::VolumesNotUnpublishedError {
+                reason: "All volumes are not unpublished".to_string(),
+            });
+        }
+        info!("All volumes are unpublished");
+
         info!("Restarting io-engine pods...");
         match pods
-            .delete_collection(
-                &DeleteParams::default(),
-                &ListParams::default().labels(IO_ENGINE_POD_LABEL),
-            )
+            .delete_collection(&DeleteParams::default(), &io_engine_listparam)
             .await?
         {
             either::Left(list) => {
@@ -235,7 +273,28 @@ impl ResourceContext {
                 debug!(?status, "Deleted collection of pods: status");
             }
         }
-        Ok(Action::await_change())
+        debug!("Deleted io-engine Pods");
+
+        debug!("Waiting for new io-engine Pods to start...");
+
+        let max_retries = 20;
+        let mut current_retries = 0;
+        while current_retries < max_retries {
+            let final_io_engine_pod_list: ObjectList<Pod> = pods.list(&io_engine_listparam).await?;
+            if at_least_one_pod_uid_exists(&initial_io_engine_pod_uids, final_io_engine_pod_list) {
+                debug!("Not all io-engine Pods have been restarted yet. Waiting for 3 seconds...");
+                tokio::time::sleep(Duration::from_secs(3_u64)).await;
+                current_retries += 1;
+                continue;
+            } else {
+                info!("All io-engine Pods have been restarted");
+                return Ok(Action::await_change());
+            }
+        }
+
+        Err(Error::ReconcileError {
+            name: self.name_any(),
+        })
     }
 
     /// Starts verifying phase.
@@ -248,21 +307,27 @@ impl ResourceContext {
             ))
             .await?;
 
-        let nodes = UpgradeOperatorConfig::get_config()
+        UpgradeConfig::get_config()
             .rest_client()
             .nodes_api()
             .get_nodes()
-            .await;
-        match nodes {
-            Ok(_) => Ok(Action::await_change()),
-            Err(_) => {
-                self.mark_error(UpgradePhase::Error).await?;
-                // we updated the resource as an error stop reconciliation
-                Err(Error::ReconcileError {
-                    name: self.name_any(),
-                })
-            }
+            .await?;
+
+        // Verifying if the io-engine Pods are ready
+        let pods: Api<Pod> = Api::namespaced(
+            UpgradeConfig::get_config().k8s_client().client(),
+            UpgradeConfig::get_config().namespace(),
+        );
+
+        let lp = ListParams::default().labels(IO_ENGINE_POD_LABEL);
+        let pod_list: ObjectList<Pod> = pods.list(&lp).await?;
+        if !all_pods_are_ready(pod_list) {
+            return Err(Error::ReconcileError {
+                name: self.name_any(),
+            });
         }
+
+        Ok(Action::await_change())
     }
 
     /// Starts successful update phase.
@@ -283,7 +348,7 @@ impl ResourceContext {
         Ok(Action::await_change())
     }
 
-    /// Callback hooks for the finalizers
+    /// Callback hooks for the finalizers.
     async fn finalizer(&self) -> Result<Action, Error> {
         let _ = finalizer(
             &self.api(),
@@ -340,7 +405,7 @@ async fn ensure_crd(k8s: Client) {
             }
         }
     } else {
-        info!("CRD present")
+        info!("UpgradeAction CRD is already present.");
     }
 }
 
@@ -383,7 +448,24 @@ async fn reconcile(ua: Arc<UpgradeAction>, ctx: Arc<ControllerContext>) -> Resul
         Some(UpgradeActionStatus {
             state: UpgradeState::UpdatingControlPlane,
             ..
-        }) => ua.restart_io_engine().await,
+        }) => {
+            // Retry for up to 30 seconds, if there's an error.
+            let max_retries = 6;
+            let mut current_retries = 0;
+            let mut err: Error = Error::ReconcileError {
+                name: ua.name_any(),
+            };
+            while current_retries < max_retries {
+                err = match ua.restart_io_engine().await {
+                    Ok(action) => return Ok(action),
+                    Err(error) => error,
+                };
+                tokio::time::sleep(Duration::from_secs(5)).await;
+                current_retries += 1;
+            }
+
+            Err(err)
+        }
 
         Some(UpgradeActionStatus {
             state: UpgradeState::UpdatingDataPlane,
@@ -415,34 +497,23 @@ async fn reconcile(ua: Arc<UpgradeAction>, ctx: Arc<ControllerContext>) -> Resul
         None => ua.start().await,
     }
 }
-
 /// Upgrade controller that has its own resource and controller context.
-pub async fn upgrade_controller() -> Result<(), Error> {
+pub async fn start_upgrade_worker() {
     let ua: Api<UpgradeAction> = Api::namespaced(
-        UpgradeOperatorConfig::get_config().k8s_client().client(),
-        UpgradeOperatorConfig::get_config().namespace(),
+        UpgradeConfig::get_config().k8s_client().client(),
+        UpgradeConfig::get_config().namespace(),
     );
     let lp = ListParams::default();
 
     let context = ControllerContext {
-        k8s: UpgradeOperatorConfig::get_config().k8s_client().client(),
+        k8s: UpgradeConfig::get_config().k8s_client().client(),
         inventory: tokio::sync::RwLock::new(HashMap::new()),
     };
 
     Controller::new(ua, lp)
         .run(reconcile, error_policy, Arc::new(context))
         .for_each(|res| async move {
-            //let _= res.unwrap()..start().await;
-            match res {
-                Ok(o) => {
-                    trace!(?o);
-                }
-                Err(e) => {
-                    trace!(?e);
-                }
-            }
+            trace!(?res);
         })
         .await;
-
-    Ok(())
 }

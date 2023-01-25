@@ -8,7 +8,7 @@ use tracing::debug;
 
 use crate::upgrade::{
     common::{constants::DEFAULT_VALUES_PATH, error::Error},
-    config::UpgradeOperatorConfig,
+    config::UpgradeConfig,
 };
 
 // Create a new file to store values.
@@ -28,7 +28,7 @@ pub(crate) fn values_pathfile() -> Result<PathBuf, Error> {
 /// Start updating components.
 pub async fn components_update(opts: Vec<(String, String)>) -> Result<(), Error> {
     let output_filepath = values_pathfile().unwrap();
-    let output = UpgradeOperatorConfig::get_config()
+    let output = UpgradeConfig::get_config()
         .helm_client()
         .get_values()
         .unwrap();
@@ -36,7 +36,7 @@ pub async fn components_update(opts: Vec<(String, String)>) -> Result<(), Error>
 
     fs::write(output_filepath.clone(), output)?;
 
-    match UpgradeOperatorConfig::get_config()
+    match UpgradeConfig::get_config()
         .helm_client()
         .upgrade(vec![output_filepath.clone()], opts)
         .await
