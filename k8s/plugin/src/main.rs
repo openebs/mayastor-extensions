@@ -13,12 +13,7 @@ use plugin::{
 use std::{env, path::PathBuf};
 mod resources;
 use crate::resources::GetResourcesK8s;
-use http::Uri;
-use resources::{
-    upgrade::{UpgradeOperator, UpgradeResources},
-    Operations,
-};
-pub mod constant;
+use resources::Operations;
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
@@ -50,11 +45,6 @@ struct CliArgs {
     /// Kubernetes namespace of mayastor service, defaults to mayastor
     #[clap(global = true, long, short = 'n', default_value = "mayastor")]
     namespace: String,
-
-    /// Endpoint of upgrade operator service, if left empty then it will try to parse endpoints
-    /// from upgrade operator service(K8s service resource).
-    #[clap(global = true, short, long)]
-    upgrade_operator_endpoint: Option<Uri>,
 }
 impl CliArgs {
     fn args() -> Self {
@@ -115,15 +105,6 @@ async fn execute(cli_args: CliArgs) {
                         .await
                     }
                 },
-                GetResourcesK8s::UpgradeStatus => {
-                    UpgradeResources::get(
-                        cli_args.upgrade_operator_endpoint,
-                        &cli_args.namespace,
-                        cli_args.kube_config_path,
-                        cli_args.timeout,
-                    )
-                    .await
-                }
             },
             Operations::Drain(resource) => match resource {
                 DrainResources::Node(drain_node_args) => {
@@ -160,25 +141,6 @@ async fn execute(cli_args: CliArgs) {
                         std::process::exit(1);
                     });
                 println!("Completed collection of dump !!");
-            }
-            Operations::Install(resource) => match resource {
-                UpgradeOperator::UpgradeOperator => {
-                    UpgradeResources::install(&cli_args.namespace).await;
-                }
-            },
-            Operations::Uninstall(resource) => match resource {
-                UpgradeOperator::UpgradeOperator => {
-                    UpgradeResources::uninstall(&cli_args.namespace).await;
-                }
-            },
-            Operations::Upgrade => {
-                UpgradeResources::apply(
-                    cli_args.upgrade_operator_endpoint,
-                    &cli_args.namespace,
-                    cli_args.kube_config_path,
-                    cli_args.timeout,
-                )
-                .await;
             }
         };
     };

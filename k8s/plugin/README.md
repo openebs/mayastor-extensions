@@ -317,31 +317,4 @@ SUBCOMMANDS:
       ```
 
 <details>
-<summary> Upgrade operations </summary>
 
-**Examples**:
-
-1. To install upgrade resources need for executing upgrade operation
-   ```sh
-   ## Command
-   kubectl mayastor install upgrade-operator -n <mayastor_namespace>
-   ```
-
-2. To uninstall upgrade resources need for executing upgrade operation
-   ```sh
-   ## Command
-   kubectl mayastor uninstall upgrade-operator -n <mayastor_namespace>
-   ```
-
-3. To upgrade the installation
-   ```sh
-   ## Command
-   kubectl mayastor upgrade
-   ```
-
-4. To get the upgrade status
-   ```sh
-   ## Command
-   kubectl mayastor get upgrade-status
-   ```
-</details>

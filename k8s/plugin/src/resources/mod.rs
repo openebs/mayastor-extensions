@@ -2,17 +2,10 @@ use clap::Parser;
 use plugin::resources::{CordonResources, DrainResources, GetResources, ScaleResources};
 use supportability::DumpArgs;
 
-pub mod objects;
-pub mod uo_client;
-pub mod upgrade;
-use upgrade::UpgradeOperator;
-
 #[derive(clap::Subcommand, Debug)]
 pub enum GetResourcesK8s {
     #[clap(flatten)]
     Rest(GetResources),
-    /// Get upgrade status
-    UpgradeStatus,
 }
 
 /// The types of operations that are supported.
@@ -35,12 +28,4 @@ pub enum Operations {
     Uncordon(CordonResources),
     /// `Dump` resources.
     Dump(DumpArgs),
-    /// `Install` upgrade operator.
-    #[clap(subcommand)]
-    Install(UpgradeOperator),
-    /// `Uninstall` upgrade operator.
-    #[clap(subcommand)]
-    Uninstall(UpgradeOperator),
-    /// `Upgrade` the operator.
-    Upgrade,
 }
