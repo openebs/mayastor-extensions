@@ -4,6 +4,9 @@ kind: Jaeger
 metadata:
   name: jaeger
   namespace: {{ .Release.Namespace }}
+labels:
+  {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+  {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
   strategy: allInOne
   ingress:

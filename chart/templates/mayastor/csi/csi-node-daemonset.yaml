@@ -4,7 +4,8 @@ metadata:
   name: {{ .Release.Name }}-csi-node
   labels:
     app: csi-node
-    helm-release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
     {{- range $key, $val := .Values.csi.node.topology.segments }}
     {{ $key }}: {{ $val }}
     {{- end }}
@@ -12,7 +13,8 @@ spec:
   selector:
     matchLabels:
       app: csi-node
-      helm-release: {{ .Release.Name }}
+      {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+      {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -22,8 +24,9 @@ spec:
     metadata:
       labels:
         app: csi-node
-        helm-release: {{ .Release.Name }}
-        openebs.io/logging: "true"
+        {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+        {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+        {{ include "label_prefix" . }}/logging: "true"
     spec:
       serviceAccount: {{ .Release.Name }}-service-account
       hostNetwork: true
