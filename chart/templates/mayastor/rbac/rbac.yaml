@@ -5,14 +5,16 @@ metadata:
   name: {{ .Release.Name }}-service-account
   namespace: {{ .Release.Namespace }}
   labels:
-    helm-release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ .Release.Name }}-cluster-role
   labels:
-    helm-release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 rules:
   # must create mayastor crd if it doesn't exist
 - apiGroups: ["apiextensions.k8s.io"]
@@ -76,7 +78,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ .Release.Name }}-cluster-role-binding
   labels:
-    helm-release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 subjects:
 - kind: ServiceAccount
   name: {{ .Release.Name }}-service-account
