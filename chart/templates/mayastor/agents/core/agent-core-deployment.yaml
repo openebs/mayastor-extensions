@@ -4,19 +4,22 @@ metadata:
   name: {{ .Release.Name }}-agent-core
   labels:
     app: agent-core
-    helm-release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: agent-core
-      helm-release: {{ .Release.Name }}
+      {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+      {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
   template:
     metadata:
       labels:
         app: agent-core
-        helm-release: {{ .Release.Name }}
-        openebs.io/logging: "true"
+        {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+        {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+        {{ include "label_prefix" . }}/logging: "true"
     spec:
       serviceAccount: {{ .Release.Name }}-service-account
       imagePullSecrets:

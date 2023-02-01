@@ -4,11 +4,14 @@ metadata:
   name: {{ .Release.Name }}-agent-core
   labels:
     app: agent-core
-    helm-release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
   clusterIP: None
   selector:
     app: agent-core
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
   ports:
     - name: grpc
       port: 50051

@@ -4,19 +4,22 @@ metadata:
   name: {{ .Release.Name }}-operator-diskpool
   labels:
     app: operator-diskpool
-    helm-release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: operator-diskpool
-      helm-release: {{ .Release.Name }}
+      {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+      {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
   template:
     metadata:
       labels:
         app: operator-diskpool
-        helm-release: {{ .Release.Name }}
-        openebs.io/logging: "true"
+        {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+        {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+        {{ include "label_prefix" . }}/logging: "true"
     spec:
       serviceAccount: {{ .Release.Name }}-service-account
       imagePullSecrets:

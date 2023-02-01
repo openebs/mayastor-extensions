@@ -4,19 +4,22 @@ metadata:
   name: {{ .Release.Name }}-api-rest
   labels:
     app: api-rest
-    helm-release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
   replicas: {{ .Values.apis.rest.replicaCount }}
   selector:
     matchLabels:
       app: api-rest
-      helm-release: {{ .Release.Name }}
+      {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+      {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
   template:
     metadata:
       labels:
         app: api-rest
-        helm-release: {{ .Release.Name }}
-        openebs.io/logging: "true"
+        {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+        {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+        {{ include "label_prefix" . }}/logging: "true"
     spec:
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}

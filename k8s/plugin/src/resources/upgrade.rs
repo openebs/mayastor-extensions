@@ -549,7 +549,7 @@ pub async fn get_release_name(ns: &str) -> Result<String, Error> {
     match get_deployment_for_rest(ns).await {
         Ok(deployments) => match deployments.items.get(0) {
             Some(deployment) => match &deployment.metadata.labels {
-                Some(label) => match label.get("helm-release") {
+                Some(label) => match label.get("openebs.io/release") {
                     Some(value) => Ok(value.to_string()),
                     None => Ok(DEFAULT_RELEASE_NAME.to_string()),
                 },
