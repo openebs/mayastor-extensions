@@ -107,3 +107,13 @@ Usage:
 {{- printf "%d" (add $i 1) }}
 {{- end }}
 {{- end }}
+
+{{/*
+Adds the project domain to labels
+Usage:
+{{ include "label_prefix" . }}/release: {{ .Release.Name }}
+*/}}
+{{- define "label_prefix" -}}
+    {{ $product := .Files.Get "product.yaml" | fromYaml }}
+    {{- print $product.domain -}}
+{{- end -}}

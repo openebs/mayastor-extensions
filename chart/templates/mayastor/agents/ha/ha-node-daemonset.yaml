@@ -5,12 +5,14 @@ metadata:
   name: {{ .Release.Name }}-agent-ha-node
   labels:
     app: agent-ha-node
-    helm-release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
   selector:
     matchLabels:
       app: agent-ha-node
-      helm-release: {{ .Release.Name }}
+      {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+      {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -20,8 +22,9 @@ spec:
     metadata:
       labels:
         app: agent-ha-node
-        helm-release: {{ .Release.Name }}
-        openebs.io/logging: "true"
+        {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+        {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+        {{ include "label_prefix" . }}/logging: "true"
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

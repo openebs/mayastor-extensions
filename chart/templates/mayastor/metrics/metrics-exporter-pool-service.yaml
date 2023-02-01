@@ -5,7 +5,8 @@ metadata:
   name: {{ .Release.Name }}-metrics-exporter-pool
   labels:
     app: metrics-exporter-pool
-    helm-release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
   clusterIP: None
   ports:
@@ -15,4 +16,6 @@ spec:
       protocol: TCP
   selector:
     app: io-engine
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 {{- end }}
