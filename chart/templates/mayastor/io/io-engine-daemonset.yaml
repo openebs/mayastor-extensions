@@ -11,7 +11,6 @@ spec:
     matchLabels:
       app: io-engine
       {{ include "label_prefix" . }}/release: {{ .Release.Name }}
-      {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
   updateStrategy:
     type: OnDelete
   minReadySeconds: 10
