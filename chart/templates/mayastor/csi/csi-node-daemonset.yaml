@@ -14,7 +14,6 @@ spec:
     matchLabels:
       app: csi-node
       {{ include "label_prefix" . }}/release: {{ .Release.Name }}
-      {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
