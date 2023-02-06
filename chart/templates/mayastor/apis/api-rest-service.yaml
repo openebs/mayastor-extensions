@@ -11,7 +11,6 @@ spec:
   selector:
     app: api-rest
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
-    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
   ports:
     - port: 8080
       name: https
