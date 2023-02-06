@@ -124,12 +124,12 @@ agents:
         # -- Cpu limits for core agents
         cpu: "1000m"
         # -- Memory limits for core agents
-        memory: "32Mi"
+        memory: "128Mi"
       requests:
         # -- Cpu requests for core agents
         cpu: "500m"
         # -- Memory requests for core agents
-        memory: "16Mi"
+        memory: "32Mi"
   ha:
     enabled: true
     node:
@@ -154,7 +154,7 @@ agents:
           # -- Cpu limits for ha cluster agent
           cpu: "100m"
           # -- Memory limits for ha cluster agent
-          memory: "32Mi"
+          memory: "64Mi"
         requests:
           # -- Cpu requests for ha cluster agent
           cpu: "100m"
