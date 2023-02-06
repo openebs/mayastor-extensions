@@ -158,7 +158,10 @@ pub(crate) fn upgrade_operator_cluster_role(
             PolicyRule {
                 api_groups: Some(vec!["rbac.authorization.k8s.io"].into_vec()),
                 resources: Some(vec!["clusterroles"].into_vec()),
-                verbs: vec!["create", "list", "delete", "get", "patch", "escalate"].into_vec(),
+                verbs: vec![
+                    "create", "list", "delete", "get", "patch", "escalate", "bind",
+                ]
+                .into_vec(),
                 ..Default::default()
             },
             PolicyRule {
