@@ -13,7 +13,6 @@ spec:
     matchLabels:
       app: obs-callhome
       {{ include "label_prefix" . }}/release: {{ .Release.Name }}
-      {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
   template:
     metadata:
       labels:
