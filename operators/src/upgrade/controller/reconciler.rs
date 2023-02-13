@@ -411,7 +411,11 @@ async fn ensure_crd(k8s: Client) {
 
 /// Determine what we want to do when dealing with errors from the
 /// reconciliation loop
-fn error_policy(error: &Error, _ctx: Arc<ControllerContext>) -> Action {
+fn error_policy(
+    _object: Arc<UpgradeAction>,
+    error: &Error,
+    _ctx: Arc<ControllerContext>,
+) -> Action {
     let duration = Duration::from_secs(match error {
         Error::Duplicate { timeout } | Error::SpecError { timeout, .. } => (*timeout).into(),
 

@@ -105,7 +105,7 @@ impl HelmArgs {
         }
 
         for (key, val) in self.opts() {
-            command.arg("--set").arg(format!("{}={}", key, val));
+            command.arg("--set").arg(format!("{key}={val}"));
         }
     }
 
@@ -191,7 +191,7 @@ impl Chart {
 
     /// Get installed chart by names.
     fn get_installed_chart_by_name(name: String, namespace: String) -> Result<Chart, Error> {
-        let exact_match = format!("^{}$", name);
+        let exact_match = format!("^{name}$");
 
         let output = HelmArgs::default()
             .with_namespace(Some(namespace))

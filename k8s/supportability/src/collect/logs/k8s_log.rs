@@ -84,10 +84,7 @@ impl K8sLoggerClient {
             None => RUNNING_FIELD_SELECTOR.to_string(),
             Some(name) => {
                 let node_name = self.k8s_client.get_nodename(name.as_str()).await?;
-                format!(
-                    "{},{}={}",
-                    RUNNING_FIELD_SELECTOR, NODE_NAME_FIELD_SELECTOR, node_name
-                )
+                format!("{RUNNING_FIELD_SELECTOR},{NODE_NAME_FIELD_SELECTOR}={node_name}")
             }
         };
 
@@ -204,9 +201,9 @@ impl K8sLoggerClient {
     ) -> Result<(), K8sLoggerError> {
         let mut container_file = pod_dir;
         if pod_restarted {
-            container_file.push(format!("previous_{}.log", container_name));
+            container_file.push(format!("previous_{container_name}.log"));
         } else {
-            container_file.push(format!("{}.log", container_name));
+            container_file.push(format!("{container_name}.log"));
         }
 
         let log_file = File::create(container_file)?;

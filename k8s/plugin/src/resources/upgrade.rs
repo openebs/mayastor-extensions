@@ -394,7 +394,7 @@ impl UpgradeResources {
                 match uo.service_account_actions(ns, Actions::Create).await {
                     Ok(_) => (),
                     Err(error) => {
-                        println!("Failed in creating ServiceAccount {}", error);
+                        println!("Failed in creating ServiceAccount {error}");
                         std::process::exit(1)
                     }
                 }
@@ -403,7 +403,7 @@ impl UpgradeResources {
                 match uo.cluster_role_actions(ns, Actions::Create).await {
                     Ok(_) => (),
                     Err(error) => {
-                        println!("Failed in creating ClusterRole {}", error);
+                        println!("Failed in creating ClusterRole {error}");
                         std::process::exit(1)
                     }
                 }
@@ -412,7 +412,7 @@ impl UpgradeResources {
                 match uo.cluster_role_binding_actions(ns, Actions::Create).await {
                     Ok(_) => (),
                     Err(error) => {
-                        println!("Failed in creating ClusterRoleBinding {}", error);
+                        println!("Failed in creating ClusterRoleBinding {error}");
                         std::process::exit(1)
                     }
                 }
@@ -421,7 +421,7 @@ impl UpgradeResources {
                 match uo.deployment_actions(ns, Actions::Create).await {
                     Ok(_) => (),
                     Err(error) => {
-                        println!("Failed in creating Deployment {}", error);
+                        println!("Failed in creating Deployment {error}");
                         std::process::exit(1)
                     }
                 }
@@ -430,12 +430,12 @@ impl UpgradeResources {
                 match uo.service_actions(ns, Actions::Create).await {
                     Ok(_) => (),
                     Err(error) => {
-                        println!("Failed in creating Service {}", error);
+                        println!("Failed in creating Service {error}");
                         std::process::exit(1)
                     }
                 }
             }
-            Err(e) => println!("Failed to install. Error {:?}", e),
+            Err(e) => println!("Failed to install. Error {e:?}"),
         };
     }
     /// Uninstall the upgrade resources
@@ -446,7 +446,7 @@ impl UpgradeResources {
                 match uo.deployment_actions(ns, Actions::Delete).await {
                     Ok(_) => (),
                     Err(error) => {
-                        println!("Failed in creating Deployment {}", error);
+                        println!("Failed in creating Deployment {error}");
                         std::process::exit(1)
                     }
                 }
@@ -455,7 +455,7 @@ impl UpgradeResources {
                 match uo.service_actions(ns, Actions::Delete).await {
                     Ok(_) => (),
                     Err(error) => {
-                        println!("Failed in deleting Service {}", error);
+                        println!("Failed in deleting Service {error}");
                         std::process::exit(1)
                     }
                 }
@@ -464,7 +464,7 @@ impl UpgradeResources {
                 match uo.cluster_role_binding_actions(ns, Actions::Delete).await {
                     Ok(_) => (),
                     Err(error) => {
-                        println!("Failed in deleting ClusterRoleBinding {}", error);
+                        println!("Failed in deleting ClusterRoleBinding {error}");
                         std::process::exit(1)
                     }
                 }
@@ -473,7 +473,7 @@ impl UpgradeResources {
                 match uo.cluster_role_actions(ns, Actions::Delete).await {
                     Ok(_) => (),
                     Err(error) => {
-                        println!("Failed in deleting ClusterRole {}", error);
+                        println!("Failed in deleting ClusterRole {error}");
                         std::process::exit(1)
                     }
                 }
@@ -482,12 +482,12 @@ impl UpgradeResources {
                 match uo.service_account_actions(ns, Actions::Delete).await {
                     Ok(_) => (),
                     Err(error) => {
-                        println!("Failed in deleting ServiceAccount {}", error);
+                        println!("Failed in deleting ServiceAccount {error}");
                         std::process::exit(1)
                     }
                 }
             }
-            Err(e) => println!("Failed to uninstall. Error {}", e),
+            Err(e) => println!("Failed to uninstall. Error {e}"),
         };
     }
 
@@ -503,11 +503,11 @@ impl UpgradeResources {
         {
             Ok(mut client) => {
                 if let Err(err) = client.apply_upgrade().await {
-                    println!("Error while  upgrading {:?}", err);
+                    println!("Error while  upgrading {err:?}");
                 }
             }
             Err(e) => {
-                println!("Failed to create client for upgrade {:?}", e);
+                println!("Failed to create client for upgrade {e:?}");
                 std::process::exit(1);
             }
         }
@@ -525,11 +525,11 @@ impl UpgradeResources {
         {
             Ok(mut client) => {
                 if let Err(err) = client.get_upgrade().await {
-                    println!("Error while  upgrading {:?}", err);
+                    println!("Error while  upgrading {err:?}");
                 }
             }
             Err(e) => {
-                println!("Failed to create client for upgrade {:?}", e);
+                println!("Failed to create client for upgrade {e:?}");
                 std::process::exit(1);
             }
         }
@@ -561,7 +561,7 @@ pub async fn get_release_name(ns: &str) -> Result<String, Error> {
             }
         },
         Err(e) => {
-            println!("Failed in fetching deployment {:?}", e);
+            println!("Failed in fetching deployment {e:?}");
             std::process::exit(1);
         }
     }

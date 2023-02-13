@@ -245,7 +245,7 @@ impl ConfigBuilder<ApiRest> {
             .timeout
             .unwrap_or_else(|| std::time::Duration::from_secs(5));
         let (scheme, certificate) = self.scheme.parts();
-        let url = Url::parse(&format!("{}://localhost:{}", scheme, port))?;
+        let url = Url::parse(&format!("{scheme}://localhost:{port}"))?;
 
         let config = Configuration::builder()
             .with_timeout(timeout)
@@ -269,7 +269,7 @@ impl ConfigBuilder<Etcd> {
         let (port, _handle) = pf.port_forward().await?;
 
         let (scheme, _certificate) = self.scheme.parts();
-        let uri = Uri::try_from(&format!("{}://localhost:{}", scheme, port))?;
+        let uri = Uri::try_from(&format!("{scheme}://localhost:{port}"))?;
         Ok(uri)
     }
 }
@@ -331,7 +331,7 @@ impl ConfigBuilder<Loki> {
             .unwrap_or_else(|| std::time::Duration::from_secs(5));
 
         let (scheme, _certificate) = self.scheme.parts();
-        let uri = Uri::try_from(&format!("{}://localhost:{}", scheme, port))?;
+        let uri = Uri::try_from(&format!("{scheme}://localhost:{port}"))?;
 
         let service = match self.scheme {
             Scheme::HTTP => {
@@ -409,7 +409,7 @@ impl ConfigBuilder<Upgrade> {
             .unwrap_or_else(|| std::time::Duration::from_secs(5));
 
         let (scheme, _certificate) = self.scheme.parts();
-        let uri = Uri::try_from(&format!("{}://localhost:{}", scheme, port))?;
+        let uri = Uri::try_from(&format!("{scheme}://localhost:{port}"))?;
 
         let service = match self.scheme {
             Scheme::HTTP => {

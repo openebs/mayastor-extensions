@@ -41,16 +41,13 @@ impl SystemDumper {
         let new_dir = match common::create_and_get_tmp_directory(config.output_directory.clone()) {
             Ok(val) => val,
             Err(e) => {
-                println!(
-                    "Failed to create temporary directory to dump information, error: {:?}",
-                    e
-                );
+                println!("Failed to create temporary directory to dump information, error: {e:?}");
                 process::exit(1);
             }
         };
 
         // Create and initialise the support tool log file
-        init_tool_log_file(PathBuf::from(format!("{}/support_tool_logs.log", new_dir)))
+        init_tool_log_file(PathBuf::from(format!("{new_dir}/support_tool_logs.log")))
             .expect("Support Tool Log file should be created");
 
         // Creates an arcive file to dump mayastor resource information. If creation
@@ -58,10 +55,7 @@ impl SystemDumper {
         let archive = match archive::Archive::new(Some(config.output_directory)) {
             Ok(val) => val,
             Err(err) => {
-                log(format!(
-                    "Failed to create archive archive, error: {:?}",
-                    err
-                ));
+                log(format!("Failed to create archive archive, error: {err:?}"));
                 process::exit(1);
             }
         };
@@ -78,8 +72,7 @@ impl SystemDumper {
             Ok(val) => val,
             Err(err) => {
                 log(format!(
-                    "Failed to initialize logging service, error: {:?}",
-                    err
+                    "Failed to initialize logging service, error: {err:?}"
                 ));
                 process::exit(1);
             }
@@ -94,8 +87,7 @@ impl SystemDumper {
             Ok(val) => val,
             Err(err) => {
                 log(format!(
-                    "Failed to instantiate K8s resource dumper, error: {:?}",
-                    err
+                    "Failed to instantiate K8s resource dumper, error: {err:?}"
                 ));
                 process::exit(1);
             }
@@ -110,10 +102,7 @@ impl SystemDumper {
         {
             Ok(val) => Some(val),
             Err(err) => {
-                log(format!(
-                    "Failed to initialize etcd client, error: {:?}",
-                    err
-                ));
+                log(format!("Failed to initialize etcd client, error: {err:?}"));
                 None
             }
         };
@@ -208,8 +197,7 @@ impl SystemDumper {
         }
 
         let _ = write_to_log_file(format!(
-            "Collecting logs of following services: \n {:#?}",
-            resources
+            "Collecting logs of following services: \n {resources:#?}"
         ));
 
         log("Collecting logs...".to_string());
@@ -244,8 +232,7 @@ impl SystemDumper {
         .await
         .map_err(|e| {
             log(format!(
-                "Failed to collect etcd dump information, error: {:?}",
-                e
+                "Failed to collect etcd dump information, error: {e:?}"
             ));
             errors.push(Error::EtcdDumpError(e));
         });
@@ -265,16 +252,14 @@ impl SystemDumper {
             .copy_to_archive(self.dir_path.clone(), ".".to_string())
             .map_err(|e| {
                 log(format!(
-                    "Failed to move content into archive file, error: {}",
-                    e
+                    "Failed to move content into archive file, error: {e}"
                 ));
                 e
             })?;
 
         self.delete_temporary_directory().map_err(|e| {
             log(format!(
-                "Failed to delete temporary directory, error: {:?}",
-                e
+                "Failed to delete temporary directory, error: {e:?}"
             ));
             e
         })?;

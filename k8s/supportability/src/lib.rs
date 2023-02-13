@@ -123,11 +123,11 @@ impl SupportArgs {
                     collect::system_dump::SystemDumper::get_or_panic_system_dumper(config).await;
                 if let Err(e) = system_dumper.dump_system().await {
                     // NOTE: We also need to log error content into Supportability log file
-                    log(format!("Failed to dump system state, error: {:?}", e));
+                    log(format!("Failed to dump system state, error: {e:?}"));
                     errors.push(e);
                 }
                 if let Err(e) = system_dumper.fill_archive_and_delete_tmp() {
-                    log(format!("Failed to copy content to archive, error: {:?}", e));
+                    log(format!("Failed to copy content to archive, error: {e:?}"));
                     errors.push(e);
                 }
             }
@@ -137,14 +137,11 @@ impl SupportArgs {
                 config.topologer = Some(topologer);
                 let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
                 if let Err(e) = dumper.dump_info("topology/volume".to_string()).await {
-                    log(format!(
-                        "Failed to dump volumes information, Error: {:?}",
-                        e
-                    ));
+                    log(format!("Failed to dump volumes information, Error: {e:?}"));
                     errors.push(e);
                 }
                 if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                    log(format!("Failed to copy content to archive, error: {:?}", e));
+                    log(format!("Failed to copy content to archive, error: {e:?}"));
                     errors.push(e);
                 }
             }
@@ -155,13 +152,12 @@ impl SupportArgs {
                 let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
                 if let Err(e) = dumper.dump_info("topology/volume".to_string()).await {
                     log(format!(
-                        "Failed to dump volume {} information, Error: {:?}",
-                        id, e
+                        "Failed to dump volume {id} information, Error: {e:?}"
                     ));
                     errors.push(e);
                 }
                 if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                    log(format!("Failed to copy content to archive, error: {:?}", e));
+                    log(format!("Failed to copy content to archive, error: {e:?}"));
                     errors.push(e);
                 }
             }
@@ -171,11 +167,11 @@ impl SupportArgs {
                 config.topologer = Some(topologer);
                 let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
                 if let Err(e) = dumper.dump_info("topology/pool".to_string()).await {
-                    log(format!("Failed to dump pools information, Error: {:?}", e));
+                    log(format!("Failed to dump pools information, Error: {e:?}"));
                     errors.push(e);
                 }
                 if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                    log(format!("Failed to copy content to archive, error: {:?}", e));
+                    log(format!("Failed to copy content to archive, error: {e:?}"));
                     errors.push(e);
                 }
             }
@@ -186,13 +182,12 @@ impl SupportArgs {
                 let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
                 if let Err(e) = dumper.dump_info("topology/pool".to_string()).await {
                     log(format!(
-                        "Failed to dump pool {} information, Error: {:?}",
-                        id, e
+                        "Failed to dump pool {id} information, Error: {e:?}"
                     ));
                     errors.push(e);
                 }
                 if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                    log(format!("Failed to copy content to archive, error: {:?}", e));
+                    log(format!("Failed to copy content to archive, error: {e:?}"));
                     errors.push(e);
                 }
             }
@@ -202,11 +197,11 @@ impl SupportArgs {
                 config.topologer = Some(topologer);
                 let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
                 if let Err(e) = dumper.dump_info("topology/node".to_string()).await {
-                    log(format!("Failed to dump nodes information, Error: {:?}", e));
+                    log(format!("Failed to dump nodes information, Error: {e:?}"));
                     errors.push(e);
                 }
                 if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                    log(format!("Failed to copy content to archive, error: {:?}", e));
+                    log(format!("Failed to copy content to archive, error: {e:?}"));
                     errors.push(e);
                 }
             }
@@ -217,13 +212,12 @@ impl SupportArgs {
                 let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
                 if let Err(e) = dumper.dump_info("topology/node".to_string()).await {
                     log(format!(
-                        "Failed to dump node {} information, Error: {:?}",
-                        id, e
+                        "Failed to dump node {id} information, Error: {e:?}"
                     ));
                     errors.push(e);
                 }
                 if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                    log(format!("Failed to copy content to archive, error: {:?}", e));
+                    log(format!("Failed to copy content to archive, error: {e:?}"));
                     errors.push(e);
                 }
             }
@@ -235,7 +229,7 @@ impl SupportArgs {
                 };
                 let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
                 if let Err(e) = dumper.dump_etcd().await {
-                    log(format!("Failed to dump etcd information, Error: {:?}", e));
+                    log(format!("Failed to dump etcd information, Error: {e:?}"));
                     errors.push(e);
                 }
             }

@@ -28,7 +28,7 @@ async fn initialize_client(api_version: ApiVersion) -> Result<GrpcClient, Export
     let pod_ip = get_pod_ip()?;
     let endpoint = Uri::builder()
         .scheme("https")
-        .authority(format!("{}:10124", pod_ip))
+        .authority(format!("{pod_ip}:10124"))
         .path_and_query("")
         .build()
         .map_err(|error| ExporterError::InvalidURI(error.to_string()))?;

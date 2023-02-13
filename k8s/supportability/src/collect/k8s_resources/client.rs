@@ -245,15 +245,14 @@ impl ClientSet {
 
         // Labels will definitely exists on Kubernetes node object
         let labels = node.meta().labels.as_ref().ok_or_else(|| {
-            K8sResourceError::CustomError(format!("No labels available on node '{}'", node_name))
+            K8sResourceError::CustomError(format!("No labels available on node '{node_name}'"))
         })?;
 
         let reqired_label_value = labels
             .get(KUBERNETES_HOST_LABEL_KEY)
             .ok_or_else(|| {
                 K8sResourceError::CustomError(format!(
-                    "Node '{}' label not found on node {}",
-                    KUBERNETES_HOST_LABEL_KEY, node_name
+                    "Node '{KUBERNETES_HOST_LABEL_KEY}' label not found on node {node_name}"
                 ))
             })?
             .as_str();
@@ -266,13 +265,12 @@ impl ClientSet {
         let node = node_api
             .list(
                 &ListParams::default()
-                    .labels(format!("{}={}", KUBERNETES_HOST_LABEL_KEY, host_name).as_str()),
+                    .labels(format!("{KUBERNETES_HOST_LABEL_KEY}={host_name}").as_str()),
             )
             .await?;
         if node.items.is_empty() {
             return Err(K8sResourceError::CustomError(format!(
-                "No node found for hostname {}",
-                host_name
+                "No node found for hostname {host_name}"
             )));
         }
         // Since object fetched from Kube-apiserver node name will always exist
@@ -284,8 +282,7 @@ impl ClientSet {
                 .expect("Node Name should exist in kube-apiserver"))
         } else {
             Err(K8sResourceError::CustomError(format!(
-                "No node found for hostname {}",
-                host_name
+                "No node found for hostname {host_name}"
             )))
         }
     }

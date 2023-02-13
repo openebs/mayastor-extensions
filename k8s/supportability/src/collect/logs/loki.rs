@@ -151,8 +151,7 @@ impl LokiClient {
                     Ok(result) => result,
                     Err(error) => {
                         log(format!(
-                            "Failed to create loki client ({:?}). Continuing...",
-                            error
+                            "Failed to create loki client ({error:?}). Continuing..."
                         ));
                         return None;
                     }
@@ -200,7 +199,6 @@ impl LokiClient {
         //  app="mayastor",openebs_io_storage="mayastor"(Loki supported values)
         let mut label_filters: String = label_selector
             .split(',')
-            .into_iter()
             .map(|key_value_pair| {
                 let pairs = key_value_pair.split('=').collect::<Vec<&str>>();
                 format!("{}=\"{}\",", pairs[0], pairs[1])
@@ -213,17 +211,15 @@ impl LokiClient {
         }
         let (file_name, new_query_field) = match host_name {
             Some(host_name) => {
-                let file_name = format!("{}-{}-{}.log", host_name, SERVICE_NAME, container_name);
+                let file_name = format!("{host_name}-{SERVICE_NAME}-{container_name}.log");
                 let new_query_field = format!(
-                    "{{{},container=\"{}\",hostname=~\"{}.*\"}}",
-                    label_filters, container_name, host_name
+                    "{{{label_filters},container=\"{container_name}\",hostname=~\"{host_name}.*\"}}"
                 );
                 (file_name, new_query_field)
             }
             None => {
-                let file_name = format!("{}-{}.log", SERVICE_NAME, container_name);
-                let new_query_field =
-                    format!("{{{},container=\"{}\"}}", label_filters, container_name);
+                let file_name = format!("{SERVICE_NAME}-{container_name}.log");
+                let new_query_field = format!("{{{label_filters},container=\"{container_name}\"}}");
                 (file_name, new_query_field)
             }
         };
@@ -259,18 +255,17 @@ impl LokiClient {
                     if !is_written {
                         if let Err(e) = std::fs::remove_file(file_path) {
                             log(format!(
-                                "[Warning] Failed to remove empty historic log file {}",
-                                e
+                                "[Warning] Failed to remove empty historic log file {e}"
                             ));
                         }
                     }
-                    write_to_log_file(format!("[Warning] While fetching logs from Loki {:?}", e))?;
+                    write_to_log_file(format!("[Warning] While fetching logs from Loki {e:?}"))?;
                     return Err(e);
                 }
             };
             is_written = true;
             for msg in result.iter() {
-                write!(log_file, "{}", msg)?;
+                write!(log_file, "{msg}")?;
             }
         }
         Ok(())

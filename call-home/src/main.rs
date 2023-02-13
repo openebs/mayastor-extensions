@@ -162,9 +162,8 @@ async fn generate_report(
         }
     };
 
-    match volumes.clone() {
-        Some(volumes) => report.volumes = Volumes::new(volumes),
-        None => {}
+    if let Some(volumes) = &volumes {
+        report.volumes = Volumes::new(volumes.clone());
     }
 
     let replicas = http_client.replicas_api().get_replicas().await;

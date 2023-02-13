@@ -14,7 +14,7 @@ macro_rules! upgrade_labels {
 
 /// Append the release name to k8s objects.
 pub(crate) fn upgrade_group(release_name: &str, name: &str) -> String {
-    format!("{}-{}", release_name, name)
+    format!("{release_name}-{name}")
 }
 
 /// Upgrade endpoint

@@ -6,11 +6,11 @@ static TOOL_LOG_FILE: OnceCell<File> = OnceCell::new();
 
 /// Method to be only used to print tool logs to console and write in file
 pub fn log(content: String) {
-    println!("{}", content);
+    println!("{content}");
     // NOTE: If we failed to write to log file can't do anything, just write
     // to stdout and return
-    let _ = write_to_log_file(format!("{}\n", content))
-        .map_err(|e| println!("Not be able to write to log file, error: {}", e));
+    let _ = write_to_log_file(format!("{content}\n"))
+        .map_err(|e| println!("Not be able to write to log file, error: {e}"));
 }
 
 /// Method to be only used to write in file
