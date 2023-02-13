@@ -23,7 +23,7 @@ impl EtcdStore {
         let client_set = ClientSet::new(kube_config_path.clone(), namespace.clone()).await?;
         let platform_info = common_lib::platform::k8s::K8s::from(client_set.kube_client())
             .await
-            .map_err(|e| EtcdError::Custom(format!("Failed to get k8s platform info: {}", e)))?;
+            .map_err(|e| EtcdError::Custom(format!("Failed to get k8s platform info: {e}")))?;
         let key_prefix =
             common_lib::store::etcd::build_key_prefix(platform_info, namespace.clone());
 

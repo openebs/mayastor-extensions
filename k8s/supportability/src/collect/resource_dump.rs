@@ -42,8 +42,7 @@ impl ResourceDumper {
                         Ok(val) => val,
                         Err(e) => {
                             println!(
-                            "Failed to create temporary directory to dump information, error: {:?}",
-                            e
+                            "Failed to create temporary directory to dump information, error: {e:?}"
                         );
                             process::exit(1);
                         }
@@ -51,9 +50,9 @@ impl ResourceDumper {
 
                 // Create and initialise the support tool log file
                 if let Err(e) =
-                    init_tool_log_file(PathBuf::from(format!("{}/support_tool_logs.log", new_dir)))
+                    init_tool_log_file(PathBuf::from(format!("{new_dir}/support_tool_logs.log")))
                 {
-                    println!("Encountered error while creating log file: {} ", e);
+                    println!("Encountered error while creating log file: {e} ");
                     process::exit(1);
                 }
 
@@ -65,7 +64,7 @@ impl ResourceDumper {
         let archive = match archive::Archive::new(output_directory) {
             Ok(val) => val,
             Err(err) => {
-                log(format!("Failed to create archive, {:?}", err));
+                log(format!("Failed to create archive, {err:?}"));
                 process::exit(1);
             }
         };
@@ -82,8 +81,7 @@ impl ResourceDumper {
             Ok(val) => val,
             Err(err) => {
                 log(format!(
-                    "Failed to initialize logging service, error: {:?}",
-                    err
+                    "Failed to initialize logging service, error: {err:?}"
                 ));
                 process::exit(1);
             }
@@ -98,8 +96,7 @@ impl ResourceDumper {
             Ok(val) => val,
             Err(err) => {
                 log(format!(
-                    "Failed to instantiate K8s resource dumper, error: {:?}",
-                    err
+                    "Failed to instantiate K8s resource dumper, error: {err:?}"
                 ));
                 process::exit(1);
             }
@@ -114,10 +111,7 @@ impl ResourceDumper {
         {
             Ok(val) => Some(val),
             Err(err) => {
-                log(format!(
-                    "Failed to initialize etcd client, error: {:?}",
-                    err
-                ));
+                log(format!("Failed to initialize etcd client, error: {err:?}"));
                 None
             }
         };
@@ -140,8 +134,7 @@ impl ResourceDumper {
             Ok(list) => list,
             Err(e) => {
                 log(format!(
-                    "Failed to fetch control plane services, error: {:?}",
-                    e
+                    "Failed to fetch control plane services, error: {e:?}"
                 ));
                 errors.push(Error::LogCollectionError(e));
                 std::collections::HashSet::new()
@@ -155,8 +148,7 @@ impl ResourceDumper {
                 .dump_topology_info(format!("{}/{}", self.dir_path.clone(), folder_path))
                 .map_err(|e| {
                     log(format!(
-                        "Failed to collect topology information, error: {:?}",
-                        e
+                        "Failed to collect topology information, error: {e:?}"
                     ));
                     errors.push(Error::ResourceError(e));
                 });
@@ -178,8 +170,7 @@ impl ResourceDumper {
         log("Completed collection of topology information".to_string());
 
         let _ = write_to_log_file(format!(
-            "Collecting logs from following services: {:#?}",
-            resources
+            "Collecting logs from following services: {resources:#?}"
         ));
         log("Collecting logs...".to_string());
         let _ = self
@@ -211,8 +202,7 @@ impl ResourceDumper {
         .await
         .map_err(|e| {
             log(format!(
-                "Failed to collect etcd dump information, error: {:?}",
-                e
+                "Failed to collect etcd dump information, error: {e:?}"
             ));
             errors.push(Error::EtcdDumpError(e));
         });
@@ -223,16 +213,14 @@ impl ResourceDumper {
             .copy_to_archive(self.dir_path.clone(), ".".to_string())
             .map_err(|e| {
                 log(format!(
-                    "Failed to move content into archive file, error: {}",
-                    e
+                    "Failed to move content into archive file, error: {e}"
                 ));
                 errors.push(Error::ArchiveError(e));
             });
 
         let _ = self.delete_temporary_directory().map_err(|e| {
             log(format!(
-                "Failed to delete temporary directory, error: {:?}",
-                e
+                "Failed to delete temporary directory, error: {e:?}"
             ));
         });
 
@@ -255,8 +243,7 @@ impl ResourceDumper {
             .await
             .map_err(|e| {
                 log(format!(
-                    "Failed to collect etcd dump information, error: {:?}",
-                    e
+                    "Failed to collect etcd dump information, error: {e:?}"
                 ));
                 e
             })?;
@@ -267,16 +254,14 @@ impl ResourceDumper {
                 .copy_to_archive(self.dir_path.clone(), ".".to_string())
                 .map_err(|e| {
                     log(format!(
-                        "Failed to move content into archive file, error: {}",
-                        e
+                        "Failed to move content into archive file, error: {e}"
                     ));
                     e
                 })?;
 
             let _ = self.delete_temporary_directory().map_err(|e| {
                 log(format!(
-                    "Failed to delete temporary directory, error: {:?}",
-                    e
+                    "Failed to delete temporary directory, error: {e:?}"
                 ));
             });
         }
@@ -295,16 +280,14 @@ impl ResourceDumper {
             .copy_to_archive(self.dir_path.clone(), ".".to_string())
             .map_err(|e| {
                 log(format!(
-                    "Failed to move content into archive file, error: {}",
-                    e
+                    "Failed to move content into archive file, error: {e}"
                 ));
                 e
             })?;
 
         self.delete_temporary_directory().map_err(|e| {
             log(format!(
-                "Failed to delete temporary directory, error: {:?}",
-                e
+                "Failed to delete temporary directory, error: {e:?}"
             ));
             e
         })?;

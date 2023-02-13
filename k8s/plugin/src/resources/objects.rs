@@ -241,9 +241,9 @@ pub(crate) fn upgrade_operator_deployment(
     release_name: String,
 ) -> Deployment {
     let rest_endpoint_clusterip_url = format!("http://{}-api-rest:8081", &release_name);
-    let rest_endpoint_arg = format!("--rest-endpoint={}", rest_endpoint_clusterip_url);
+    let rest_endpoint_arg = format!("--rest-endpoint={rest_endpoint_clusterip_url}");
 
-    let namespace_arg = format!("--namespace={}", namespace);
+    let namespace_arg = format!("--namespace={namespace}");
     let chart_release_name_arg = format!("--release-name={}", &release_name);
 
     Deployment {

@@ -251,8 +251,7 @@ impl Resourcer for PoolClientWrapper {
                 Err(e) => {
                     // TODO: Collect errors and return to caller at end
                     log(format!(
-                        "Failed to get node information for pool: {}, error: {:?}",
-                        pool_id, e
+                        "Failed to get node information for pool: {pool_id}, error: {e:?}"
                     ));
                     None
                 }
@@ -262,8 +261,7 @@ impl Resourcer for PoolClientWrapper {
                 Err(e) => {
                     // TODO: Collect errors and return to caller at end
                     log(format!(
-                        "Failed to get device information for pool: {}, error: {:?}",
-                        pool_id, e
+                        "Failed to get device information for pool: {pool_id}, error: {e:?}"
                     ));
                     None
                 }
@@ -286,8 +284,7 @@ impl Resourcer for PoolClientWrapper {
                 Err(e) => {
                     // TODO: Collect errors and return to caller at end
                     log(format!(
-                        "Failed to get node information for pools, error: {:?}",
-                        e
+                        "Failed to get node information for pools, error: {e:?}"
                     ));
                     None
                 }
@@ -297,8 +294,7 @@ impl Resourcer for PoolClientWrapper {
                 Err(e) => {
                     // TODO: Collect errors and return to caller at end
                     log(format!(
-                        "Failed to get device information for pools, error: {:?}",
-                        e
+                        "Failed to get device information for pools, error: {e:?}"
                     ));
                     None
                 }

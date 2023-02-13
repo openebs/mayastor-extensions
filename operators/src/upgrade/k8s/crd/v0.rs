@@ -77,9 +77,10 @@ impl UpgradeActionSpec {
 }
 
 /// 'UpgradePhase' defines the status of each components.
-#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq, JsonSchema, Default)]
 pub enum UpgradePhase {
     // Components in Waiting phase.
+    #[default]
     Waiting,
     // Components in Updating phase.
     Updating,
@@ -89,12 +90,6 @@ pub enum UpgradePhase {
     Completed,
     // Components in Error phase.
     Error,
-}
-
-impl Default for UpgradePhase {
-    fn default() -> Self {
-        UpgradePhase::Waiting
-    }
 }
 
 /// converts the Upgrade phase into a string.
@@ -118,9 +113,10 @@ impl From<UpgradePhase> for String {
 }
 
 /// 'UpgradeState' defines the status of upgradeaction resource.
-#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq, JsonSchema, Default)]
 pub enum UpgradeState {
     // Upgrade in NotStarted phase, which denotes cr is created.
+    #[default]
     NotStarted,
     // Upgrade in UpdatingControlPlane phase, which denotes helm chart upgrade has been started.
     UpdatingControlPlane,
@@ -133,12 +129,6 @@ pub enum UpgradeState {
     SuccessfulUpdate,
     // Upgrade in Error state.
     Error,
-}
-
-impl Default for UpgradeState {
-    fn default() -> Self {
-        UpgradeState::NotStarted
-    }
 }
 
 /// Converts the Upgrade Condition Type into a string.

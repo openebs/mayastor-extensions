@@ -63,13 +63,10 @@ impl Replicas {
     /// report_models::replica object by using the data provided.
     pub(crate) fn new(replica_count: usize, volumes: Option<openapi::models::Volumes>) -> Self {
         let mut replicas = Self::default();
-        match volumes {
-            Some(volumes) => {
-                let replicas_size_vector = get_replicas_size_vector(volumes.entries);
-                replicas.count_per_volume_percentiles = Percentiles::new(replicas_size_vector);
-            }
-            None => {}
-        };
+        if let Some(volumes) = volumes {
+            let replicas_size_vector = get_replicas_size_vector(volumes.entries);
+            replicas.count_per_volume_percentiles = Percentiles::new(replicas_size_vector);
+        }
         replicas.count = replica_count as u64;
         replicas
     }

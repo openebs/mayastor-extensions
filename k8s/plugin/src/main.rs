@@ -28,7 +28,7 @@ struct CliArgs {
     rest: Option<Url>,
 
     /// Path to kubeconfig file.
-    #[clap(parse(from_os_str), global = true, long, short = 'k')]
+    #[clap(global = true, long, short = 'k')]
     kube_config_path: Option<PathBuf>,
 
     /// The operation to be performed.
@@ -74,7 +74,7 @@ async fn main() {
 async fn execute(cli_args: CliArgs) {
     // Initialise the REST client.
     if let Err(e) = init_rest(&cli_args).await {
-        println!("Failed to initialise the REST client. Error {}", e);
+        println!("Failed to initialise the REST client. Error {e}");
         std::process::exit(1);
     }
 
