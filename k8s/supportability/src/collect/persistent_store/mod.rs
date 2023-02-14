@@ -1,5 +1,5 @@
 use crate::collect::k8s_resources::client::K8sResourceError;
-use common_lib::types::v0::store::definitions::StoreError;
+use pstor::Error as StoreError;
 use std::io::Error;
 
 pub mod etcd;
