@@ -1709,6 +1709,7 @@ dependencies = [
  "kube",
  "kube-proxy",
  "maplit",
+ "nu-ansi-term",
  "openapi",
  "opentelemetry",
  "rest-plugin",

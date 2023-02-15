@@ -5,14 +5,14 @@ use supportability::DumpArgs;
 pub mod objects;
 pub mod uo_client;
 pub mod upgrade;
-use upgrade::UpgradeOperator;
+use upgrade::{GetUpgradeArgs, UpgradeArgs, UpgradeOperator};
 
 #[derive(clap::Subcommand, Debug)]
 pub enum GetResourcesK8s {
     #[clap(flatten)]
     Rest(GetResources),
     /// Get upgrade status
-    UpgradeStatus,
+    UpgradeStatus(GetUpgradeArgs),
 }
 
 /// The types of operations that are supported.
@@ -41,6 +41,6 @@ pub enum Operations {
     /// `Uninstall` upgrade operator.
     #[clap(subcommand)]
     Uninstall(UpgradeOperator),
-    /// `Upgrade` the operator.
-    Upgrade,
+    /// `Upgrade` the deployment.
+    Upgrade(UpgradeArgs),
 }
