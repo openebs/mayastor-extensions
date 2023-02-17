@@ -3720,6 +3720,7 @@ dependencies = [
  "kube-proxy",
  "maplit",
  "openapi",
+ "rest-plugin",
  "serde",
  "serde_json",
  "tower",

@@ -1,4 +1,4 @@
-use nu_ansi_term::Color::{Cyan, Red};
+use nu_ansi_term::Color::{Cyan, LightBlue, Red};
 
 /// Print info on console.
 pub fn info(message: &str) {
@@ -6,10 +6,10 @@ pub fn info(message: &str) {
 }
 
 /// Print warning on console.
-pub fn warn(data: &str, message: &str) {
+pub fn warn(message: &str, data: &str) {
     println!(
-        "{} {} ",
+        "{} {}",
         Red.bold().italic().paint(message),
-        Cyan.bold().italic().paint(data)
+        LightBlue.bold().italic().paint(data)
     );
 }

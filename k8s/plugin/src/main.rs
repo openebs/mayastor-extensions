@@ -14,7 +14,10 @@ use std::{env, path::PathBuf};
 mod resources;
 use crate::resources::GetResourcesK8s;
 use resources::Operations;
-use upgrade::upgrade_resources::upgrade::{UpgradeOperator, UpgradeResources};
+use upgrade::{
+    upgrade_resources::upgrade::{UpgradeOperator, UpgradeResources},
+    upgrade_validations,
+};
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
@@ -163,7 +166,33 @@ async fn execute(cli_args: CliArgs) {
                 }
             },
             Operations::Upgrade(resources) => {
-                console_logger::info(upgrade::user_prompt::UPGRADE_WARNING);
+                console_logger::info(upgrade::upgrade_validations::UPGRADE_WARNING);
+
+                match upgrade_validations::upgrade_validations().await {
+                    Ok(upgrade_validations) => {
+                        if upgrade_validations.rebuild_in_progress {
+                            console_logger::warn(upgrade_validations::REBUILD_WARNING, "");
+                            std::process::exit(1)
+                        }
+                        if !upgrade_validations.single_replica_volumes.is_empty() {
+                            let single_volume_replicas_list: Vec<String> = upgrade_validations
+                                .single_replica_volumes
+                                .iter()
+                                .map(|s| s.to_string())
+                                .collect();
+                            let data = single_volume_replicas_list.join("\n");
+                            console_logger::warn(
+                                upgrade_validations::SINGLE_REPLICA_VOLUME_WARNING,
+                                &data,
+                            );
+                            std::process::exit(1)
+                        }
+                    }
+                    Err(error) => {
+                        println!("Failed in getting volume for upgrade {error}");
+                        std::process::exit(1)
+                    }
+                }
                 resources
                     .apply(
                         &cli_args.namespace,
