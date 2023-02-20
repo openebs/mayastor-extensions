@@ -48,7 +48,7 @@ pub struct UpgradeArgs {
 
 impl UpgradeArgs {
     ///  Upgrade the resources.
-    pub async fn implement(
+    pub async fn apply(
         &self,
         namespace: &str,
         kube_config_path: Option<PathBuf>,

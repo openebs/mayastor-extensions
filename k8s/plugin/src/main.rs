@@ -18,7 +18,6 @@ use resources::{
     Operations,
 };
 pub mod constant;
-use nu_ansi_term::Color::Cyan;
 pub mod user_prompt;
 
 #[derive(Parser, Debug)]
@@ -168,12 +167,9 @@ async fn execute(cli_args: CliArgs) {
                 }
             },
             Operations::Upgrade(resources) => {
-                println!(
-                    "{}",
-                    Cyan.bold().italic().paint(user_prompt::UPGRADE_WARNING)
-                );
+                console_logger::info(user_prompt::UPGRADE_WARNING);
                 resources
-                    .implement(
+                    .apply(
                         &cli_args.namespace,
                         cli_args.kube_config_path,
                         cli_args.timeout,

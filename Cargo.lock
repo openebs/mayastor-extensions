@@ -603,6 +603,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "console-logger"
+version = "0.1.0"
+dependencies = [
+ "nu-ansi-term",
+]
+
+[[package]]
 name = "convert_case"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1702,6 +1709,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap",
+ "console-logger",
  "http",
  "humantime",
  "hyper",
@@ -1709,7 +1717,6 @@ dependencies = [
  "kube",
  "kube-proxy",
  "maplit",
- "nu-ansi-term",
  "openapi",
  "opentelemetry",
  "rest-plugin",

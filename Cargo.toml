@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "call-home",
+    "console-logger",
     "exporter",
     "operators",
     "k8s/plugin",
