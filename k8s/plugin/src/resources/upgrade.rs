@@ -37,6 +37,60 @@ pub enum Actions {
     Delete,
 }
 
+/// Arguments to be passed for upgrade.
+#[derive(Debug, Clone, clap::Args)]
+pub struct UpgradeArgs {
+    /// Endpoint of upgrade operator service, if left empty then it will try to parse endpoints
+    /// from upgrade operator service(K8s service resource).
+    #[clap(global = true, short, long)]
+    upgrade_operator_endpoint: Option<Uri>,
+}
+
+impl UpgradeArgs {
+    ///  Upgrade the resources.
+    pub async fn apply(
+        &self,
+        namespace: &str,
+        kube_config_path: Option<PathBuf>,
+        timeout: humantime::Duration,
+    ) {
+        UpgradeResources::apply(
+            self.upgrade_operator_endpoint.clone(),
+            namespace,
+            kube_config_path,
+            timeout,
+        )
+        .await;
+    }
+}
+
+/// Arguments to be passed for upgrade.
+#[derive(Debug, Clone, clap::Args)]
+pub struct GetUpgradeArgs {
+    /// Endpoint of upgrade operator service, if left empty then it will try to parse endpoints
+    /// from upgrade operator service(K8s service resource).
+    #[clap(global = true, short, long)]
+    upgrade_operator_endpoint: Option<Uri>,
+}
+
+impl GetUpgradeArgs {
+    ///  Upgrade the resources.
+    pub async fn get_upgrade(
+        &self,
+        namespace: &str,
+        kube_config_path: Option<PathBuf>,
+        timeout: humantime::Duration,
+    ) {
+        UpgradeResources::get(
+            self.upgrade_operator_endpoint.clone(),
+            namespace,
+            kube_config_path,
+            timeout,
+        )
+        .await
+    }
+}
+
 /// K8s resources needed for upgrade operator.
 pub(crate) struct UpgradeResources {
     pub(crate) service_account: Api<ServiceAccount>,

@@ -1,0 +1,13 @@
+[package]
+name = "console-logger"
+version = "0.1.0"
+edition = "2021"
+description = "Console log for users console"
+
+
+[lib]
+name = "console_logger"
+path = "./src/console.rs"
+
+[dependencies]
+nu-ansi-term = "0.46.0"

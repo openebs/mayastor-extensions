@@ -57,6 +57,7 @@ let
     "Cargo.toml"
     "exporter"
     "rpc"
+    "console-logger"
     "operators"
     "call-home"
     "scripts"
