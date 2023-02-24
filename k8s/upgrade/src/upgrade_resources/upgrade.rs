@@ -5,7 +5,7 @@ use crate::{
         UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING, UPGRADE_OPERATOR_SERVICE,
         UPGRADE_OPERATOR_SERVICE_ACCOUNT,
     },
-    resources::{objects, uo_client::UpgradeOperatorClient},
+    upgrade_resources::{objects, uo_client::UpgradeOperatorClient},
 };
 use anyhow::Error;
 use http::Uri;
@@ -92,7 +92,7 @@ impl GetUpgradeArgs {
 }
 
 /// K8s resources needed for upgrade operator.
-pub(crate) struct UpgradeResources {
+pub struct UpgradeResources {
     pub(crate) service_account: Api<ServiceAccount>,
     pub(crate) cluster_role: Api<ClusterRole>,
     pub(crate) cluster_role_binding: Api<ClusterRoleBinding>,

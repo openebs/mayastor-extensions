@@ -13,12 +13,8 @@ use plugin::{
 use std::{env, path::PathBuf};
 mod resources;
 use crate::resources::GetResourcesK8s;
-use resources::{
-    upgrade::{UpgradeOperator, UpgradeResources},
-    Operations,
-};
-pub mod constant;
-pub mod user_prompt;
+use resources::Operations;
+use upgrade::upgrade_resources::upgrade::{UpgradeOperator, UpgradeResources};
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
@@ -167,7 +163,7 @@ async fn execute(cli_args: CliArgs) {
                 }
             },
             Operations::Upgrade(resources) => {
-                console_logger::info(user_prompt::UPGRADE_WARNING);
+                console_logger::info(upgrade::user_prompt::UPGRADE_WARNING);
                 resources
                     .apply(
                         &cli_args.namespace,
