@@ -2,10 +2,7 @@ use clap::Parser;
 use plugin::resources::{CordonResources, DrainResources, GetResources, ScaleResources};
 use supportability::DumpArgs;
 
-pub mod objects;
-pub mod uo_client;
-pub mod upgrade;
-use upgrade::{GetUpgradeArgs, UpgradeArgs, UpgradeOperator};
+use upgrade::upgrade_resources::upgrade::{GetUpgradeArgs, UpgradeArgs, UpgradeOperator};
 
 #[derive(clap::Subcommand, Debug)]
 pub enum GetResourcesK8s {
