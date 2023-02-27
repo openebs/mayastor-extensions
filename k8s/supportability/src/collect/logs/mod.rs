@@ -223,18 +223,20 @@ impl Logger for LogCollection {
 
             create_directory_if_not_exist(service_dir.clone())?;
             if let Some(loki_client) = &mut self.loki_client {
-                if loki_client
+                let _ = loki_client
                     .fetch_and_dump_logs(
                         resource.label_selector.clone(),
                         resource.container_name.clone(),
                         resource.host_name.clone(),
                         service_dir.clone(),
                     )
-                    .await
-                    .is_ok()
-                {
-                    continue;
-                }
+                    .await.map_err(|e| {
+                    log(format!(
+                        "\t Failed to collect historical logs of service: {}, container: {} of: host {:?}",
+                        resource.service_type, resource.container_name, resource.host_name,
+                    ));
+                    errors.push(LogError::Loki(e));
+                });
             }
 
             let _ = self
@@ -248,7 +250,7 @@ impl Logger for LogCollection {
                 .await
                 .map_err(|e| {
                     log(format!(
-                        "\t Failed to collect logs of service: {}, container: {} of: host {:?}",
+                        "\t Failed to collect current logs of service: {}, container: {} of: host {:?}",
                         resource.service_type, resource.container_name, resource.host_name,
                     ));
                     errors.push(LogError::K8sLogger(e));
