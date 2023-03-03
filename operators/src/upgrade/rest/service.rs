@@ -10,6 +10,7 @@ use actix_web::{
     put, HttpRequest, HttpResponse, Responder, ResponseError,
 };
 use kube::ResourceExt;
+use openapi::models::CordonDrainState;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
 use tracing::{error, info};
@@ -125,9 +126,101 @@ pub async fn apply_upgrade() -> Result<HttpResponse, RestError> {
     }
 }
 
+// Steps
+// 1. Get all nodes
+// 2. Get the darin status
+// 3. Wait for the drain to complete
+// 4. For each node in node list , drain the node
+// 5. restart the io engine pod on this node ( find the node on which th e pod lies)
+// 6. wait for
+
+pub async fn is_draining() -> Result<bool, Error> {
+    let mut is_draining = false;
+    match UpgradeConfig::get_config()
+        .rest_client()
+        .nodes_api()
+        .get_nodes()
+        .await
+    {
+        Ok(nodes) => {
+            let nodelist = nodes.into_body();
+            for node in nodelist {
+                let node_draining =
+                    if let Some(cordondrainstate) = &node.spec.as_ref().unwrap().cordondrainstate {
+                        match cordondrainstate {
+                            CordonDrainState::cordonedstate(_) => false,
+                            CordonDrainState::drainingstate(_) => true,
+                            CordonDrainState::drainedstate(_) => false,
+                        }
+                    } else {
+                        false
+                    };
+                is_draining = is_draining || node_draining
+            }
+        }
+        Err(error) => {
+            return Err(error.into());
+        }
+    }
+    Ok(is_draining)
+}
+
+// pub async fn is_draining() -> Result<bool, Error> {
+//     let mut is_rebuilding = false;
+//     match UpgradeConfig::get_config()
+//         .rest_client()
+//         .nodes_api()
+//         .get_nodes()
+//         .await
+//     {
+//         Ok(nodes) => {
+//             info!("ashish kumar sinha");
+//             let nodelist = nodes.into_body();
+//             for node in nodelist {
+//                 if let Some(cordondrainstate) = node.spec.as_ref().unwrap().cordondrainstate {
+//                     if cordondrainstate == CordonDrainState::drainingstate {
+//                         is_rebuilding = is_rebuilding || true;
+//                     }
+//                 }
+//             }
+//         }
+//         Err(error) => {
+//             info!("two");
+//             info!("{:#?}", error);
+//             return Err(error.into());
+//         }
+//     };
+//     Ok(is_rebuilding);
+// }
+
 /// Get  upgrade.
 #[get("/upgrade")]
 pub async fn get_upgrade() -> impl Responder {
+    info!("one");
+    info!(" yahoo ");
+    // let is_draining = false;
+    // match UpgradeConfig::get_config()
+    //     .rest_client()
+    //     .nodes_api()
+    //     .get_nodes()
+    //     .await
+    // {
+    //     Ok(nodes) => {
+    //         info!("ashish kumar sinha");
+    //         let nodelist = nodes.into_body();
+
+    //         for node in nodelist {
+    //             info!("{:#?}", node);
+    //             is_draining = is_draining && node.spec
+
+    //         }
+    //     }
+    //     Err(error) => {
+    //         info!("two");
+    //         info!("{:#?}", error);
+    //     }
+    // }
+
     match UpgradeConfig::get_config()
         .k8s_client()
         .get_upgrade_action_resource()
