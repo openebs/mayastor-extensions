@@ -97,6 +97,10 @@ pub enum Error {
     #[error("Node status not present, node: {}", node)]
     NodeStatusNotPresent { node: String },
 
+    /// Node spec not present error.
+    #[error("Node spec not present, node: {}", node)]
+    NodeSpecNotPresent { node: String },
+
     /// Node Condition error.
     #[error("Node condition not present, node: {}", node)]
     NodeConditionNotPresent { node: String },
