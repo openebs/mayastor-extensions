@@ -143,6 +143,7 @@ DRY_RUN=
 DEVELOP_TO_REL=
 DATE_TIME_FMT="%Y-%m-%d-%H-%M-%S"
 DATE_TIME=${DATE_TIME:-$(date +"$DATE_TIME_FMT")}
+IGNORE_INDEX_CHECK=
 
 # Check if all needed tools are installed
 semver --version >/dev/null
@@ -176,6 +177,9 @@ while [ "$#" -gt 0 ]; do
     --override-index)
       shift
       INDEX_LT_VERSION=$1
+      if [ -z "$INDEX_LT_VERSION" ]; then
+        IGNORE_INDEX_CHECK="y"
+      fi
       shift
       ;;
     --index-file)
@@ -278,33 +282,35 @@ if [ "$(semver get prerel "$CHART_APP_VERSION")" != "" ]; then
   die "Script expects CHART_APP_VERSION($CHART_APP_VERSION) to point to the future stable release"
 fi
 
-if [ -z "$INDEX_LT_VERSION" ]; then
-  INDEX_FILE_YAML=$(index_yaml)
-  len_versions="$(echo "$INDEX_FILE_YAML" | yq ".entries.${CHART_NAME} | length")"
-  INDEX_VERSIONS=""
-  if [ "$len_versions" != "0" ]; then
-    INDEX_VERSIONS="$(echo "$INDEX_FILE_YAML" | yq ".entries.${CHART_NAME}[].version")"
+if [ -z "$IGNORE_INDEX_CHECK" ]; then
+  if [ -z "$INDEX_LT_VERSION" ]; then
+    INDEX_FILE_YAML=$(index_yaml)
+    len_versions="$(echo "$INDEX_FILE_YAML" | yq ".entries.${CHART_NAME} | length")"
+    INDEX_VERSIONS=""
+    if [ "$len_versions" != "0" ]; then
+      INDEX_VERSIONS="$(echo "$INDEX_FILE_YAML" | yq ".entries.${CHART_NAME}[].version")"
+    fi
+  else
+    INDEX_VERSIONS="$INDEX_LT_VERSION"
+    INDEX_LT_VERSION=
   fi
-else
-  INDEX_VERSIONS="$INDEX_LT_VERSION"
-  INDEX_LT_VERSION=
-fi
 
-version_prefix=$(version_prefix "$APP_TAG")
-INDEX_CHART_VERSIONS=$(echo "$INDEX_VERSIONS" | grep "$version_prefix" || echo)
-if [ "$INDEX_CHART_VERSIONS" != "" ]; then
-  INDEX_LT_VERSION=$(echo "$INDEX_CHART_VERSIONS" | sort -r | head -n1)
-fi
+  version_prefix=$(version_prefix "$APP_TAG")
+  INDEX_CHART_VERSIONS=$(echo "$INDEX_VERSIONS" | grep "$version_prefix" || echo)
+  if [ "$INDEX_CHART_VERSIONS" != "" ]; then
+    INDEX_LT_VERSION=$(echo "$INDEX_CHART_VERSIONS" | sort -r | head -n1)
+  fi
 
-if [ "$(echo "$INDEX_VERSIONS" | grep -x "$APP_TAG" || echo)" == "$APP_TAG" ] && [ "$(semver get prerel "$APP_TAG")" == "" ]; then
-  die "A stable chart version $APP_TAG matching the app tag is already in the index. What should I do?"
-fi
+  if [ "$(echo "$INDEX_VERSIONS" | grep -x "$APP_TAG" || echo)" == "$APP_TAG" ] && [ "$(semver get prerel "$APP_TAG")" == "" ]; then
+    die "A stable chart version $APP_TAG matching the app tag is already in the index. What should I do?"
+  fi
 
-if [ -n "$INDEX_LT_VERSION" ]; then
-  INDEX_LT_VERSION=$(version "$INDEX_LT_VERSION" "Latest index")
-  # If the latest index that matches ours is a release
-  if [ "$(semver get prerel "$INDEX_LT_VERSION")" == "" ]; then
-    die "A stable chart version $INDEX_LT_VERSION is already in the index. What should I do?"
+  if [ -n "$INDEX_LT_VERSION" ]; then
+    INDEX_LT_VERSION=$(version "$INDEX_LT_VERSION" "Latest index")
+    # If the latest index that matches ours is a release
+    if [ "$(semver get prerel "$INDEX_LT_VERSION")" == "" ]; then
+      die "A stable chart version $INDEX_LT_VERSION is already in the index. What should I do?"
+    fi
   fi
 fi
 

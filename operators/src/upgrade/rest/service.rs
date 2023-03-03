@@ -1,6 +1,16 @@
 use crate::upgrade::{
-    common::error::{Error, RestError},
+    common::{
+        constants::{
+            AGENT_CORE_POD_LABEL, API_REST_POD_LABEL, DRAIN_FOR_UPGRADE, ETCD_POD_LABEL,
+            IO_ENGINE_POD_LABEL,
+        },
+        error::{Error, RestError},
+    },
     config::UpgradeConfig,
+    controller::{
+        reconciler::{is_draining, is_node_cordoned, is_rebuilding},
+        utils::all_pods_are_ready,
+    },
     k8s::crd::v0::UpgradePhase,
 };
 use actix_web::{
@@ -9,11 +19,14 @@ use actix_web::{
     http::{header::ContentType, StatusCode},
     put, HttpRequest, HttpResponse, Responder, ResponseError,
 };
-use kube::ResourceExt;
+use k8s_openapi::api::core::v1::Pod;
+use kube::{
+    api::{DeleteParams, ListParams, ObjectList},
+    Api, ResourceExt,
+};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, time::Duration};
 use tracing::{error, info};
-
 /// Upgrade to be returned for get calls.
 #[derive(Serialize, Deserialize, Default)]
 pub(crate) struct Upgrade {
@@ -123,6 +136,230 @@ pub async fn apply_upgrade() -> Result<HttpResponse, RestError> {
             Err(err)
         }
     }
+}
+
+/// Upgrade data plane by controlled restart of io-engine pods
+pub async fn upgrade_data_plane() -> Result<(), Error> {
+    let pods: Api<Pod> = Api::namespaced(
+        UpgradeConfig::get_config().k8s_client().client(),
+        UpgradeConfig::get_config().namespace(),
+    );
+
+    let io_engine_listparam = ListParams::default().labels(IO_ENGINE_POD_LABEL);
+    let initial_io_engine_pod_list: ObjectList<Pod> = pods.list(&io_engine_listparam).await?;
+    for pod in initial_io_engine_pod_list.iter() {
+        // Fetch the node name on which the io-engine pod is running
+        let node_name = pod
+            .spec
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("pod.spec is empty"))?
+            .node_name
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("pod.spec.node_name is empty"))?
+            .as_str();
+
+        tracing::info!(
+            pod.name = %pod.metadata.name.clone().unwrap_or_default(),
+            node.name = %node_name,
+            "Upgrade starting for data-plane pod"
+        );
+
+        let is_node_cordoned = is_node_cordoned(node_name).await?;
+
+        // Issue node drain command
+        issue_node_drain(node_name).await?;
+
+        // Wait for node drain to complete across the cluster.
+        wait_node_drain().await?;
+
+        // Wait for any rebuild to complete.
+        wait_for_rebuild().await?;
+
+        // restart the data plane pod
+        restart_data_plane(node_name, pod).await?;
+
+        // Uncordon the drained node
+        if !is_node_cordoned {
+            uncordon_node(node_name).await?;
+        }
+
+        // validate the new pod is up and running
+        verify_data_plane_pod_is_running(node_name).await?;
+
+        // Validate the control plane pod is up and running
+        is_control_plane_running().await?
+    }
+    Ok(())
+}
+
+pub async fn uncordon_node(node_name: &str) -> Result<(), Error> {
+    match UpgradeConfig::get_config()
+        .rest_client()
+        .nodes_api()
+        .delete_node_cordon(node_name, DRAIN_FOR_UPGRADE)
+        .await
+    {
+        Ok(_) => {
+            tracing::info!(node.name = node_name, "Node is uncordoned");
+            Ok(())
+        }
+        Err(_) => Err(Error::NodeUncordonError {
+            node_name: node_name.to_string(),
+        }),
+    }
+}
+
+/// Issue delete command on dataplane pods.
+pub async fn restart_data_plane(node_name: &str, pod: &Pod) -> Result<(), Error> {
+    let pods: Api<Pod> = Api::namespaced(
+        UpgradeConfig::get_config().k8s_client().client(),
+        UpgradeConfig::get_config().namespace(),
+    );
+    // Deleting the io-engine pod
+    let pod_name = pod.metadata.name.as_ref().unwrap();
+    tracing::info!(
+        pod.name = pod_name,
+        node.name = node_name,
+        "Deleting the pod"
+    );
+    pods.delete(pod_name, &DeleteParams::default())
+        .await?
+        .map_right(|s| tracing::info!(pod.name = pod_name, "Deleted Pod: {:?}", s));
+    Ok(())
+}
+
+/// Wait for the data plane pod to come up on the given node.
+pub async fn wait_node_drain() -> Result<(), Error> {
+    while is_draining().await? {
+        tokio::time::sleep(Duration::from_secs(10_u64)).await;
+    }
+    Ok(())
+}
+
+/// Wait for all the node drain process to complete.
+pub async fn verify_data_plane_pod_is_running(node_name: &str) -> Result<(), Error> {
+    // Validate the new pod is up and running
+    while is_data_plane_pod_running(node_name).await? {
+        tokio::time::sleep(Duration::from_secs(10_u64)).await;
+    }
+    Ok(())
+}
+
+///  Wait for the rebuild to complete if any
+pub async fn wait_for_rebuild() -> Result<(), Error> {
+    // Wait for 60 seconds for any rebuilds to kick in.
+    tokio::time::sleep(Duration::from_secs(60_u64)).await;
+    while is_rebuilding().await? {
+        tokio::time::sleep(Duration::from_secs(10_u64)).await;
+    }
+    Ok(())
+}
+
+/// Issue the node drain command on the node.
+pub async fn issue_node_drain(node_name: &str) -> Result<(), Error> {
+    match UpgradeConfig::get_config()
+        .rest_client()
+        .nodes_api()
+        .put_node_drain(node_name, DRAIN_FOR_UPGRADE)
+        .await
+    {
+        Ok(_) => {
+            tracing::info!(
+                node.name = %node_name,
+                "Drain started"
+            );
+            Ok(())
+        }
+        Err(_) => Err(Error::NodeDrainError {
+            node_name: node_name.to_string(),
+        }),
+    }
+}
+
+pub async fn is_data_plane_pod_running(node: &str) -> Result<bool, Error> {
+    let mut data_plane_pod_running = false;
+    let pods: Api<Pod> = Api::namespaced(
+        UpgradeConfig::get_config().k8s_client().client(),
+        UpgradeConfig::get_config().namespace(),
+    );
+    let io_engine_listparam = ListParams::default().labels(IO_ENGINE_POD_LABEL);
+    let initial_io_engine_pod_list: ObjectList<Pod> = pods.list(&io_engine_listparam).await?;
+    //let data_plane_pod_running =
+    for pod in initial_io_engine_pod_list.iter() {
+        // Fetch the node name on which the io-engine pod is running
+        let node_name = pod
+            .spec
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("pod.spec is empty"))?
+            .node_name
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("pod.spec.node_name is empty"))?
+            .as_str();
+        if node != node_name {
+            continue;
+        } else {
+            match pod
+                .status
+                .as_ref()
+                .and_then(|status| status.conditions.as_ref())
+            {
+                Some(conditions) => {
+                    for condition in conditions {
+                        if condition.type_.eq("Ready") && condition.status.eq("True") {
+                            data_plane_pod_running = true
+                        } else {
+                            data_plane_pod_running = false;
+                        }
+                    }
+                }
+                None => {
+                    data_plane_pod_running = false;
+                }
+            }
+        }
+    }
+    Ok(data_plane_pod_running)
+}
+
+pub async fn is_control_plane_running() -> Result<(), Error> {
+    let pods: Api<Pod> = Api::namespaced(
+        UpgradeConfig::get_config().k8s_client().client(),
+        UpgradeConfig::get_config().namespace(),
+    );
+
+    let pod_list: ObjectList<Pod> = pods
+        .list(&ListParams::default().labels(AGENT_CORE_POD_LABEL))
+        .await?;
+    let core_result = all_pods_are_ready(pod_list);
+    if !core_result.0 {
+        return Err(Error::AgentCorePodNotRunning {
+            pod: core_result.1,
+            namespace: core_result.2,
+        });
+    }
+
+    let pod_list: ObjectList<Pod> = pods
+        .list(&ListParams::default().labels(API_REST_POD_LABEL))
+        .await?;
+    let rest_result = all_pods_are_ready(pod_list);
+    if !rest_result.0 {
+        return Err(Error::ApiRestPodNotRunning {
+            pod: rest_result.1,
+            namespace: rest_result.2,
+        });
+    }
+
+    let pod_list: ObjectList<Pod> = pods
+        .list(&ListParams::default().labels(ETCD_POD_LABEL))
+        .await?;
+    let etcd_result = all_pods_are_ready(pod_list);
+    if !etcd_result.0 {
+        return Err(Error::EtcdPodNotRunning {
+            pod: etcd_result.1,
+            namespace: etcd_result.2,
+        });
+    }
+    Ok(())
 }
 
 /// Get  upgrade.

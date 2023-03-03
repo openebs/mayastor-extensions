@@ -14,7 +14,7 @@ use std::{env, path::PathBuf};
 mod resources;
 use crate::resources::GetResourcesK8s;
 use resources::Operations;
-use upgrade::upgrade_resources::upgrade::{UpgradeOperator, UpgradeResources};
+use upgrade::{preflight_validations, upgrade_resources::upgrade::DeleteResources};
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
@@ -110,13 +110,7 @@ async fn execute(cli_args: CliArgs) {
                     }
                 },
                 GetResourcesK8s::UpgradeStatus(resources) => {
-                    resources
-                        .get_upgrade(
-                            &cli_args.namespace,
-                            cli_args.kube_config_path,
-                            cli_args.timeout,
-                        )
-                        .await;
+                    resources.get_upgrade(&cli_args.namespace).await;
                 }
             },
             Operations::Drain(resource) => match resource {
@@ -155,26 +149,30 @@ async fn execute(cli_args: CliArgs) {
                     });
                 println!("Completed collection of dump !!");
             }
-            Operations::Install(resource) => match resource {
-                UpgradeOperator::UpgradeOperator => {
-                    UpgradeResources::install(&cli_args.namespace).await;
-                }
-            },
-            Operations::Uninstall(resource) => match resource {
-                UpgradeOperator::UpgradeOperator => {
-                    UpgradeResources::uninstall(&cli_args.namespace).await;
-                }
-            },
             Operations::Upgrade(resources) => {
-                console_logger::info(upgrade::user_prompt::UPGRADE_WARNING);
-                resources
-                    .apply(
-                        &cli_args.namespace,
-                        cli_args.kube_config_path,
-                        cli_args.timeout,
-                    )
-                    .await;
+                let _ignore = preflight_validations::preflight_check(
+                    cli_args.kube_config_path.clone(),
+                    cli_args.timeout,
+                    resources.skip_single_replica_volume_validation,
+                    resources.skip_replica_rebuild,
+                )
+                .await
+                .map_err(|_e| {
+                    std::process::exit(1);
+                });
+
+                if resources.dry_run {
+                    let _ = resources.dummy_apply(&cli_args.namespace).await;
+                } else {
+                    resources.apply(&cli_args.namespace).await;
+                }
             }
+
+            Operations::Delete(resource) => match resource {
+                DeleteResources::Upgrade(res) => {
+                    res.delete(&cli_args.namespace).await;
+                }
+            },
         };
     };
 

@@ -2,14 +2,15 @@
 # avoid dependency on docker tool chain. Though the maturity of OCI
 # builder in nixpkgs is questionable which is why we postpone this step.
 
-{ dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, runCommand, img_tag ? "" }:
+{ dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, runCommand, img_tag ? "" }:
 let
-  helm_chart_src = builtins.filterSource (path: type: true) ../../../chart;
+  whitelistSource = extensions.project-builder.whitelistSource;
+  helm_chart = whitelistSource ../../.. [ "chart" "scripts/helm" ];
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
+  tag = if img_tag != "" then img_tag else extensions.version;
   build-extensions-image = { pname, buildType, package, extraCommands ? '''', contents ? [ ], config ? { } }:
     dockerTools.buildImage {
-      inherit extraCommands;
-      tag = if img_tag != "" then img_tag else extensions.version;
+      inherit extraCommands tag;
       created = "now";
       name = "openebs/mayastor-${pname}${image_suffix.${buildType}}";
       contents = [ package ] ++ contents;
@@ -29,14 +30,32 @@ let
       };
     };
   };
+  tagged_helm_chart = runCommand "tagged_helm_chart"
+    {
+      nativeBuildInputs = [ kubernetes-helm-wrapped helm_chart semver-tool yq-go ];
+    } ''
+    mkdir -p build && cp -drf ${helm_chart}/* build
+
+    chmod +w build/scripts/helm
+    chmod +w build/chart
+    chmod +w build/chart/*.yaml
+    patchShebangs build/scripts/helm/publish-chart-yaml.sh
+
+    # if tag is not semver just keep whatever is checked-in
+    # todo: handle this properly?
+    if [ "$(semver validate "tag")" == "valid" ]; then
+      CHART_FILE=build/chart/Chart.yaml build/scripts/helm/publish-chart-yaml.sh --app-tag ${tag} --override-index ""
+    fi
+    chmod -w build/chart
+    chmod -w build/chart/*.yaml
+
+    mkdir -p $out && cp -drf --preserve=mode build/chart $out/chart
+  '';
   build-upgrade-operator-image = { buildType }:
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.operators.upgrade;
-      contents = [ helm_chart_src kubernetes-helm-wrapped busybox ];
-      extraCommands = ''
-        mkdir -p chart && cp -drf --preserve=mode ${helm_chart_src}/* chart/
-      '';
+      contents = [ kubernetes-helm-wrapped busybox tagged_helm_chart ];
       pname = package.pname;
       config = {
         ExposedPorts = {
@@ -45,6 +64,16 @@ let
         Env = [ "CHART_DIR=/chart" ];
       };
     };
+  build-upgrade-image = { buildType, name }:
+    build-extensions-image rec{
+      inherit buildType;
+      package = extensions.${buildType}.upgrade.${name};
+      contents = [ kubernetes-helm-wrapped busybox tagged_helm_chart ];
+      pname = package.pname;
+      config = {
+        Env = [ "CORE_CHART_DIR=/chart" ];
+    };
+  };
   build-obs-callhome-image = { buildType }:
     build-extensions-image rec{
       inherit buildType;
@@ -71,6 +100,12 @@ let
       inherit buildType;
     };
   };
+  build-upgrade-images = { buildType }: {
+    job = build-upgrade-image {
+      inherit buildType;
+      name = "job";
+    };
+  };
   build-obs-images = { buildType }: {
     callhome = build-obs-callhome-image {
       inherit buildType;
@@ -83,6 +118,9 @@ let
       recurseForDerivations = true;
     };
     operators = build-upgrade-operator-images { inherit buildType; } // {
+      recurseForDerivations = true;
+    };
+    upgrade = build-upgrade-images { inherit buildType; } // {
       recurseForDerivations = true;
     };
     obs = build-obs-images { inherit buildType; } // {

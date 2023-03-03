@@ -2,7 +2,7 @@ use clap::Parser;
 use plugin::resources::{CordonResources, DrainResources, GetResources, ScaleResources};
 use supportability::DumpArgs;
 
-use upgrade::upgrade_resources::upgrade::{GetUpgradeArgs, UpgradeArgs, UpgradeOperator};
+use upgrade::upgrade_resources::upgrade::{DeleteResources, GetUpgradeArgs, UpgradeArgs};
 
 #[derive(clap::Subcommand, Debug)]
 pub enum GetResourcesK8s {
@@ -32,12 +32,9 @@ pub enum Operations {
     Uncordon(CordonResources),
     /// `Dump` resources.
     Dump(DumpArgs),
-    /// `Install` resources.
-    #[clap(subcommand)]
-    Install(UpgradeOperator),
-    /// `Uninstall` resources.
-    #[clap(subcommand)]
-    Uninstall(UpgradeOperator),
-    /// `Upgrade` resources.
+    /// `Upgrade` the deployment.
     Upgrade(UpgradeArgs),
+    /// `Delete` the resources.
+    #[clap(subcommand)]
+    Delete(DeleteResources),
 }
