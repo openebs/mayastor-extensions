@@ -50,7 +50,7 @@ async fn main() {
 
 async fn run() -> anyhow::Result<()> {
     let args = CliArgs::args();
-    let version = clap::crate_version!().to_string();
+    let version = RELEASE_VERSION.to_string();
     let endpoint = args.endpoint;
     let namespace = digest(args.namespace);
 
