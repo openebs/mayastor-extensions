@@ -62,3 +62,6 @@ pub(crate) fn call_home_frequency() -> std::time::Duration {
         })
         .unwrap()
 }
+
+/// Release version
+pub(crate) const RELEASE_VERSION: &str = "2.0.1";
