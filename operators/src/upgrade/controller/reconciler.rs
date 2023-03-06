@@ -322,7 +322,7 @@ impl ResourceContext {
 
         let lp = ListParams::default().labels(IO_ENGINE_POD_LABEL);
         let pod_list: ObjectList<Pod> = pods.list(&lp).await?;
-        if !all_pods_are_ready(pod_list) {
+        if !all_pods_are_ready(pod_list).0 {
             return Err(Error::ReconcileError {
                 name: self.name_any(),
             });
@@ -551,6 +551,31 @@ pub async fn is_draining() -> Result<bool, Error> {
         }
     }
     Ok(is_draining)
+}
+
+pub async fn is_node_cordoned(node_name: &str) -> Result<bool, Error> {
+    let node = UpgradeConfig::get_config()
+        .rest_client()
+        .nodes_api()
+        .get_node(node_name)
+        .await?;
+    let node_body = &node.clone().into_body();
+    if node_body.spec.as_ref().is_none() {
+        return Err(Error::NodeSpecNotPresent {
+            node: node_body.clone().id,
+        });
+    }
+    let is_cordoned =
+        if let Some(cordondrainstate) = &node_body.spec.as_ref().unwrap().cordondrainstate {
+            match cordondrainstate {
+                CordonDrainState::cordonedstate(_) => true,
+                CordonDrainState::drainingstate(_) => false,
+                CordonDrainState::drainedstate(_) => false,
+            }
+        } else {
+            false
+        };
+    Ok(is_cordoned)
 }
 
 /// Function to check for any volume rebuild in progress across the cluster

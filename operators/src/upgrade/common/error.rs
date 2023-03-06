@@ -118,6 +118,26 @@ pub enum Error {
     /// Error for when all volumes are not unpublished.
     #[error("All volumes must be unpublished before upgrade: {}", reason)]
     VolumesNotUnpublishedError { reason: String },
+
+    /// Agent core pod not running.
+    #[error("Agent core pod {} in name space {} is not running", pod, namespace)]
+    AgentCorePodNotRunning { pod: String, namespace: String },
+
+    /// Api rest pod not running.
+    #[error("Agent rest pod {} in namespace {} is not running ", pod, namespace)]
+    ApiRestPodNotRunning { pod: String, namespace: String },
+
+    /// Etcd pod not running.
+    #[error("Etcd pod {} in namespace {} is not running", pod, namespace)]
+    EtcdPodNotRunning { pod: String, namespace: String },
+
+    /// Node drain error.
+    #[error("Node drain error {}", node_name)]
+    NodeDrainError { node_name: String },
+
+    /// Node uncordon error.
+    #[error("Node uncordon error {}", node_name)]
+    NodeUncordonError { node_name: String },
 }
 
 impl From<std::io::Error> for Error {

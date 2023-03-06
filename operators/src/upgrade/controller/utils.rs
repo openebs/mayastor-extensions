@@ -31,7 +31,7 @@ pub(crate) fn at_least_one_pod_uid_exists(
 
 /// This function returns 'true' only if all of the containers in the Pods contained in the
 /// ObjectList<Pod> have their Ready status.condition value set to true.
-pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> bool {
+pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> (bool, String, String) {
     let not_ready_warning = |pod_name: &String, namespace: &String| {
         warn!("Couldn't verify the ready condition of io-engine Pod '{}' in namespace '{}' to be true", pod_name, namespace);
     };
@@ -47,18 +47,18 @@ pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> bool {
                         continue;
                     } else {
                         not_ready_warning(&pod.name_any(), &pod.namespace().unwrap());
-                        return false;
+                        return (false, pod.name_any(), pod.namespace().unwrap());
                     }
                 }
             }
             None => {
                 not_ready_warning(&pod.name_any(), &pod.namespace().unwrap());
-                return false;
+                return (false, pod.name_any(), pod.namespace().unwrap());
             }
         }
     }
 
-    false
+    return (false, "".to_string(), "".to_string());
 }
 
 /// This function checks if at least one volume is published.
