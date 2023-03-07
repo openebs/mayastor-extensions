@@ -5,6 +5,16 @@ image:
   repo: openebs
   # -- Release tag for our images
   tag: develop
+  repoTags:
+    # Note: Below image tag configuration is optional and typically should never be
+    #       used. Setting specific image tags for the different repositories proves useful 
+    #       for some integration testing scenarios. Use the 'tag' option above to set
+    #       release/pre-release container image tags.
+    #       The below tag values will be picked for images by default.
+    #       If not specified, 'tag' option provided above will be picked.
+    controlPlane: ""
+    dataPlane: ""
+    extensions: ""
   # -- ImagePullPolicy for our images
   pullPolicy: Always
 
