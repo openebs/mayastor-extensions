@@ -17,10 +17,7 @@ tls = [ "openapi/tower-client-tls", "rest-plugin/tls" ]
 
 
 [dependencies]
-openapi = { path = "../../dependencies/control-plane/openapi", default-features = false, features = [ "tower-trace" ] }
-utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
 console-logger = { path = "../../console-logger" }
-rest-plugin = { path = "../../dependencies/control-plane/control-plane/plugin", default-features = false }
 supportability = { path = "../supportability" }
 upgrade = { path = "../upgrade" }
 kube-proxy = { path = "../proxy" }
@@ -28,6 +25,10 @@ tokio = { version = "1.25.0" }
 anyhow = "1.0.69"
 clap = { version = "4.1.4", features = ["color", "derive"] }
 humantime = "2.1.0"
-shutdown = { path = "../../dependencies/control-plane/utils/shutdown" }
 # Tracing
 opentelemetry = { version = "0.18.0", features = ["rt-tokio-current-thread"] }
+
+shutdown = { path = "../../dependencies/control-plane/utils/shutdown" }
+openapi = { path = "../../dependencies/control-plane/openapi", default-features = false, features = [ "tower-trace" ] }
+utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
+rest-plugin = { path = "../../dependencies/control-plane/control-plane/plugin", default-features = false }
