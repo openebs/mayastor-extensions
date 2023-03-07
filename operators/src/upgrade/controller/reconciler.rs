@@ -10,6 +10,7 @@ use kube::{
     runtime::{controller::Action, finalizer, Controller},
     Api, Client, CustomResourceExt, ResourceExt,
 };
+use openapi::models::CordonDrainState;
 use serde_json::json;
 use std::{
     collections::{HashMap, HashSet},
@@ -520,4 +521,34 @@ pub async fn start_upgrade_worker() {
             trace!(?res);
         })
         .await;
+}
+
+/// Function to find whether any node drain is in progress.
+pub async fn is_draining() -> Result<bool, Error> {
+    let mut is_draining = false;
+    let nodes = UpgradeConfig::get_config()
+        .rest_client()
+        .nodes_api()
+        .get_nodes()
+        .await?;
+    let nodelist = nodes.into_body();
+    for node in nodelist {
+        if node.spec.as_ref().is_none() {
+            return Err(Error::NodeSpecNotPresent { node: node.id });
+        }
+        is_draining = if let Some(cordondrainstate) = &node.spec.as_ref().unwrap().cordondrainstate
+        {
+            match cordondrainstate {
+                CordonDrainState::cordonedstate(_) => false,
+                CordonDrainState::drainingstate(_) => true,
+                CordonDrainState::drainedstate(_) => false,
+            }
+        } else {
+            false
+        };
+        if is_draining {
+            break;
+        }
+    }
+    Ok(is_draining)
 }
