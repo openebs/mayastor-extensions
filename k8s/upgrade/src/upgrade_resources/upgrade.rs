@@ -44,6 +44,14 @@ pub struct UpgradeArgs {
     /// from upgrade operator service(K8s service resource).
     #[clap(global = true, short, long)]
     upgrade_operator_endpoint: Option<Uri>,
+
+    /// If set then upgrade will skip the io-engine pods restart
+    #[clap(global = true, long, short)]
+    skip_data_plane_restart: bool,
+
+    /// If set then upgrade will skip the repilca rebuild in progress validation
+    #[clap(global = true, long, short)]
+    ignore_replica_rebuild: bool,
 }
 
 impl UpgradeArgs {
@@ -59,6 +67,8 @@ impl UpgradeArgs {
             namespace,
             kube_config_path,
             timeout,
+            self.skip_data_plane_restart,
+            self.ignore_replica_rebuild,
         )
         .await;
     }
@@ -551,11 +561,16 @@ impl UpgradeResources {
         namespace: &str,
         kube_config_path: Option<PathBuf>,
         timeout: humantime::Duration,
+        skip_dp_restart: bool,
+        ignore_rebuild_validation: bool,
     ) {
         match UpgradeOperatorClient::new(uri, namespace.to_string(), kube_config_path, timeout)
             .await
         {
             Ok(mut client) => {
+                println!("skip_dp_restart {:#?}", skip_dp_restart);
+                println!("skip_rebuild_validation {:#?}", ignore_rebuild_validation);
+
                 if let Err(err) = client.apply_upgrade().await {
                     println!("Error while  upgrading {err:?}");
                 }
