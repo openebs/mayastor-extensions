@@ -552,3 +552,46 @@ pub async fn is_draining() -> Result<bool, Error> {
     }
     Ok(is_draining)
 }
+
+/// Function to check for any volume rebuild in progress across the cluster
+pub async fn is_rebuilding() -> Result<bool, Error> {
+    let mut is_rebuilding = false;
+
+    // The number of volumes to get per request.
+    let max_entries = 200;
+    let mut starting_token = Some(0_isize);
+    let mut volumes = Vec::with_capacity(max_entries as usize);
+
+    // The last paginated request will set the `starting_token` to `None`.
+    while starting_token.is_some() {
+        let vols = UpgradeConfig::get_config()
+            .rest_client()
+            .volumes_api()
+            .get_volumes(max_entries, None, starting_token)
+            .await
+            .map_err(|error| {
+                error!(?error, "Failed to list volumes");
+                error
+            })?;
+
+        let v = vols.into_body();
+        volumes.extend(v.entries);
+        starting_token = v.next_token;
+    }
+
+    for volume in volumes.into_iter() {
+        is_rebuilding = if let Some(target) = &volume.state.target {
+            target
+                .children
+                .iter()
+                .any(|child| child.rebuild_progress.is_some())
+        } else {
+            false
+        };
+
+        if is_rebuilding {
+            break;
+        }
+    }
+    Ok(is_rebuilding)
+}
