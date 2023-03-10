@@ -40,7 +40,7 @@ impl Receiver {
             .client
             .post(&self.url)
             .header("CAStor-Cluster-Id", &self.cluster_id)
-            .header("CAStor-Version", RELEASE_VERSION)
+            .header("CAStor-Version", release_version())
             .header("CAStor-Report-Type", "health_report")
             .header("CAStor-Product", PRODUCT)
             .header("CAStor-Time", Utc::now().to_string())
