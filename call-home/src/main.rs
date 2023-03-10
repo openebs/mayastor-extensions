@@ -18,9 +18,10 @@ use tokio::time::sleep;
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 use url::Url;
+use utils::{package_description, version_info_str};
 
 #[derive(Parser)]
-#[clap(author, version, about)]
+#[clap(name = package_description!(), version = version_info_str!())]
 struct CliArgs {
     /// An URL endpoint to the control plane's rest endpoint.
     #[clap(short, long, default_value = "http://mayastor-api-rest:8081")]
@@ -50,7 +51,7 @@ async fn main() {
 
 async fn run() -> anyhow::Result<()> {
     let args = CliArgs::args();
-    let version = RELEASE_VERSION.to_string();
+    let version = release_version();
     let endpoint = args.endpoint;
     let namespace = digest(args.namespace);
 

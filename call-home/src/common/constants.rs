@@ -2,6 +2,7 @@ use std::{
     env,
     path::{Path, PathBuf},
 };
+use utils::version_info;
 
 /// PRODUCT is the name of the project for which this call-home component is deployed.
 pub(crate) const PRODUCT: &str = "Mayastor";
@@ -63,5 +64,11 @@ pub(crate) fn call_home_frequency() -> std::time::Duration {
         .unwrap()
 }
 
-/// Release version
-pub(crate) const RELEASE_VERSION: &str = "2.0.1";
+/// Returns the git tag version (if tag is found) or simply returns the commit hash (12 characters).
+pub(crate) fn release_version() -> String {
+    let version_info = version_info!();
+    match version_info.version_tag {
+        Some(tag) => tag,
+        None => version_info.commit_hash,
+    }
+}
