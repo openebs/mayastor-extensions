@@ -14,7 +14,10 @@ use std::{env, path::PathBuf};
 mod resources;
 use crate::resources::GetResourcesK8s;
 use resources::Operations;
-use upgrade::upgrade_resources::upgrade::{UpgradeOperator, UpgradeResources};
+use upgrade::{
+    preflight_validations,
+    upgrade_resources::upgrade::{UpgradeOperator, UpgradeResources},
+};
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
@@ -163,7 +166,11 @@ async fn execute(cli_args: CliArgs) {
                 }
             },
             Operations::Upgrade(resources) => {
-                console_logger::info(upgrade::user_prompt::UPGRADE_WARNING);
+                let _ignore = preflight_validations::preflight_check()
+                    .await
+                    .map_err(|_e| {
+                        std::process::exit(1);
+                    });
                 resources
                     .apply(
                         &cli_args.namespace,

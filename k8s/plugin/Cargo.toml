@@ -19,9 +19,9 @@ tls = [ "openapi/tower-client-tls", "rest-plugin/tls" ]
 [dependencies]
 openapi = { path = "../../dependencies/control-plane/openapi", default-features = false, features = [ "tower-trace" ] }
 utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
-console-logger = { path = "../../console-logger" }
 rest-plugin = { path = "../../dependencies/control-plane/control-plane/plugin", default-features = false }
 supportability = { path = "../supportability" }
+operators = { path = "../../operators" }
 upgrade = { path = "../upgrade" }
 kube-proxy = { path = "../proxy" }
 tokio = { version = "1.25.0" }
