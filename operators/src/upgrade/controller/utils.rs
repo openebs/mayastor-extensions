@@ -46,19 +46,18 @@ pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> (bool, String, St
                     if condition.type_.eq("Ready") && condition.status.eq("True") {
                         continue;
                     } else {
-                        not_ready_warning(&pod.name_any(), &pod.namespace().unwrap());
-                        return (false, pod.name_any(), pod.namespace().unwrap());
+                        not_ready_warning(&pod.name_any(), &pod.namespace().unwrap_or_default());
+                        return (false, pod.name_any(), pod.namespace().unwrap_or_default());
                     }
                 }
             }
             None => {
-                not_ready_warning(&pod.name_any(), &pod.namespace().unwrap());
-                return (false, pod.name_any(), pod.namespace().unwrap());
+                not_ready_warning(&pod.name_any(), &pod.namespace().unwrap_or_default());
+                return (false, pod.name_any(), pod.namespace().unwrap_or_default());
             }
         }
     }
-
-    return (false, "".to_string(), "".to_string());
+    (false, "".to_string(), "".to_string())
 }
 
 /// This function checks if at least one volume is published.
