@@ -235,11 +235,11 @@ CHART_APP_VERSION=2.0.0-a.0
 EXPECT_FAIL=1
 test_one "Chart Version and appVersion must match"
 
-APP_TAG=2.0.1
+APP_TAG=2.1.0
 CHART_VERSION=2.0.0
 CHART_APP_VERSION=2.0.0
 EXPECT_FAIL=1
-test_one "Chart Versions and app tag must not differ more than prerelease"
+test_one "Chart Versions and app tag must not differ more than patch"
 
 APP_TAG=2.0.0-b.1
 CHART_VERSION=2.0.0
