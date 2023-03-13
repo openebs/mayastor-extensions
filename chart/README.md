@@ -2,7 +2,7 @@
 
 Mayastor Helm chart for Kubernetes
 
-![Version: 2.0.0](https://img.shields.io/badge/Version-2.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2.0.0](https://img.shields.io/badge/AppVersion-2.0.0-informational?style=flat-square)
+![Version: 2.0.1](https://img.shields.io/badge/Version-2.0.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2.0.1](https://img.shields.io/badge/AppVersion-2.0.1-informational?style=flat-square)
 
 ## Installation Guide
 
@@ -111,7 +111,7 @@ $ helm install my-release openebs/mayastor
 | image.&ZeroWidthSpace;pullPolicy | ImagePullPolicy for our images | `"Always"` |
 | image.&ZeroWidthSpace;registry | Image registry to pull our product images | `"docker.io"` |
 | image.&ZeroWidthSpace;repo | Image registry's namespace | `"openebs"` |
-| image.&ZeroWidthSpace;tag | Release tag for our images | `"release-2.0"` |
+| image.&ZeroWidthSpace;tag | Release tag for our images | `"release-2.0.1"` |
 | io_engine.&ZeroWidthSpace;cpuCount | The number of cpu that each io-engine instance will bind to. | `"2"` |
 | io_engine.&ZeroWidthSpace;envcontext | Pass additional arguments to the Environment Abstraction Layer. Example: --set {product}.envcontext=iova-mode=pa | `""` |
 | io_engine.&ZeroWidthSpace;logLevel | Log level for the io-engine service | `"info,io_engine=info"` |
