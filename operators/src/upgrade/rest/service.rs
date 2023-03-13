@@ -175,11 +175,11 @@ pub async fn upgrade_data_plane() -> Result<(), Error> {
         // Wait for any rebuild to complete.
         wait_for_rebuild().await?;
 
-        // restart the data plane pods
-        restart_data_plane(&node_name, pod).await?;
+        // restart the data plane pod
+        restart_data_plane(node_name, pod).await?;
 
         // Uncordon the drained node
-        if is_node_cordoned {
+        if !is_node_cordoned {
             uncordon_node(node_name).await?;
         }
 
@@ -200,15 +200,13 @@ pub async fn uncordon_node(node_name: &str) -> Result<(), Error> {
         .await
     {
         Ok(_) => {
-            tracing::info!("Node {:#?} uncordoned!", node_name);
+            tracing::info!(node.name = node_name, "Node is uncordoned");
+            Ok(())
         }
-        Err(_) => {
-            return Err(Error::NodeUncordonError {
-                node_name: node_name.to_string(),
-            });
-        }
+        Err(_) => Err(Error::NodeUncordonError {
+            node_name: node_name.to_string(),
+        }),
     }
-    Ok(())
 }
 
 /// Issue delete command on dataplane pods.
@@ -220,22 +218,19 @@ pub async fn restart_data_plane(node_name: &str, pod: &Pod) -> Result<(), Error>
     // Deleting the io-engine pod
     let pod_name = pod.metadata.name.as_ref().unwrap();
     tracing::info!(
-        "Deleting io-engine pod: {:#?} present on node: {:#?}",
-        pod_name,
-        node_name,
+        pod.name = pod_name,
+        node.name = node_name,
+        "Deleting the pod"
     );
-
     pods.delete(pod_name, &DeleteParams::default())
         .await?
-        .map_left(|o| tracing::debug!("Deleting Pod: {:?}", o.status))
-        .map_right(|s| tracing::info!("Deleted Pod: {:?}", s));
+        .map_right(|s| tracing::info!(pod.name = pod_name, "Deleted Pod: {:?}", s));
     Ok(())
 }
 
 /// Wait for the data plane pod to come up on the given node.
 pub async fn wait_node_drain() -> Result<(), Error> {
     while is_draining().await? {
-        tracing::info!("Mayastor node is still draining");
         tokio::time::sleep(Duration::from_secs(10_u64)).await;
     }
     Ok(())
@@ -245,7 +240,6 @@ pub async fn wait_node_drain() -> Result<(), Error> {
 pub async fn verify_data_plane_pod_is_running(node_name: &str) -> Result<(), Error> {
     // Validate the new pod is up and running
     while is_data_plane_pod_running(node_name).await? {
-        tracing::info!("Data plane pod is still not up");
         tokio::time::sleep(Duration::from_secs(10_u64)).await;
     }
     Ok(())
@@ -253,10 +247,9 @@ pub async fn verify_data_plane_pod_is_running(node_name: &str) -> Result<(), Err
 
 ///  Wait for the rebuild to complete if any
 pub async fn wait_for_rebuild() -> Result<(), Error> {
-    // Wait for 30 seconds for any rebuilds to kick in.
-    tokio::time::sleep(Duration::from_secs(30_u64)).await;
+    // Wait for 60 seconds for any rebuilds to kick in.
+    tokio::time::sleep(Duration::from_secs(60_u64)).await;
     while is_rebuilding().await? {
-        tracing::info!("Some rebuild is in progress");
         tokio::time::sleep(Duration::from_secs(10_u64)).await;
     }
     Ok(())
@@ -275,14 +268,12 @@ pub async fn issue_node_drain(node_name: &str) -> Result<(), Error> {
                 node.name = %node_name,
                 "Drain started"
             );
+            Ok(())
         }
-        Err(_) => {
-            return Err(Error::NodeDrainError {
-                node_name: node_name.to_string(),
-            });
-        }
+        Err(_) => Err(Error::NodeDrainError {
+            node_name: node_name.to_string(),
+        }),
     }
-    Ok(())
 }
 
 pub async fn is_data_plane_pod_running(node: &str) -> Result<bool, Error> {

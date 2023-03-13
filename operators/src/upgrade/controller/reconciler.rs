@@ -533,18 +533,15 @@ pub async fn is_draining() -> Result<bool, Error> {
         .await?;
     let nodelist = nodes.into_body();
     for node in nodelist {
-        if node.spec.as_ref().is_none() {
-            return Err(Error::NodeSpecNotPresent { node: node.id });
-        }
-        is_draining = if let Some(cordondrainstate) = &node.spec.as_ref().unwrap().cordondrainstate
-        {
-            match cordondrainstate {
-                CordonDrainState::cordonedstate(_) => false,
-                CordonDrainState::drainingstate(_) => true,
-                CordonDrainState::drainedstate(_) => false,
-            }
-        } else {
-            false
+        let node_spec = match node.spec {
+            Some(node_spec) => node_spec,
+            None => return Err(Error::NodeSpecNotPresent { node: node.id }),
+        };
+        is_draining = match node_spec.cordondrainstate {
+            Some(CordonDrainState::cordonedstate(_)) => false,
+            Some(CordonDrainState::drainingstate(_)) => true,
+            Some(CordonDrainState::drainedstate(_)) => false,
+            None => false,
         };
         if is_draining {
             break;
@@ -559,22 +556,17 @@ pub async fn is_node_cordoned(node_name: &str) -> Result<bool, Error> {
         .nodes_api()
         .get_node(node_name)
         .await?;
-    let node_body = &node.clone().into_body();
-    if node_body.spec.as_ref().is_none() {
-        return Err(Error::NodeSpecNotPresent {
-            node: node_body.clone().id,
-        });
-    }
-    let is_cordoned =
-        if let Some(cordondrainstate) = &node_body.spec.as_ref().unwrap().cordondrainstate {
-            match cordondrainstate {
-                CordonDrainState::cordonedstate(_) => true,
-                CordonDrainState::drainingstate(_) => false,
-                CordonDrainState::drainedstate(_) => false,
-            }
-        } else {
-            false
-        };
+    let node_body = node.into_body();
+    let node_spec = match &node_body.spec {
+        Some(node_spec) => node_spec,
+        None => return Err(Error::NodeSpecNotPresent { node: node_body.id }),
+    };
+    let is_cordoned = match node_spec.cordondrainstate {
+        Some(CordonDrainState::cordonedstate(_)) => true,
+        Some(CordonDrainState::drainingstate(_)) => false,
+        Some(CordonDrainState::drainedstate(_)) => false,
+        None => false,
+    };
     Ok(is_cordoned)
 }
 
