@@ -49,7 +49,7 @@ branch_chart_version()
   elif [ "$RELEASE_V" != "${CHECK_BRANCH}" ]; then
     if [ "$(semver validate "$RELEASE_V")" == "valid" ]; then
       echo "$RELEASE_V"
-    elif  [ "$(semver validate "$RELEASE_V.0")" == "valid" ]; then
+    elif [ "$(semver validate "$RELEASE_V.0")" == "valid" ]; then
       echo "$RELEASE_V.0"
     else
       die "Cannot determine Chart version from branch: $CHECK_BRANCH"
@@ -217,8 +217,8 @@ echo "APP_TAG: $APP_TAG"
 echo "CHART_VERSION: $CHART_VERSION"
 echo "CHART_APP_VERSION: $CHART_APP_VERSION"
 
-# Allow only for a semver difference of at most prerelease
-allowed_diff=("" "prerelease")
+# Allow only for a semver difference of at most patch
+allowed_diff=("" "patch" "prerelease")
 
 diff="$(semver diff "$CHART_VERSION" "$CHART_APP_VERSION")"
 if ! [[ " ${allowed_diff[*]} " =~ " $diff " ]]; then
