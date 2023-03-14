@@ -16,6 +16,15 @@ pub(crate) const NODE_LABEL: &str = "openebs.io/engine=mayastor";
 /// IO_ENGINE_POD_LABEL is the Kubernetes Pod label set on mayastor-io-engine Pods.
 pub(crate) const IO_ENGINE_POD_LABEL: &str = "app=io-engine";
 
+/// AGENT_CORE_POD_LABEL is the Kubernetes Pod label set on mayastor-agent-core Pods.
+pub(crate) const AGENT_CORE_POD_LABEL: &str = "app=agent-core";
+
+/// API_REST_POD_LABEL is the Kubernetes Pod label set on mayastor-api-rest Pods.
+pub(crate) const API_REST_POD_LABEL: &str = "app=api-rest";
+
+/// ETCD_POD_LABEL is the Kubernetes Pod label set on mayastor-etcd Pods.
+pub(crate) const ETCD_POD_LABEL: &str = "app=etcd";
+
 /// DEFAULT_VALUES_PATH is the default path to the values.yaml file that will will be generated from
 /// the source with `helm get values`.
 pub(crate) const DEFAULT_VALUES_PATH: &str = "./";
@@ -80,3 +89,6 @@ pub(crate) fn components() -> HashMap<String, Vec<String>> {
     );
     components
 }
+
+/// Label used with Mayastor drain of nodes for upgrade process
+pub(crate) const DRAIN_FOR_UPGRADE: &str = "upgrade-drain";
