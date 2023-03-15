@@ -166,11 +166,14 @@ async fn execute(cli_args: CliArgs) {
                 }
             },
             Operations::Upgrade(resources) => {
-                let _ignore = preflight_validations::preflight_check()
-                    .await
-                    .map_err(|_e| {
-                        std::process::exit(1);
-                    });
+                let _ignore = preflight_validations::preflight_check(
+                    cli_args.kube_config_path.clone(),
+                    cli_args.timeout,
+                )
+                .await
+                .map_err(|_e| {
+                    std::process::exit(1);
+                });
                 resources
                     .apply(
                         &cli_args.namespace,
