@@ -11,6 +11,7 @@ path = "src/lib.rs"
 [dependencies]
 openapi = { path = "../../dependencies/control-plane/openapi", default-features = false, features = [ "tower-trace" ] }
 kube-proxy = { path = "../proxy" }
+console-logger = { path = "../../console-logger" }
 operators = { path = "../../operators" }
 kube = { version = "0.78.0", features = [ "derive" ] }
 anyhow = "1.0.69"
