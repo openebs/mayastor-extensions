@@ -33,7 +33,7 @@ spec:
       containers:
       {{- if .Values.base.metrics.enabled }}
       - name: metrics-exporter-pool
-        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-metrics-exporter-pool:{{ .Values.image.tag }}"
+        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-metrics-exporter-pool:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
         - name: MY_NODE_NAME
@@ -55,7 +55,7 @@ spec:
             name: metrics
       {{- end }}
       - name: io-engine
-        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-io-engine:{{ .Values.image.tag }}"
+        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-io-engine:{{ default .Values.image.tag .Values.image.repoTags.dataPlane }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
         - name: RUST_LOG
