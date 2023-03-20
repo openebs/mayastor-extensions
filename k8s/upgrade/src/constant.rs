@@ -47,3 +47,5 @@ pub const UPGRADE_OPERATOR_HTTP_PORT: &str = "http";
 pub(crate) const API_REST_LABEL_SELECTOR: &str = "app=api-rest";
 /// Defines the default release name
 pub(crate) const DEFAULT_RELEASE_NAME: &str = "mayastor";
+/// Volumes with one replica
+pub(crate) const SINGLE_REPLICA_VOLUME: u8 = 1;

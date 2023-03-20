@@ -11,7 +11,7 @@ use anyhow::Error;
 use http::Uri;
 use k8s_openapi::api::{
     apps::v1::Deployment,
-    core::v1::{Service, ServiceAccount},
+    core::v1::{PersistentVolumeClaim, Service, ServiceAccount},
     rbac::v1::{ClusterRole, ClusterRoleBinding},
 };
 use kube::{
@@ -19,7 +19,7 @@ use kube::{
     core::ObjectList,
     Client,
 };
-use std::path::PathBuf;
+use std::{collections::HashSet, path::PathBuf};
 
 /// The types of resources that support the upgrade operator.
 #[derive(clap::Subcommand, Debug)]
@@ -492,6 +492,7 @@ impl UpgradeResources {
             Err(e) => println!("Failed to install. Error {e:?}"),
         };
     }
+
     /// Uninstall the upgrade resources
     pub async fn uninstall(ns: &str) {
         match UpgradeResources::new(ns).await {
@@ -596,6 +597,24 @@ pub async fn get_deployment_for_rest(ns: &str) -> Result<ObjectList<Deployment>,
     let deployment = Api::<Deployment>::namespaced(client.clone(), ns);
     let lp = ListParams::default().labels(API_REST_LABEL_SELECTOR);
     Ok(deployment.list(&lp).await?)
+}
+
+pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> Result<Vec<String>, Error> {
+    let client = Client::try_default().await?;
+    let pvclaim = Api::<PersistentVolumeClaim>::all(client.clone());
+    let lp = ListParams::default();
+    let pvc_list = pvclaim.list(&lp).await?;
+    let mut single_replica_volumes_pvc = Vec::new();
+    for pvc in pvc_list {
+        if let Some(uuid) = pvc.metadata.uid {
+            if uuid_list.contains(&uuid) {
+                if let Some(pvc_name) = pvc.metadata.name {
+                    single_replica_volumes_pvc.push(pvc_name);
+                }
+            }
+        }
+    }
+    Ok(single_replica_volumes_pvc)
 }
 
 /// Return the release name.
