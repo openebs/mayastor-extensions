@@ -44,6 +44,10 @@ pub struct UpgradeArgs {
     /// from upgrade operator service(K8s service resource).
     #[clap(global = true, short, long)]
     upgrade_operator_endpoint: Option<Uri>,
+
+    /// Display all the validations output but will not execute upgrade.
+    #[clap(global = true, long, short)]
+    pub dry_run: bool,
 }
 
 impl UpgradeArgs {
