@@ -25,6 +25,9 @@ pub(crate) const APP: &str = "app.kubernetes.io/component";
 pub(crate) const LABEL: &str = "app";
 /// Upgrade operator.
 pub(crate) const UPGRADE_OPERATOR: &str = "operator-upgrade";
+
+/// Upgrade Job.
+pub(crate) const UPGRADE_JOB: &str = "upgrade-job";
 /// Service account name for upgrade operator.
 pub(crate) const UPGRADE_OPERATOR_SERVICE_ACCOUNT: &str = "operator-upgrade-service-account";
 /// Role constant for upgrade operator.
@@ -33,6 +36,8 @@ pub(crate) const UPGRADE_OPERATOR_CLUSTER_ROLE: &str = "operator-upgrade-role";
 pub(crate) const UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING: &str = "operator-upgrade-role-binding";
 /// Deployment constant for upgrade operator.
 pub(crate) const UPGRADE_CONTROLLER_DEPLOYMENT: &str = "operator-upgrade";
+/// Deployment constant for upgrade operator.
+pub(crate) const UPGRADE_CONTROLLER_JOB: &str = "upgrade-job";
 /// Service name constant for upgrade operator.
 pub(crate) const UPGRADE_OPERATOR_SERVICE: &str = "operator-upgrade";
 /// Service port constant for upgrade operator.
