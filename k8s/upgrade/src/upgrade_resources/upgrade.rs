@@ -1,7 +1,7 @@
 use crate::{
     constant::{
         upgrade_group, API_REST_LABEL_SELECTOR, DEFAULT_RELEASE_NAME,
-        UPGRADE_CONTROLLER_DEPLOYMENT, UPGRADE_IMAGE, UPGRADE_OPERATOR_CLUSTER_ROLE,
+        UPGRADE_CONTROLLER_JOB, UPGRADE_IMAGE, UPGRADE_OPERATOR_CLUSTER_ROLE,
         UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING, UPGRADE_OPERATOR_SERVICE,
         UPGRADE_OPERATOR_SERVICE_ACCOUNT,
     },
@@ -10,7 +10,7 @@ use crate::{
 use anyhow::Error;
 use http::Uri;
 use k8s_openapi::api::{
-    apps::v1::Deployment,
+    batch::v1::Job, 
     core::v1::{PersistentVolumeClaim, Service, ServiceAccount},
     rbac::v1::{ClusterRole, ClusterRoleBinding},
 };
@@ -58,6 +58,11 @@ impl UpgradeArgs {
         kube_config_path: Option<PathBuf>,
         timeout: humantime::Duration,
     ) {
+
+        // Create resources for upgrade
+        UpgradeResources::create_upgrade_resources(namespace).await;
+
+
         UpgradeResources::apply(
             self.upgrade_operator_endpoint.clone(),
             namespace,
@@ -100,7 +105,7 @@ pub struct UpgradeResources {
     pub(crate) service_account: Api<ServiceAccount>,
     pub(crate) cluster_role: Api<ClusterRole>,
     pub(crate) cluster_role_binding: Api<ClusterRoleBinding>,
-    pub(crate) deployment: Api<Deployment>,
+    pub(crate) job: Api<Job>,
     pub(crate) service: Api<Service>,
     pub(crate) release_name: String,
 }
@@ -110,14 +115,14 @@ impl UpgradeResources {
     /// Returns an instance of UpgradesResources
     pub async fn new(ns: &str) -> anyhow::Result<Self, Error> {
         let client = Client::try_default().await?;
-        let release_name = get_release_name(ns).await?;
+        //let release_name = get_release_name(ns).await?;
         Ok(Self {
             service_account: Api::<ServiceAccount>::namespaced(client.clone(), ns),
             cluster_role: Api::<ClusterRole>::all(client.clone()),
             cluster_role_binding: Api::<ClusterRoleBinding>::all(client.clone()),
-            deployment: Api::<Deployment>::namespaced(client.clone(), ns),
+            job: Api::<Job>::namespaced(client.clone(), ns),
             service: Api::<Service>::namespaced(client, ns),
-            release_name,
+            release_name : "mayastor".to_string(),
         })
     }
 
@@ -317,34 +322,34 @@ impl UpgradeResources {
     }
 
     /// Create/Delete deployment
-    pub async fn deployment_actions(&self, ns: &str, action: Actions) -> Result<(), kube::Error> {
+    pub async fn job_actions(&self, ns: &str, action: Actions) -> Result<(), kube::Error> {
         if let Some(deployment) = self
-            .deployment
+            .job
             .get_opt(&upgrade_group(
                 &self.release_name,
-                UPGRADE_CONTROLLER_DEPLOYMENT,
+                UPGRADE_CONTROLLER_JOB,
             ))
             .await?
         {
             match action {
                 Actions::Create => {
                     println!(
-                        "Deployment: {} in namespace: {} already exist",
+                        "Job: {} in namespace: {} already exist",
                         deployment.metadata.name.as_ref().unwrap(),
                         deployment.metadata.namespace.as_ref().unwrap()
                     );
                 }
                 Actions::Delete => {
                     match self
-                        .deployment
+                        .job
                         .delete(
-                            &upgrade_group(&self.release_name, UPGRADE_CONTROLLER_DEPLOYMENT),
+                            &upgrade_group(&self.release_name, UPGRADE_CONTROLLER_JOB),
                             &DeleteParams::default(),
                         )
                         .await
                     {
                         Ok(_) => {
-                            println!("Deployment deleted");
+                            println!("Job deleted");
                         }
                         Err(error) => {
                             return Err(error);
@@ -355,19 +360,19 @@ impl UpgradeResources {
         } else {
             match action {
                 Actions::Create => {
-                    let upgrade_deploy = objects::upgrade_operator_deployment(
+                    let upgrade_deploy = objects::upgrade_job(
                         ns,
                         UPGRADE_IMAGE.to_string(),
                         self.release_name.clone(),
                     );
                     match self
-                        .deployment
+                        .job
                         .create(&PostParams::default(), &upgrade_deploy)
                         .await
                     {
                         Ok(dep) => {
                             println!(
-                                "Deployment: {} created in namespace: {}",
+                                "Job: {} created in namespace: {}",
                                 dep.metadata.name.unwrap(),
                                 dep.metadata.namespace.unwrap()
                             );
@@ -378,7 +383,7 @@ impl UpgradeResources {
                     }
                 }
                 Actions::Delete => {
-                    println!("Deployment does not exist");
+                    println!("Job does not exist");
                 }
             }
         }
@@ -444,8 +449,8 @@ impl UpgradeResources {
         Ok(())
     }
 
-    /// Install the upgrade resources
-    pub async fn install(ns: &str) {
+    /// Create the resources for upcrate
+    pub async fn create_upgrade_resources(ns: &str) {
         match UpgradeResources::new(ns).await {
             Ok(uo) => {
                 // Create Service Account
@@ -476,10 +481,10 @@ impl UpgradeResources {
                 }
 
                 // Create Deployment
-                match uo.deployment_actions(ns, Actions::Create).await {
+                match uo.job_actions(ns, Actions::Create).await {
                     Ok(_) => (),
                     Err(error) => {
-                        println!("Failed in creating Deployment {error}");
+                        println!("Failed in creating Job {error}");
                         std::process::exit(1)
                     }
                 }
@@ -502,7 +507,7 @@ impl UpgradeResources {
         match UpgradeResources::new(ns).await {
             Ok(uo) => {
                 // Delete deployment
-                match uo.deployment_actions(ns, Actions::Delete).await {
+                match uo.job_actions(ns, Actions::Delete).await {
                     Ok(_) => (),
                     Err(error) => {
                         println!("Failed in creating Deployment {error}");
@@ -596,11 +601,11 @@ impl UpgradeResources {
 }
 
 /// Return results as list of deployments.
-pub async fn get_deployment_for_rest(ns: &str) -> Result<ObjectList<Deployment>, Error> {
+pub async fn get_job_for_rest(ns: &str) -> Result<ObjectList<Job>, Error> {
     let client = Client::try_default().await?;
-    let deployment = Api::<Deployment>::namespaced(client.clone(), ns);
+    let job = Api::<Job>::namespaced(client.clone(), ns);
     let lp = ListParams::default().labels(API_REST_LABEL_SELECTOR);
-    Ok(deployment.list(&lp).await?)
+    Ok(job.list(&lp).await?)
 }
 
 pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> Result<Vec<String>, Error> {
@@ -623,7 +628,7 @@ pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> Result<Vec<String>
 
 /// Return the release name.
 pub async fn get_release_name(ns: &str) -> Result<String, Error> {
-    match get_deployment_for_rest(ns).await {
+    match get_job_for_rest(ns).await {
         Ok(deployments) => match deployments.items.get(0) {
             Some(deployment) => match &deployment.metadata.labels {
                 Some(label) => match label.get("openebs.io/release") {

@@ -158,16 +158,6 @@ async fn execute(cli_args: CliArgs) {
                     });
                 println!("Completed collection of dump !!");
             }
-            Operations::Install(resource) => match resource {
-                UpgradeOperator::UpgradeOperator => {
-                    UpgradeResources::install(&cli_args.namespace).await;
-                }
-            },
-            Operations::Uninstall(resource) => match resource {
-                UpgradeOperator::UpgradeOperator => {
-                    UpgradeResources::uninstall(&cli_args.namespace).await;
-                }
-            },
             Operations::Upgrade(resources) => {
                 let _ignore = preflight_validations::preflight_check(
                     cli_args.kube_config_path.clone(),
@@ -177,15 +167,20 @@ async fn execute(cli_args: CliArgs) {
                 .map_err(|_e| {
                     std::process::exit(1);
                 });
-                if !resources.dry_run {
-                    resources
-                        .apply(
-                            &cli_args.namespace,
-                            cli_args.kube_config_path,
-                            cli_args.timeout,
-                        )
-                        .await;
-                }
+                
+                resources
+                    .apply(
+                        &cli_args.namespace,
+                        cli_args.kube_config_path,
+                        cli_args.timeout,
+                    )
+                    .await;
+        
+
+
+
+              UpgradeResources::install(&cli_args.namespace).await;
+               UpgradeResources::uninstall(&cli_args.namespace).await;
             }
         };
     };
