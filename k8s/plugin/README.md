@@ -365,10 +365,31 @@ Supportability - collects state & log information of services and dumps it to a 
    ```
 
 3. To upgrade the installation
-   ```sh
-   ## Command
-   kubectl mayastor upgrade
-   ```
+```sh
+  ## Command
+  kubectl mayastor upgrade
+  `Upgrade` the deployment
+
+  Usage: kubectl-mayastor upgrade [OPTIONS]
+
+  Options:
+    -r, --rest <REST>
+        The rest endpoint to connect to
+    -u, --upgrade-operator-endpoint <UPGRADE_OPERATOR_ENDPOINT>
+        Endpoint of upgrade operator service, if left empty then it will try to parse endpoints from upgrade operator service(K8s service resource)
+    -d, --dry-run
+        Display all the validations output but will not execute upgrade.
+    -k, --kube-config-path <KUBE_CONFIG_PATH>
+        Path to kubeconfig file
+    -o, --output <OUTPUT>
+        The Output, viz yaml, json [default: none]
+    -j, --jaeger <JAEGER>
+        Trace rest requests to the Jaeger endpoint agent
+    -n, --namespace <NAMESPACE>
+        Kubernetes namespace of mayastor service, defaults to mayastor [default: mayastor]
+    -h, --help
+        Print help
+```
 
 4. To get the upgrade status
    ```sh

@@ -177,13 +177,15 @@ async fn execute(cli_args: CliArgs) {
                 .map_err(|_e| {
                     std::process::exit(1);
                 });
-                resources
-                    .apply(
-                        &cli_args.namespace,
-                        cli_args.kube_config_path,
-                        cli_args.timeout,
-                    )
-                    .await;
+                if !resources.dry_run {
+                    resources
+                        .apply(
+                            &cli_args.namespace,
+                            cli_args.kube_config_path,
+                            cli_args.timeout,
+                        )
+                        .await;
+                }
             }
         };
     };
