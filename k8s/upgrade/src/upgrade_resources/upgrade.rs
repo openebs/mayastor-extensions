@@ -1,17 +1,16 @@
 use crate::{
     constant::{
-        upgrade_group, API_REST_LABEL_SELECTOR, DEFAULT_RELEASE_NAME,
-        UPGRADE_CONTROLLER_JOB, UPGRADE_IMAGE, UPGRADE_OPERATOR_CLUSTER_ROLE,
-        UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING, UPGRADE_OPERATOR_SERVICE,
+        upgrade_group, API_REST_LABEL_SELECTOR, DEFAULT_RELEASE_NAME, UPGRADE_CONTROLLER_JOB,
+        UPGRADE_IMAGE, UPGRADE_OPERATOR_CLUSTER_ROLE, UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
         UPGRADE_OPERATOR_SERVICE_ACCOUNT,
     },
-    upgrade_resources::{objects, uo_client::UpgradeOperatorClient},
+    upgrade_resources::objects,
 };
 use anyhow::Error;
-use http::Uri;
 use k8s_openapi::api::{
-    batch::v1::Job, 
-    core::v1::{PersistentVolumeClaim, Service, ServiceAccount},
+    apps::v1::Deployment,
+    batch::v1::Job,
+    core::v1::{PersistentVolumeClaim, ServiceAccount},
     rbac::v1::{ClusterRole, ClusterRoleBinding},
 };
 use kube::{
@@ -19,7 +18,7 @@ use kube::{
     core::ObjectList,
     Client,
 };
-use std::{collections::HashSet, path::PathBuf};
+use std::collections::HashSet;
 
 /// The types of resources that support the upgrade operator.
 #[derive(clap::Subcommand, Debug)]
@@ -40,63 +39,53 @@ pub enum Actions {
 /// Arguments to be passed for upgrade.
 #[derive(Debug, Clone, clap::Args)]
 pub struct UpgradeArgs {
-    /// Endpoint of upgrade operator service, if left empty then it will try to parse endpoints
-    /// from upgrade operator service(K8s service resource).
-    #[clap(global = true, short, long)]
-    upgrade_operator_endpoint: Option<Uri>,
-
     /// Display all the validations output but will not execute upgrade.
     #[clap(global = true, long, short)]
     pub dry_run: bool,
+
+    /// If set then upgrade will skip the io-engine pods restart
+    #[clap(global = true, long, short)]
+    skip_data_plane_restart: bool,
+
+    /// If set then it will continue with upgrade without validating singla replica volume.
+    #[clap(global = true, long)]
+    pub skip_single_replica_volume_validation: bool,
+
+    /// If set then upgrade will skip the repilca rebuild in progress validation
+    #[clap(global = true, long)]
+    pub skip_replica_rebuild: bool,
 }
 
 impl UpgradeArgs {
     ///  Upgrade the resources.
-    pub async fn apply(
-        &self,
-        namespace: &str,
-        kube_config_path: Option<PathBuf>,
-        timeout: humantime::Duration,
-    ) {
-
+    pub async fn apply(&self, namespace: &str) {
         // Create resources for upgrade
-        UpgradeResources::create_upgrade_resources(namespace).await;
+        UpgradeResources::create_upgrade_resources(namespace, self.skip_data_plane_restart).await;
 
-
-        UpgradeResources::apply(
-            self.upgrade_operator_endpoint.clone(),
-            namespace,
-            kube_config_path,
-            timeout,
-        )
-        .await;
+        // Delete upgrade resources once job completes
+        match upgrade_job_completed(namespace).await {
+            Ok(job_completed) => {
+                if job_completed {
+                    UpgradeResources::delete_upgrade_resources(namespace).await;
+                }
+            }
+            Err(error) => {
+                println!("Failed in fething upgrade job {error}");
+                std::process::exit(1);
+            }
+        }
     }
 }
 
 /// Arguments to be passed for upgrade.
 #[derive(Debug, Clone, clap::Args)]
-pub struct GetUpgradeArgs {
-    /// Endpoint of upgrade operator service, if left empty then it will try to parse endpoints
-    /// from upgrade operator service(K8s service resource).
-    #[clap(global = true, short, long)]
-    upgrade_operator_endpoint: Option<Uri>,
-}
+pub struct GetUpgradeArgs {}
 
 impl GetUpgradeArgs {
     ///  Upgrade the resources.
-    pub async fn get_upgrade(
-        &self,
-        namespace: &str,
-        kube_config_path: Option<PathBuf>,
-        timeout: humantime::Duration,
-    ) {
-        UpgradeResources::get(
-            self.upgrade_operator_endpoint.clone(),
-            namespace,
-            kube_config_path,
-            timeout,
-        )
-        .await
+    pub async fn get_upgrade(&self, namespace: &str) {
+        println!("{namespace}")
+        // To be implemented
     }
 }
 
@@ -106,7 +95,6 @@ pub struct UpgradeResources {
     pub(crate) cluster_role: Api<ClusterRole>,
     pub(crate) cluster_role_binding: Api<ClusterRoleBinding>,
     pub(crate) job: Api<Job>,
-    pub(crate) service: Api<Service>,
     pub(crate) release_name: String,
 }
 
@@ -115,14 +103,13 @@ impl UpgradeResources {
     /// Returns an instance of UpgradesResources
     pub async fn new(ns: &str) -> anyhow::Result<Self, Error> {
         let client = Client::try_default().await?;
-        //let release_name = get_release_name(ns).await?;
+        let release_name = get_release_name(ns).await?;
         Ok(Self {
             service_account: Api::<ServiceAccount>::namespaced(client.clone(), ns),
             cluster_role: Api::<ClusterRole>::all(client.clone()),
             cluster_role_binding: Api::<ClusterRoleBinding>::all(client.clone()),
-            job: Api::<Job>::namespaced(client.clone(), ns),
-            service: Api::<Service>::namespaced(client, ns),
-            release_name : "mayastor".to_string(),
+            job: Api::<Job>::namespaced(client, ns),
+            release_name,
         })
     }
 
@@ -321,22 +308,24 @@ impl UpgradeResources {
         Ok(())
     }
 
-    /// Create/Delete deployment
-    pub async fn job_actions(&self, ns: &str, action: Actions) -> Result<(), kube::Error> {
-        if let Some(deployment) = self
+    /// Create/Delete upgrade job
+    pub async fn job_actions(
+        &self,
+        ns: &str,
+        action: Actions,
+        restart_data_plane: bool,
+    ) -> Result<(), kube::Error> {
+        if let Some(job) = self
             .job
-            .get_opt(&upgrade_group(
-                &self.release_name,
-                UPGRADE_CONTROLLER_JOB,
-            ))
+            .get_opt(&upgrade_group(&self.release_name, UPGRADE_CONTROLLER_JOB))
             .await?
         {
             match action {
                 Actions::Create => {
                     println!(
                         "Job: {} in namespace: {} already exist",
-                        deployment.metadata.name.as_ref().unwrap(),
-                        deployment.metadata.namespace.as_ref().unwrap()
+                        job.metadata.name.as_ref().unwrap(),
+                        job.metadata.namespace.as_ref().unwrap()
                     );
                 }
                 Actions::Delete => {
@@ -364,6 +353,7 @@ impl UpgradeResources {
                         ns,
                         UPGRADE_IMAGE.to_string(),
                         self.release_name.clone(),
+                        restart_data_plane,
                     );
                     match self
                         .job
@@ -390,222 +380,93 @@ impl UpgradeResources {
         Ok(())
     }
 
-    /// Create/Delete service
-    pub async fn service_actions(&self, ns: &str, action: Actions) -> Result<(), kube::Error> {
-        if let Some(svc) = self
-            .service
-            .get_opt(&upgrade_group(&self.release_name, UPGRADE_OPERATOR_SERVICE))
-            .await?
-        {
-            match action {
-                Actions::Create => {
-                    println!(
-                        "Service: {} in namespace: {} already exist",
-                        svc.metadata.name.as_ref().unwrap(),
-                        svc.metadata.namespace.as_ref().unwrap()
-                    );
-                }
-                Actions::Delete => {
-                    match self
-                        .service
-                        .delete(
-                            &upgrade_group(&self.release_name, UPGRADE_OPERATOR_SERVICE),
-                            &DeleteParams::default(),
-                        )
-                        .await
-                    {
-                        Ok(_) => {
-                            println!("Service deleted");
-                        }
-                        Err(error) => {
-                            return Err(error);
-                        }
-                    }
-                }
-            }
-        } else {
-            match action {
-                Actions::Create => {
-                    let ns = Some(ns.to_string());
-                    let service = objects::upgrade_operator_service(ns, self.release_name.clone());
-                    match self.service.create(&PostParams::default(), &service).await {
-                        Ok(svc) => {
-                            println!(
-                                "Service: {} created in namespace: {}",
-                                svc.metadata.name.unwrap(),
-                                svc.metadata.namespace.unwrap()
-                            );
-                        }
-                        Err(error) => {
-                            return Err(error);
-                        }
-                    }
-                }
-                Actions::Delete => {
-                    println!("Service does not exist");
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Create the resources for upcrate
-    pub async fn create_upgrade_resources(ns: &str) {
+    /// Create the resources for upgrade
+    pub async fn create_upgrade_resources(ns: &str, restart_data_plane: bool) {
         match UpgradeResources::new(ns).await {
             Ok(uo) => {
                 // Create Service Account
-                match uo.service_account_actions(ns, Actions::Create).await {
-                    Ok(_) => (),
-                    Err(error) => {
+                let _svc_acc = uo
+                    .service_account_actions(ns, Actions::Create)
+                    .await
+                    .map_err(|error| {
                         println!("Failed in creating ServiceAccount {error}");
-                        std::process::exit(1)
-                    }
-                }
+                        std::process::exit(1);
+                    });
 
                 // Create Cluser role
-                match uo.cluster_role_actions(ns, Actions::Create).await {
-                    Ok(_) => (),
-                    Err(error) => {
-                        println!("Failed in creating ClusterRole {error}");
-                        std::process::exit(1)
-                    }
-                }
+                let _cl_role =
+                    uo.cluster_role_actions(ns, Actions::Create)
+                        .await
+                        .map_err(|error| {
+                            println!("Failed in creating ClusterRole {error}");
+                            std::process::exit(1);
+                        });
 
                 // Create Cluster role binding
-                match uo.cluster_role_binding_actions(ns, Actions::Create).await {
-                    Ok(_) => (),
-                    Err(error) => {
+                let _cl_role_binding = uo
+                    .cluster_role_binding_actions(ns, Actions::Create)
+                    .await
+                    .map_err(|error| {
                         println!("Failed in creating ClusterRoleBinding {error}");
-                        std::process::exit(1)
-                    }
-                }
+                        std::process::exit(1);
+                    });
 
-                // Create Deployment
-                match uo.job_actions(ns, Actions::Create).await {
-                    Ok(_) => (),
-                    Err(error) => {
-                        println!("Failed in creating Job {error}");
-                        std::process::exit(1)
-                    }
-                }
-
-                // Create Service
-                match uo.service_actions(ns, Actions::Create).await {
-                    Ok(_) => (),
-                    Err(error) => {
-                        println!("Failed in creating Service {error}");
-                        std::process::exit(1)
-                    }
-                }
+                // Create Service Account
+                let _job = uo
+                    .job_actions(ns, Actions::Create, restart_data_plane)
+                    .await
+                    .map_err(|error| {
+                        println!("Failed in creating Upgrade Job {error}");
+                        std::process::exit(1);
+                    });
             }
-            Err(e) => println!("Failed to install. Error {e:?}"),
+            Err(e) => println!("Failed to create upgrade resources. Error {e:?}"),
         };
     }
 
-    /// Uninstall the upgrade resources
-    pub async fn uninstall(ns: &str) {
+    /// Delete the upgrade resources
+    pub async fn delete_upgrade_resources(ns: &str) {
         match UpgradeResources::new(ns).await {
             Ok(uo) => {
-                // Delete deployment
-                match uo.job_actions(ns, Actions::Delete).await {
-                    Ok(_) => (),
-                    Err(error) => {
-                        println!("Failed in creating Deployment {error}");
-                        std::process::exit(1)
-                    }
-                }
-
-                // Delete service
-                match uo.service_actions(ns, Actions::Delete).await {
-                    Ok(_) => (),
-                    Err(error) => {
-                        println!("Failed in deleting Service {error}");
-                        std::process::exit(1)
-                    }
-                }
+                // Delete the job
+                let _job = uo
+                    .job_actions(ns, Actions::Delete, false)
+                    .await
+                    .map_err(|error| {
+                        println!("Failed in deleting Upgrade Job {error}");
+                        std::process::exit(1);
+                    });
 
                 // Delete cluster role binding
-                match uo.cluster_role_binding_actions(ns, Actions::Delete).await {
-                    Ok(_) => (),
-                    Err(error) => {
+                let _cl_role_binding = uo
+                    .cluster_role_binding_actions(ns, Actions::Delete)
+                    .await
+                    .map_err(|error| {
                         println!("Failed in deleting ClusterRoleBinding {error}");
-                        std::process::exit(1)
-                    }
-                }
+                        std::process::exit(1);
+                    });
 
                 // Delete cluster role
-                match uo.cluster_role_actions(ns, Actions::Delete).await {
-                    Ok(_) => (),
-                    Err(error) => {
-                        println!("Failed in deleting ClusterRole {error}");
-                        std::process::exit(1)
-                    }
-                }
+                let _cl_role =
+                    uo.cluster_role_actions(ns, Actions::Delete)
+                        .await
+                        .map_err(|error| {
+                            println!("Failed in deleting ClusterRole {error}");
+                            std::process::exit(1);
+                        });
 
                 // Delete service account
-                match uo.service_account_actions(ns, Actions::Delete).await {
-                    Ok(_) => (),
-                    Err(error) => {
+                let _svc_acc = uo
+                    .service_account_actions(ns, Actions::Delete)
+                    .await
+                    .map_err(|error| {
                         println!("Failed in deleting ServiceAccount {error}");
-                        std::process::exit(1)
-                    }
-                }
+                        std::process::exit(1);
+                    });
             }
             Err(e) => println!("Failed to uninstall. Error {e}"),
         };
     }
-
-    /// Upgrades the cluster
-    pub async fn apply(
-        uri: Option<Uri>,
-        namespace: &str,
-        kube_config_path: Option<PathBuf>,
-        timeout: humantime::Duration,
-    ) {
-        match UpgradeOperatorClient::new(uri, namespace.to_string(), kube_config_path, timeout)
-            .await
-        {
-            Ok(mut client) => {
-                if let Err(err) = client.apply_upgrade().await {
-                    println!("Error while  upgrading {err:?}");
-                }
-            }
-            Err(e) => {
-                println!("Failed to create client for upgrade {e:?}");
-                std::process::exit(1);
-            }
-        }
-    }
-
-    /// Upgrades the cluster
-    pub async fn get(
-        uri: Option<Uri>,
-        namespace: &str,
-        kube_config_path: Option<PathBuf>,
-        timeout: humantime::Duration,
-    ) {
-        match UpgradeOperatorClient::new(uri, namespace.to_string(), kube_config_path, timeout)
-            .await
-        {
-            Ok(mut client) => {
-                if let Err(err) = client.get_upgrade().await {
-                    println!("Error while  upgrading {err:?}");
-                }
-            }
-            Err(e) => {
-                println!("Failed to create client for upgrade {e:?}");
-                std::process::exit(1);
-            }
-        }
-    }
-}
-
-/// Return results as list of deployments.
-pub async fn get_job_for_rest(ns: &str) -> Result<ObjectList<Job>, Error> {
-    let client = Client::try_default().await?;
-    let job = Api::<Job>::namespaced(client.clone(), ns);
-    let lp = ListParams::default().labels(API_REST_LABEL_SELECTOR);
-    Ok(job.list(&lp).await?)
 }
 
 pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> Result<Vec<String>, Error> {
@@ -626,9 +487,17 @@ pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> Result<Vec<String>
     Ok(single_replica_volumes_pvc)
 }
 
+/// Return results as list of deployments.
+pub async fn get_deployment_for_rest(ns: &str) -> Result<ObjectList<Deployment>, Error> {
+    let client = Client::try_default().await?;
+    let deployment = Api::<Deployment>::namespaced(client.clone(), ns);
+    let lp = ListParams::default().labels(API_REST_LABEL_SELECTOR);
+    Ok(deployment.list(&lp).await?)
+}
+
 /// Return the release name.
 pub async fn get_release_name(ns: &str) -> Result<String, Error> {
-    match get_job_for_rest(ns).await {
+    match get_deployment_for_rest(ns).await {
         Ok(deployments) => match deployments.items.get(0) {
             Some(deployment) => match &deployment.metadata.labels {
                 Some(label) => match label.get("openebs.io/release") {
@@ -647,4 +516,31 @@ pub async fn get_release_name(ns: &str) -> Result<String, Error> {
             std::process::exit(1);
         }
     }
+}
+
+/// Return true if upgrade job is completed
+pub async fn upgrade_job_completed(ns: &str) -> Result<bool, Error> {
+    match UpgradeResources::new(ns).await {
+        Ok(uo) => {
+            if let Some(job) = uo
+                .job
+                .get_opt(&upgrade_group(&uo.release_name, UPGRADE_CONTROLLER_JOB))
+                .await?
+            {
+                if matches!(
+                    job.status
+                        .as_ref()
+                        .ok_or_else(|| anyhow::anyhow!("job.status is empty"))?
+                        .succeeded
+                        .as_ref()
+                        .ok_or_else(|| anyhow::anyhow!("job.status.succeeded is empty"))?,
+                    1
+                ) {
+                    return Ok(true);
+                }
+            }
+        }
+        Err(error) => return Err(error),
+    }
+    Ok(false)
 }

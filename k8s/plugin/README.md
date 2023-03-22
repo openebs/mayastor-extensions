@@ -333,7 +333,7 @@ SUBCOMMANDS:
    kubectl mayastor uninstall upgrade-operator -n <mayastor_namespace>
    ```
 
-3. To upgrade the installation
+1. To upgrade the installation
 ```sh
   ## Command
   kubectl mayastor upgrade
@@ -342,14 +342,18 @@ SUBCOMMANDS:
   Usage: kubectl-mayastor upgrade [OPTIONS]
 
   Options:
+    -d, --dry-run
+        Display all the validations output but will not execute upgrade
     -r, --rest <REST>
         The rest endpoint to connect to
-    -u, --upgrade-operator-endpoint <UPGRADE_OPERATOR_ENDPOINT>
-        Endpoint of upgrade operator service, if left empty then it will try to parse endpoints from upgrade operator service(K8s service resource)
-    -d, --dry-run
-        Display all the validations output but will not execute upgrade.
     -k, --kube-config-path <KUBE_CONFIG_PATH>
         Path to kubeconfig file
+    -s, --skip-data-plane-restart
+        If set then upgrade will skip the io-engine pods restart
+    --skip-single-replica-volume-validation
+        If set then it will continue with upgrade without validating singla replica volume
+    --skip-replica-rebuild
+        If set then upgrade will skip the repilca rebuild in progress validation
     -o, --output <OUTPUT>
         The Output, viz yaml, json [default: none]
     -j, --jaeger <JAEGER>

@@ -17,8 +17,6 @@ pub(crate) fn upgrade_group(release_name: &str, name: &str) -> String {
     format!("{release_name}-{name}")
 }
 
-/// Upgrade endpoint
-pub(crate) const UPGRADE_OPERATOR_END_POINT: &str = "/upgrade";
 /// label used for upgrade operator.
 pub(crate) const APP: &str = "app.kubernetes.io/component";
 /// label used for upgrade operator.
@@ -34,16 +32,10 @@ pub(crate) const UPGRADE_OPERATOR_SERVICE_ACCOUNT: &str = "operator-upgrade-serv
 pub(crate) const UPGRADE_OPERATOR_CLUSTER_ROLE: &str = "operator-upgrade-role";
 /// Role binding constant for upgrade operator.
 pub(crate) const UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING: &str = "operator-upgrade-role-binding";
-/// Deployment constant for upgrade operator.
-pub(crate) const UPGRADE_CONTROLLER_DEPLOYMENT: &str = "operator-upgrade";
-/// Deployment constant for upgrade operator.
+///Job constant for upgrade.
 pub(crate) const UPGRADE_CONTROLLER_JOB: &str = "upgrade-job";
-/// Service name constant for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_SERVICE: &str = "operator-upgrade";
-/// Service port constant for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_SERVICE_PORT: i32 = 8080;
-/// Service internal port constant for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_INTERNAL_PORT: i32 = 8080;
+/// Pod constant for upgrade job.
+pub(crate) const UPGRADE_CONTROLLER_JOB_POD: &str = "upgrade-pod";
 /// This is the upgrade-operator container image.
 pub(crate) const UPGRADE_IMAGE: &str = "openebs/mayastor-operator-upgrade:develop";
 /// The service port for upgrade operator.

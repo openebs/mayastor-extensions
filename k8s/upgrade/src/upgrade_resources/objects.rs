@@ -1,24 +1,16 @@
 use crate::{
     constant::{
-        upgrade_group, APP, LABEL, UPGRADE_CONTROLLER_DEPLOYMENT,UPGRADE_OPERATOR,
+        upgrade_group, APP, LABEL, UPGRADE_CONTROLLER_JOB_POD, UPGRADE_JOB, UPGRADE_OPERATOR,
         UPGRADE_OPERATOR_CLUSTER_ROLE, UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
-        UPGRADE_OPERATOR_HTTP_PORT, UPGRADE_OPERATOR_INTERNAL_PORT, UPGRADE_OPERATOR_SERVICE,
-        UPGRADE_OPERATOR_SERVICE_ACCOUNT, UPGRADE_OPERATOR_SERVICE_PORT,UPGRADE_JOB, 
+        UPGRADE_OPERATOR_SERVICE_ACCOUNT,
     },
     upgrade_labels,
 };
 
-use k8s_openapi::{
-    api::{
-        apps::v1::{Deployment, DeploymentSpec, DeploymentStrategy},
-        batch::v1::{Job, JobSpec},
-        core::v1::{
-            Container, ContainerPort, EnvVar, PodSpec, PodTemplateSpec, Service, ServiceAccount,
-            ServicePort, ServiceSpec,
-        },
-        rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject},
-    },
-    apimachinery::pkg::{apis::meta::v1::LabelSelector, util::intstr::IntOrString},
+use k8s_openapi::api::{
+    batch::v1::{Job, JobSpec},
+    core::v1::{Container, ContainerPort, EnvVar, PodSpec, PodTemplateSpec, ServiceAccount},
+    rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject},
 };
 
 use kube::core::ObjectMeta;
@@ -239,6 +231,7 @@ pub(crate) fn upgrade_job(
     namespace: &str,
     upgrade_image: String,
     release_name: String,
+    restart_data_plane: bool,
 ) -> Job {
     let rest_endpoint_clusterip_url = format!("http://{}-api-rest:8081", &release_name);
     let rest_endpoint_arg = format!("--rest-endpoint={rest_endpoint_clusterip_url}");
@@ -248,33 +241,27 @@ pub(crate) fn upgrade_job(
 
     Job {
         metadata: ObjectMeta {
-            labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
-            name: Some(upgrade_group(&release_name, UPGRADE_CONTROLLER_DEPLOYMENT)),
+            labels: Some(upgrade_labels!(UPGRADE_JOB)),
+            name: Some(upgrade_group(&release_name, UPGRADE_JOB)),
             namespace: Some(namespace.to_string()),
             ..Default::default()
         },
         spec: Some(JobSpec {
-            // replicas: Some(1),
-            // selector: LabelSelector {
-            //     match_labels: Some(btreemap! { LABEL.to_string() => UPGRADE_OPERATOR.to_string()}),
-            //     ..Default::default()
-            // },
-            // strategy: Some(DeploymentStrategy {
-            //     type_: Some("Recreate".to_string()),
-            //     ..Default::default()
-            // }),
             template: PodTemplateSpec {
                 metadata: Some(ObjectMeta {
-                    labels: Some(btreemap! { LABEL.to_string() => UPGRADE_OPERATOR.to_string()}),
+                    labels: Some(
+                        btreemap! { LABEL.to_string() => UPGRADE_CONTROLLER_JOB_POD.to_string()},
+                    ),
                     ..Default::default()
                 }),
                 spec: Some(PodSpec {
-                    restart_policy : Some("OnFailure".to_string()),
+                    restart_policy: Some("OnFailure".to_string()),
                     containers: vec![Container {
                         args: Some(vec![
                             rest_endpoint_arg,
                             namespace_arg,
                             chart_release_name_arg,
+                            format!("--restart_data_plane={restart_data_plane}"),
                         ]),
                         image: Some(upgrade_image),
                         image_pull_policy: Some("Always".to_string()),
@@ -299,107 +286,6 @@ pub(crate) fn upgrade_job(
                     ..Default::default()
                 }),
             },
-            ..Default::default()
-        }),
-        ..Default::default()
-    }
-}
-
-
-
-
-
-
-
-/// Defines the upgrade-operator deployment.
-pub(crate) fn upgrade_operator_deployment(
-    namespace: &str,
-    upgrade_image: String,
-    release_name: String,
-) -> Deployment {
-    let rest_endpoint_clusterip_url = format!("http://{}-api-rest:8081", &release_name);
-    let rest_endpoint_arg = format!("--rest-endpoint={rest_endpoint_clusterip_url}");
-
-    let namespace_arg = format!("--namespace={namespace}");
-    let chart_release_name_arg = format!("--release-name={}", &release_name);
-
-    Deployment {
-        metadata: ObjectMeta {
-            labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
-            name: Some(upgrade_group(&release_name, UPGRADE_CONTROLLER_DEPLOYMENT)),
-            namespace: Some(namespace.to_string()),
-            ..Default::default()
-        },
-        spec: Some(DeploymentSpec {
-            replicas: Some(1),
-            selector: LabelSelector {
-                match_labels: Some(btreemap! { LABEL.to_string() => UPGRADE_OPERATOR.to_string()}),
-                ..Default::default()
-            },
-            strategy: Some(DeploymentStrategy {
-                type_: Some("Recreate".to_string()),
-                ..Default::default()
-            }),
-            template: PodTemplateSpec {
-                metadata: Some(ObjectMeta {
-                    labels: Some(btreemap! { LABEL.to_string() => UPGRADE_OPERATOR.to_string()}),
-                    ..Default::default()
-                }),
-                spec: Some(PodSpec {
-                    containers: vec![Container {
-                        args: Some(vec![
-                            rest_endpoint_arg,
-                            namespace_arg,
-                            chart_release_name_arg,
-                        ]),
-                        image: Some(upgrade_image),
-                        image_pull_policy: Some("Always".to_string()),
-                        name: UPGRADE_OPERATOR.to_string(),
-                        command: Some(vec!["operator-upgrade".to_string()]),
-                        ports: Some(vec![ContainerPort {
-                            container_port: 8080,
-                            name: Some("http".to_string()),
-                            ..Default::default()
-                        }]),
-                        env: Some(vec![EnvVar {
-                            name: "RUST_LOG".to_string(),
-                            value: Some("info".to_string()),
-                            ..Default::default()
-                        }]),
-                        ..Default::default()
-                    }],
-                    service_account_name: Some(upgrade_group(
-                        &release_name,
-                        UPGRADE_OPERATOR_SERVICE_ACCOUNT,
-                    )),
-                    ..Default::default()
-                }),
-            },
-            ..Default::default()
-        }),
-        ..Default::default()
-    }
-}
-
-/// Defines the upgrade-operator service.
-pub(crate) fn upgrade_operator_service(namespace: Option<String>, release_name: String) -> Service {
-    Service {
-        metadata: ObjectMeta {
-            labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
-            name: Some(upgrade_group(&release_name, UPGRADE_OPERATOR_SERVICE)),
-            namespace,
-            ..Default::default()
-        },
-        spec: Some(ServiceSpec {
-            selector: Some(btreemap! {
-                LABEL.to_string() => UPGRADE_OPERATOR.to_string()
-            }),
-            ports: Some(vec![ServicePort {
-                port: UPGRADE_OPERATOR_SERVICE_PORT,
-                name: Some(UPGRADE_OPERATOR_HTTP_PORT.to_string()),
-                target_port: Some(IntOrString::Int(UPGRADE_OPERATOR_INTERNAL_PORT)),
-                ..Default::default()
-            }]),
             ..Default::default()
         }),
         ..Default::default()
