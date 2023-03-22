@@ -109,11 +109,11 @@ spec:
           mountPath: /dev/hugepages
         resources:
           limits:
-            cpu: {{ .Values.io_engine.resources.limits.cpu | default .Values.io_engine.cpuCount | quote }}
+            cpu: {{ .Values.io_engine.resources.limits.cpu | default (include "coreCount" .) | quote }}
             memory: {{ .Values.io_engine.resources.limits.memory | quote }}
             hugepages-2Mi: {{ .Values.io_engine.resources.limits.hugepages2Mi | quote }}
           requests:
-            cpu: {{ .Values.io_engine.resources.requests.cpu | default .Values.io_engine.cpuCount | quote }}
+            cpu: {{ .Values.io_engine.resources.requests.cpu | default (include "coreCount" .) | quote }}
             memory: {{ .Values.io_engine.resources.requests.memory | quote }}
             hugepages-2Mi: {{ .Values.io_engine.resources.requests.hugepages2Mi | quote }}
         ports:
