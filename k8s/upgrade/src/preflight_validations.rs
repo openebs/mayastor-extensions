@@ -11,6 +11,8 @@ use tracing::error;
 pub async fn preflight_check(
     kube_config_path: Option<PathBuf>,
     timeout: humantime::Duration,
+    ignore_single_replica: bool,
+    skip_replica_rebuild: bool,
 ) -> Result<(), error::Error> {
     console_logger::info(user_prompt::UPGRADE_WARNING);
     // Initialise the REST client.
@@ -22,11 +24,14 @@ pub async fn preflight_check(
 
     let rest_client = upgrade_lib::RestClient::new_with_config(config);
 
-    rebuild_in_progress_validation(&rest_client).await?;
+    if !skip_replica_rebuild {
+        rebuild_in_progress_validation(&rest_client).await?;
+    }
 
     already_cordoned_nodes_validation(&rest_client).await?;
-
-    single_volume_replica_validation(&rest_client).await?;
+    if !ignore_single_replica {
+        single_volume_replica_validation(&rest_client).await?;
+    }
     Ok(())
 }
 
@@ -90,11 +95,14 @@ pub async fn single_volume_replica_validation(
         starting_token = v.next_token;
     }
 
-    let data = get_pvc_from_uuid(HashSet::from_iter(volumes))
-        .await?
-        .join("\n");
+    if !volumes.is_empty() {
+        let data = get_pvc_from_uuid(HashSet::from_iter(volumes))
+            .await?
+            .join("\n");
 
-    console_logger::warn(user_prompt::SINGLE_REPLICA_VOLUME_WARNING, &data);
+        console_logger::warn(user_prompt::SINGLE_REPLICA_VOLUME_WARNING, &data);
+        std::process::exit(1);
+    }
     Ok(())
 }
 
@@ -104,6 +112,7 @@ pub async fn rebuild_in_progress_validation(
 ) -> Result<(), error::Error> {
     if rebuild_in_progress(client).await? {
         console_logger::warn(user_prompt::REBUILD_WARNING, "");
+        std::process::exit(1);
     }
     Ok(())
 }
