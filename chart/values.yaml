@@ -250,7 +250,7 @@ csi:
 
 io_engine:
   # -- Log level for the io-engine service
-  logLevel: info,io_engine=info
+  logLevel: info
   api: "v1"
   target:
     nvmf:
@@ -263,8 +263,10 @@ io_engine:
   envcontext: ""
   reactorFreezeDetection:
     enabled: false
-  # -- The number of cpu that each io-engine instance will bind to.
+  # -- The number of cores that each io-engine instance will bind to.
   cpuCount: "2"
+  # -- Overrides the cpuCount and explicitly sets the list of cores.
+  coreList: []
   # -- Node selectors to designate storage nodes for diskpool creation
   # Note that if multi-arch images support 'kubernetes.io/arch: amd64'
   # should be removed.
