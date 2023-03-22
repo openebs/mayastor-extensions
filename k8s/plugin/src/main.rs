@@ -14,10 +14,7 @@ use std::{env, path::PathBuf};
 mod resources;
 use crate::resources::GetResourcesK8s;
 use resources::Operations;
-use upgrade::{
-    preflight_validations,
-    upgrade_resources::upgrade::{UpgradeOperator, UpgradeResources},
-};
+use upgrade::preflight_validations;
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
@@ -113,13 +110,7 @@ async fn execute(cli_args: CliArgs) {
                     }
                 },
                 GetResourcesK8s::UpgradeStatus(resources) => {
-                    resources
-                        .get_upgrade(
-                            &cli_args.namespace,
-                            cli_args.kube_config_path,
-                            cli_args.timeout,
-                        )
-                        .await;
+                    resources.get_upgrade(&cli_args.namespace).await;
                 }
             },
             Operations::Drain(resource) => match resource {
@@ -162,25 +153,16 @@ async fn execute(cli_args: CliArgs) {
                 let _ignore = preflight_validations::preflight_check(
                     cli_args.kube_config_path.clone(),
                     cli_args.timeout,
+                    resources.skip_single_replica_volume_validation,
+                    resources.skip_replica_rebuild,
                 )
                 .await
                 .map_err(|_e| {
                     std::process::exit(1);
                 });
-                
-                resources
-                    .apply(
-                        &cli_args.namespace,
-                        cli_args.kube_config_path,
-                        cli_args.timeout,
-                    )
-                    .await;
-        
-
-
-
-              UpgradeResources::install(&cli_args.namespace).await;
-               UpgradeResources::uninstall(&cli_args.namespace).await;
+                if resources.dry_run {
+                    resources.apply(&cli_args.namespace).await;
+                }
             }
         };
     };
