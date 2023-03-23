@@ -112,9 +112,10 @@ $ helm install my-release openebs/mayastor
 | image.&ZeroWidthSpace;registry | Image registry to pull our product images | `"docker.io"` |
 | image.&ZeroWidthSpace;repo | Image registry's namespace | `"openebs"` |
 | image.&ZeroWidthSpace;tag | Release tag for our images | `"release-2.0"` |
-| io_engine.&ZeroWidthSpace;cpuCount | The number of cpu that each io-engine instance will bind to. | `"2"` |
+| io_engine.&ZeroWidthSpace;coreList | Overrides the cpuCount and explicitly sets the list of cores. | `[]` |
+| io_engine.&ZeroWidthSpace;cpuCount | The number of cores that each io-engine instance will bind to. | `"2"` |
 | io_engine.&ZeroWidthSpace;envcontext | Pass additional arguments to the Environment Abstraction Layer. Example: --set {product}.envcontext=iova-mode=pa | `""` |
-| io_engine.&ZeroWidthSpace;logLevel | Log level for the io-engine service | `"info,io_engine=info"` |
+| io_engine.&ZeroWidthSpace;logLevel | Log level for the io-engine service | `"info"` |
 | io_engine.&ZeroWidthSpace;nodeSelector | Node selectors to designate storage nodes for diskpool creation Note that if multi-arch images support 'kubernetes.io/arch: amd64' should be removed. | <pre>{<br>"kubernetes.io/arch":"amd64",<br>"openebs.io/engine":"mayastor"<br>}</pre> |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for the io-engine | `""` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;hugepages2Mi | Hugepage size available on the nodes | `"2Gi"` |
