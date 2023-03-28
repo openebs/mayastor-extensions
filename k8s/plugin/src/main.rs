@@ -157,7 +157,7 @@ async fn execute(cli_args: CliArgs) {
                 .map_err(|_e| {
                     std::process::exit(1);
                 });
-                if resources.dry_run {
+                if !resources.dry_run {
                     resources.apply(&cli_args.namespace).await;
                 }
             }
