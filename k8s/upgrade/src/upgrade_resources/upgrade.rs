@@ -1,10 +1,10 @@
 use crate::{
     constant::{
-        release_version, upgrade_image_concat, upgrade_name_concat, AGENT_CORE_POD_LABEL,
-        API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_RELEASE_NAME, IO_ENGINE_POD_LABEL,
-        UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
-        UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX,
-        UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+        get_image_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
+        AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_RELEASE_NAME,
+        IO_ENGINE_POD_LABEL, UPGRADE_EVENT_REASON, UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
+        UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX, UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO,
+        UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     error::Error,
     upgrade_resources::objects,
@@ -13,11 +13,12 @@ use crate::{
         DATA_PLANE_PODS_LIST_SKIP_RESTART, UPGRADE_DRY_RUN_SUMMARY, UPGRADE_JOB_STARTED,
     },
 };
+use serde::Deserialize;
 
 use k8s_openapi::api::{
     apps::v1::Deployment,
     batch::v1::Job,
-    core::v1::{PersistentVolumeClaim, Pod, ServiceAccount},
+    core::v1::{Event, PersistentVolumeClaim, Pod, ServiceAccount},
     rbac::v1::{ClusterRole, ClusterRoleBinding},
 };
 use kube::{
@@ -162,13 +163,87 @@ pub struct GetUpgradeArgs {}
 impl GetUpgradeArgs {
     ///  Upgrade the resources.
     pub async fn get_upgrade(&self, namespace: &str) {
-        println!("{namespace}")
-        // To be implemented
+        // Create resources for getting upgrade status
+        match UpgradeEventClient::create_get_upgrade_resource(namespace).await {
+            Ok(_) => {}
+            Err(error) => eprintln! {"Failure {error}"},
+        }
+    }
+}
+
+/// This struct is used to deserialize the output of ugrade events.
+#[derive(Clone, Deserialize)]
+pub(crate) struct UpgradeEvent {
+    from_version: String,
+    to_version: String,
+    message: String,
+}
+
+/// Resource to be created to get upgrade status.
+struct UpgradeEventClient {
+    upgrade_event: Api<Event>,
+}
+
+/// Methods implemented by UpgradeEventClient.
+impl UpgradeEventClient {
+    pub async fn new(ns: &str) -> Result<Self, Error> {
+        let client = Client::try_default().await?;
+        Ok(Self {
+            upgrade_event: Api::<Event>::namespaced(client, ns),
+        })
+    }
+
+    /// Returns an client for upgrade events.
+    pub(crate) fn api_client(&self) -> Api<Event> {
+        self.upgrade_event.clone()
+    }
+
+    /// Fetch upgrade events and print.
+    pub async fn get_and_log(&self, release_name: String) -> Result<(), Error> {
+        let event_lp = ListParams {
+            field_selector: Some(upgrade_event_selector(
+                release_name.as_str(),
+                UPGRADE_JOB_NAME_SUFFIX,
+            )),
+            ..Default::default()
+        };
+
+        let mut event_list = self
+            .api_client()
+            .list(&event_lp)
+            .await?
+            .into_iter()
+            .filter(|e| e.reason == Some(UPGRADE_EVENT_REASON.to_string()))
+            .collect::<Vec<_>>();
+
+        event_list.sort_by(|a, b| b.event_time.cmp(&a.event_time));
+        match event_list.get(0) {
+            Some(event) => match event.message.clone() {
+                Some(data) => {
+                    let e: UpgradeEvent = serde_json::from_str(data.as_str())
+                        .map_err(|_| Error::EventSerdeDeserializationError)?;
+                    println!("Upgrade From: {}", e.from_version);
+                    println!("Upgrade To: {}", e.to_version);
+                    println!("Upgrade Status: {}", e.message);
+                    Ok(())
+                }
+                None => Err(Error::MessageInEventNotPresent),
+            },
+            None => Err(Error::UpgradeEventNotPresent),
+        }
+    }
+
+    /// Create resouurces for fetching upgrade events.
+    pub async fn create_get_upgrade_resource(ns: &str) -> Result<(), Error> {
+        let release_name = get_release_name(ns).await?;
+        let gur = UpgradeEventClient::new(ns).await?;
+        gur.get_and_log(release_name).await?;
+        Ok(())
     }
 }
 
 /// K8s resources needed for upgrade operator.
-pub struct UpgradeResources {
+struct UpgradeResources {
     pub(crate) service_account: Api<ServiceAccount>,
     pub(crate) cluster_role: Api<ClusterRole>,
     pub(crate) cluster_role_binding: Api<ClusterRoleBinding>,
@@ -191,7 +266,7 @@ impl UpgradeResources {
         })
     }
 
-    /// Create/Delete ServiceAction
+    /// Create/Delete ServiceAction.
     pub async fn service_account_actions(
         &self,
         ns: &str,
@@ -434,15 +509,13 @@ impl UpgradeResources {
         } else {
             match action {
                 Actions::Create => {
-                    let upgrade_job_image_tag = release_version();
+                    let upgrade_job_image_tag = get_image_tag();
                     let upgrade_deploy = objects::upgrade_job(
                         ns,
                         upgrade_image_concat(
                             UPGRADE_JOB_IMAGE_REPO,
                             UPGRADE_JOB_IMAGE_NAME,
-                            upgrade_job_image_tag
-                                .unwrap_or("develop".to_string())
-                                .as_str(),
+                            upgrade_job_image_tag.as_str(),
                         ),
                         self.release_name.clone(),
                         skip_data_plane_restart,

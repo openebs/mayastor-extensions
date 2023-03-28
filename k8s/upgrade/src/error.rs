@@ -64,6 +64,18 @@ pub enum Error {
     /// Pod Name not present error.
     #[error("Pod name not present: {}", source)]
     PodNameNotPresent { source: kube::Error },
+
+    /// Deserialization error for event.
+    #[error("Error in desiaralizing upgrade event.")]
+    EventSerdeDeserializationError,
+
+    /// No message in upgrade event.
+    #[error("No Message present in event.")]
+    MessageInEventNotPresent,
+
+    /// No upgrade event present.
+    #[error("No upgrade event present.")]
+    UpgradeEventNotPresent,
 }
 
 impl From<anyhow::Error> for Error {
