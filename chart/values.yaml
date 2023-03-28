@@ -7,7 +7,7 @@ image:
   tag: develop
   repoTags:
     # Note: Below image tag configuration is optional and typically should never be
-    #       used. Setting specific image tags for the different repositories proves useful 
+    #       used. Setting specific image tags for the different repositories proves useful
     #       for some integration testing scenarios. Use the 'tag' option above to set
     #       release/pre-release container image tags.
     #       The below tag values will be picked for images by default.
@@ -260,7 +260,7 @@ csi:
 
 io_engine:
   # -- Log level for the io-engine service
-  logLevel: info,io_engine=info
+  logLevel: info
   api: "v1"
   target:
     nvmf:
@@ -273,8 +273,11 @@ io_engine:
   envcontext: ""
   reactorFreezeDetection:
     enabled: false
-  # -- The number of cpu that each io-engine instance will bind to.
+  # -- The number of cores that each io-engine instance will bind to.
   cpuCount: "2"
+  # -- If not empty, overrides the cpuCount and explicitly sets the list of cores.
+  # Example: --set='io_engine.coreList={30,31}'
+  coreList: []
   # -- Node selectors to designate storage nodes for diskpool creation
   # Note that if multi-arch images support 'kubernetes.io/arch: amd64'
   # should be removed.
@@ -359,9 +362,13 @@ etcd:
   # extra debug information on logs
   debug: false
   initialClusterState: "new"
-  # Pod anti-affinity preset
+
+  # -- Pod anti-affinity preset
   # Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
   podAntiAffinityPreset: "hard"
+  ## -- nodeSelector [object] Node labels for pod assignment
+  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  nodeSelector: {}
 
   # etcd service parameters defines how the etcd service is exposed
   service:
