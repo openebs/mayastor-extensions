@@ -1,3 +1,5 @@
+use crate::constant::release_version;
+
 /// Warning to users before doing an upgrade.
 pub const UPGRADE_WARNING: &str =  "\nVolumes which make use of a single volume replica instance will be unavailable for some time during upgrade.\nIt is recommended that you do not create new volumes which make use of only one volume replica.";
 
@@ -23,10 +25,16 @@ pub const DATA_PLANE_PODS_LIST_SKIP_RESTART: &str =
     "\nList of data plane pods which need to be manually restarted to reflect upgrade as --skip-data-plane-restart flag is passed during upgrade.";
 
 /// Append the release name to k8s objects.
-pub(crate) fn upgrade_dry_run_summary(message: &str, tag: &str) -> String {
-    format!("{message} : {tag}")
+pub(crate) fn upgrade_dry_run_summary(message: &str) -> String {
+    let tag = release_version();
+    let version = tag.unwrap_or("develop".to_string());
+    format!("{message} : {version}")
 }
 
 /// Info about the data plane pods.
 pub const UPGRADE_DRY_RUN_SUMMARY: &str =
     "\nFinally the cluster deployment will be upgraded to version";
+
+/// Info about successful start
+pub const UPGRADE_JOB_STARTED: &str =
+    "\nThe upgrade has started. You can see the recent upgrade status using 'get upgrade-status` command.";

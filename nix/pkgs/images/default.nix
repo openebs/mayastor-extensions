@@ -68,10 +68,7 @@ let
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.upgrade.${name};
-      contents = [ helm_chart_src kubernetes-helm-wrapped busybox ];
-      extraCommands = ''
-        mkdir -p chart && cp -drf --preserve=mode ${helm_chart_src}/* chart/
-      '';
+      contents = [ kubernetes-helm-wrapped busybox tagged_helm_chart ];
       pname = package.pname;
       config = {
         Env = [ "CORE_CHART_DIR=/chart" ];

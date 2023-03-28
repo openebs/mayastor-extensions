@@ -611,33 +611,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "common-lib"
-version = "1.0.0"
-dependencies = [
- "async-trait",
- "chrono",
- "dyn-clonable",
- "etcd-client",
- "k8s-openapi",
- "kube",
- "openapi",
- "parking_lot 0.12.1",
- "percent-encoding",
- "rand",
- "serde",
- "serde_json",
- "serde_tuple",
- "snafu",
- "strum",
- "strum_macros",
- "tokio",
- "tonic",
- "tracing",
- "url",
- "uuid",
-]
-
-[[package]]
 name = "concolor-override"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1757,6 +1730,7 @@ version = "1.0.0"
 dependencies = [
  "anyhow",
  "clap",
+ "console-logger",
  "humantime",
  "kube-proxy",
  "openapi",
@@ -2494,7 +2468,7 @@ dependencies = [
  "async-trait",
  "dyn-clonable",
  "etcd-client",
- "parking_lot",
+ "parking_lot 0.12.1",
  "platform",
  "rand",
  "serde",
@@ -2960,27 +2934,6 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "serde_tuple"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4f025b91216f15a2a32aa39669329a475733590a015835d1783549a56d09427"
-dependencies = [
- "serde",
- "serde_tuple_macros",
-]
-
-[[package]]
-name = "serde_tuple_macros"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4076151d1a2b688e25aaf236997933c66e18b870d0369f8b248b8ab2be630d7e"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -3834,8 +3787,10 @@ dependencies = [
  "operators",
  "serde",
  "serde_json",
+ "thiserror",
  "tower",
  "tracing",
+ "utils",
 ]
 
 [[package]]

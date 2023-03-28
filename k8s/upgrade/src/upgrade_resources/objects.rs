@@ -23,15 +23,12 @@ use openapi::apis::IntoVec;
 /// Defines the upgrade job service account.
 pub(crate) fn upgrade_job_service_account(
     namespace: Option<String>,
-    release_name: String,
+    service_account_name: String,
 ) -> ServiceAccount {
     ServiceAccount {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!()),
-            name: Some(upgrade_name_concat(
-                &release_name,
-                UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
-            )),
+            name: Some(service_account_name),
             namespace,
             ..Default::default()
         },
@@ -42,15 +39,12 @@ pub(crate) fn upgrade_job_service_account(
 /// Defines the upgrade job cluster role.
 pub(crate) fn upgrade_job_cluster_role(
     namespace: Option<String>,
-    release_name: String,
+    cluster_role_name: String,
 ) -> ClusterRole {
     ClusterRole {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!()),
-            name: Some(upgrade_name_concat(
-                &release_name,
-                UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
-            )),
+            name: Some(cluster_role_name),
             namespace,
             ..Default::default()
         },
@@ -220,6 +214,7 @@ pub(crate) fn upgrade_job_cluster_role(
 pub(crate) fn upgrade_job_cluster_role_binding(
     namespace: Option<String>,
     release_name: String,
+    upgrade_to_branch: Option<&String>,
 ) -> ClusterRoleBinding {
     ClusterRoleBinding {
         metadata: ObjectMeta {
@@ -227,6 +222,7 @@ pub(crate) fn upgrade_job_cluster_role_binding(
             name: Some(upgrade_name_concat(
                 &release_name,
                 UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
+                upgrade_to_branch,
             )),
             namespace: namespace.clone(),
             ..Default::default()
@@ -234,11 +230,19 @@ pub(crate) fn upgrade_job_cluster_role_binding(
         role_ref: RoleRef {
             api_group: "rbac.authorization.k8s.io".to_string(),
             kind: "ClusterRole".to_string(),
-            name: upgrade_name_concat(&release_name, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX),
+            name: upgrade_name_concat(
+                &release_name,
+                UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
+                upgrade_to_branch,
+            ),
         },
         subjects: Some(vec![Subject {
             kind: "ServiceAccount".to_string(),
-            name: upgrade_name_concat(&release_name, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX),
+            name: upgrade_name_concat(
+                &release_name,
+                UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+                upgrade_to_branch,
+            ),
             namespace,
             ..Default::default()
         }]),
@@ -250,6 +254,7 @@ pub(crate) fn upgrade_job(
     upgrade_image: String,
     release_name: String,
     skip_data_plane_restart: bool,
+    upgrade_to_branch: Option<&String>,
 ) -> Job {
     let mut job_args: Vec<String> = vec![
         format!("--rest-endpoint=http://{release_name}-api-rest:8081"),
@@ -263,7 +268,11 @@ pub(crate) fn upgrade_job(
     Job {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!()),
-            name: Some(upgrade_name_concat(&release_name, UPGRADE_JOB_NAME_SUFFIX)),
+            name: Some(upgrade_name_concat(
+                &release_name,
+                UPGRADE_JOB_NAME_SUFFIX,
+                upgrade_to_branch,
+            )),
             namespace: Some(namespace.to_string()),
             ..Default::default()
         },
@@ -324,6 +333,7 @@ pub(crate) fn upgrade_job(
                     service_account_name: Some(upgrade_name_concat(
                         &release_name,
                         UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+                        upgrade_to_branch,
                     )),
                     ..Default::default()
                 }),

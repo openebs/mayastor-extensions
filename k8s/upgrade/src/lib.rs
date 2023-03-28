@@ -1,5 +1,7 @@
 /// Module for upgrade related constants.
 pub mod constant;
+/// Module for upgrade client errors.
+pub mod error;
 /// Validations before applying upgrade.
 pub mod preflight_validations;
 /// Library for upgrade module.
