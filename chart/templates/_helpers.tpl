@@ -125,7 +125,7 @@ Usage:
 {{- $first := first $cores | required (print "At least one core must be specified in io_engine.coreList") -}}
 {{- $cores | join "," -}}
 {{- else -}}
-{{- if gt 1 .Values.io_engine.cpuCount -}}
+{{- if gt 1 (.Values.io_engine.cpuCount | int) -}}
 {{- fail ".Values.io_engine.cpuCount must be >= 1" -}}
 {{- end -}}
 {{- untilStep 1 (add 1 .Values.io_engine.cpuCount | int) 1 | join "," -}}
