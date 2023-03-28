@@ -231,13 +231,16 @@ pub(crate) fn upgrade_job(
     namespace: &str,
     upgrade_image: String,
     release_name: String,
-    restart_data_plane: bool,
+    skip_data_plane_restart: bool,
 ) -> Job {
-    let rest_endpoint_clusterip_url = format!("http://{}-api-rest:8081", &release_name);
-    let rest_endpoint_arg = format!("--rest-endpoint={rest_endpoint_clusterip_url}");
-
-    let namespace_arg = format!("--namespace={namespace}");
-    let chart_release_name_arg = format!("--release-name={}", &release_name);
+    let mut job_args: Vec<String> = vec![
+        format!("--rest-endpoint=http://{release_name}-api-rest:8081"),
+        format!("--namespace={namespace}"),
+        format!("--release-name={release_name}"),
+    ];
+    if skip_data_plane_restart {
+        job_args.push("--skip-data-plane-restart".to_string());
+    }
 
     Job {
         metadata: ObjectMeta {
@@ -257,12 +260,7 @@ pub(crate) fn upgrade_job(
                 spec: Some(PodSpec {
                     restart_policy: Some("OnFailure".to_string()),
                     containers: vec![Container {
-                        args: Some(vec![
-                            rest_endpoint_arg,
-                            namespace_arg,
-                            chart_release_name_arg,
-                            format!("--restart_data_plane={restart_data_plane}"),
-                        ]),
+                        args: Some(job_args),
                         image: Some(upgrade_image),
                         image_pull_policy: Some("Always".to_string()),
                         name: UPGRADE_JOB.to_string(),
