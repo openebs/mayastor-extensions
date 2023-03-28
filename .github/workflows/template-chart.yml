@@ -1,0 +1,22 @@
+name: Helm Template
+on:
+  pull_request:
+    types: ['opened', 'edited', 'reopened', 'synchronize']
+  push:
+    branches:
+      - staging
+
+jobs:
+  template-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v18
+      - name: Pre-populate nix-shell
+        run: |
+          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+          nix-shell --pure --run "echo" ./scripts/helm/shell.nix
+      - name: Check if the chart can be rendered with the default values
+        run: |
+          nix-shell --pure --run "./scripts/helm/test-template.sh" ./scripts/helm/shell.nix
