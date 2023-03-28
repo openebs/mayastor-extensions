@@ -1,10 +1,9 @@
-/// macros to define labels for upgrade operator.
+/// This is used to create labels for the upgrade job.
 #[macro_export]
 macro_rules! upgrade_labels {
-    ($s:expr) => {
+    () => {
         btreemap! {
-            APP => $s,
-            LABEL => $s,
+           "app" => UPGRADE_JOB_NAME_SUFFIX,
         }
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
@@ -13,36 +12,27 @@ macro_rules! upgrade_labels {
 }
 
 /// Append the release name to k8s objects.
-pub(crate) fn upgrade_group(release_name: &str, name: &str) -> String {
-    format!("{release_name}-{name}")
+pub(crate) fn upgrade_name_concat(release_name: &str, component_name: &str) -> String {
+    format!("{release_name}-{component_name}")
 }
 
-/// label used for upgrade operator.
-pub(crate) const APP: &str = "app.kubernetes.io/component";
-/// label used for upgrade operator.
-pub(crate) const LABEL: &str = "app";
-/// Upgrade operator.
-pub(crate) const UPGRADE_OPERATOR: &str = "operator-upgrade";
-
-/// Upgrade Job.
-pub(crate) const UPGRADE_JOB: &str = "upgrade-job";
-/// Service account name for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_SERVICE_ACCOUNT: &str = "operator-upgrade-service-account";
-/// Role constant for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_CLUSTER_ROLE: &str = "operator-upgrade-role";
-/// Role binding constant for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING: &str = "operator-upgrade-role-binding";
-///Job constant for upgrade.
-pub(crate) const UPGRADE_CONTROLLER_JOB: &str = "upgrade-job";
-/// Pod constant for upgrade job.
-pub(crate) const UPGRADE_CONTROLLER_JOB_POD: &str = "upgrade-pod";
-/// This is the upgrade-operator container image.
-pub(crate) const UPGRADE_IMAGE: &str = "openebs/mayastor-operator-upgrade:develop";
-/// The service port for upgrade operator.
-pub const UPGRADE_OPERATOR_HTTP_PORT: &str = "http";
-/// Defines the Label select for mayastor
+/// Upgrade job name suffix.
+pub(crate) const UPGRADE_JOB_NAME_SUFFIX: &str = "upgrade";
+/// ServiceAccount name suffix for upgrade job.
+pub(crate) const UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX: &str = "upgrade-service-account";
+/// ClusterRole name suffix for upgrade job.
+pub(crate) const UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX: &str = "upgrade-role";
+/// ClusterRoleBinding for upgrade job.
+pub(crate) const UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX: &str = "upgrade-role-binding";
+/// Upgrade job binary name.
+pub(crate) const UPGRADE_BINARY_NAME: &str = "upgrade-job";
+/// Upgrade job container name.
+pub(crate) const UPGRADE_JOB_CONTAINER_NAME: &str = "mayastor-upgrade-job";
+/// Upgrade job container image.
+pub(crate) const UPGRADE_JOB_IMAGE: &str = "openebs/mayastor-upgrade-job:develop";
+/// Defines the Label select for mayastor REST API.
 pub(crate) const API_REST_LABEL_SELECTOR: &str = "app=api-rest";
-/// Defines the default release name
+/// Defines the default helm chart release name.
 pub(crate) const DEFAULT_RELEASE_NAME: &str = "mayastor";
 /// Volumes with one replica
 pub(crate) const SINGLE_REPLICA_VOLUME: u8 = 1;

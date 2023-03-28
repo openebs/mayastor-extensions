@@ -1,8 +1,8 @@
 use crate::{
     constant::{
-        upgrade_group, API_REST_LABEL_SELECTOR, DEFAULT_RELEASE_NAME, UPGRADE_CONTROLLER_JOB,
-        UPGRADE_IMAGE, UPGRADE_OPERATOR_CLUSTER_ROLE, UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
-        UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+        upgrade_name_concat, API_REST_LABEL_SELECTOR, DEFAULT_RELEASE_NAME,
+        UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
+        UPGRADE_JOB_IMAGE, UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     upgrade_resources::objects,
 };
@@ -121,9 +121,9 @@ impl UpgradeResources {
     ) -> Result<(), kube::Error> {
         if let Some(sa) = self
             .service_account
-            .get_opt(&upgrade_group(
+            .get_opt(&upgrade_name_concat(
                 &self.release_name,
-                UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+                UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
             ))
             .await?
         {
@@ -139,7 +139,10 @@ impl UpgradeResources {
                     match self
                         .service_account
                         .delete(
-                            &upgrade_group(&self.release_name, UPGRADE_OPERATOR_SERVICE_ACCOUNT),
+                            &upgrade_name_concat(
+                                &self.release_name,
+                                UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+                            ),
                             &DeleteParams::default(),
                         )
                         .await
@@ -158,7 +161,7 @@ impl UpgradeResources {
                 Actions::Create => {
                     let ns = Some(ns.to_string());
                     let service_account =
-                        objects::upgrade_operator_service_account(ns, self.release_name.clone());
+                        objects::upgrade_job_service_account(ns, self.release_name.clone());
                     let pp = PostParams::default();
                     match self.service_account.create(&pp, &service_account).await {
                         Ok(sa) => {
@@ -185,9 +188,9 @@ impl UpgradeResources {
     pub async fn cluster_role_actions(&self, ns: &str, action: Actions) -> Result<(), kube::Error> {
         if let Some(cr) = self
             .cluster_role
-            .get_opt(&upgrade_group(
+            .get_opt(&upgrade_name_concat(
                 &self.release_name,
-                UPGRADE_OPERATOR_CLUSTER_ROLE,
+                UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
             ))
             .await?
         {
@@ -202,7 +205,10 @@ impl UpgradeResources {
                     match self
                         .cluster_role
                         .delete(
-                            &upgrade_group(&self.release_name, UPGRADE_OPERATOR_CLUSTER_ROLE),
+                            &upgrade_name_concat(
+                                &self.release_name,
+                                UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
+                            ),
                             &DeleteParams::default(),
                         )
                         .await
@@ -220,8 +226,7 @@ impl UpgradeResources {
             match action {
                 Actions::Create => {
                     let ns = Some(ns.to_string());
-                    let role =
-                        objects::upgrade_operator_cluster_role(ns, self.release_name.clone());
+                    let role = objects::upgrade_job_cluster_role(ns, self.release_name.clone());
                     let pp = PostParams::default();
                     match self.cluster_role.create(&pp, &role).await {
                         Ok(cr) => {
@@ -248,9 +253,9 @@ impl UpgradeResources {
     ) -> Result<(), kube::Error> {
         if let Some(crb) = self
             .cluster_role_binding
-            .get_opt(&upgrade_group(
+            .get_opt(&upgrade_name_concat(
                 &self.release_name,
-                UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
+                UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
             ))
             .await?
         {
@@ -265,9 +270,9 @@ impl UpgradeResources {
                     match self
                         .cluster_role_binding
                         .delete(
-                            &upgrade_group(
+                            &upgrade_name_concat(
                                 &self.release_name,
-                                UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
+                                UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
                             ),
                             &DeleteParams::default(),
                         )
@@ -286,10 +291,8 @@ impl UpgradeResources {
             match action {
                 Actions::Create => {
                     let ns = Some(ns.to_string());
-                    let role_binding = objects::upgrade_operator_cluster_role_binding(
-                        ns,
-                        self.release_name.clone(),
-                    );
+                    let role_binding =
+                        objects::upgrade_job_cluster_role_binding(ns, self.release_name.clone());
                     let pp = PostParams::default();
                     match self.cluster_role_binding.create(&pp, &role_binding).await {
                         Ok(crb) => {
@@ -317,7 +320,10 @@ impl UpgradeResources {
     ) -> Result<(), kube::Error> {
         if let Some(job) = self
             .job
-            .get_opt(&upgrade_group(&self.release_name, UPGRADE_CONTROLLER_JOB))
+            .get_opt(&upgrade_name_concat(
+                &self.release_name,
+                UPGRADE_JOB_NAME_SUFFIX,
+            ))
             .await?
         {
             match action {
@@ -332,7 +338,7 @@ impl UpgradeResources {
                     match self
                         .job
                         .delete(
-                            &upgrade_group(&self.release_name, UPGRADE_CONTROLLER_JOB),
+                            &upgrade_name_concat(&self.release_name, UPGRADE_JOB_NAME_SUFFIX),
                             &DeleteParams::default(),
                         )
                         .await
@@ -351,7 +357,7 @@ impl UpgradeResources {
                 Actions::Create => {
                     let upgrade_deploy = objects::upgrade_job(
                         ns,
-                        UPGRADE_IMAGE.to_string(),
+                        UPGRADE_JOB_IMAGE.to_string(),
                         self.release_name.clone(),
                         skip_data_plane_restart,
                     );
@@ -524,7 +530,10 @@ pub async fn upgrade_job_completed(ns: &str) -> Result<bool, Error> {
         Ok(uo) => {
             if let Some(job) = uo
                 .job
-                .get_opt(&upgrade_group(&uo.release_name, UPGRADE_CONTROLLER_JOB))
+                .get_opt(&upgrade_name_concat(
+                    &uo.release_name,
+                    UPGRADE_JOB_NAME_SUFFIX,
+                ))
                 .await?
             {
                 if matches!(

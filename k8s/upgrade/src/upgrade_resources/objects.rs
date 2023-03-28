@@ -1,15 +1,18 @@
 use crate::{
     constant::{
-        upgrade_group, APP, LABEL, UPGRADE_CONTROLLER_JOB_POD, UPGRADE_JOB, UPGRADE_OPERATOR,
-        UPGRADE_OPERATOR_CLUSTER_ROLE, UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
-        UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+        upgrade_name_concat, UPGRADE_BINARY_NAME, UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
+        UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX, UPGRADE_JOB_CONTAINER_NAME, UPGRADE_JOB_NAME_SUFFIX,
+        UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     upgrade_labels,
 };
 
 use k8s_openapi::api::{
     batch::v1::{Job, JobSpec},
-    core::v1::{Container, ContainerPort, EnvVar, PodSpec, PodTemplateSpec, ServiceAccount},
+    core::v1::{
+        Container, ContainerPort, EnvVar, EnvVarSource, ExecAction, ObjectFieldSelector, PodSpec,
+        PodTemplateSpec, Probe, ServiceAccount,
+    },
     rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject},
 };
 
@@ -17,17 +20,17 @@ use kube::core::ObjectMeta;
 use maplit::btreemap;
 use openapi::apis::IntoVec;
 
-/// Defines the upgrade-operator service account.
-pub(crate) fn upgrade_operator_service_account(
+/// Defines the upgrade job service account.
+pub(crate) fn upgrade_job_service_account(
     namespace: Option<String>,
     release_name: String,
 ) -> ServiceAccount {
     ServiceAccount {
         metadata: ObjectMeta {
-            labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
-            name: Some(upgrade_group(
+            labels: Some(upgrade_labels!()),
+            name: Some(upgrade_name_concat(
                 &release_name,
-                UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+                UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
             )),
             namespace,
             ..Default::default()
@@ -36,15 +39,18 @@ pub(crate) fn upgrade_operator_service_account(
     }
 }
 
-/// Defines the upgrade-operator cluster role.
-pub(crate) fn upgrade_operator_cluster_role(
+/// Defines the upgrade job cluster role.
+pub(crate) fn upgrade_job_cluster_role(
     namespace: Option<String>,
     release_name: String,
 ) -> ClusterRole {
     ClusterRole {
         metadata: ObjectMeta {
-            labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
-            name: Some(upgrade_group(&release_name, UPGRADE_OPERATOR_CLUSTER_ROLE)),
+            labels: Some(upgrade_labels!()),
+            name: Some(upgrade_name_concat(
+                &release_name,
+                UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
+            )),
             namespace,
             ..Default::default()
         },
@@ -118,6 +124,18 @@ pub(crate) fn upgrade_operator_cluster_role(
                 api_groups: Some(vec![""].into_vec()),
                 resources: Some(vec!["nodes"].into_vec()),
                 verbs: vec!["get", "list"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec![""].into_vec()),
+                resources: Some(vec!["namespaces"].into_vec()),
+                verbs: vec!["get"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec![""].into_vec()),
+                resources: Some(vec!["events"].into_vec()),
+                verbs: vec!["create"].into_vec(),
                 ..Default::default()
             },
             PolicyRule {
@@ -198,17 +216,17 @@ pub(crate) fn upgrade_operator_cluster_role(
     }
 }
 
-/// Defines the upgrade-operator cluster role binding.
-pub(crate) fn upgrade_operator_cluster_role_binding(
+/// Defines the upgrade job cluster role binding.
+pub(crate) fn upgrade_job_cluster_role_binding(
     namespace: Option<String>,
     release_name: String,
 ) -> ClusterRoleBinding {
     ClusterRoleBinding {
         metadata: ObjectMeta {
-            labels: Some(upgrade_labels!(UPGRADE_OPERATOR)),
-            name: Some(upgrade_group(
+            labels: Some(upgrade_labels!()),
+            name: Some(upgrade_name_concat(
                 &release_name,
-                UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING,
+                UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
             )),
             namespace: namespace.clone(),
             ..Default::default()
@@ -216,11 +234,11 @@ pub(crate) fn upgrade_operator_cluster_role_binding(
         role_ref: RoleRef {
             api_group: "rbac.authorization.k8s.io".to_string(),
             kind: "ClusterRole".to_string(),
-            name: upgrade_group(&release_name, UPGRADE_OPERATOR_CLUSTER_ROLE),
+            name: upgrade_name_concat(&release_name, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX),
         },
         subjects: Some(vec![Subject {
             kind: "ServiceAccount".to_string(),
-            name: upgrade_group(&release_name, UPGRADE_OPERATOR_SERVICE_ACCOUNT),
+            name: upgrade_name_concat(&release_name, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX),
             namespace,
             ..Default::default()
         }]),
@@ -244,17 +262,20 @@ pub(crate) fn upgrade_job(
 
     Job {
         metadata: ObjectMeta {
-            labels: Some(upgrade_labels!(UPGRADE_JOB)),
-            name: Some(upgrade_group(&release_name, UPGRADE_JOB)),
+            labels: Some(upgrade_labels!()),
+            name: Some(upgrade_name_concat(&release_name, UPGRADE_JOB_NAME_SUFFIX)),
             namespace: Some(namespace.to_string()),
             ..Default::default()
         },
         spec: Some(JobSpec {
+            // Backoff for unrecoverable errors, recoverable errors are handled by the Job process
+            // Investigate backoff with `kubectl -n <namespace> logs job/<job-name>`.
+            // Non-recoverable errors also often emit Job event, `kubectl mayastor get
+            // upgrade-status` fetches the most recent Job event.
+            backoff_limit: Some(6),
             template: PodTemplateSpec {
                 metadata: Some(ObjectMeta {
-                    labels: Some(
-                        btreemap! { LABEL.to_string() => UPGRADE_CONTROLLER_JOB_POD.to_string()},
-                    ),
+                    labels: Some(upgrade_labels!()),
                     ..Default::default()
                 }),
                 spec: Some(PodSpec {
@@ -263,23 +284,46 @@ pub(crate) fn upgrade_job(
                         args: Some(job_args),
                         image: Some(upgrade_image),
                         image_pull_policy: Some("Always".to_string()),
-                        name: UPGRADE_JOB.to_string(),
-                        command: Some(vec!["operator-upgrade".to_string()]),
+                        name: UPGRADE_JOB_CONTAINER_NAME.to_string(),
                         ports: Some(vec![ContainerPort {
                             container_port: 8080,
                             name: Some("http".to_string()),
                             ..Default::default()
                         }]),
-                        env: Some(vec![EnvVar {
-                            name: "RUST_LOG".to_string(),
-                            value: Some("info".to_string()),
+                        env: Some(vec![
+                            EnvVar {
+                                name: "RUST_LOG".to_string(),
+                                value: Some("info".to_string()),
+                                ..Default::default()
+                            },
+                            EnvVar {
+                                name: "POD_NAME".to_string(),
+                                value_from: Some(EnvVarSource {
+                                    field_ref: Some(ObjectFieldSelector {
+                                        field_path: "metadata.name".to_string(),
+                                        ..Default::default()
+                                    }),
+                                    ..Default::default()
+                                }),
+                                ..Default::default()
+                            },
+                        ]),
+                        liveness_probe: Some(Probe {
+                            exec: Some(ExecAction {
+                                command: Some(vec![
+                                    "pgrep".to_string(),
+                                    UPGRADE_BINARY_NAME.to_string(),
+                                ]),
+                            }),
+                            initial_delay_seconds: Some(10),
+                            period_seconds: Some(60),
                             ..Default::default()
-                        }]),
+                        }),
                         ..Default::default()
                     }],
-                    service_account_name: Some(upgrade_group(
+                    service_account_name: Some(upgrade_name_concat(
                         &release_name,
-                        UPGRADE_OPERATOR_SERVICE_ACCOUNT,
+                        UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
                     )),
                     ..Default::default()
                 }),
