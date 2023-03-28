@@ -44,7 +44,7 @@ pub struct UpgradeArgs {
     pub dry_run: bool,
 
     /// If set then upgrade will skip the io-engine pods restart
-    #[clap(global = true, long, short)]
+    #[clap(global = true, long, short, default_value_t = false)]
     skip_data_plane_restart: bool,
 
     /// If set then it will continue with upgrade without validating singla replica volume.
@@ -313,7 +313,7 @@ impl UpgradeResources {
         &self,
         ns: &str,
         action: Actions,
-        restart_data_plane: bool,
+        skip_data_plane_restart: bool,
     ) -> Result<(), kube::Error> {
         if let Some(job) = self
             .job
@@ -353,7 +353,7 @@ impl UpgradeResources {
                         ns,
                         UPGRADE_IMAGE.to_string(),
                         self.release_name.clone(),
-                        restart_data_plane,
+                        skip_data_plane_restart,
                     );
                     match self
                         .job
@@ -381,7 +381,7 @@ impl UpgradeResources {
     }
 
     /// Create the resources for upgrade
-    pub async fn create_upgrade_resources(ns: &str, restart_data_plane: bool) {
+    pub async fn create_upgrade_resources(ns: &str, skip_data_plane_restart: bool) {
         match UpgradeResources::new(ns).await {
             Ok(uo) => {
                 // Create Service Account
@@ -413,7 +413,7 @@ impl UpgradeResources {
 
                 // Create Service Account
                 let _job = uo
-                    .job_actions(ns, Actions::Create, restart_data_plane)
+                    .job_actions(ns, Actions::Create, skip_data_plane_restart)
                     .await
                     .map_err(|error| {
                         println!("Failed in creating Upgrade Job {error}");
