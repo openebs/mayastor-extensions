@@ -145,6 +145,16 @@ pipeline {
             sh 'nix-shell --pure --run "./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix'
           }
         }
+        stage('chart template test') {
+          when {
+            expression { helm_test == true }
+          }
+          agent { label 'nixos-mayastor' }
+          steps {
+            sh 'printenv'
+            sh 'nix-shell --pure --run "./scripts/helm/test-template.sh" ./scripts/helm/shell.nix'
+          }
+        }
         stage('image build test') {
           when {
             branch 'staging'

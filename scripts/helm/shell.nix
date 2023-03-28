@@ -15,5 +15,6 @@ mkShell {
     semver-tool
     yq-go
     helm-docs
+    kubernetes-helm-wrapped
   ];
 }
