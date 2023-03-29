@@ -133,7 +133,7 @@ pub(crate) fn upgrade_job_cluster_role(
                 ..Default::default()
             },
             PolicyRule {
-                api_groups: Some(vec![""].into_vec()),
+                api_groups: Some(vec!["events.k8s.io"].into_vec()),
                 resources: Some(vec!["events"].into_vec()),
                 verbs: vec!["create"].into_vec(),
                 ..Default::default()
