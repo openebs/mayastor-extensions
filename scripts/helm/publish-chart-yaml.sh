@@ -39,6 +39,7 @@ version()
 # Get the expected Chart version for the given branch
 # Example:
 # For 'develop', the Chart should be x.0.0-develop
+# For 'main', the Chart should be x.0.0-$date-$time, example: v0.0.0-2023-03-30-13-07-40
 # For 'release/2.0' the Chart should be 2.0.0
 branch_chart_version()
 {
@@ -46,6 +47,9 @@ branch_chart_version()
   if [ "$CHECK_BRANCH" == "develop" ]; then
     # Develop has no meaningful version
     echo "0.0.0"
+  elif [ "$CHECK_BRANCH" == "main" ]; then
+    # Main has no meaningful version, other than the date-time
+    echo "0.0.0-$DATE_TIME"
   elif [ "$RELEASE_V" != "${CHECK_BRANCH}" ]; then
     if [ "$(semver validate "$RELEASE_V")" == "valid" ]; then
       echo "$RELEASE_V"
@@ -108,6 +112,7 @@ Options:
   --override-index       <latest_version>         Override the latest chart version from the published chart's index.
   --index-file           <index_yaml>             Use the provided index.yaml instead of fetching from the git branch.
   --override-chart       <version> <app_version>  Override the Chart.yaml version and app version.
+  --date-time            <date-time>              The date-time in the format +"$DATE_TIME_FMT".
 
 Examples:
   $(basename "$0") --app-tag v2.0.0-alpha.0
@@ -136,6 +141,8 @@ INDEX_BRANCH_FILE="index.yaml"
 INDEX_FILE=
 DRY_RUN=
 DEVELOP_TO_REL=
+DATE_TIME_FMT="%Y-%m-%d-%H-%M-%S"
+DATE_TIME=${DATE_TIME:-$(date +"$DATE_TIME_FMT")}
 
 # Check if all needed tools are installed
 semver --version >/dev/null
@@ -183,6 +190,11 @@ while [ "$#" -gt 0 ]; do
       CHART_APP_VERSION=$1
       shift
       ;;
+    --date-time)
+      shift
+      DATE_TIME=$1
+      shift
+      ;;
     *)
       help
       die "Unknown option: $1"
@@ -227,7 +239,9 @@ fi
 
 if [ -n "$CHECK_BRANCH" ]; then
   if [ "$(semver get prerel "$APP_TAG")" != "" ]; then
-    die "Script expects Branch Name($APP_TAG) to point to a stable release"
+    if [ ! "$CHECK_BRANCH" == "main" ]; then
+        die "Script expects Branch Name($APP_TAG) to point to a stable release"
+    fi
   fi
   if [ -n "$DEVELOP_TO_REL" ]; then
     if [ "$CHART_VERSION" == "0.0.0" ]; then

@@ -15,11 +15,14 @@ CHART_FILE=${CHART_FILE:-"$ROOTDIR/chart/Chart.yaml"}
 INDEX_REMOTE="${INDEX_REMOTE:-origin}"
 INDEX_FILE=$(mktemp)
 DEBUG=${DEBUG:-}
+DATE_TIME_FMT="%Y-%m-%d-%H-%M-%S"
 
 trap "rm '$INDEX_FILE'" HUP QUIT EXIT TERM INT
 
 # Branch to check
 CHECK_BRANCH=
+# The $date-$time for the main branch
+DATE_TIME=
 # Upgrade from develop to release/x.y*
 DEVELOP_TO_REL=
 # Tag that has been pushed
@@ -90,6 +93,9 @@ call_script()
   else
     ARGS="--app-tag $APP_TAG $ARGS"
   fi
+  if [ -n "$DATE_TIME" ]; then
+      ARGS="--date-time $DATE_TIME $ARGS"
+  fi
   $SCRIPTDIR/publish-chart-yaml.sh $ARGS
 }
 
@@ -132,6 +138,7 @@ test_one()
   fi
 
   CHECK_BRANCH=
+  DATE_TIME=
   DEVELOP_TO_REL=
   APP_TAG=
   CHART_VERSION=
@@ -147,6 +154,13 @@ APP_TAG=0.0.0
 CHART_VERSION=0.0.0
 CHART_APP_VERSION=0.0.0
 test_one "Develop is special"
+
+CHECK_BRANCH=main
+DATE_TIME=$(date +"$DATE_TIME_FMT")
+APP_TAG=0.0.0-$DATE_TIME
+CHART_VERSION=0.0.0
+CHART_APP_VERSION=0.0.0
+test_one "Main is special"
 
 CHECK_BRANCH=release/2.0
 APP_TAG=2.0.0
