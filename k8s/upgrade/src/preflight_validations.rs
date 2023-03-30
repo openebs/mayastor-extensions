@@ -14,7 +14,7 @@ pub async fn preflight_check(
     ignore_single_replica: bool,
     skip_replica_rebuild: bool,
 ) -> Result<(), error::Error> {
-    console_logger::info(user_prompt::UPGRADE_WARNING);
+    console_logger::info(user_prompt::UPGRADE_WARNING, "");
     // Initialise the REST client.
     let config = kube_proxy::ConfigBuilder::default_api_rest()
         .with_kube_config(kube_config_path.clone())
