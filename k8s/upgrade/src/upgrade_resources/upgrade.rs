@@ -1,16 +1,23 @@
 use crate::{
     constant::{
-        upgrade_name_concat, API_REST_LABEL_SELECTOR, DEFAULT_RELEASE_NAME,
+        upgrade_image_concat, upgrade_name_concat, AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR,
+        API_REST_POD_LABEL, DEFAULT_RELEASE_NAME, IO_ENGINE_POD_LABEL,
         UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
-        UPGRADE_JOB_IMAGE, UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+        UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_IMAGE_TAG,
+        UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     upgrade_resources::objects,
+    user_prompt::{
+        upgrade_dry_run_summary, CONTROL_PLANE_PODS_LIST, DATA_PLANE_PODS_LIST,
+        DATA_PLANE_PODS_LIST_SKIP_RESTART, UPGRADE_DRY_RUN_SUMMARY,
+    },
 };
+
 use anyhow::Error;
 use k8s_openapi::api::{
     apps::v1::Deployment,
     batch::v1::Job,
-    core::v1::{PersistentVolumeClaim, ServiceAccount},
+    core::v1::{PersistentVolumeClaim, Pod, ServiceAccount},
     rbac::v1::{ClusterRole, ClusterRoleBinding},
 };
 use kube::{
@@ -45,7 +52,7 @@ pub struct UpgradeArgs {
 
     /// If set then upgrade will skip the io-engine pods restart
     #[clap(global = true, long, short, default_value_t = false)]
-    skip_data_plane_restart: bool,
+    pub skip_data_plane_restart: bool,
 
     /// If set then it will continue with upgrade without validating singla replica volume.
     #[clap(global = true, long)]
@@ -75,6 +82,52 @@ impl UpgradeArgs {
             }
         }
     }
+
+    ///  Dummy upgrade the resources.
+    pub async fn dummy_apply(&self, namespace: &str) -> Result<(), Error> {
+        let mut pods_names: Vec<String> = Vec::new();
+        list_pods(AGENT_CORE_POD_LABEL, namespace, &mut pods_names).await?;
+        list_pods(API_REST_POD_LABEL, namespace, &mut pods_names).await?;
+        console_logger::info(CONTROL_PLANE_PODS_LIST, &pods_names.join("\n"));
+
+        let mut io_engine_pods_names: Vec<String> = Vec::new();
+        list_pods(IO_ENGINE_POD_LABEL, namespace, &mut io_engine_pods_names).await?;
+        if self.skip_data_plane_restart {
+            console_logger::info(
+                DATA_PLANE_PODS_LIST_SKIP_RESTART,
+                &io_engine_pods_names.join("\n"),
+            );
+        } else {
+            console_logger::info(DATA_PLANE_PODS_LIST, &io_engine_pods_names.join("\n"));
+        }
+        console_logger::info(
+            upgrade_dry_run_summary(UPGRADE_DRY_RUN_SUMMARY, UPGRADE_JOB_IMAGE_TAG).as_str(),
+            "",
+        );
+        Ok(())
+    }
+}
+
+pub async fn list_pods(
+    label: &str,
+    namespace: &str,
+    pods_names: &mut Vec<String>,
+) -> Result<(), Error> {
+    let client = Client::try_default().await?;
+    let pods: Api<Pod> = Api::namespaced(client.clone(), namespace);
+    let pod_list: ObjectList<Pod> = pods.list(&ListParams::default().labels(label)).await?;
+
+    for pod in pod_list.iter() {
+        // Fetch the pod name
+        let pod_name = pod
+            .metadata
+            .name
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("pod.metadata.name is empty"))?
+            .as_str();
+        let _ = &pods_names.push(pod_name.to_string());
+    }
+    Ok(())
 }
 
 /// Arguments to be passed for upgrade.
@@ -357,7 +410,11 @@ impl UpgradeResources {
                 Actions::Create => {
                     let upgrade_deploy = objects::upgrade_job(
                         ns,
-                        UPGRADE_JOB_IMAGE.to_string(),
+                        upgrade_image_concat(
+                            UPGRADE_JOB_IMAGE_REPO,
+                            UPGRADE_JOB_IMAGE_NAME,
+                            UPGRADE_JOB_IMAGE_TAG,
+                        ),
                         self.release_name.clone(),
                         skip_data_plane_restart,
                     );

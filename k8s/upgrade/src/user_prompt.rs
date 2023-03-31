@@ -9,3 +9,24 @@ pub const SINGLE_REPLICA_VOLUME_WARNING: &str =  "\nThe list below shows the sin
 
 /// Warning to users before doing an upgrade.
 pub const CORDONED_NODE_WARNING: &str =  "\nBelow are the list of cordoned nodes. Since there are some cordoned nodes, \nthe rebuild will happen on another nodes so please have enough available free space or else the rebuild will get stuck forever.";
+
+/// Info about the control plane pods.
+pub const CONTROL_PLANE_PODS_LIST: &str =
+    "\nList of control plane pods which will be restarted during upgrade.";
+
+/// Info about the data plane pods.
+pub const DATA_PLANE_PODS_LIST: &str =
+    "\nList of data plane pods which will be restarted during upgrade.";
+
+/// Info about the data plane pods.
+pub const DATA_PLANE_PODS_LIST_SKIP_RESTART: &str =
+    "\nList of data plane pods which need to be manually restarted to reflect upgrade as --skip-data-plane-restart flag is passed during upgrade.";
+
+/// Append the release name to k8s objects.
+pub(crate) fn upgrade_dry_run_summary(message: &str, tag: &str) -> String {
+    format!("{message} : {tag}")
+}
+
+/// Info about the data plane pods.
+pub const UPGRADE_DRY_RUN_SUMMARY: &str =
+    "\nFinally the cluster deployment will be upgraded to version";
