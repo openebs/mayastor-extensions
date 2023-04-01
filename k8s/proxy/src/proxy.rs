@@ -35,8 +35,6 @@ pub struct ApiRest {}
 pub struct Etcd {}
 /// Internal for type-state.
 pub struct Loki {}
-/// Internal for type-state.
-pub struct Upgrade {}
 
 /// The scheme component of the URI.
 pub enum Scheme {
@@ -126,26 +124,6 @@ impl Default for ConfigBuilder<Loki> {
     }
 }
 
-impl Default for ConfigBuilder<Upgrade> {
-    fn default() -> Self {
-        Self {
-            kube_config: None,
-            target: kube_forward::Target::new(
-                kube_forward::TargetSelector::ServiceLabel(
-                    utils::UPGRADE_OPERATOR_LABEL.to_string(),
-                ),
-                utils::UPGRADE_OPERATOR_HTTP_PORT,
-                utils::DEFAULT_NAMESPACE,
-            ),
-            timeout: Some(std::time::Duration::from_secs(5)),
-            jwt: None,
-            method: ForwardingProxy::HTTP,
-            scheme: Scheme::HTTP,
-            builder_target: Default::default(),
-        }
-    }
-}
-
 impl ConfigBuilder<ApiRest> {
     /// Returns a `Self` with sane defaults for the api-rest.
     pub fn default_api_rest() -> ConfigBuilder<ApiRest> {
@@ -159,16 +137,9 @@ impl ConfigBuilder<Etcd> {
     }
 }
 impl ConfigBuilder<Loki> {
-    /// Returns a `Self` with sane defaults for the etcd.
+    /// Returns a `Self` with sane defaults for the Loki.
     pub fn default_loki() -> ConfigBuilder<Loki> {
         ConfigBuilder::<Loki>::default()
-    }
-}
-
-impl ConfigBuilder<Upgrade> {
-    /// Returns a `Self` with sane defaults for the etcd.
-    pub fn default_upgrade() -> ConfigBuilder<Upgrade> {
-        ConfigBuilder::<Upgrade>::default()
     }
 }
 

@@ -14,7 +14,10 @@ use std::{env, path::PathBuf};
 mod resources;
 use crate::resources::GetResourcesK8s;
 use resources::Operations;
-use upgrade::preflight_validations;
+use upgrade::{
+    preflight_validations,
+    upgrade_resources::upgrade::{DeleteResources, Upgrade},
+};
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
@@ -167,6 +170,12 @@ async fn execute(cli_args: CliArgs) {
                     resources.apply(&cli_args.namespace).await;
                 }
             }
+
+            Operations::Delete(resource) => match resource {
+                DeleteResources::Upgrade => {
+                    Upgrade::delete(&cli_args.namespace).await;
+                }
+            },
         };
     };
 
