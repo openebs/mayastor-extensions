@@ -1,7 +1,7 @@
 use crate::collect::{
     constants::ETCD_PAGED_LIMIT, k8s_resources::client::ClientSet, persistent_store::EtcdError,
 };
-use pstor::{etcd, StoreKv};
+use pstor::{etcd, StoreKv, API_VERSION};
 use std::{io::Write, path::PathBuf};
 
 /// EtcdStore is used to abstract connection to etcd database for dumping the contents
@@ -24,7 +24,7 @@ impl EtcdStore {
         let platform_info = platform::k8s::K8s::from(client_set.kube_client())
             .await
             .map_err(|e| EtcdError::Custom(format!("Failed to get k8s platform info: {e}")))?;
-        let key_prefix = pstor::build_key_prefix(&platform_info, 0);
+        let key_prefix = pstor::build_key_prefix(&platform_info, API_VERSION);
 
         // if an endpoint is provided it will be used, else the kubeconfig path will be used
         // to find the endpoint of the headless etcd service
