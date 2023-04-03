@@ -265,7 +265,8 @@ io_engine:
     enabled: false
   # -- The number of cores that each io-engine instance will bind to.
   cpuCount: "2"
-  # -- Overrides the cpuCount and explicitly sets the list of cores.
+  # -- If not empty, overrides the cpuCount and explicitly sets the list of cores.
+  # Example: --set='io_engine.coreList={30,31}'
   coreList: []
   # -- Node selectors to designate storage nodes for diskpool creation
   # Note that if multi-arch images support 'kubernetes.io/arch: amd64'
@@ -351,9 +352,13 @@ etcd:
   # extra debug information on logs
   debug: false
   initialClusterState: "new"
-  # Pod anti-affinity preset
+
+  # -- Pod anti-affinity preset
   # Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
   podAntiAffinityPreset: "hard"
+  ## -- nodeSelector [object] Node labels for pod assignment
+  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  nodeSelector: {}
 
   # etcd service parameters defines how the etcd service is exposed
   service:
