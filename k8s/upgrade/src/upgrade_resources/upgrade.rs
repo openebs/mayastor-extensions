@@ -27,11 +27,32 @@ use kube::{
 };
 use std::collections::HashSet;
 
-/// The types of resources that support the upgrade operator.
+/// Arguments to be passed for upgrade.
 #[derive(clap::Subcommand, Debug)]
-pub enum UpgradeOperator {
-    /// Install, Uninstall upgrade resources.
-    UpgradeOperator,
+pub enum DeleteResources {
+    /// Delete upgrade resources
+    Upgrade,
+}
+
+/// Upgrade resource.
+#[derive(clap::Args, Debug)]
+pub struct Upgrade {}
+
+impl Upgrade {
+    /// Delete the upgrade resources
+    pub async fn delete(ns: &str) {
+        // Delete upgrade resources once job completes
+        match upgrade_job_completed(ns).await {
+            Ok(job_completed) => {
+                if job_completed {
+                    UpgradeResources::delete_upgrade_resources(ns).await;
+                }
+            }
+            Err(error) => {
+                eprintln!("Failure: {error}");
+            }
+        }
+    }
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -68,19 +89,6 @@ impl UpgradeArgs {
     pub async fn apply(&self, namespace: &str) {
         // Create resources for upgrade
         UpgradeResources::create_upgrade_resources(namespace, self.skip_data_plane_restart).await;
-
-        // Delete upgrade resources once job completes
-        match upgrade_job_completed(namespace).await {
-            Ok(job_completed) => {
-                if job_completed {
-                    UpgradeResources::delete_upgrade_resources(namespace).await;
-                }
-            }
-            Err(error) => {
-                println!("Failed in fething upgrade job {error}");
-                std::process::exit(1);
-            }
-        }
     }
 
     ///  Dummy upgrade the resources.
@@ -585,28 +593,34 @@ pub async fn get_release_name(ns: &str) -> Result<String, Error> {
 pub async fn upgrade_job_completed(ns: &str) -> Result<bool, Error> {
     match UpgradeResources::new(ns).await {
         Ok(uo) => {
-            if let Some(job) = uo
+            let job_name = upgrade_name_concat(&uo.release_name, UPGRADE_JOB_NAME_SUFFIX);
+            let option_job = uo
                 .job
-                .get_opt(&upgrade_name_concat(
-                    &uo.release_name,
-                    UPGRADE_JOB_NAME_SUFFIX,
-                ))
-                .await?
-            {
-                if matches!(
-                    job.status
-                        .as_ref()
-                        .ok_or_else(|| anyhow::anyhow!("job.status is empty"))?
-                        .succeeded
-                        .as_ref()
-                        .ok_or_else(|| anyhow::anyhow!("job.status.succeeded is empty"))?,
-                    1
-                ) {
-                    return Ok(true);
+                .get_opt(&job_name)
+                .await
+                .map_err(|err| anyhow::anyhow!(err.to_string()))?;
+            match option_job {
+                Some(job) => {
+                    if matches!(
+                        job.status
+                            .as_ref()
+                            .ok_or_else(|| anyhow::anyhow!("upgrade job.status is empty"))?
+                            .succeeded
+                            .as_ref()
+                            .ok_or_else(|| anyhow::anyhow!("upgrade job has not completed yet."))?,
+                        1
+                    ) {
+                        return Ok(true);
+                    }
+                }
+                None => {
+                    eprintln!("Upgrade job {job_name} in namespace {ns} does not exist");
                 }
             }
         }
-        Err(error) => return Err(error),
+        Err(error) => {
+            return Err(error);
+        }
     }
     Ok(false)
 }
