@@ -1,9 +1,8 @@
 use crate::{
-    constant::SINGLE_REPLICA_VOLUME, upgrade_lib, upgrade_resources::upgrade::get_pvc_from_uuid,
-    user_prompt,
+    constant::SINGLE_REPLICA_VOLUME, error::Error, upgrade_lib,
+    upgrade_resources::upgrade::get_pvc_from_uuid, user_prompt,
 };
 use openapi::models::CordonDrainState;
-use operators::upgrade::common::error;
 use std::{collections::HashSet, path::PathBuf};
 use tracing::error;
 
@@ -13,14 +12,20 @@ pub async fn preflight_check(
     timeout: humantime::Duration,
     ignore_single_replica: bool,
     skip_replica_rebuild: bool,
-) -> Result<(), error::Error> {
+) -> Result<(), Error> {
     console_logger::info(user_prompt::UPGRADE_WARNING, "");
     // Initialise the REST client.
     let config = kube_proxy::ConfigBuilder::default_api_rest()
         .with_kube_config(kube_config_path.clone())
         .with_timeout(*timeout)
         .build()
-        .await?;
+        .await
+        .map_err(|error| Error::OpenapiClientConfigurationErr {
+            source: anyhow::anyhow!(
+                "Failed to create openapi configuration, Error: '{:?}'",
+                error
+            ),
+        })?;
 
     let rest_client = upgrade_lib::RestClient::new_with_config(config);
 
@@ -38,14 +43,14 @@ pub async fn preflight_check(
 /// Check for already cordoned node
 pub async fn already_cordoned_nodes_validation(
     client: &upgrade_lib::RestClient,
-) -> Result<(), error::Error> {
+) -> Result<(), Error> {
     let mut cordoned_nodes_list = Vec::new();
     let nodes = client.nodes_api().get_nodes().await?;
     let nodelist = nodes.into_body();
     for node in nodelist {
         let node_spec = match node.spec {
             Some(node_spec) => node_spec,
-            None => return Err(error::Error::NodeSpecNotPresent { node: node.id }),
+            None => return Err(Error::NodeSpecNotPresent { node: node.id }),
         };
         if matches!(
             node_spec.cordondrainstate,
@@ -66,7 +71,7 @@ pub async fn already_cordoned_nodes_validation(
 /// Check single replica volumes.
 pub async fn single_volume_replica_validation(
     client: &upgrade_lib::RestClient,
-) -> Result<(), error::Error> {
+) -> Result<(), Error> {
     // let mut single_replica_volumes = Vec::new();
     // The number of volumes to get per request.
     let max_entries = 200;
@@ -107,10 +112,8 @@ pub async fn single_volume_replica_validation(
 }
 
 /// Prompt to user if any rebuild in progress.
-pub async fn rebuild_in_progress_validation(
-    client: &upgrade_lib::RestClient,
-) -> Result<(), error::Error> {
-    if rebuild_in_progress(client).await? {
+pub async fn rebuild_in_progress_validation(client: &upgrade_lib::RestClient) -> Result<(), Error> {
+    if is_rebuild_in_progress(client).await? {
         console_logger::warn(user_prompt::REBUILD_WARNING, "");
         std::process::exit(1);
     }
@@ -118,7 +121,7 @@ pub async fn rebuild_in_progress_validation(
 }
 
 /// Check for rebuild in progress.
-pub async fn rebuild_in_progress(client: &upgrade_lib::RestClient) -> Result<bool, error::Error> {
+pub async fn is_rebuild_in_progress(client: &upgrade_lib::RestClient) -> Result<bool, Error> {
     // The number of volumes to get per request.
     let max_entries = 200;
     let mut starting_token = Some(0_isize);

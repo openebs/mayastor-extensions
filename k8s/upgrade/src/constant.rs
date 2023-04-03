@@ -1,3 +1,5 @@
+use utils::version_info;
+
 /// This is used to create labels for the upgrade job.
 #[macro_export]
 macro_rules! upgrade_labels {
@@ -12,8 +14,37 @@ macro_rules! upgrade_labels {
 }
 
 /// Append the release name to k8s objects.
-pub(crate) fn upgrade_name_concat(release_name: &str, component_name: &str) -> String {
-    format!("{release_name}-{component_name}")
+pub(crate) fn upgrade_name_concat(
+    release_name: &str,
+    component_name: &str,
+    upgrade_to_branch: Option<&String>,
+) -> String {
+    let version = match upgrade_to_branch {
+        Some(tag) => tag.to_string(),
+        None => get_image_tag(),
+    };
+    format!("{release_name}-{component_name}-{version}")
+}
+
+/// Fetch the image tag to append to upgrade resources.
+pub(crate) fn get_image_tag() -> String {
+    let version = release_version();
+    match version {
+        Some(upgrade_job_image_tag) => {
+            let tag: Vec<_> = upgrade_job_image_tag.split('.').collect();
+            let major = *(tag.first().unwrap_or(&""));
+            let minor = *(tag.get(1).unwrap_or(&""));
+            let patch = *(tag.get(2).unwrap_or(&""));
+            format!("v{major}-{minor}-{patch}")
+        }
+        None => UPGRADE_JOB_TO_DEVELOP_TAG.to_string(),
+    }
+}
+
+/// Returns the git tag version (if tag is found) or simply returns the commit hash (12 characters).
+pub(crate) fn release_version() -> Option<String> {
+    let version_info = version_info!();
+    version_info.version_tag
 }
 
 /// Append the tag to image in upgrade.
@@ -21,8 +52,8 @@ pub(crate) fn upgrade_image_concat(image_repo: &str, image_name: &str, image_tag
     format!("{image_repo}/{image_name}:{image_tag}")
 }
 
-/// Upgrade job container image tag.
-pub(crate) const UPGRADE_JOB_IMAGE_TAG: &str = "develop";
+/// Upgrade conatainers to develop.
+pub(crate) const UPGRADE_JOB_TO_DEVELOP_TAG: &str = "develop";
 /// Upgrade job container image repository.
 pub(crate) const UPGRADE_JOB_IMAGE_REPO: &str = "openebs";
 /// Upgrade job container image name.
