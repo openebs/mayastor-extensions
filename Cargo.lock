@@ -3724,8 +3724,10 @@ dependencies = [
  "operators",
  "serde",
  "serde_json",
+ "thiserror",
  "tower",
  "tracing",
+ "utils",
 ]
 
 [[package]]
