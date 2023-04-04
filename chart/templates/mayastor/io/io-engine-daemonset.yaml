@@ -28,6 +28,9 @@ spec:
       # To resolve services in the namespace
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector: {{- .Values.io_engine.nodeSelector | toYaml | nindent 8 }}
+      {{- if .Values.io_engine.priorityClassName }}
+      priorityClassName: {{ .Values.io_engine.priorityClassName }}
+      {{- end }}
       initContainers:
         {{- include "base_init_containers" . }}
       containers:

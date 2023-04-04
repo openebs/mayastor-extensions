@@ -31,6 +31,9 @@ spec:
       hostNetwork: true
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
       nodeSelector:
         {{- if .Values.nodeSelector }}
         {{- toYaml .Values.nodeSelector | nindent 8 }}
