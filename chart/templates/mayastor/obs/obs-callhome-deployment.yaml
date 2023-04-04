@@ -23,6 +23,9 @@ spec:
       serviceAccount: {{ .Release.Name }}-service-account
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
       {{- if .Values.nodeSelector }}
       nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}
