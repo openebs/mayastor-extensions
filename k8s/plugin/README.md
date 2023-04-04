@@ -16,8 +16,42 @@ To make the plugin as intuitive as possible, every attempt has been made to make
 
 The general command structure is `kubectl mayastor <operation> <resource>` where the operation defines what should be performed (i.e. `get`, `scale`) and the resource defines what the operation should be performed on (i.e. `volumes`, `pools`).
 
-The plugin needs to be able to connect to the REST server in order to make the appropriate REST calls. The IP address and port number of the REST server can be provided through the use of the `--rest` command line argument. If the `--rest` argument is omitted, the plugin will attempt to make use of the kubeconfig file to determine the IP of the master node of the cluster. Should the kubeconfig file contain multiple clusters, then the first cluster will be selected.
+Here is the top-level help which includes global options:
+```
+The types of operations that are supported
 
+Usage: kubectl-mayastor [OPTIONS] <COMMAND>
+
+Commands:
+  drain      'Drain' resources
+  get        'Get' resources
+  scale      'Scale' resources
+  cordon     'Cordon' resources
+  uncordon   'Uncordon' resources
+  dump       `Dump` resources
+  install    `Install` resources
+  uninstall  `Uninstall` resources
+  upgrade    `Upgrade` resources
+  help       Print this message or the help of the given subcommand(s)
+
+Options:
+  -r, --rest <REST>
+          The rest endpoint to connect to
+  -k, --kube-config-path <KUBE_CONFIG_PATH>
+          Path to kubeconfig file
+  -o, --output <OUTPUT>
+          The Output, viz yaml, json [default: none]
+  -j, --jaeger <JAEGER>
+          Trace rest requests to the Jaeger endpoint agent
+  -t, --timeout <TIMEOUT>
+          Timeout for the REST operations [default: 10s]
+  -n, --namespace <NAMESPACE>
+          Kubernetes namespace of mayastor service, defaults to mayastor [default: mayastor]
+  -h, --help
+          Print help
+  -V, --version
+          Print version
+```
 
 ### Examples and Outputs
 
@@ -28,39 +62,39 @@ The plugin needs to be able to connect to the REST server in order to make the a
 1. Get Volumes
 ```
 ❯ kubectl mayastor get volumes
- ID                                    REPLICAS TARGET-NODE  ACCESSIBILITY STATUS  SIZE
- 18e30e83-b106-4e0d-9fb6-2b04e761e18a  4        mayastor-1   nvmf          Online  10485761
- 0c08667c-8b59-4d11-9192-b54e27e0ce0f  4        mayastor-2   <none>        Online  10485761
+ ID                                    REPLICAS TARGET-NODE  ACCESSIBILITY STATUS  SIZE     THIN-PROVISIONED ALLOCATED
+ 18e30e83-b106-4e0d-9fb6-2b04e761e18a  4        kworker1     nvmf          Online  1GiB     true             8MiB
+ 0c08667c-8b59-4d11-9192-b54e27e0ce0f  4        kworker2     <none>        Online  381.6MiB false            384MiB
 
 ```
 2. Get Volume by ID
 ```
 ❯ kubectl mayastor get volume 18e30e83-b106-4e0d-9fb6-2b04e761e18a
- ID                                    REPLICAS TARGET-NODE  ACCESSIBILITY STATUS  SIZE
- 18e30e83-b106-4e0d-9fb6-2b04e761e18a  4        mayastor-1   nvmf          Online  10485761
+ ID                                    REPLICAS TARGET-NODE  ACCESSIBILITY STATUS  SIZE     THIN-PROVISIONED ALLOCATED
+ 18e30e83-b106-4e0d-9fb6-2b04e761e18a  4        kworker1     nvmf          Online  1GiB     true             8MiB
 
 ```
 3. Get Pools
 ```
 ❯ kubectl mayastor get pools
- ID               TOTAL CAPACITY  USED CAPACITY  DISKS                                                     NODE      STATUS  MANAGED
- mayastor-pool-1  5360320512      1111490560     aio:///dev/vdb?uuid=d8a36b4b-0435-4fee-bf76-f2aef980b833  kworker1  Online  true
- mayastor-pool-2  5360320512      2172649472     aio:///dev/vdc?uuid=bb12ec7d-8fc3-4644-82cd-dee5b63fc8c5  kworker1  Online  true
- mayastor-pool-3  5360320512      3258974208     aio:///dev/vdb?uuid=f324edb7-1aca-41ec-954a-9614527f77e1  kworker2  Online  false
+ ID               DISKS                                                     MANAGED  NODE      STATUS  CAPACITY  ALLOCATED  AVAILABLE
+ pool-1-kworker1  aio:///dev/vdb?uuid=d8a36b4b-0435-4fee-bf76-f2aef980b833  true     kworker1  Online  500GiB    100GiB     400GiB
+ pool-1-kworker2  aio:///dev/vdc?uuid=bb12ec7d-8fc3-4644-82cd-dee5b63fc8c5  true     kworker1  Online  500GiB    100GiB     400GiB
+ pool-1-kworker2  aio:///dev/vdb?uuid=f324edb7-1aca-41ec-954a-9614527f77e1  true     kworker2  Online  500GiB    100GiB     400GiB
 ```
 4. Get Pool by ID
 ```
-❯ kubectl mayastor get pool mayastor-pool-1
- ID               TOTAL CAPACITY  USED CAPACITY  DISKS                                                     NODE      STATUS  MANAGED
- mayastor-pool-1  5360320512      1111490560     aio:///dev/vdb?uuid=d8a36b4b-0435-4fee-bf76-f2aef980b833  kworker1  Online  true
+❯ kubectl mayastor get pool pool-1-kworker1
+ ID               DISKS                                                     MANAGED  NODE      STATUS  CAPACITY  ALLOCATED  AVAILABLE
+ pool-1-kworker1  aio:///dev/vdb?uuid=d8a36b4b-0435-4fee-bf76-f2aef980b833  true     kworker1  Online  500GiB    100GiB     400GiB
 ```
 5. Get Nodes
 ```
 ❯ kubectl mayastor get nodes
  ID          GRPC ENDPOINT   STATUS   CORDONED
- mayastor-2  10.1.0.7:10124  Online   false
- mayastor-1  10.1.0.6:10124  Online   false
- mayastor-3  10.1.0.8:10124  Online   false
+ kworker1    10.1.0.7:10124  Online   false
+ kworker2    10.1.0.6:10124  Online   false
+ kworker3    10.1.0.8:10124  Online   false
 ```
 6. Get Node by ID
 ```
@@ -79,30 +113,30 @@ The plugin needs to be able to connect to the REST server in order to make the a
 ```
 ❯ kubectl mayastor -oyaml get pools
 ---
-- id: mayastor-pool-1
+- id: pool-1-kworker1
   state:
     capacity: 5360320512
     disks:
       - "aio:///dev/vdb?uuid=d8a36b4b-0435-4fee-bf76-f2aef980b833"
-    id: mayastor-pool-1
+    id: pool-1-kworker1
     node: kworker1
     status: Online
     used: 1111490560
-- id: mayastor-pool-2
+- id: pool-1-kworker2
   state:
     capacity: 5360320512
     disks:
       - "aio:///dev/vdc?uuid=bb12ec7d-8fc3-4644-82cd-dee5b63fc8c5"
-    id: mayastor-pool-2
+    id: pool-1-kworker-2
     node: kworker1
     status: Online
     used: 2185232384
-- id: mayastor-pool-3
+- id: pool-1-kworker3
   state:
     capacity: 5360320512
     disks:
       - "aio:///dev/vdb?uuid=f324edb7-1aca-41ec-954a-9614527f77e1"
-    id: mayastor-pool-3
+    id: pool-1-kworker-3
     node: kworker2
     status: Online
     used: 3258974208
@@ -110,23 +144,35 @@ The plugin needs to be able to connect to the REST server in order to make the a
 8. Replica topology for a specific volume
 ```
 ❯ kubectl mayastor get volume-replica-topology ec4e66fd-3b33-4439-b504-d49aba53da26
- ID                                    NODE      POOL              STATUS
- 93b1e1e9-ffcd-4c56-971e-294a530ea5cd  ksnode-2  pool-on-ksnode-2  Online
- 88d89a92-40cf-4147-97d4-09e64979f548  ksnode-3  pool-on-ksnode-3  Online
+ ID                                    NODE      POOL             STATUS  CAPACITY  ALLOCATED  CHILD-STATUS  CHILD-STATUS-REASON  REBUILD
+ b32769b8-e5b3-4e1c-9db0-89867470f6eb  kworker1  pool-1-kworker1  Online  384MiB    8MiB       Degraded      <none>               75 %
+ d3856829-22b3-414d-a01b-4b6467db14fb  kworker2  pool-1-kworker2  Online  384MiB    8MiB       Online        <none>               <none>
 ```
 
-9. Get BlockDevices by NodeID
+9. Replica topology for all volumes
 ```
-❯ kubectl mayastor get block-devices worker-node1 --all
+❯ kubectl mayastor get volume-replica-topologies
+VOLUME-ID                              ID                                    NODE      POOL             STATUS  CAPACITY  ALLOCATED  CHILD-STATUS  CHILD-STATUS-REASON  REBUILD
+ c05ef923-a320-468c-b426-a260c1d84107  b58e1975-633f-4b34-9611-b648babf76a8  kworker1  pool-1-kworker1  Online  60MiB     36MiB      Degraded      OutOfSpace           <none>
+ ├─                                    67a6ec31-5923-490f-84b7-0be1df3bfb53  kworker2  pool-1-kworker2  Online  60MiB     60MiB      Online        <none>               <none>
+ └─                                    553aeb7c-4be4-4391-a403-ad241d96711f  kworker3  pool-1-kworker3  Online  60MiB     60MiB      Online        <none>               <none>
+ 83241cc8-5dca-4bf1-b55a-c427c3e9b4a1  adde358f-70cd-4a2d-9dfb-f40d6663ecbc  kworker1  pool-1-kworker1  Online  20MiB     16MiB      Degraded      <none>               51%
+ ├─                                    b5ff41b8-1a0a-4bc7-84bb-5bfdfe72a71e  kworker2  pool-1-kworker2  Online  60MiB     60MiB      Online        <none>               <none>
+ └─                                    39431c11-0eea-48e7-970f-a2359ebbb9d1  kworker3  pool-1-kworker3  Online  60MiB     60MiB      Online        <none>               <none>
+```
+
+10. Get BlockDevices by NodeID
+```
+❯ kubectl mayastor get block-devices kworker1 --all
  DEVNAME          DEVTYPE    SIZE       AVAILABLE  MODEL                       DEVPATH                                                         FSTYPE  FSUUID  MOUNTPOINT  PARTTYPE                              MAJOR            MINOR                                     DEVLINKS
- /dev/nvme1n1     disk       4194304    no         Amazon Elastic Block Store  /devices/pci0000:00/0000:00:1f.0/nvme/nvme1/nvme1n1             259     4       ext4        4616cd08-7a7d-49fe-ae6d-908f9e864fc7                                                             "/dev/disk/by-uuid/4616cd08-7a7d-49fe-ae6d-908f9e864fc7", "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol04bfba0a58c4ffdae", "/dev/disk/by-id/nvme-nvme.1d0f-766f6c303462666261306135386334666664
- /dev/nvme4n1     disk       20971520   yes        Amazon Elastic Block Store  /devices/pci0000:00/0000:00:1d.0/nvme/nvme4/nvme4n1             259     12                                                                                                                   "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol06eb486c9593587a9", "/dev/disk/by-id/nvme-nvme.1d0f-766f6c3036656234383663393539333538376139-416d617a6f6e20456c617374696320426c6f636b2053746f7265-00000001", "/dev/disk/by-path/pci-0000:00:1d.0-nvme-1"
- /dev/nvme2n1     disk       104857600  no         Amazon Elastic Block Store  /devices/pci0000:00/0000:00:1e.0/nvme/nvme2/nvme2n1             259     5                                                                                                                    "/dev/disk/by-id/nvme-nvme.1d0f-766f6c3033623636623930363535636636656465-416d617a6f6e20456c617374696320426c6f636b2053746f7265-00000001", "/dev/disk/by-path/pci-0000:00:1e.0-nvme-1", "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol03b66b90655cf6ede"
+ /dev/nvme1n1     disk       400GiB     no         Amazon Elastic Block Store  /devices/pci0000:00/0000:00:1f.0/nvme/nvme1/nvme1n1             259     4       ext4        4616cd08-7a7d-49fe-ae6d-908f9e864fc7                                                             "/dev/disk/by-uuid/4616cd08-7a7d-49fe-ae6d-908f9e864fc7", "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol04bfba0a58c4ffdae", "/dev/disk/by-id/nvme-nvme.1d0f-766f6c303462666261306135386334666664
+ /dev/nvme4n1     disk       2TiB       yes        Amazon Elastic Block Store  /devices/pci0000:00/0000:00:1d.0/nvme/nvme4/nvme4n1             259     12                                                                                                                   "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol06eb486c9593587a9", "/dev/disk/by-id/nvme-nvme.1d0f-766f6c3036656234383663393539333538376139-416d617a6f6e20456c617374696320426c6f636b2053746f7265-00000001", "/dev/disk/by-path/pci-0000:00:1d.0-nvme-1"
+ /dev/nvme2n1     disk       1TiB       no         Amazon Elastic Block Store  /devices/pci0000:00/0000:00:1e.0/nvme/nvme2/nvme2n1             259     5                                                                                                                    "/dev/disk/by-id/nvme-nvme.1d0f-766f6c3033623636623930363535636636656465-416d617a6f6e20456c617374696320426c6f636b2053746f7265-00000001", "/dev/disk/by-path/pci-0000:00:1e.0-nvme-1", "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol03b66b90655cf6ede"
 ```
 ```
-❯ kubectl mayastor get block-devices worker-node1
+❯ kubectl mayastor get block-devices kworker1
  DEVNAME       DEVTYPE  SIZE      AVAILABLE  MODEL                       DEVPATH                                              MAJOR  MINOR  DEVLINKS
- /dev/nvme4n1  disk     20971520  yes        Amazon Elastic Block Store  /devices/pci0000:00/0000:00:1d.0/nvme/nvme4/nvme4n1  259    12     "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol06eb486c9593587a9", "/dev/disk/by-id/nvme-nvme.1d0f-766f6c3036656234383663393539333538376139-416d617a6f6e20456c617374696320426c6f636b2053746f7265-00000001", "/dev/disk/by-path/pci-0000:00:1d.0-nvme-1"
+ /dev/nvme4n1  disk     2TiB      yes        Amazon Elastic Block Store  /devices/pci0000:00/0000:00:1d.0/nvme/nvme4/nvme4n1  259    12     "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol06eb486c9593587a9", "/dev/disk/by-id/nvme-nvme.1d0f-766f6c3036656234383663393539333538376139-416d617a6f6e20456c617374696320426c6f636b2053746f7265-00000001", "/dev/disk/by-path/pci-0000:00:1d.0-nvme-1"
 ```
 **NOTE: The above command lists usable blockdevices if `--all` flag is not used, but currently since there isn't a way to identify whether the `disk` has a blobstore pool, `disks` not used by `pools` created by `control-plane` are shown as usable if they lack any filesystem uuid.**
 
@@ -137,12 +183,12 @@ The plugin needs to be able to connect to the REST server in order to make the a
 
 1. Node Cordoning
 ```
-❯ kubectl mayastor cordon node node-1-14048 my_cordon_1
+❯ kubectl mayastor cordon node kworker1 my_cordon_1
 Node node-1-14048 cordoned successfully
 ```
 2. Node Uncordoning
 ```
-❯ kubectl mayastor uncordon node node-1-14048 my_cordon_1
+❯ kubectl mayastor uncordon node kworker1 my_cordon_1
 Node node-1-14048 successfully uncordoned
 ```
 3. Get Cordon
@@ -202,60 +248,45 @@ Volume 0c08667c-8b59-4d11-9192-b54e27e0ce0f Scaled Successfully 🚀
 <summary> Support operations </summary>
 
 ```sh
-kubectl-mayastor-dump
-Supportability tool collects state & log information of services and dumps it to a tar file
+kubectl mayastor dump
+Usage: kubectl-mayastor dump [OPTIONS] <COMMAND>
 
-USAGE:
-    kubectl-mayastor dump [OPTIONS] <SUBCOMMAND>
+Commands:
+  system   Collects entire system information
+  volumes  Collects information about all volumes and its descendants (replicas/pools/nodes)
+  volume   Collects information about particular volume and its descendants matching to given volume ID
+  pools    Collects information about all pools and its descendants (nodes)
+  pool     Collects information about particular pool and its descendants matching to given pool ID
+  nodes    Collects information about all nodes
+  node     Collects information about particular node matching to given node ID
+  etcd     Collects information from etcd
+  help     Print this message or the help of the given subcommand(s)
 
-OPTIONS:
-    -d, --output-directory-path <OUTPUT_DIRECTORY_PATH>
-            Output directory path to store archive file [default: ./]
+Options:
+  -r, --rest <REST>
+          The rest endpoint to connect to
+  -t, --timeout <TIMEOUT>
+          Specifies the timeout value to interact with other modules of system [default: 10s]
+  -k, --kube-config-path <KUBE_CONFIG_PATH>
+          Path to kubeconfig file
+  -s, --since <SINCE>
+          Period states to collect all logs from last specified duration [default: 24h]
+  -l, --loki-endpoint <LOKI_ENDPOINT>
+          Endpoint of LOKI service, if left empty then it will try to parse endpoint from Loki service(K8s service resource), if the tool is unable to parse from service then logs will be collected using Kube-apiserver
+  -e, --etcd-endpoint <ETCD_ENDPOINT>
+          Endpoint of ETCD service, if left empty then will be parsed from the internal service name
+  -d, --output-directory-path <OUTPUT_DIRECTORY_PATH>
+          Output directory path to store archive file [default: ./]
+  -n, --namespace <NAMESPACE>
+          Kubernetes namespace of mayastor service, defaults to mayastor [default: mayastor]
+  -o, --output <OUTPUT>
+          The Output, viz yaml, json [default: none]
+  -j, --jaeger <JAEGER>
+          Trace rest requests to the Jaeger endpoint agent
+  -h, --help
+          Print help
 
-    -e, --etcd-endpoint <ETCD_ENDPOINT>
-            Endpoint of ETCD service, if left empty then will be parsed from the internal service
-            name
-
-    -h, --help
-            Print help information
-
-    -j, --jaeger <JAEGER>
-            Trace rest requests to the Jaeger endpoint agent
-
-    -k, --kube-config-path <KUBE_CONFIG_PATH>
-            Path to kubeconfig file
-
-    -l, --loki-endpoint <LOKI_ENDPOINT>
-            Endpoint of LOKI service, if left empty then it will try to parse endpoint from Loki
-            service(K8s service resource), if the tool is unable to parse from service then logs
-            will be collected using Kube-apiserver
-
-    -n, --namespace <NAMESPACE>
-            Kubernetes namespace of mayastor service [default: mayastor]
-
-    -o, --output <OUTPUT>
-            The Output, viz yaml, json [default: none]
-
-    -r, --rest <REST>
-            The rest endpoint to connect to
-
-    -s, --since <SINCE>
-            Period states to collect all logs from last specified duration [default: 24h]
-
-    -t, --timeout <TIMEOUT>
-            Specifies the timeout value to interact with other modules of system [default: 10s]
-
-SUBCOMMANDS:
-    help       Print this message or the help of the given subcommand(s)
-    node       Collects information about particular node matching to given node ID
-    nodes      Collects information about all nodes
-    pool       Collects information about particular pool and its descendants matching to given
-                   pool ID
-    pools      Collects information about all pools and its descendants (nodes)
-    system     Collects entire system information
-    volume     Collects information about particular volume and its descendants matching to
-                   given volume ID
-    volumes    Collects information about all volumes and its descendants (replicas/pools/nodes)
+Supportability - collects state & log information of services and dumps it to a tar file.
 ```
 
 **Note**: Each subcommand supports `--help` option to know various other options.

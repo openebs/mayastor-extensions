@@ -32,12 +32,12 @@ pub enum Operations {
     Uncordon(CordonResources),
     /// `Dump` resources.
     Dump(DumpArgs),
-    /// `Install` upgrade operator.
+    /// `Install` resources.
     #[clap(subcommand)]
     Install(UpgradeOperator),
-    /// `Uninstall` upgrade operator.
+    /// `Uninstall` resources.
     #[clap(subcommand)]
     Uninstall(UpgradeOperator),
-    /// `Upgrade` the deployment.
+    /// `Upgrade` resources.
     Upgrade(UpgradeArgs),
 }
