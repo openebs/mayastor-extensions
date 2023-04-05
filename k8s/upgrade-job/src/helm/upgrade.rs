@@ -2,21 +2,18 @@ use crate::{
     common::{
         constants::{CORE_CHART_NAME, UMBRELLA_CHART_NAME},
         error::{
-            NoInputHelmChartDir, NotAKnownHelmChart, OpeningFile, RegexCompile, Result,
-            YamlParseFromFile, YamlStructure, HelmUpgradeOptionsAbsent,InvalidUpgradePath,
+            HelmUpgradeOptionsAbsent, InvalidUpgradePath, NoInputHelmChartDir, NotAKnownHelmChart,
+            RegexCompile, Result,
         },
     },
-    helm::{
-        client::{HelmReleaseClient, HelmReleaseClientBuilder},
-        values::generate_values_args,
-    },
+    helm::{client::HelmReleaseClient, values::generate_values_args},
     upgrade,
 };
 use regex::Regex;
-use serde_yaml::Value;
-use snafu::{ensure, ResultExt};
-use std::{fs, path::PathBuf};
 use semver::Version;
+
+use snafu::{ensure, ResultExt};
+use std::path::PathBuf;
 
 /// This is the helm chart variant of the helm chart installed in the cluster.
 /// The PRODUCT may be installed using either of these options, but never both.
@@ -73,7 +70,10 @@ impl HelmUpgradeBuilder {
 
     /// This adds buiilds the HelmUpgrade object.
     pub(crate) fn build(self) -> Result<HelmUpgrade> {
-        ensure!(self.release_name.is_some() && self.namespace.is_some(), HelmUpgradeOptionsAbsent);
+        ensure!(
+            self.release_name.is_some() && self.namespace.is_some(),
+            HelmUpgradeOptionsAbsent
+        );
 
         let release_name = self.release_name.clone().unwrap();
         // Generate HelmReleaseClient.
@@ -87,7 +87,8 @@ impl HelmUpgradeBuilder {
         // <chart-name>-<chart-version> string.
         let umbrella_chart_regex = format!(r"^({UMBRELLA_CHART_NAME}-[0-9]+\.[0-9]+\.[0-9]+)$");
         // Accepts pre-release and release, both.
-        let core_chart_regex = format!(r"^({CORE_CHART_NAME}-[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?)$");
+        let core_chart_regex =
+            format!(r"^({CORE_CHART_NAME}-[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?)$");
 
         // Assign HelmChart variant and validate directory path input for the said
         // variant's chart based on the 'chart' member of the HelmReleaseElement.
@@ -124,7 +125,10 @@ impl HelmUpgradeBuilder {
             }
         } else {
             // Case: Helm chart release is not a known helm chart installation.
-            NotAKnownHelmChart { chart_name: chart.clone() }.fail()?;
+            NotAKnownHelmChart {
+                chart_name: chart.clone(),
+            }
+            .fail()?;
         }
 
         // Validating upgrade path.
@@ -132,15 +136,15 @@ impl HelmUpgradeBuilder {
         chart_yaml_path.push("Chart.yaml");
         let to_version = upgrade::path::version_from_chart_yaml_file(chart_yaml_path)?;
         let from_version = upgrade::path::version_from_release_chart(chart)?;
-        let upgrade_path_is_valid = upgrade::path::is_valid(chart_variant.clone(), &from_version, &to_version)?;
+        let upgrade_path_is_valid =
+            upgrade::path::is_valid(chart_variant.clone(), &from_version, &to_version)?;
         ensure!(upgrade_path_is_valid, InvalidUpgradePath);
-
 
         // Generate args to pass to the `helm upgrade` command.
         let mut values_yaml_path = chart_dir.clone();
         values_yaml_path.push("values.yaml");
         let mut upgrade_args: Vec<String> = generate_values_args(
-            chart_variant.clone(),
+            chart_variant,
             values_yaml_path,
             &client,
             release_name.clone(),
@@ -153,7 +157,7 @@ impl HelmUpgradeBuilder {
             client,
             extra_args: upgrade_args,
             from_version,
-            to_version
+            to_version,
         })
     }
 }
@@ -176,14 +180,11 @@ impl HelmUpgrade {
 
     /// Use the HelmReleaseClient's upgrade method to upgrade the installed helm release.
     pub(crate) fn run(self) -> Result<()> {
-        self.client.upgrade(
-            self.release_name,
-            self.chart_dir,
-            Some(self.extra_args),
-        )
+        self.client
+            .upgrade(self.release_name, self.chart_dir, Some(self.extra_args))
     }
 
-    pub(crate) fn from_version(&self) -> String {
+    pub(crate) fn installed_version(&self) -> String {
         self.from_version.to_string()
     }
 

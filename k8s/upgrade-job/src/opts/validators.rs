@@ -5,18 +5,17 @@ use crate::{
             FindingHelmChart, GetNamespace, HelmCommand, HelmListCommand, HelmRelease, HelmVersion,
             HelmVersionCommand, ListStorageNodes, NotADirectory, NotAFile, OpeningFile,
             RegexCompile, Result, U8VectorToString, ValidateDirPath, ValidateFilePath,
-            YamlParseFromFile, YamlStructure,
+            YamlParseFromFile,
         },
         kube_client::KubeClientSet,
         rest_client::RestClientSet,
     },
-    helm::upgrade::HelmChart,
+    helm::{chart::Chart, upgrade::HelmChart},
     vec_to_strings,
 };
 use regex::bytes::Regex;
-use crate::helm::chart::Chart;
 use snafu::{ensure, ResultExt};
-use std::{fs, ops::Deref, path::PathBuf, process::Command, str};
+use std::{fs, path::PathBuf, process::Command, str};
 use tracing::debug;
 
 /// Validate that the helm release specified in the CLI options exists in the namespace,

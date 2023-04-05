@@ -1,22 +1,17 @@
 use crate::{
     common::{
         constants::CORE_CHART_NAME,
-        error::{Result, YamlStructure, YamlParseFromFile, OpeningFile, U8VectorToString, YamlParseFromSlice},
+        error::{OpeningFile, Result, U8VectorToString, YamlParseFromFile, YamlParseFromSlice},
     },
     helm::{
-        upgrade::HelmChart,
         chart::{CoreValues, UmbrellaValues},
+        client::HelmReleaseClient,
+        upgrade::HelmChart,
     },
 };
+
 use snafu::ResultExt;
-use serde_yaml::Value;
-use std::{
-    str,
-    path::PathBuf,
-    fs::File,
-};
-use crate::helm::client::HelmReleaseClient;
-use crate::upgrade::upgrade;
+use std::{fs::File, path::PathBuf, str};
 
 /// This compiles all of the helm values options to be passed during the helm chart upgrade.
 pub(crate) fn generate_values_args(
@@ -30,7 +25,9 @@ pub(crate) fn generate_values_args(
     })?;
 
     let from_values_yaml = client.get_values_as_yaml::<String, String>(release_name, None)?;
-    let from_values_yaml_string = str::from_utf8(from_values_yaml.as_slice()).context(U8VectorToString)?.to_string();
+    let from_values_yaml_string = str::from_utf8(from_values_yaml.as_slice())
+        .context(U8VectorToString)?
+        .to_string();
     // Helm chart flags -- reuse all values, except for the image tag. Modify
     // io_engine DaemonSet PodSpec logLevel if set to from-chart default, and
     // to-chart default differs from the from-chart default.
@@ -45,7 +42,6 @@ pub(crate) fn generate_values_args(
     let log_level_to_replace: &str = "info,io_engine=info";
     match chart_variant {
         HelmChart::Umbrella => {
-
             image_tag_arg.push_str(CORE_CHART_NAME);
             image_tag_arg.push('.');
             image_tag_arg.push_str(image_key);
@@ -63,10 +59,13 @@ pub(crate) fn generate_values_args(
             // helm upgrade .. --set <core-chart>.image.tag=<version>
             upgrade_args.push(image_tag_arg);
 
-            let from_values: UmbrellaValues = serde_yaml::from_slice(from_values_yaml.as_slice()).context(YamlParseFromSlice {
+            let from_values: UmbrellaValues = serde_yaml::from_slice(from_values_yaml.as_slice())
+                .context(YamlParseFromSlice {
                 input_yaml: from_values_yaml_string,
             })?;
-            if from_values.io_engine_log_level().eq(log_level_to_replace) && to_values.io_engine_log_level().ne(log_level_to_replace) {
+            if from_values.io_engine_log_level().eq(log_level_to_replace)
+                && to_values.io_engine_log_level().ne(log_level_to_replace)
+            {
                 upgrade_args.push("--set".to_string());
 
                 let mut io_engine_log_level_arg: String = Default::default();
@@ -82,10 +81,8 @@ pub(crate) fn generate_values_args(
                 // <core-chart>.io-engine.loglevel=info
                 upgrade_args.push(io_engine_log_level_arg);
             }
-
-        },
+        }
         HelmChart::Core => {
-
             image_tag_arg.push_str(image_key);
             image_tag_arg.push('.');
             image_tag_arg.push_str(tag_key);
@@ -101,10 +98,13 @@ pub(crate) fn generate_values_args(
             // helm upgrade .. --set image.tag=<version>
             upgrade_args.push(image_tag_arg);
 
-            let from_values: CoreValues = serde_yaml::from_slice(from_values_yaml.as_slice()).context(YamlParseFromSlice {
-                input_yaml: from_values_yaml_string,
-            })?;
-            if from_values.io_engine_log_level().eq(log_level_to_replace) && to_values.io_engine_log_level().ne(log_level_to_replace) {
+            let from_values: CoreValues = serde_yaml::from_slice(from_values_yaml.as_slice())
+                .context(YamlParseFromSlice {
+                    input_yaml: from_values_yaml_string,
+                })?;
+            if from_values.io_engine_log_level().eq(log_level_to_replace)
+                && to_values.io_engine_log_level().ne(log_level_to_replace)
+            {
                 upgrade_args.push("--set".to_string());
 
                 let mut io_engine_log_level_arg: String = Default::default();
@@ -117,7 +117,7 @@ pub(crate) fn generate_values_args(
                 // helm upgrade .. --set image.tag=<version> --set io-engine.loglevel=info
                 upgrade_args.push(io_engine_log_level_arg);
             }
-        },
+        }
     }
 
     // helm upgrade .. --set image.tag=<version> --reuse-values

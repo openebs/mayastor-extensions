@@ -1,7 +1,7 @@
 use crate::{
     common::error::{
-        HelmCommand, HelmGetValuesCommand, HelmListCommand, HelmRelease, HelmUpgradeCommand,
-        Result, U8VectorToString, YamlParseFromSlice, HelmClientNs,
+        HelmClientNs, HelmCommand, HelmGetValuesCommand, HelmListCommand, HelmRelease,
+        HelmUpgradeCommand, Result, U8VectorToString, YamlParseFromSlice,
     },
     vec_to_strings,
 };
@@ -51,11 +51,7 @@ impl HelmReleaseClientBuilder {
     /// Build the HelmReleaseClient.
     pub(crate) fn build(self) -> Result<HelmReleaseClient> {
         let ns = self.namespace.ok_or(HelmClientNs.build())?;
-        Ok(
-            HelmReleaseClient {
-                namespace: ns,
-            }
-        )
+        Ok(HelmReleaseClient { namespace: ns })
     }
 }
 
@@ -73,8 +69,7 @@ impl HelmReleaseClient {
     }
 
     /// Runs command `helm get values -n <namespace> <release_name> --all -o yaml`.
-    pub(crate) fn
-    get_values_as_yaml<A, B>(
+    pub(crate) fn get_values_as_yaml<A, B>(
         &self,
         release_name: A,
         maybe_extra_args: Option<Vec<B>>,

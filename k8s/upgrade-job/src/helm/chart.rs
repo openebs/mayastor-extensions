@@ -1,15 +1,12 @@
-use serde::Deserialize;
 use semver::Version;
-use crate::{
-    common::constants::CORE_CHART_NAME,
-};
+use serde::Deserialize;
 
 #[derive(Deserialize)]
+/// Chart for name and dependencies.
 pub(crate) struct Chart {
     name: String,
     #[serde(deserialize_with = "Version::deserialize")]
     version: Version,
-    dependencies: Vec<Dependency>,
 }
 
 impl Chart {
@@ -20,40 +17,16 @@ impl Chart {
     pub(crate) fn version(&self) -> &Version {
         &self.version
     }
-
-    pub(crate) fn dependencies(&self) -> &[Dependency] {
-        self.dependencies.as_slice()
-    }
 }
 
 #[derive(Deserialize)]
-pub(crate) struct Dependency {
-    name: String,
-    #[serde(deserialize_with = "Version::deserialize")]
-    version: Version,
-}
-
-impl Dependency {
-    pub(crate) fn name(&self) -> &str {
-        self.name.as_str()
-    }
-
-    pub(crate) fn version(&self) -> &Version {
-        &self.version
-    }
-}
-
-#[derive(Deserialize)]
+/// UmbrellaValues has core values.
 pub(crate) struct UmbrellaValues {
-    #[serde(rename(deserialize = CORE_CHART_NAME))]
+    #[serde(rename(deserialize = "mayastor"))]
     core: CoreValues,
 }
 
 impl UmbrellaValues {
-    pub(crate) fn core(&self) -> &CoreValues {
-        &self.core
-    }
-
     pub(crate) fn image_tag(&self) -> &str {
         self.core.image_tag()
     }
@@ -80,9 +53,9 @@ impl CoreValues {
 }
 
 #[derive(Deserialize)]
+/// Image has tag.
 pub(crate) struct Image {
     tag: String,
-
 }
 
 impl Image {
@@ -94,7 +67,7 @@ impl Image {
 #[derive(Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub(crate) struct IoEngine {
-    log_level: String
+    log_level: String,
 }
 
 impl IoEngine {
