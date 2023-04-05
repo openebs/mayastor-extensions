@@ -1,17 +1,16 @@
 use crate::common::{
     constants::PRODUCT,
     error::{
-        EventPublish, EventRecorderOptionsAbsent, GetPod, SerializeEventNote,
-        JobPodHasTooManyOwners, JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result,
+        EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
+        JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result, SerializeEventNote,
     },
     kube_client::KubeClientSet,
 };
-use k8s_openapi::api::core::v1::ObjectReference;
+use k8s_openapi::{api::core::v1::ObjectReference, serde_json};
 use kube::runtime::events::{Event, EventType, Recorder};
+use serde::Serialize;
 use snafu::{ensure, ResultExt};
 use std::fmt::Display;
-use k8s_openapi::serde_json;
-use serde::Serialize;
 
 #[derive(Serialize, Debug)]
 #[serde(rename(serialize = "camelCase"))]
@@ -87,8 +86,8 @@ impl EventRecorderBuilder {
 
     /// This is a builder option add the to-version in upgrade.
     #[must_use]
-    pub(crate) fn with_to_version(mut self, from: String) -> Self {
-        self.from_version = Some(from);
+    pub(crate) fn with_to_version(mut self, to: String) -> Self {
+        self.to_version = Some(to);
         self
     }
 
@@ -97,7 +96,11 @@ impl EventRecorderBuilder {
     /// This builds the EventRecorder. This fails if Kubernetes API requests fail.
     pub(crate) async fn build(&self) -> Result<EventRecorder> {
         ensure!(
-            self.reporter_name.is_some() && self.pod_name.is_some() && self.namespace.is_some() && self.from_version.is_some() && self.to_version.is_some(),
+            self.reporter_name.is_some()
+                && self.pod_name.is_some()
+                && self.namespace.is_some()
+                && self.from_version.is_some()
+                && self.to_version.is_some(),
             EventRecorderOptionsAbsent
         );
         let reporter_name = self.reporter_name.clone().unwrap();
@@ -236,5 +239,4 @@ impl EventRecorder {
             .await
             .map_err(|error| tracing::error!(%error, "Failed to upgrade {PRODUCT}"));
     }
-
 }

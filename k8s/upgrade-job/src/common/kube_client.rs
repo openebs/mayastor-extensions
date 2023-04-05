@@ -1,7 +1,7 @@
 use crate::common::error::{K8sClientGeneration, KubeClientSetBuilderNs, Result};
 use k8s_openapi::api::core::v1::{Namespace, Pod};
 use kube::{api::Api, Client};
-use snafu::{ensure, ResultExt};
+use snafu::ResultExt;
 
 /// Builder for Kubernetes clients.
 #[derive(Default)]

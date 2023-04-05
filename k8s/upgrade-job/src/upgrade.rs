@@ -1,5 +1,8 @@
 use crate::{
-    common::{constants::{PRODUCT, KUBE_EVENT_REPORTER_NAME}, error::Result},
+    common::{
+        constants::{KUBE_EVENT_REPORTER_NAME, PRODUCT},
+        error::Result,
+    },
     events::event_recorder::EventRecorder,
     helm::upgrade::HelmUpgrade,
     opts::CliArgs,
@@ -28,7 +31,7 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
         .with_pod_name(&opts.pod_name())
         .with_namespace(&opts.namespace())
         .with_reporter_name(KUBE_EVENT_REPORTER_NAME.to_string())
-        .with_from_version(helm_upgrade.from_version())
+        .with_from_version(helm_upgrade.installed_version())
         .with_to_version(helm_upgrade.to_version())
         .build()
         .await?;
@@ -43,7 +46,7 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
     // Control plane containers are updated in this step.
     if let Err(error) = helm_upgrade.run() {
         event.publish_unrecoverable(&error).await;
-        return Err(error)
+        return Err(error);
     }
 
     event
@@ -64,7 +67,7 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
 
         if let Err(error) = upgrade_data_plane(opts.namespace(), opts.rest_endpoint()).await {
             event.publish_unrecoverable(&error).await;
-            return Err(error)
+            return Err(error);
         }
 
         event
@@ -75,7 +78,9 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
             .await?;
     }
 
-    event.publish_normal(format!("Successfully upgraded {PRODUCT}"), "Successful");
+    event
+        .publish_normal(format!("Successfully upgraded {PRODUCT}"), "Successful")
+        .await?;
 
     Ok(())
 }

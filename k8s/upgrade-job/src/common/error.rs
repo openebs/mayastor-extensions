@@ -3,7 +3,7 @@ use crate::{
     events::event_recorder::EventNote,
 };
 use snafu::Snafu;
-use std::{fmt::Display, path::PathBuf};
+use std::path::PathBuf;
 use url::Url;
 
 /// For use with multiple fallible operations which may fail for different reasons, but are
@@ -15,10 +15,10 @@ use url::Url;
 pub(crate) enum Error {
     /// Error for when the storage REST API URL is parsed.
     #[snafu(display(
-    "Failed to parse {} REST API URL {}: {}",
-    PRODUCT,
-    rest_endpoint,
-    source
+        "Failed to parse {} REST API URL {}: {}",
+        PRODUCT,
+        rest_endpoint,
+        source
     ))]
     RestUrlParse {
         source: url::ParseError,
@@ -38,10 +38,10 @@ pub(crate) enum Error {
 
     /// Error for when REST API configuration fails.
     #[snafu(display(
-    "Failed to configure {} REST API client with endpoint {}: {:?}",
-    PRODUCT,
-    rest_endpoint,
-    source,
+        "Failed to configure {} REST API client with endpoint {}: {:?}",
+        PRODUCT,
+        rest_endpoint,
+        source,
     ))]
     RestClientConfiguration {
         #[snafu(source(false))]
@@ -51,10 +51,10 @@ pub(crate) enum Error {
 
     /// Error for when a Helm command fails.
     #[snafu(display(
-    "Failed to run Helm command,\ncommand: {},\nargs: {:?},\ncommand_error: {}",
-    command,
-    args,
-    source
+        "Failed to run Helm command,\ncommand: {},\nargs: {:?},\ncommand_error: {}",
+        command,
+        args,
+        source
     ))]
     HelmCommand {
         source: std::io::Error,
@@ -75,9 +75,9 @@ pub(crate) enum Error {
 
     /// Error for when input Helm release is not found in the input namespace.
     #[snafu(display(
-    "'deployed' Helm release {} not found in Namespace {}",
-    name,
-    namespace
+        "'deployed' Helm release {} not found in Namespace {}",
+        name,
+        namespace
     ))]
     HelmRelease { name: String, namespace: String },
 
@@ -95,9 +95,9 @@ pub(crate) enum Error {
 
     /// Error for when the number of ownerReferences for this Pod is more than 1.
     #[snafu(display(
-    "Pod {} in {} namespace has too many owners, while trying to find Pod's Job owner",
-    pod_name,
-    pod_namespace
+        "Pod {} in {} namespace has too many owners, while trying to find Pod's Job owner",
+        pod_name,
+        pod_namespace
     ))]
     JobPodHasTooManyOwners {
         pod_name: String,
@@ -128,10 +128,10 @@ pub(crate) enum Error {
     /// Error for when the Helm chart installed in the cluster is not of the umbrella or core
     /// variant.
     #[snafu(display(
-    "Helm chart release {} in Namespace {} has an unsupported chart variant: {}",
-    release_name,
-    namespace,
-    chart_name
+        "Helm chart release {} in Namespace {} has an unsupported chart variant: {}",
+        release_name,
+        namespace,
+        chart_name
     ))]
     DetermineChartVariant {
         release_name: String,
@@ -174,10 +174,10 @@ pub(crate) enum Error {
 
     /// Error for when a Kubernetes API request for GET-ing a Pod fails.
     #[snafu(display(
-    "Failed to GET Kubernetes Pod {} in namespace {}: {}",
-    pod_name,
-    pod_namespace,
-    source
+        "Failed to GET Kubernetes Pod {} in namespace {}: {}",
+        pod_name,
+        pod_namespace,
+        source
     ))]
     GetPod {
         source: kube::Error,
@@ -188,10 +188,10 @@ pub(crate) enum Error {
     /// Error for when a Kubernetes API request for GET-ing a list of Pods filtered by label(s)
     /// fails.
     #[snafu(display(
-    "Failed to list Pods with label {} in namespace {}: {}",
-    label,
-    namespace,
-    source
+        "Failed to list Pods with label {} in namespace {}: {}",
+        label,
+        namespace,
+        source
     ))]
     ListPodsWithLabel {
         source: kube::Error,
@@ -205,9 +205,9 @@ pub(crate) enum Error {
 
     /// Error for when the spec.nodeName of a Pod is empty.
     #[snafu(display(
-    "Failed get .spec.nodeName from Pod {} in Namespace {}",
-    name,
-    namespace
+        "Failed get .spec.nodeName from Pod {} in Namespace {}",
+        name,
+        namespace
     ))]
     EmptyPodNodeName { name: String, namespace: String },
 
@@ -274,10 +274,10 @@ pub(crate) enum Error {
 
     /// Error for when a Helm list command execution succeeds, but with an error.
     #[snafu(display(
-    "`helm list` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-    command,
-    args,
-    std_err,
+        "`helm list` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
+        command,
+        args,
+        std_err,
     ))]
     HelmListCommand {
         command: String,
@@ -287,10 +287,10 @@ pub(crate) enum Error {
 
     /// Error for when a Helm version command execution succeeds, but with an error.
     #[snafu(display(
-    "`helm version` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-    command,
-    args,
-    std_err,
+        "`helm version` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
+        command,
+        args,
+        std_err,
     ))]
     HelmVersionCommand {
         command: String,
@@ -300,10 +300,10 @@ pub(crate) enum Error {
 
     /// Error for when a Helm upgrade command execution succeeds, but with an error.
     #[snafu(display(
-    "`helm upgrade` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-    command,
-    args,
-    std_err,
+        "`helm upgrade` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
+        command,
+        args,
+        std_err,
     ))]
     HelmUpgradeCommand {
         command: String,
@@ -313,10 +313,10 @@ pub(crate) enum Error {
 
     /// Error for when a Helm get values command execution succeeds, but with an error.
     #[snafu(display(
-    "`helm get values` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-    command,
-    args,
-    std_err,
+        "`helm get values` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
+        command,
+        args,
+        std_err,
     ))]
     HelmGetValuesCommand {
         command: String,
@@ -326,11 +326,11 @@ pub(crate) enum Error {
 
     /// Error for when detected helm chart name is not known helm chart.
     #[snafu(display(
-    "'{}' is not a known {} helm chart, only the '{}' and '{}' charts are supported",
-    chart_name,
-    PRODUCT,
-    CORE_CHART_NAME,
-    UMBRELLA_CHART_NAME
+        "'{}' is not a known {} helm chart, only the '{}' and '{}' charts are supported",
+        chart_name,
+        PRODUCT,
+        CORE_CHART_NAME,
+        UMBRELLA_CHART_NAME
     ))]
     NotAKnownHelmChart { chart_name: String },
 
@@ -351,19 +351,33 @@ pub(crate) enum Error {
     HelmUpgradeOptionsAbsent,
 
     #[snafu(display("Failed to parse {} as a valid semver: {}", version_string, source))]
-    SemverParse { source: semver::Error, version_string: String },
+    SemverParse {
+        source: semver::Error,
+        version_string: String,
+    },
 
-    #[snafu(display("'{}' chart is not a subchart of '{}' chart", CORE_CHART_NAME, UMBRELLA_CHART_NAME))]
+    #[snafu(display(
+        "'{}' chart is not a subchart of '{}' chart",
+        CORE_CHART_NAME,
+        UMBRELLA_CHART_NAME
+    ))]
     CoreNotASubchartOfUmbrella,
 
-    #[snafu(display("Upgrade for {} chart v{} is not supported", UMBRELLA_CHART_NAME, version))]
+    #[snafu(display(
+        "Upgrade for {} chart v{} is not supported",
+        UMBRELLA_CHART_NAME,
+        version
+    ))]
     UmbrellaChartVersionInvalid { version: String },
 
     #[snafu(display("The upgrade path is invalid"))]
     InvalidUpgradePath,
 
     #[snafu(display("Failed to serialize event note {:?}: {}", note, source))]
-    SerializeEventNote { source: serde_json::Error, note: EventNote },
+    SerializeEventNote {
+        source: serde_json::Error,
+        note: EventNote,
+    },
 }
 /// A wrapper type to remove repeated Result<T, Error> returns.
 pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;

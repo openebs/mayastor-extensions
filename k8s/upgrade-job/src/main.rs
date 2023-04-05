@@ -1,15 +1,12 @@
 use crate::{
-    common::{
-        constants::{KUBE_EVENT_REPORTER_NAME, PRODUCT},
-        error::Result,
-    },
+    common::{constants::PRODUCT, error::Result},
     opts::validators::{
         validate_helm_chart_dirs, validate_helm_release, validate_helmv3_in_path,
         validate_namespace, validate_rest_endpoint,
     },
 };
 use clap::Parser;
-use events::event_recorder::EventRecorderBuilder;
+
 use opts::CliArgs;
 use tracing::info;
 use upgrade::upgrade;
