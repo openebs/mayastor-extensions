@@ -6,7 +6,8 @@ members = [
     "operators",
     "k8s/plugin",
     "k8s/proxy",
-    "k8s/supportability"
+    "k8s/supportability",
+    "k8s/upgrade-job",
 ]
 
 exclude = [ "./dependencies/control-plane" ]
