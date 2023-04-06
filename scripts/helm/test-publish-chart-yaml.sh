@@ -162,6 +162,12 @@ CHART_VERSION=0.0.0
 CHART_APP_VERSION=0.0.0
 test_one "Main is special"
 
+CHECK_BRANCH=main
+APP_TAG=0.0.0-main
+CHART_VERSION=0.0.0
+CHART_APP_VERSION=0.0.0
+test_one "Main is special"
+
 CHECK_BRANCH=release/2.0
 APP_TAG=2.0.0
 CHART_VERSION=2.0.0
