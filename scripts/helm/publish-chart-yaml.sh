@@ -49,7 +49,7 @@ branch_chart_version()
     echo "0.0.0"
   elif [ "$CHECK_BRANCH" == "main" ]; then
     # Main has no meaningful version, other than the date-time
-    echo "0.0.0-$DATE_TIME"
+    echo "0.0.0-main"
   elif [ "$RELEASE_V" != "${CHECK_BRANCH}" ]; then
     if [ "$(semver validate "$RELEASE_V")" == "valid" ]; then
       echo "$RELEASE_V"
