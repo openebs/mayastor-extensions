@@ -62,9 +62,9 @@ pub(crate) fn upgrade_event_selector(release_name: &str, component_name: &str) -
 }
 
 /// Upgrade conatainers to develop.
-pub(crate) const UPGRADE_JOB_TO_DEVELOP_TAG: &str = "jai-shree-ram";
+pub(crate) const UPGRADE_JOB_TO_DEVELOP_TAG: &str = "develop";
 /// Upgrade job container image repository.
-pub(crate) const UPGRADE_JOB_IMAGE_REPO: &str = "sinhaashish";
+pub(crate) const UPGRADE_JOB_IMAGE_REPO: &str = "openebs";
 /// Upgrade job container image name.
 pub(crate) const UPGRADE_JOB_IMAGE_NAME: &str = "mayastor-upgrade-job";
 /// Upgrade job name suffix.
