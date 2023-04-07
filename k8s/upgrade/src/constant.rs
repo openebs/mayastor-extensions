@@ -1,10 +1,11 @@
-/// macros to define labels for upgrade operator.
+use utils::version_info;
+
+/// This is used to create labels for the upgrade job.
 #[macro_export]
 macro_rules! upgrade_labels {
-    ($s:expr) => {
+    () => {
         btreemap! {
-            APP => $s,
-            LABEL => $s,
+           "app" => UPGRADE_JOB_NAME_SUFFIX,
         }
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
@@ -13,37 +14,82 @@ macro_rules! upgrade_labels {
 }
 
 /// Append the release name to k8s objects.
-pub(crate) fn upgrade_group(release_name: &str, name: &str) -> String {
-    format!("{release_name}-{name}")
+pub(crate) fn upgrade_name_concat(
+    release_name: &str,
+    component_name: &str,
+    upgrade_to_branch: Option<&String>,
+) -> String {
+    let version = match upgrade_to_branch {
+        Some(tag) => tag.to_string(),
+        None => get_image_tag(),
+    };
+    format!("{release_name}-{component_name}-{version}")
 }
 
-/// Upgrade endpoint
-pub(crate) const UPGRADE_OPERATOR_END_POINT: &str = "/upgrade";
-/// label used for upgrade operator.
-pub(crate) const APP: &str = "app.kubernetes.io/component";
-/// label used for upgrade operator.
-pub(crate) const LABEL: &str = "app";
-/// Upgrade operator.
-pub(crate) const UPGRADE_OPERATOR: &str = "operator-upgrade";
-/// Service account name for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_SERVICE_ACCOUNT: &str = "operator-upgrade-service-account";
-/// Role constant for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_CLUSTER_ROLE: &str = "operator-upgrade-role";
-/// Role binding constant for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_CLUSTER_ROLE_BINDING: &str = "operator-upgrade-role-binding";
-/// Deployment constant for upgrade operator.
-pub(crate) const UPGRADE_CONTROLLER_DEPLOYMENT: &str = "operator-upgrade";
-/// Service name constant for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_SERVICE: &str = "operator-upgrade";
-/// Service port constant for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_SERVICE_PORT: i32 = 8080;
-/// Service internal port constant for upgrade operator.
-pub(crate) const UPGRADE_OPERATOR_INTERNAL_PORT: i32 = 8080;
-/// This is the upgrade-operator container image.
-pub(crate) const UPGRADE_IMAGE: &str = "openebs/mayastor-operator-upgrade:develop";
-/// The service port for upgrade operator.
-pub const UPGRADE_OPERATOR_HTTP_PORT: &str = "http";
-/// Defines the Label select for mayastor
+/// Fetch the image tag to append to upgrade resources.
+pub(crate) fn get_image_tag() -> String {
+    let version = release_version();
+    match version {
+        Some(upgrade_job_image_tag) => {
+            let tag: Vec<_> = upgrade_job_image_tag.split('.').collect();
+            let major = *(tag.first().unwrap_or(&""));
+            let minor = *(tag.get(1).unwrap_or(&""));
+            let patch = *(tag.get(2).unwrap_or(&""));
+            format!("v{major}-{minor}-{patch}")
+        }
+        None => UPGRADE_JOB_TO_DEVELOP_TAG.to_string(),
+    }
+}
+
+/// Returns the git tag version (if tag is found) or simply returns the commit hash (12 characters).
+pub(crate) fn release_version() -> Option<String> {
+    let version_info = version_info!();
+    version_info.version_tag
+}
+
+/// Append the tag to image in upgrade.
+pub(crate) fn upgrade_image_concat(image_repo: &str, image_name: &str, image_tag: &str) -> String {
+    format!("{image_repo}/{image_name}:{image_tag}")
+}
+
+/// Append the release name to k8s objects.
+pub(crate) fn upgrade_event_selector(release_name: &str, component_name: &str) -> String {
+    let kind = "involvedObject.kind=Job";
+    let name_key = "involvedObject.name";
+    let tag = get_image_tag();
+    let name_value = format!("{release_name}-{component_name}-{tag}");
+    format!("{kind},{name_key}={name_value}")
+}
+
+/// Upgrade conatainers to develop.
+pub(crate) const UPGRADE_JOB_TO_DEVELOP_TAG: &str = "jai-shree-ram";
+/// Upgrade job container image repository.
+pub(crate) const UPGRADE_JOB_IMAGE_REPO: &str = "sinhaashish";
+/// Upgrade job container image name.
+pub(crate) const UPGRADE_JOB_IMAGE_NAME: &str = "mayastor-upgrade-job";
+/// Upgrade job name suffix.
+pub(crate) const UPGRADE_JOB_NAME_SUFFIX: &str = "upgrade";
+/// ServiceAccount name suffix for upgrade job.
+pub(crate) const UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX: &str = "upgrade-service-account";
+/// ClusterRole name suffix for upgrade job.
+pub(crate) const UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX: &str = "upgrade-role";
+/// ClusterRoleBinding for upgrade job.
+pub(crate) const UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX: &str = "upgrade-role-binding";
+/// Upgrade job binary name.
+pub(crate) const UPGRADE_BINARY_NAME: &str = "upgrade-job";
+/// Upgrade job container name.
+pub(crate) const UPGRADE_JOB_CONTAINER_NAME: &str = "mayastor-upgrade-job";
+/// Defines the Label select for mayastor REST API.
 pub(crate) const API_REST_LABEL_SELECTOR: &str = "app=api-rest";
-/// Defines the default release name
+/// Defines the default helm chart release name.
 pub(crate) const DEFAULT_RELEASE_NAME: &str = "mayastor";
+/// Volumes with one replica
+pub(crate) const SINGLE_REPLICA_VOLUME: u8 = 1;
+/// IO_ENGINE_POD_LABEL is the Kubernetes Pod label set on mayastor-io-engine Pods.
+pub(crate) const IO_ENGINE_POD_LABEL: &str = "app=io-engine";
+/// AGENT_CORE_POD_LABEL is the Kubernetes Pod label set on mayastor-agent-core Pods.
+pub(crate) const AGENT_CORE_POD_LABEL: &str = "app=agent-core";
+/// API_REST_POD_LABEL is the Kubernetes Pod label set on mayastor-api-rest Pods.
+pub(crate) const API_REST_POD_LABEL: &str = "app=api-rest";
+/// UPGRADE_EVENT_REASON is the reason field in upgrade job.
+pub(crate) const UPGRADE_EVENT_REASON: &str = "MayastorUpgrade";

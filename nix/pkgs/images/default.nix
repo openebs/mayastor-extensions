@@ -64,6 +64,16 @@ let
         Env = [ "CHART_DIR=/chart" ];
       };
     };
+  build-upgrade-image = { buildType, name }:
+    build-extensions-image rec{
+      inherit buildType;
+      package = extensions.${buildType}.upgrade.${name};
+      contents = [ kubernetes-helm-wrapped busybox tagged_helm_chart ];
+      pname = package.pname;
+      config = {
+        Env = [ "CORE_CHART_DIR=/chart" ];
+    };
+  };
   build-obs-callhome-image = { buildType }:
     build-extensions-image rec{
       inherit buildType;
@@ -90,6 +100,12 @@ let
       inherit buildType;
     };
   };
+  build-upgrade-images = { buildType }: {
+    job = build-upgrade-image {
+      inherit buildType;
+      name = "job";
+    };
+  };
   build-obs-images = { buildType }: {
     callhome = build-obs-callhome-image {
       inherit buildType;
@@ -102,6 +118,9 @@ let
       recurseForDerivations = true;
     };
     operators = build-upgrade-operator-images { inherit buildType; } // {
+      recurseForDerivations = true;
+    };
+    upgrade = build-upgrade-images { inherit buildType; } // {
       recurseForDerivations = true;
     };
     obs = build-obs-images { inherit buildType; } // {

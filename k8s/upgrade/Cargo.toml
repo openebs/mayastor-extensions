@@ -10,7 +10,10 @@ path = "src/lib.rs"
 
 [dependencies]
 openapi = { path = "../../dependencies/control-plane/openapi", default-features = false, features = [ "tower-trace" ] }
+utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
 kube-proxy = { path = "../proxy" }
+console-logger = { path = "../../console-logger" }
+operators = { path = "../../operators" }
 kube = { version = "0.78.0", features = [ "derive" ] }
 anyhow = "1.0.69"
 clap = { version = "4.1.4", features = ["color", "derive"] }
@@ -23,5 +26,6 @@ http = "0.2.8"
 async-trait = "0.1.64"
 serde = "1.0.152"
 serde_json = "1.0.93"
+thiserror = "1.0.38"
 # Tracing
 tracing = "0.1.37"
