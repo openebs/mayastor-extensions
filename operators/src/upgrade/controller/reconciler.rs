@@ -10,6 +10,7 @@ use kube::{
     runtime::{controller::Action, finalizer, Controller},
     Api, Client, CustomResourceExt, ResourceExt,
 };
+use openapi::models::CordonDrainState;
 use serde_json::json;
 use std::{
     collections::{HashMap, HashSet},
@@ -321,7 +322,7 @@ impl ResourceContext {
 
         let lp = ListParams::default().labels(IO_ENGINE_POD_LABEL);
         let pod_list: ObjectList<Pod> = pods.list(&lp).await?;
-        if !all_pods_are_ready(pod_list) {
+        if !all_pods_are_ready(pod_list).0 {
             return Err(Error::ReconcileError {
                 name: self.name_any(),
             });
@@ -520,4 +521,86 @@ pub async fn start_upgrade_worker() {
             trace!(?res);
         })
         .await;
+}
+
+/// Function to find whether any node drain is in progress.
+pub async fn is_draining() -> Result<bool, Error> {
+    let mut is_draining = false;
+    let nodes = UpgradeConfig::get_config()
+        .rest_client()
+        .nodes_api()
+        .get_nodes()
+        .await?;
+    let nodelist = nodes.into_body();
+    for node in nodelist {
+        let node_spec = match node.spec {
+            Some(node_spec) => node_spec,
+            None => return Err(Error::NodeSpecNotPresent { node: node.id }),
+        };
+        is_draining = match node_spec.cordondrainstate {
+            Some(CordonDrainState::cordonedstate(_)) => false,
+            Some(CordonDrainState::drainingstate(_)) => true,
+            Some(CordonDrainState::drainedstate(_)) => false,
+            None => false,
+        };
+        if is_draining {
+            break;
+        }
+    }
+    Ok(is_draining)
+}
+
+pub async fn is_node_cordoned(node_name: &str) -> Result<bool, Error> {
+    let node = UpgradeConfig::get_config()
+        .rest_client()
+        .nodes_api()
+        .get_node(node_name)
+        .await?;
+    let node_body = node.into_body();
+    let node_spec = match &node_body.spec {
+        Some(node_spec) => node_spec,
+        None => return Err(Error::NodeSpecNotPresent { node: node_body.id }),
+    };
+    let is_cordoned = match node_spec.cordondrainstate {
+        Some(CordonDrainState::cordonedstate(_)) => true,
+        Some(CordonDrainState::drainingstate(_)) => false,
+        Some(CordonDrainState::drainedstate(_)) => false,
+        None => false,
+    };
+    Ok(is_cordoned)
+}
+
+/// Function to check for any volume rebuild in progress across the cluster
+pub async fn is_rebuilding() -> Result<bool, Error> {
+    // The number of volumes to get per request.
+    let max_entries = 200;
+    let mut starting_token = Some(0_isize);
+
+    // The last paginated request will set the `starting_token` to `None`.
+    while starting_token.is_some() {
+        let vols = UpgradeConfig::get_config()
+            .rest_client()
+            .volumes_api()
+            .get_volumes(max_entries, None, starting_token)
+            .await
+            .map_err(|error| {
+                error!(?error, "Failed to list volumes");
+                error
+            })?;
+
+        let volumes = vols.into_body();
+        starting_token = volumes.next_token;
+        for volume in volumes.entries {
+            if let Some(target) = &volume.state.target {
+                if target
+                    .children
+                    .iter()
+                    .any(|child| child.rebuild_progress.is_some())
+                {
+                    return Ok(true);
+                }
+            }
+        }
+    }
+    Ok(false)
 }

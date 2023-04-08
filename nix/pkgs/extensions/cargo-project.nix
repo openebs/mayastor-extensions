@@ -60,7 +60,7 @@ let
     "console-logger"
     "operators"
     "call-home"
-    "scripts"
+    "upgrade-job"
     "dependencies/control-plane/openapi/Cargo.toml"
     "dependencies/control-plane/openapi/build.rs"
     "dependencies/control-plane/control-plane/plugin"
@@ -114,11 +114,11 @@ let
   builder = if incremental then build_with_naersk else build_with_default;
 in
 {
-  inherit PROTOC PROTOC_INCLUDE version src;
+  inherit PROTOC PROTOC_INCLUDE version src whitelistSource;
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if allInOne then
-      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p exporter" "-p operators" "-p call-home" ]; }
+      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p exporter" "-p operators" "-p call-home" "-p upgrade-job" ]; }
     else
       builder { inherit buildType cargoBuildFlags; };
 }
