@@ -51,19 +51,6 @@ let
 
     mkdir -p $out && cp -drf --preserve=mode build/chart $out/chart
   '';
-  build-upgrade-operator-image = { buildType }:
-    build-extensions-image rec{
-      inherit buildType;
-      package = extensions.${buildType}.operators.upgrade;
-      contents = [ kubernetes-helm-wrapped busybox tagged_helm_chart ];
-      pname = package.pname;
-      config = {
-        ExposedPorts = {
-          "8080/tcp" = { };
-        };
-        Env = [ "CHART_DIR=/chart" ];
-      };
-    };
   build-upgrade-image = { buildType, name }:
     build-extensions-image rec{
       inherit buildType;
@@ -95,11 +82,6 @@ let
       inherit buildType;
     };
   };
-  build-upgrade-operator-images = { buildType }: {
-    upgrade = build-upgrade-operator-image {
-      inherit buildType;
-    };
-  };
   build-upgrade-images = { buildType }: {
     job = build-upgrade-image {
       inherit buildType;
@@ -115,9 +97,6 @@ in
 let
   build-images = { buildType }: {
     exporters = build-exporter-images { inherit buildType; } // {
-      recurseForDerivations = true;
-    };
-    operators = build-upgrade-operator-images { inherit buildType; } // {
       recurseForDerivations = true;
     };
     upgrade = build-upgrade-images { inherit buildType; } // {

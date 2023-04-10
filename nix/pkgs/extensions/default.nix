@@ -36,19 +36,6 @@ let
         };
       };
     };
-    operators = rec {
-      recurseForDerivations = true;
-      upgrade_operator_builder = { buildType, builder, cargoBuildFlags ? [ "-p operator-upgrade" ] }: builder.build { inherit buildType cargoBuildFlags; };
-      operator_installer = { pname, src }: installer { inherit pname src; };
-      upgrade = operator_installer {
-        src =
-          if allInOne then
-            upgrade_operator_builder { inherit buildType builder; }
-          else
-            upgrade_operator_builder { inherit buildType builder; cargoBuildFlags = [ "--bin operator-upgrade" ]; };
-        pname = "operator-upgrade";
-      };
-    };
     upgrade = rec {
       recurseForDerivations = true;
       upgrade_builder = { buildType, builder, cargoBuildFlags ? [ "-p upgrade-job" ] }: builder.build { inherit buildType cargoBuildFlags; };
