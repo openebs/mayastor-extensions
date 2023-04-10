@@ -211,6 +211,10 @@ pub(crate) enum Error {
     ))]
     EmptyPodNodeName { name: String, namespace: String },
 
+    /// Error for when the metadata.uid of a Pod is empty.
+    #[snafu(display("Failed get metadta.uid from Pod {} in Namespace {}", name, namespace))]
+    EmptyPodUid { name: String, namespace: String },
+
     /// Error for when an uncordon request for a storage node fails.
     #[snafu(display("Failed to uncordon {} Node {}: {}", PRODUCT, node_name, source))]
     StorageNodeUncordon {
@@ -341,6 +345,10 @@ pub(crate) enum Error {
     /// Error for when mandatory options for an EventRecorder are missing when building.
     #[snafu(display("Mandatory options for EventRecorder were not given"))]
     EventRecorderOptionsAbsent,
+
+    /// Error for when pod uid is not present.
+    #[snafu(display("Pod Uid is None"))]
+    PodUidIsNone,
 
     /// Error for mandatory options for a HelmClient are missing when building.
     #[snafu(display("Setting namespace is mandatory for HelmClient"))]
