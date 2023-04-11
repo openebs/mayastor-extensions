@@ -151,6 +151,7 @@ async fn execute(cli_args: CliArgs) {
             }
             Operations::Upgrade(resources) => {
                 let _ignore = preflight_validations::preflight_check(
+                    &cli_args.namespace,
                     cli_args.kube_config_path.clone(),
                     cli_args.timeout,
                     resources.skip_single_replica_volume_validation,
