@@ -13,7 +13,6 @@ openapi = { path = "../../dependencies/control-plane/openapi", default-features 
 utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
 kube-proxy = { path = "../proxy" }
 console-logger = { path = "../../console-logger" }
-operators = { path = "../../operators" }
 kube = { version = "0.78.0", features = [ "derive" ] }
 anyhow = "1.0.69"
 clap = { version = "4.1.4", features = ["color", "derive"] }
