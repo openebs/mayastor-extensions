@@ -70,7 +70,11 @@ pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
 /// ObjectList<Pod> have their Ready status.condition value set to true.
 pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> (bool, String, String) {
     let not_ready_warning = |pod_name: &String, namespace: &String| {
-        tracing::warn!("Couldn't verify the ready condition of io-engine Pod '{}' in namespace '{}' to be true", pod_name, namespace);
+        tracing::warn!(
+            "Couldn't verify the ready condition of Pod '{}' in namespace '{}' to be true",
+            pod_name,
+            namespace
+        );
     };
     for pod in pod_list.iter() {
         match &pod
@@ -82,6 +86,8 @@ pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> (bool, String, St
                 for condition in *conditions {
                     if condition.type_.eq("Ready") {
                         if condition.status.eq("True") {
+                            let pod_name = pod.name_any();
+                            tracing::info!(pod.name = %pod_name, "Pod is Ready");
                             break;
                         }
                         not_ready_warning(&pod.name_any(), &pod.namespace().unwrap_or_default());
