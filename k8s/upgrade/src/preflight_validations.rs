@@ -8,6 +8,7 @@ use tracing::error;
 
 /// Validation to be done before applying upgrade.
 pub async fn preflight_check(
+    namespace: &str,
     kube_config_path: Option<PathBuf>,
     timeout: humantime::Duration,
     ignore_single_replica: bool,
@@ -18,6 +19,7 @@ pub async fn preflight_check(
     let config = kube_proxy::ConfigBuilder::default_api_rest()
         .with_kube_config(kube_config_path.clone())
         .with_timeout(*timeout)
+        .with_target_mod(|t| t.with_namespace(namespace))
         .build()
         .await
         .map_err(|error| Error::OpenapiClientConfigurationErr {
@@ -26,7 +28,6 @@ pub async fn preflight_check(
                 error
             ),
         })?;
-
     let rest_client = upgrade_lib::RestClient::new_with_config(config);
 
     if !skip_replica_rebuild {
