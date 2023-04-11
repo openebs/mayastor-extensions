@@ -1,39 +1,10 @@
 use crate::common::{
-    error::{EmptyStorageNodeSpec, ListStorageVolumes, Result},
+    error::{ListStorageVolumes, Result},
     rest_client::RestClientSet,
 };
 use k8s_openapi::api::core::v1::Pod;
 use kube::{api::ObjectList, ResourceExt};
-use openapi::models::CordonDrainState;
 use snafu::ResultExt;
-
-/// Function to find whether any node drain is in progress.
-pub(crate) async fn is_draining(rest_client: &RestClientSet) -> Result<bool> {
-    let mut is_draining = false;
-    let nodes = rest_client
-        .nodes_api()
-        .get_nodes()
-        .await
-        .context(ListStorageVolumes)?;
-
-    let nodelist = nodes.into_body();
-    for node in nodelist {
-        let node_spec = node
-            .spec
-            .ok_or(EmptyStorageNodeSpec { node_id: node.id }.build())?;
-
-        is_draining = match node_spec.cordondrainstate {
-            Some(CordonDrainState::cordonedstate(_)) => false,
-            Some(CordonDrainState::drainingstate(_)) => true,
-            Some(CordonDrainState::drainedstate(_)) => false,
-            None => false,
-        };
-        if is_draining {
-            break;
-        }
-    }
-    Ok(is_draining)
-}
 
 /// Function to check for any volume rebuild in progress across the cluster
 pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
@@ -68,7 +39,7 @@ pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
 
 /// This function returns 'true' only if all of the containers in the Pods contained in the
 /// ObjectList<Pod> have their Ready status.condition value set to true.
-pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> (bool, String, String) {
+pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> bool {
     let not_ready_warning = |pod_name: &String, namespace: &String| {
         tracing::warn!(
             "Couldn't verify the ready condition of Pod '{}' in namespace '{}' to be true",
@@ -76,7 +47,7 @@ pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> (bool, String, St
             namespace
         );
     };
-    for pod in pod_list.iter() {
+    for pod in pod_list.into_iter() {
         match &pod
             .status
             .as_ref()
@@ -91,7 +62,7 @@ pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> (bool, String, St
                             break;
                         }
                         not_ready_warning(&pod.name_any(), &pod.namespace().unwrap_or_default());
-                        return (false, pod.name_any(), pod.namespace().unwrap_or_default());
+                        return false;
                     } else {
                         continue;
                     }
@@ -99,9 +70,9 @@ pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> (bool, String, St
             }
             None => {
                 not_ready_warning(&pod.name_any(), &pod.namespace().unwrap_or_default());
-                return (false, pod.name_any(), pod.namespace().unwrap_or_default());
+                return false;
             }
         }
     }
-    (true, "".to_string(), "".to_string())
+    true
 }

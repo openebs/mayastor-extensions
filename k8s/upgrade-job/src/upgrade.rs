@@ -27,13 +27,23 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
         .with_core_chart_dir(opts.core_chart_dir())
         .build()?;
 
+    let from_version = helm_upgrade.upgrade_from_version();
+    let to_version = helm_upgrade.upgrade_to_version();
+
     let event = EventRecorder::builder()
         .with_pod_name(&opts.pod_name())
         .with_namespace(&opts.namespace())
         .with_reporter_name(KUBE_EVENT_REPORTER_NAME.to_string())
-        .with_from_version(helm_upgrade.installed_version())
-        .with_to_version(helm_upgrade.to_version())
+        .with_from_version(from_version.clone())
+        .with_to_version(to_version.clone())
         .build()
+        .await?;
+
+    event
+        .publish_normal(
+            format!("Starting {PRODUCT} upgrade..."),
+            "Upgrading control-plane",
+        )
         .await?;
 
     event
@@ -65,7 +75,14 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
             )
             .await?;
 
-        if let Err(error) = upgrade_data_plane(opts.namespace(), opts.rest_endpoint()).await {
+        if let Err(error) = upgrade_data_plane(
+            opts.namespace(),
+            opts.rest_endpoint(),
+            from_version,
+            to_version,
+        )
+        .await
+        {
             event.publish_unrecoverable(&error).await;
             return Err(error);
         }

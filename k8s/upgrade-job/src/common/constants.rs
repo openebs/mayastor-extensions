@@ -19,6 +19,9 @@ pub(crate) const IO_ENGINE_LABEL: &str = "app=io-engine";
 /// This is the shared Pod label of the <helm-release>-agent-core Deployment.
 pub(crate) const AGENT_CORE_LABEL: &str = "app=agent-core";
 
+/// This is the shared label across the helm chart components which carries the chart version.
+pub(crate) const CHART_VERSION_LABEL_KEY: &str = "openebs.io/version";
+
 /// This is the label set on a storage API Node resource when a 'Node Drain' is issued.
 pub(crate) const DRAIN_FOR_UPGRADE: &str = "mayastor-upgrade";
 

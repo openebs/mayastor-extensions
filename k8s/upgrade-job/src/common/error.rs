@@ -199,6 +199,22 @@ pub(crate) enum Error {
         namespace: String,
     },
 
+    /// Error for when a Kubernetes API request for GET-ing a list of Pods filtered by label(s)
+    /// and field(s) fails.
+    #[snafu(display(
+        "Failed to list Pods with label '{}', and field '{}' in namespace {}: {}",
+        label,
+        field,
+        namespace,
+        source
+    ))]
+    ListPodsWithLabelAndField {
+        source: kube::Error,
+        label: String,
+        field: String,
+        namespace: String,
+    },
+
     /// Error for when a Pod does not have a PodSpec struct member.
     #[snafu(display("Failed get .spec from Pod {} in Namespace {}", name, namespace))]
     EmptyPodSpec { name: String, namespace: String },
@@ -212,14 +228,18 @@ pub(crate) enum Error {
     EmptyPodNodeName { name: String, namespace: String },
 
     /// Error for when the metadata.uid of a Pod is empty.
-    #[snafu(display("Failed get metadta.uid from Pod {} in Namespace {}", name, namespace))]
+    #[snafu(display(
+        "Failed to get .metadata.uid from Pod {} in Namespace {}",
+        name,
+        namespace
+    ))]
     EmptyPodUid { name: String, namespace: String },
 
     /// Error for when an uncordon request for a storage node fails.
-    #[snafu(display("Failed to uncordon {} Node {}: {}", PRODUCT, node_name, source))]
+    #[snafu(display("Failed to uncordon {} Node {}: {}", PRODUCT, node_id, source))]
     StorageNodeUncordon {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
-        node_name: String,
+        node_id: String,
     },
 
     /// Error for when an Pod-delete Kubernetes API request fails.
@@ -237,10 +257,10 @@ pub(crate) enum Error {
     },
 
     /// Error for when GET-ing a storage node fails.
-    #[snafu(display("Failed to list {} Node {}: {}", PRODUCT, node_name, source))]
+    #[snafu(display("Failed to list {} Node {}: {}", PRODUCT, node_id, source))]
     GetStorageNode {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
-        node_name: String,
+        node_id: String,
     },
 
     /// Error for when the storage node's Spec is empty.
@@ -254,15 +274,11 @@ pub(crate) enum Error {
     },
 
     /// Error for when a storage node drain request fails.
-    #[snafu(display("Failed to drain {} Node {}: {}", PRODUCT, node_name, source))]
+    #[snafu(display("Failed to drain {} Node {}: {}", PRODUCT, node_id, source))]
     DrainStorageNode {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
-        node_name: String,
+        node_id: String,
     },
-
-    /// Error for when a Pod's Ready status validated to be 'true'.
-    #[snafu(display("Pod {} in Namespace {} is not running", name, namespace))]
-    ValidatingPodReadyStatus { name: String, namespace: String },
 
     /// Error for when the requested YAML key is invalid.
     #[snafu(display("Failed to parse YAML path {}", yaml_path))]
@@ -386,6 +402,15 @@ pub(crate) enum Error {
         source: serde_json::Error,
         note: EventNote,
     },
+
+    /// Error for when there are too many io-engine Pods in one single node;
+    #[snafu(display("Too many io-engine Pods in Node '{}'", node_name))]
+    TooManyIoEnginePods { node_name: String },
+
+    #[snafu(display(
+        "The installed helm chart version is the same as the target upgrade version"
+    ))]
+    InstalledVersionSameAsUpgradeVersion,
 }
 /// A wrapper type to remove repeated Result<T, Error> returns.
 pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
