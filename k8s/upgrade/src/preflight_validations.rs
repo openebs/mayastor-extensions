@@ -11,8 +11,9 @@ pub async fn preflight_check(
     namespace: &str,
     kube_config_path: Option<PathBuf>,
     timeout: humantime::Duration,
-    ignore_single_replica: bool,
+    skip_single_replica_volume_validation: bool,
     skip_replica_rebuild: bool,
+    skip_cordoned_node_validation: bool,
 ) -> Result<(), Error> {
     console_logger::info(user_prompt::UPGRADE_WARNING, "");
     // Initialise the REST client.
@@ -34,8 +35,11 @@ pub async fn preflight_check(
         rebuild_in_progress_validation(&rest_client).await?;
     }
 
-    already_cordoned_nodes_validation(&rest_client).await?;
-    if !ignore_single_replica {
+    if !skip_cordoned_node_validation {
+        already_cordoned_nodes_validation(&rest_client).await?;
+    }
+
+    if !skip_single_replica_volume_validation {
         single_volume_replica_validation(&rest_client).await?;
     }
     Ok(())
@@ -65,6 +69,7 @@ pub async fn already_cordoned_nodes_validation(
             user_prompt::CORDONED_NODE_WARNING,
             &cordoned_nodes_list.join("\n"),
         );
+        std::process::exit(1);
     }
     Ok(())
 }

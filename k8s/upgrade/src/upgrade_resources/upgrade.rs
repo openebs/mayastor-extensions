@@ -77,7 +77,7 @@ pub struct UpgradeArgs {
     #[clap(global = true, long, short)]
     pub dry_run: bool,
 
-    /// If set then upgrade will skip the io-engine pods restart
+    /// If set then upgrade will skip the io-engine pods restart.
     #[clap(global = true, long, short = 'D', default_value_t = false)]
     pub skip_data_plane_restart: bool,
 
@@ -85,9 +85,13 @@ pub struct UpgradeArgs {
     #[clap(global = true, long, short = 'S')]
     pub skip_single_replica_volume_validation: bool,
 
-    /// If set then upgrade will skip the repilca rebuild in progress validation
+    /// If set then upgrade will skip the repilca rebuild in progress validation.
     #[clap(global = true, long, short = 'R')]
     pub skip_replica_rebuild: bool,
+
+    /// If set then upgrade will skip the cordoned node validation.
+    #[clap(global = true, long, short = 'C')]
+    pub skip_cordoned_node_validation: bool,
 
     /// Upgrade to the specified branch.
     #[clap(global = true, hide = true, long, short = 'u')]
