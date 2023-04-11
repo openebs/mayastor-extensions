@@ -61,7 +61,7 @@ pub(crate) fn upgrade_event_selector(release_name: &str, component_name: &str) -
     format!("{kind},{name_key}={name_value}")
 }
 
-/// Upgrade conatainers to develop.
+/// Upgrade containers to develop.
 pub(crate) const UPGRADE_JOB_TO_DEVELOP_TAG: &str = "develop";
 /// Upgrade job container image repository.
 pub(crate) const UPGRADE_JOB_IMAGE_REPO: &str = "openebs";
