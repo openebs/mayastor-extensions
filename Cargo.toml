@@ -3,7 +3,6 @@ members = [
     "call-home",
     "console-logger",
     "exporter",
-    "operators",
     "k8s/plugin",
     "k8s/proxy",
     "k8s/supportability",
