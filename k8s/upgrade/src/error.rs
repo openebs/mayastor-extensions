@@ -66,16 +66,19 @@ pub enum Error {
     PodNameNotPresent { source: kube::Error },
 
     /// Deserialization error for event.
-    #[error("Error in desiaralizing upgrade event.")]
+    #[error("Error in deserializing upgrade event.")]
     EventSerdeDeserializationError,
 
     /// No message in upgrade event.
     #[error("No Message present in event.")]
     MessageInEventNotPresent,
-
     /// No upgrade event present.
     #[error("No upgrade event present.")]
     UpgradeEventNotPresent,
+
+    /// No Deployment event present.
+    #[error("No deployment present.")]
+    NoDeploymentPresent,
 
     /// Nodes are in cordoned state.
     #[error("Nodes are in cordoned state.")]
@@ -88,6 +91,26 @@ pub enum Error {
     /// Cluster is rebuilding replica of some volumes.
     #[error("Cluster is rebuilding replica of some volumes.")]
     VolumeRebuildInProgressErr,
+
+    /// Error for when .spec is None for the reference Deployment.
+    #[error("No .spec found for the reference Deployment")]
+    ReferenceDeploymentNoSpec,
+
+    /// Error for when .spec.template.spec is None for the reference Deployment.
+    #[error("No .spec.template.spec found for the reference Deployment")]
+    ReferenceDeploymentNoPodTemplateSpec,
+
+    /// Error for when .spec.template.spec.contains[0] does not exist.
+    #[error("Failed to find the first container of the Deployment.")]
+    ReferenceDeploymentNoContainers,
+
+    /// Error for when the .spec.template.spec.contains[0].image is a None.
+    #[error("Failed to find an image in Deployment.")]
+    ReferenceDeploymentNoImage,
+
+    /// Error for when the image format is invalid.
+    #[error("Failed to find a valid image in Deployment.")]
+    ReferenceDeploymentInvalidImage,
 }
 
 impl From<anyhow::Error> for Error {

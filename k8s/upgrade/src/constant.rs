@@ -48,8 +48,13 @@ pub(crate) fn release_version() -> Option<String> {
 }
 
 /// Append the tag to image in upgrade.
-pub(crate) fn upgrade_image_concat(image_repo: &str, image_name: &str, image_tag: &str) -> String {
-    format!("{image_repo}/{image_name}:{image_tag}")
+pub(crate) fn upgrade_image_concat(
+    image_registry: &str,
+    image_repo: &str,
+    image_name: &str,
+    image_tag: &str,
+) -> String {
+    format!("{image_registry}/{image_repo}/{image_name}:{image_tag}")
 }
 
 /// Append the release name to k8s objects.
@@ -61,6 +66,9 @@ pub(crate) fn upgrade_event_selector(release_name: &str, component_name: &str) -
     format!("{kind},{name_key}={name_value}")
 }
 
+pub(crate) const HELM_RELEASE_NAME_LABEL: &str = "openebs.io/release";
+
+pub(crate) const DEFAULT_IMAGE_REGISTRY: &str = "docker.io";
 /// Upgrade containers to develop.
 pub(crate) const UPGRADE_JOB_TO_DEVELOP_TAG: &str = "develop";
 /// Upgrade job container image repository.
