@@ -31,17 +31,21 @@ pub(crate) fn generate_values_args(
     // Helm chart flags -- reuse all values, except for the image tag. Modify
     // io_engine DaemonSet PodSpec logLevel if set to from-chart default, and
     // to-chart default differs from the from-chart default.
-    let mut upgrade_args: Vec<String> = Vec::with_capacity(12);
+    let mut upgrade_args: Vec<String> = Vec::with_capacity(15);
 
-    let image_key: &str = "image";
-    let tag_key: &str = "tag";
-    let repo_tags_key: &str = "repoTags";
-    let repo_tags_cp_key: &str = "controlPlane";
-    let repo_tags_dp_key: &str = "dataPlane";
-    let repo_tags_e_key: &str = "extensions";
+    let image_key = "image";
+    let tag_key = "tag";
+    let repo_tags_key = "repoTags";
+    let repo_tags_cp_key = "controlPlane";
+    let repo_tags_dp_key = "dataPlane";
+    let repo_tags_e_key = "extensions";
     let io_engine_key = "io_engine";
     let log_level_key = "logLevel";
-    let log_level_to_replace: &str = "info,io_engine=info";
+    let log_level_to_replace = "info,io_engine=info";
+    let thin_key = "agents.core.capacity.thin";
+    let thin_volume_commitment_key = "volumeCommitment";
+    let thin_pool_commitment_key = "poolCommitment";
+    let thin_volume_commitment_init_key = "volumeCommitmentInitial";
     match chart_variant {
         HelmChart::Umbrella => {
             upgrade_args.push("--set".to_string());
@@ -100,12 +104,44 @@ pub(crate) fn generate_values_args(
                 // <core-chart>.image.repoTags.extensions= --set <core-chart>.
                 // io-engine.loglevel=info
                 upgrade_args.push(io_engine_log_level_arg);
-
-                // helm upgrade .. --set release.version=<umbrella-chart-semver>
-                upgrade_args.push("--set".to_string());
-                let umbrella_release_arg: String = format!("release.version={TO_UMBRELLA_SEMVER}");
-                upgrade_args.push(umbrella_release_arg);
             }
+
+            // Empty values for these three for charts which do not have
+            // them on their values will result in a helm nil pointer error.
+            if from_values.core_capacity_is_absent() {
+                upgrade_args.push("--set".to_string());
+                let core_thin_pool_commitment_val = to_values.core_thin_pool_commitment()?;
+                let core_thin_pool_commitment_arg = format!(
+                    "{CORE_CHART_NAME}.{thin_key}.{thin_pool_commitment_key}={core_thin_pool_commitment_val}"
+                );
+                // helm upgrade .. --set
+                // <core-chart>.agents.core.capacity.thin.poolCommitment=<value>
+                upgrade_args.push(core_thin_pool_commitment_arg);
+
+                upgrade_args.push("--set".to_string());
+                let core_thin_vol_commitment_val = to_values.core_thin_volume_commitment()?;
+                let core_thin_vol_commitment_arg = format!(
+                    "{CORE_CHART_NAME}.{thin_key}.{thin_volume_commitment_key}={core_thin_vol_commitment_val}"
+                );
+                // helm upgrade .. --set
+                // <core-chart>.agents.core.capacity.thin.volumeCommitment=<value>
+                upgrade_args.push(core_thin_vol_commitment_arg);
+
+                upgrade_args.push("--set".to_string());
+                let core_thin_vol_commitment_initial_val =
+                    to_values.core_thin_volume_commitment_initial()?;
+                let core_thin_vol_commitment_initial_arg = format!(
+                    "{CORE_CHART_NAME}.{thin_key}.{thin_volume_commitment_init_key}={core_thin_vol_commitment_initial_val}"
+                );
+                // helm upgrade .. --set
+                // <core-chart>.agents.core.capacity.thin.volumeCommitmentInitial=<value>
+                upgrade_args.push(core_thin_vol_commitment_initial_arg);
+            }
+
+            // helm upgrade .. --set release.version=<umbrella-chart-semver>
+            upgrade_args.push("--set".to_string());
+            let umbrella_release_arg: String = format!("release.version={TO_UMBRELLA_SEMVER}");
+            upgrade_args.push(umbrella_release_arg);
         }
         HelmChart::Core => {
             upgrade_args.push("--set".to_string());
@@ -160,6 +196,35 @@ pub(crate) fn generate_values_args(
                 // --set image.repoTags.dataPlane= --set image.repoTags.extensions= --set
                 // io-engine.loglevel=info
                 upgrade_args.push(io_engine_log_level_arg);
+            }
+
+            // Empty values for these three for charts which do not have
+            // them on their values will result in a helm nil pointer error.
+            if from_values.core_capacity_is_absent() {
+                upgrade_args.push("--set".to_string());
+                let core_thin_pool_commitment_val = to_values.core_thin_pool_commitment()?;
+                let core_thin_pool_commitment_arg = format!(
+                    "{thin_key}.{thin_pool_commitment_key}={core_thin_pool_commitment_val}"
+                );
+                // helm upgrade .. --set agents.core.capacity.thin.poolCommitment=<value>
+                upgrade_args.push(core_thin_pool_commitment_arg);
+
+                upgrade_args.push("--set".to_string());
+                let core_thin_vol_commitment_val = to_values.core_thin_volume_commitment()?;
+                let core_thin_vol_commitment_arg = format!(
+                    "{thin_key}.{thin_volume_commitment_key}={core_thin_vol_commitment_val}"
+                );
+                // helm upgrade .. --set agents.core.capacity.thin.volumeCommitment=<value>
+                upgrade_args.push(core_thin_vol_commitment_arg);
+
+                upgrade_args.push("--set".to_string());
+                let core_thin_vol_commitment_initial_val =
+                    to_values.core_thin_volume_commitment_initial()?;
+                let core_thin_vol_commitment_initial_arg = format!(
+                    "{thin_key}.{thin_volume_commitment_init_key}={core_thin_vol_commitment_initial_val}"
+                );
+                // helm upgrade .. --set agents.core.capacity.thin.volumeCommitmentInitial=<value>
+                upgrade_args.push(core_thin_vol_commitment_initial_arg);
             }
         }
     }

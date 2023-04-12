@@ -411,6 +411,10 @@ pub(crate) enum Error {
         "The installed helm chart version is the same as the target upgrade version"
     ))]
     InstalledVersionSameAsUpgradeVersion,
+
+    /// Error for when the thin-provisioning option are absent, but still tried to fetch it.
+    #[snafu(display("The agents.core.capacity yaml object is absent amongst the helm values"))]
+    ThinProvisioningOptionsAbsent,
 }
 /// A wrapper type to remove repeated Result<T, Error> returns.
 pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;

@@ -10,8 +10,8 @@ use crate::{
 use k8s_openapi::api::{
     batch::v1::{Job, JobSpec},
     core::v1::{
-        Container, ContainerPort, EnvVar, EnvVarSource, ExecAction, ObjectFieldSelector, PodSpec,
-        PodTemplateSpec, Probe, ServiceAccount,
+        Container, EnvVar, EnvVarSource, ExecAction, ObjectFieldSelector, PodSpec, PodTemplateSpec,
+        Probe, ServiceAccount,
     },
     rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject},
 };
@@ -263,6 +263,8 @@ pub(crate) fn upgrade_job(
     release_name: String,
     skip_data_plane_restart: bool,
     upgrade_to_branch: Option<&String>,
+    image_pull_secrets: Option<Vec<k8s_openapi::api::core::v1::LocalObjectReference>>,
+    image_pull_policy: Option<String>,
 ) -> Job {
     let mut job_args: Vec<String> = vec![
         format!("--rest-endpoint=http://{release_name}-api-rest:8081"),
@@ -296,17 +298,13 @@ pub(crate) fn upgrade_job(
                     ..Default::default()
                 }),
                 spec: Some(PodSpec {
+                    image_pull_secrets,
                     restart_policy: Some("OnFailure".to_string()),
                     containers: vec![Container {
                         args: Some(job_args),
                         image: Some(upgrade_image),
-                        image_pull_policy: Some("Always".to_string()),
+                        image_pull_policy,
                         name: UPGRADE_JOB_CONTAINER_NAME.to_string(),
-                        ports: Some(vec![ContainerPort {
-                            container_port: 8080,
-                            name: Some("http".to_string()),
-                            ..Default::default()
-                        }]),
                         env: Some(vec![
                             EnvVar {
                                 name: "RUST_LOG".to_string(),
