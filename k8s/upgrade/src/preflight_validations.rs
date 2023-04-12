@@ -45,7 +45,7 @@ pub async fn preflight_check(
     Ok(())
 }
 
-/// Check for already cordoned node
+/// Prompt to user and error out if some nodes are already in cordoned state.
 pub async fn already_cordoned_nodes_validation(
     client: &upgrade_lib::RestClient,
 ) -> Result<(), Error> {
@@ -65,16 +65,16 @@ pub async fn already_cordoned_nodes_validation(
         }
     }
     if !cordoned_nodes_list.is_empty() {
-        console_logger::warn(
+        console_logger::error(
             user_prompt::CORDONED_NODE_WARNING,
             &cordoned_nodes_list.join("\n"),
         );
-        std::process::exit(1);
+        return Err(Error::NodesInCordonedState);
     }
     Ok(())
 }
 
-/// Check single replica volumes.
+/// Prompt to user and error out if the cluster has single replica volume.
 pub async fn single_volume_replica_validation(
     client: &upgrade_lib::RestClient,
 ) -> Result<(), Error> {
@@ -111,17 +111,17 @@ pub async fn single_volume_replica_validation(
             .await?
             .join("\n");
 
-        console_logger::warn(user_prompt::SINGLE_REPLICA_VOLUME_WARNING, &data);
-        std::process::exit(1);
+        console_logger::error(user_prompt::SINGLE_REPLICA_VOLUME_WARNING, &data);
+        return Err(Error::SingleReplicaVolumeErr);
     }
     Ok(())
 }
 
-/// Prompt to user if any rebuild in progress.
+/// Prompt to user and error out if any rebuild in progress.
 pub async fn rebuild_in_progress_validation(client: &upgrade_lib::RestClient) -> Result<(), Error> {
     if is_rebuild_in_progress(client).await? {
-        console_logger::warn(user_prompt::REBUILD_WARNING, "");
-        std::process::exit(1);
+        console_logger::error(user_prompt::REBUILD_WARNING, "");
+        return Err(Error::VolumeRebuildInProgressErr);
     }
     Ok(())
 }
