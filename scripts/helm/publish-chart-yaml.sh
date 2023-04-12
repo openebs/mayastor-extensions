@@ -39,7 +39,8 @@ version()
 # Get the expected Chart version for the given branch
 # Example:
 # For 'develop', the Chart should be x.0.0-develop
-# For 'main', the Chart should be x.0.0-$date-$time, example: v0.0.0-2023-03-30-13-07-40
+# For 'main', if DATE_TIME is not defined then chart should be v0.0.0-main
+# Else for 'main', the Chart should be x.0.0-$date-$time, example: v0.0.0-2023-03-30-13-07-40
 # For 'release/2.0' the Chart should be 2.0.0
 branch_chart_version()
 {
@@ -49,7 +50,11 @@ branch_chart_version()
     echo "0.0.0"
   elif [ "$CHECK_BRANCH" == "main" ]; then
     # Main has no meaningful version, other than the date-time
-    echo "0.0.0-$DATE_TIME"
+    if [ -n "$DATE_TIME" ]; then
+      echo "0.0.0-$DATE_TIME"
+    else
+      echo "0.0.0-main"
+    fi
   elif [ "$RELEASE_V" != "${CHECK_BRANCH}" ]; then
     if [ "$(semver validate "$RELEASE_V")" == "valid" ]; then
       echo "$RELEASE_V"
@@ -142,7 +147,7 @@ INDEX_FILE=
 DRY_RUN=
 DEVELOP_TO_REL=
 DATE_TIME_FMT="%Y-%m-%d-%H-%M-%S"
-DATE_TIME=${DATE_TIME:-$(date +"$DATE_TIME_FMT")}
+DATE_TIME=
 IGNORE_INDEX_CHECK=
 
 # Check if all needed tools are installed
