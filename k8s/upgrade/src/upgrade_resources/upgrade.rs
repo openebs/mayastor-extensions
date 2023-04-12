@@ -1,10 +1,11 @@
 use crate::{
     constant::{
         get_image_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
-        AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_RELEASE_NAME,
-        IO_ENGINE_POD_LABEL, UPGRADE_EVENT_REASON, UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
-        UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX, UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO,
-        UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+        AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_IMAGE_REGISTRY,
+        DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, IO_ENGINE_POD_LABEL, UPGRADE_EVENT_REASON,
+        UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
+        UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX,
+        UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     error::Error,
     upgrade_resources::objects,
@@ -144,7 +145,7 @@ pub async fn list_pods(
     let client = Client::try_default()
         .await
         .map_err(|source| Error::K8sClientError { source })?;
-    let pods: Api<Pod> = Api::namespaced(client.clone(), namespace);
+    let pods: Api<Pod> = Api::namespaced(client, namespace);
     let pod_list: ObjectList<Pod> = pods.list(&ListParams::default().labels(label)).await?;
 
     for pod in pod_list.iter() {
@@ -237,7 +238,7 @@ impl UpgradeEventClient {
         }
     }
 
-    /// Create resouurces for fetching upgrade events.
+    /// Create resources for fetching upgrade events.
     pub async fn create_get_upgrade_resource(ns: &str) -> Result<(), Error> {
         let release_name = get_release_name(ns).await?;
         let gur = UpgradeEventClient::new(ns).await?;
@@ -514,9 +515,12 @@ impl UpgradeResources {
             match action {
                 Actions::Create => {
                     let upgrade_job_image_tag = get_image_tag();
+                    let rest_deployment = get_deployment_for_rest(ns).await?;
+                    let img = ImageProperties::try_from(rest_deployment)?;
                     let upgrade_deploy = objects::upgrade_job(
                         ns,
                         upgrade_image_concat(
+                            img.registry().as_str(),
                             UPGRADE_JOB_IMAGE_REPO,
                             UPGRADE_JOB_IMAGE_NAME,
                             upgrade_job_image_tag.as_str(),
@@ -524,6 +528,8 @@ impl UpgradeResources {
                         self.release_name.clone(),
                         skip_data_plane_restart,
                         upgrade_to_branch,
+                        img.pull_secrets(),
+                        img.pull_policy(),
                     );
                     match self
                         .job
@@ -650,7 +656,7 @@ impl UpgradeResources {
 
 pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> Result<Vec<String>, Error> {
     let client = Client::try_default().await?;
-    let pvclaim = Api::<PersistentVolumeClaim>::all(client.clone());
+    let pvclaim = Api::<PersistentVolumeClaim>::all(client);
     let lp = ListParams::default();
     let pvc_list = pvclaim.list(&lp).await?;
     let mut single_replica_volumes_pvc = Vec::new();
@@ -667,31 +673,33 @@ pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> Result<Vec<String>
 }
 
 /// Return results as list of deployments.
-pub async fn get_deployment_for_rest(ns: &str) -> Result<ObjectList<Deployment>, Error> {
+pub async fn get_deployment_for_rest(ns: &str) -> Result<Deployment, Error> {
     let client = Client::try_default().await?;
-    let deployment = Api::<Deployment>::namespaced(client.clone(), ns);
+    let deployment = Api::<Deployment>::namespaced(client, ns);
     let lp = ListParams::default().labels(API_REST_LABEL_SELECTOR);
-    Ok(deployment.list(&lp).await?)
+    let deployment_list = deployment.list(&lp).await?;
+    let deployment = deployment_list
+        .items
+        .first()
+        .ok_or(Error::NoDeploymentPresent)?
+        .clone();
+
+    Ok(deployment)
 }
 
 /// Return the release name.
 pub async fn get_release_name(ns: &str) -> Result<String, Error> {
     match get_deployment_for_rest(ns).await {
-        Ok(deployments) => match deployments.items.get(0) {
-            Some(deployment) => match &deployment.metadata.labels {
-                Some(label) => match label.get("openebs.io/release") {
-                    Some(value) => Ok(value.to_string()),
-                    None => Ok(DEFAULT_RELEASE_NAME.to_string()),
-                },
+        Ok(deployment) => match &deployment.metadata.labels {
+            Some(label) => match label.get(HELM_RELEASE_NAME_LABEL) {
+                Some(value) => Ok(value.to_string()),
                 None => Ok(DEFAULT_RELEASE_NAME.to_string()),
             },
-            None => {
-                println!("No deployment present.");
-                std::process::exit(1);
-            }
+            None => Ok(DEFAULT_RELEASE_NAME.to_string()),
         },
+
         Err(e) => {
-            println!("Failed in fetching deployment {e:?}");
+            eprintln!("Failed in fetching deployment {e:?}");
             std::process::exit(1);
         }
     }
@@ -735,4 +743,64 @@ pub async fn upgrade_job_completed(
         }
     }
     Ok(false)
+}
+
+struct ImageProperties {
+    pull_secrets: Option<Vec<k8s_openapi::api::core::v1::LocalObjectReference>>,
+    registry: String,
+    pull_policy: Option<String>,
+}
+
+impl TryFrom<Deployment> for ImageProperties {
+    type Error = crate::error::Error;
+
+    fn try_from(d: Deployment) -> Result<Self, Error> {
+        let pod_spec = d
+            .spec
+            .ok_or(Error::ReferenceDeploymentNoSpec)?
+            .template
+            .spec
+            .ok_or(Error::ReferenceDeploymentNoPodTemplateSpec)?;
+
+        let container = pod_spec
+            .containers
+            .first()
+            .ok_or(Error::ReferenceDeploymentNoContainers)?;
+
+        let image = container
+            .image
+            .clone()
+            .ok_or(Error::ReferenceDeploymentNoImage)?;
+
+        let image_sections: Vec<&str> = image.split('/').collect();
+        if image_sections.is_empty() || image_sections.len() == 1 {
+            return Err(Error::ReferenceDeploymentInvalidImage);
+        }
+
+        let registry = match image_sections.len() {
+            3 => image_sections[0],
+            _ => DEFAULT_IMAGE_REGISTRY,
+        }
+        .to_string();
+
+        Ok(Self {
+            pull_secrets: pod_spec.image_pull_secrets.clone(),
+            registry,
+            pull_policy: container.image_pull_policy.clone(),
+        })
+    }
+}
+
+impl ImageProperties {
+    fn pull_secrets(&self) -> Option<Vec<k8s_openapi::api::core::v1::LocalObjectReference>> {
+        self.pull_secrets.clone()
+    }
+
+    fn registry(&self) -> String {
+        self.registry.clone()
+    }
+
+    fn pull_policy(&self) -> Option<String> {
+        self.pull_policy.clone()
+    }
 }
