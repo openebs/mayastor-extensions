@@ -9,9 +9,9 @@ pub fn info(message: &str, data: &str) {
     );
 }
 
-/// Print warning on console.
-pub fn warn(message: &str, data: &str) {
-    println!(
+/// Print error on console.
+pub fn error(message: &str, data: &str) {
+    eprintln!(
         "{} \n {} ",
         Cyan.bold().italic().paint(message),
         Red.bold().italic().paint(data)

@@ -76,6 +76,18 @@ pub enum Error {
     /// No upgrade event present.
     #[error("No upgrade event present.")]
     UpgradeEventNotPresent,
+
+    /// Nodes are in cordoned state.
+    #[error("Nodes are in cordoned state.")]
+    NodesInCordonedState,
+
+    /// Single replica volume present in cluster.
+    #[error("Single replica volume present in cluster.")]
+    SingleReplicaVolumeErr,
+
+    /// Cluster is rebuilding replica of some volumes.
+    #[error("Cluster is rebuilding replica of some volumes.")]
+    VolumeRebuildInProgressErr,
 }
 
 impl From<anyhow::Error> for Error {
