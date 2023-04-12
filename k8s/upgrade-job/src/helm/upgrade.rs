@@ -2,8 +2,8 @@ use crate::{
     common::{
         constants::{CORE_CHART_NAME, UMBRELLA_CHART_NAME},
         error::{
-            HelmUpgradeOptionsAbsent, InvalidUpgradePath, NoInputHelmChartDir, NotAKnownHelmChart,
-            RegexCompile, Result,
+            HelmUpgradeOptionsAbsent, InstalledVersionSameAsUpgradeVersion, InvalidUpgradePath,
+            NoInputHelmChartDir, NotAKnownHelmChart, RegexCompile, Result,
         },
     },
     helm::{client::HelmReleaseClient, values::generate_values_args},
@@ -138,6 +138,10 @@ impl HelmUpgradeBuilder {
         let from_version = upgrade::path::version_from_release_chart(chart)?;
         let upgrade_path_is_valid =
             upgrade::path::is_valid(chart_variant.clone(), &from_version, &to_version)?;
+        ensure!(
+            to_version.ne(&from_version),
+            InstalledVersionSameAsUpgradeVersion
+        );
         ensure!(upgrade_path_is_valid, InvalidUpgradePath);
 
         // Generate args to pass to the `helm upgrade` command.
@@ -184,11 +188,11 @@ impl HelmUpgrade {
             .upgrade(self.release_name, self.chart_dir, Some(self.extra_args))
     }
 
-    pub(crate) fn installed_version(&self) -> String {
+    pub(crate) fn upgrade_from_version(&self) -> String {
         self.from_version.to_string()
     }
 
-    pub(crate) fn to_version(&self) -> String {
+    pub(crate) fn upgrade_to_version(&self) -> String {
         self.to_version.to_string()
     }
 }
