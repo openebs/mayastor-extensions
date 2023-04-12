@@ -10,8 +10,8 @@ use crate::{
 use k8s_openapi::api::{
     batch::v1::{Job, JobSpec},
     core::v1::{
-        Container, ContainerPort, EnvVar, EnvVarSource, ExecAction, ObjectFieldSelector, PodSpec,
-        PodTemplateSpec, Probe, ServiceAccount,
+        Container, EnvVar, EnvVarSource, ExecAction, ObjectFieldSelector, PodSpec, PodTemplateSpec,
+        Probe, ServiceAccount,
     },
     rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject},
 };
@@ -305,11 +305,6 @@ pub(crate) fn upgrade_job(
                         image: Some(upgrade_image),
                         image_pull_policy,
                         name: UPGRADE_JOB_CONTAINER_NAME.to_string(),
-                        ports: Some(vec![ContainerPort {
-                            container_port: 8080,
-                            name: Some("http".to_string()),
-                            ..Default::default()
-                        }]),
                         env: Some(vec![
                             EnvVar {
                                 name: "RUST_LOG".to_string(),
