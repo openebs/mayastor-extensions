@@ -72,25 +72,9 @@ pub(crate) fn upgrade_job_cluster_role(
             },
             PolicyRule {
                 api_groups: Some(vec!["apps"].into_vec()),
-                resources: Some(vec!["deployments"].into_vec()),
-                verbs: vec!["create", "delete", "get", "list", "patch"].into_vec(),
-                ..Default::default()
-            },
-            PolicyRule {
-                api_groups: Some(vec!["apps"].into_vec()),
-                resources: Some(vec!["statefulsets"].into_vec()),
-                verbs: vec!["create", "delete", "get", "list", "patch"].into_vec(),
-                ..Default::default()
-            },
-            PolicyRule {
-                api_groups: Some(vec!["apps"].into_vec()),
-                resources: Some(vec!["daemonsets"].into_vec()),
-                verbs: vec!["create", "delete", "get", "list", "patch"].into_vec(),
-                ..Default::default()
-            },
-            PolicyRule {
-                api_groups: Some(vec!["apps"].into_vec()),
-                resources: Some(vec!["replicasets"].into_vec()),
+                resources: Some(
+                    vec!["daemonsets", "replicasets", "statefulsets", "deployments"].into_vec(),
+                ),
                 verbs: vec!["create", "delete", "get", "list", "patch"].into_vec(),
                 ..Default::default()
             },
@@ -134,7 +118,16 @@ pub(crate) fn upgrade_job_cluster_role(
             },
             PolicyRule {
                 api_groups: Some(vec![""].into_vec()),
-                resources: Some(vec!["secrets"].into_vec()),
+                resources: Some(
+                    vec![
+                        "secrets",
+                        "persistentvolumes",
+                        "persistentvolumeclaims",
+                        "services",
+                        "configmaps",
+                    ]
+                    .into_vec(),
+                ),
                 verbs: vec![
                     "get",
                     "list",
@@ -151,6 +144,33 @@ pub(crate) fn upgrade_job_cluster_role(
             PolicyRule {
                 api_groups: Some(vec!["rbac.authorization.k8s.io"].into_vec()),
                 resources: Some(vec!["roles"].into_vec()),
+                verbs: vec![
+                    "create", "list", "delete", "get", "patch", "escalate", "bind",
+                ]
+                .into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["monitoring.coreos.com"].into_vec()),
+                resources: Some(vec!["prometheusrules", "podmonitors"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["networking.k8s.io"].into_vec()),
+                resources: Some(vec!["networkpolicies"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["batch"].into_vec()),
+                resources: Some(vec!["cronjobs"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
+                api_groups: Some(vec!["jaegertracing.io"].into_vec()),
+                resources: Some(vec!["jaegers"].into_vec()),
                 verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
                 ..Default::default()
             },
@@ -176,20 +196,8 @@ pub(crate) fn upgrade_job_cluster_role(
                 ..Default::default()
             },
             PolicyRule {
-                api_groups: Some(vec![""].into_vec()),
-                resources: Some(vec!["services"].into_vec()),
-                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
-                ..Default::default()
-            },
-            PolicyRule {
                 api_groups: Some(vec!["storage.k8s.io"].into_vec()),
                 resources: Some(vec!["storageclasses"].into_vec()),
-                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
-                ..Default::default()
-            },
-            PolicyRule {
-                api_groups: Some(vec![""].into_vec()),
-                resources: Some(vec!["configmaps"].into_vec()),
                 verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
                 ..Default::default()
             },
