@@ -374,29 +374,18 @@ pub(crate) enum Error {
     #[snafu(display("Mandatory options for EventRecorder were not given"))]
     HelmUpgradeOptionsAbsent,
 
+    /// Error for failures in generating semver::Value from a &str input.
     #[snafu(display("Failed to parse {} as a valid semver: {}", version_string, source))]
     SemverParse {
         source: semver::Error,
         version_string: String,
     },
 
-    #[snafu(display(
-        "'{}' chart is not a subchart of '{}' chart",
-        CORE_CHART_NAME,
-        UMBRELLA_CHART_NAME
-    ))]
-    CoreNotASubchartOfUmbrella,
-
-    #[snafu(display(
-        "Upgrade for {} chart v{} is not supported",
-        UMBRELLA_CHART_NAME,
-        version
-    ))]
-    UmbrellaChartVersionInvalid { version: String },
-
+    /// Error for when the detected upgrade path for PRODUCT is not supported.
     #[snafu(display("The upgrade path is invalid"))]
     InvalidUpgradePath,
 
+    /// Error in serializing crate::event::event_recorder::EventNote to JSON string.
     #[snafu(display("Failed to serialize event note {:?}: {}", note, source))]
     SerializeEventNote {
         source: serde_json::Error,
@@ -415,6 +404,11 @@ pub(crate) enum Error {
     /// Error for when the thin-provisioning option are absent, but still tried to fetch it.
     #[snafu(display("The agents.core.capacity yaml object is absent amongst the helm values"))]
     ThinProvisioningOptionsAbsent,
+
+    /// Error when trying to send Events through the tokio::sync::channel::Sender<Event>
+    /// synchronisation tool.
+    #[snafu(display("Failed to send Event over the channel"))]
+    EventChannelSend,
 }
 /// A wrapper type to remove repeated Result<T, Error> returns.
 pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
