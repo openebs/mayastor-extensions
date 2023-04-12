@@ -156,6 +156,7 @@ async fn execute(cli_args: CliArgs) {
                     cli_args.timeout,
                     resources.skip_single_replica_volume_validation,
                     resources.skip_replica_rebuild,
+                    resources.skip_cordoned_node_validation,
                 )
                 .await
                 .map_err(|_e| {
