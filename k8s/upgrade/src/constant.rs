@@ -37,7 +37,7 @@ pub(crate) fn get_image_tag() -> String {
             let patch = *(tag.get(2).unwrap_or(&""));
             format!("v{major}-{minor}-{patch}")
         }
-        None => UPGRADE_JOB_TO_DEVELOP_TAG.to_string(),
+        None => UPGRADE_JOB_IMAGE_TAG.to_string(),
     }
 }
 
@@ -69,8 +69,8 @@ pub(crate) fn upgrade_event_selector(release_name: &str, component_name: &str) -
 pub(crate) const HELM_RELEASE_NAME_LABEL: &str = "openebs.io/release";
 
 pub(crate) const DEFAULT_IMAGE_REGISTRY: &str = "docker.io";
-/// Upgrade containers to develop.
-pub(crate) const UPGRADE_JOB_TO_DEVELOP_TAG: &str = "develop";
+/// The upgrade job will use the UPGRADE_JOB_IMAGE_NAME image (below) with this tag.
+pub(crate) const UPGRADE_JOB_IMAGE_TAG: &str = "release-2.1";
 /// Upgrade job container image repository.
 pub(crate) const UPGRADE_JOB_IMAGE_REPO: &str = "openebs";
 /// Upgrade job container image name.
