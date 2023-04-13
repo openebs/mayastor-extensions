@@ -196,7 +196,9 @@ impl HelmReleaseClient {
             release_name,
             chart_dir,
             "-n",
-            self.namespace.as_str()
+            self.namespace.as_str(),
+            "--timeout",
+            "15m"
         ];
 
         // Extra args

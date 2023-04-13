@@ -1,7 +1,7 @@
 use crate::common::{
     constants::PRODUCT,
     error::{
-        EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
+        EventChannelSend, EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
         JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result, SerializeEventNote,
     },
     kube_client::KubeClientSet,
@@ -10,10 +10,11 @@ use k8s_openapi::{api::core::v1::ObjectReference, serde_json};
 use kube::runtime::events::{Event, EventType, Recorder};
 use serde::Serialize;
 use snafu::{ensure, ResultExt};
-use std::fmt::Display;
+use std::{fmt::Display, time::Duration};
+use tokio::{select, sync::mpsc, task, time::sleep};
 
 #[derive(Serialize, Debug)]
-#[serde(rename(serialize = "camelCase"))]
+#[serde(rename_all(serialize = "camelCase"))]
 pub(crate) struct EventNote {
     from_version: String,
     to_version: String,
@@ -159,12 +160,39 @@ impl EventRecorderBuilder {
             resource_version: None,
         };
 
+        let (tx, mut rx) = mpsc::unbounded_channel::<Event>();
+
+        let aborter = tokio::spawn(async move {
+            let event_handler =
+                Recorder::new(k8s_client.client(), reporter_name.into(), job_obj_ref);
+
+            // Function exits when 'None'. Avoids panics.
+            let mut current_event = rx.recv().await;
+
+            while let Some(event) = &current_event {
+                // Hacky clone for the Event.
+                let event = Event {
+                    type_: event.type_,
+                    reason: event.reason.clone(),
+                    note: event.note.clone(),
+                    action: event.action.clone(),
+                    secondary: event.secondary.clone(),
+                };
+                if let Err(error) = event_handler.publish(event).await.context(EventPublish) {
+                    tracing::error!(?error, "Failed to publish event");
+                }
+
+                select! {
+                    _ = sleep(Duration::from_secs(1200)) => {}
+                    event = rx.recv() => { current_event = event }
+                }
+            }
+        })
+        .abort_handle();
+
         Ok(EventRecorder {
-            k8s_event_recorder: Recorder::new(
-                k8s_client.client(),
-                reporter_name.into(),
-                job_obj_ref,
-            ),
+            event_loop_killswitch: aborter,
+            event_sender: tx,
             from_version,
             to_version,
         })
@@ -173,9 +201,17 @@ impl EventRecorderBuilder {
 
 /// This is a wrapper around a kube::runtime::events::Recorder.
 pub(crate) struct EventRecorder {
-    k8s_event_recorder: Recorder,
+    event_loop_killswitch: task::AbortHandle,
+    event_sender: mpsc::UnboundedSender<Event>,
     from_version: String,
     to_version: String,
+}
+
+impl Drop for EventRecorder {
+    fn drop(&mut self) {
+        // Cancel the tokio task.
+        self.event_loop_killswitch.abort();
+    }
 }
 
 impl EventRecorder {
@@ -183,12 +219,13 @@ impl EventRecorder {
     pub(crate) fn builder() -> EventRecorderBuilder {
         EventRecorderBuilder::default()
     }
+
     /// This function is a wrapper around kube::runtime::events' recorder.publish().
-    pub(crate) async fn publish(&self, event: Event) -> Result<()> {
-        self.k8s_event_recorder
-            .publish(event)
-            .await
-            .context(EventPublish)
+    async fn publish(&self, event: Event) -> Result<()> {
+        self.event_sender
+            .clone()
+            .send(event)
+            .map_err(|_| EventChannelSend.build())
     }
 
     /// This is a helper method with calls the publish method above and fills out the boilerplate
