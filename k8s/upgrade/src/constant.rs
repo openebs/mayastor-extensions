@@ -21,22 +21,25 @@ pub(crate) fn upgrade_name_concat(
 ) -> String {
     let version = match upgrade_to_branch {
         Some(tag) => tag.to_string(),
-        None => get_image_tag(),
+        None => upgrade_obj_suffix(),
     };
     format!("{release_name}-{component_name}-{version}")
 }
 
 /// Fetch the image tag to append to upgrade resources.
-pub(crate) fn get_image_tag() -> String {
+pub(crate) fn upgrade_obj_suffix() -> String {
+    let version = match release_version() {
+        Some(upgrade_job_image_tag) => upgrade_job_image_tag,
+        None => UPGRADE_JOB_IMAGE_TAG.to_string(),
+    };
+    version.replace('.', "-")
+}
+
+/// Fetch the image tag for upgrade job's pod.
+pub(crate) fn get_image_version_tag() -> String {
     let version = release_version();
     match version {
-        Some(upgrade_job_image_tag) => {
-            let tag: Vec<_> = upgrade_job_image_tag.split('.').collect();
-            let major = *(tag.first().unwrap_or(&""));
-            let minor = *(tag.get(1).unwrap_or(&""));
-            let patch = *(tag.get(2).unwrap_or(&""));
-            format!("v{major}-{minor}-{patch}")
-        }
+        Some(upgrade_job_image_tag) => upgrade_job_image_tag,
         None => UPGRADE_JOB_IMAGE_TAG.to_string(),
     }
 }
@@ -61,7 +64,7 @@ pub(crate) fn upgrade_image_concat(
 pub(crate) fn upgrade_event_selector(release_name: &str, component_name: &str) -> String {
     let kind = "involvedObject.kind=Job";
     let name_key = "involvedObject.name";
-    let tag = get_image_tag();
+    let tag = upgrade_obj_suffix();
     let name_value = format!("{release_name}-{component_name}-{tag}");
     format!("{kind},{name_key}={name_value}")
 }
