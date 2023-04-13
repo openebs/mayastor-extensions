@@ -1,6 +1,6 @@
 use crate::{
     constant::{
-        get_image_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
+        get_image_version_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
         AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_IMAGE_REGISTRY,
         DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, IO_ENGINE_POD_LABEL, UPGRADE_EVENT_REASON,
         UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
@@ -515,7 +515,7 @@ impl UpgradeResources {
         } else {
             match action {
                 Actions::Create => {
-                    let upgrade_job_image_tag = get_image_tag();
+                    let upgrade_job_image_tag = get_image_version_tag();
                     let rest_deployment = get_deployment_for_rest(ns).await?;
                     let img = ImageProperties::try_from(rest_deployment)?;
                     let upgrade_deploy = objects::upgrade_job(
