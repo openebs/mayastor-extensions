@@ -178,6 +178,7 @@ impl GetUpgradeArgs {
 
 /// This struct is used to deserialize the output of ugrade events.
 #[derive(Clone, Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
 pub(crate) struct UpgradeEvent {
     from_version: String,
     to_version: String,
