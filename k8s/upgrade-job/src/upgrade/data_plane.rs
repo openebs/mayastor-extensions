@@ -23,6 +23,14 @@ use snafu::ResultExt;
 use std::time::Duration;
 use utils::{API_REST_LABEL, ETCD_LABEL};
 
+// The stages after which rebuild validation will start
+enum RebuildValidationStage {
+    // Rebuild validation after the node is drained
+    NodeIsDrained,
+    // Rebuild validation after the node is uncordoned
+    NodeIsUncordoned,
+}
+
 /// Upgrade data plane by controlled restart of io-engine pods
 pub(crate) async fn upgrade_data_plane(
     namespace: String,
@@ -87,14 +95,16 @@ pub(crate) async fn upgrade_data_plane(
         // Issue node drain command
         drain_storage_node(node_name, &rest_client).await?;
 
-        // Wait for any rebuild to complete.
-        wait_for_rebuild(node_name, &rest_client).await?;
+        // Wait for any rebuild to complete
+        wait_for_rebuild(
+            RebuildValidationStage::NodeIsDrained,
+            node_name,
+            &rest_client,
+        )
+        .await?;
 
         // restart the data plane pod
         delete_data_plane_pod(node_name, pod, &k8s_client).await?;
-
-        // Uncordon the drained node
-        uncordon_node(node_name, &rest_client).await?;
 
         // validate the new pod is up and running
         verify_data_plane_pod_is_running(
@@ -102,6 +112,17 @@ pub(crate) async fn upgrade_data_plane(
             namespace.clone(),
             &upgrade_to_version,
             &k8s_client,
+        )
+        .await?;
+
+        // Uncordon the drained node
+        uncordon_node(node_name, &rest_client).await?;
+
+        // Wait for any rebuild to complete
+        wait_for_rebuild(
+            RebuildValidationStage::NodeIsUncordoned,
+            node_name,
+            &rest_client,
         )
         .await?;
 
@@ -203,11 +224,22 @@ async fn verify_data_plane_pod_is_running(
 }
 
 /// Wait for the rebuild to complete if any.
-async fn wait_for_rebuild(node_name: &str, rest_client: &RestClientSet) -> Result<()> {
+async fn wait_for_rebuild(
+    rebuild_stage: RebuildValidationStage,
+    node_name: &str,
+    rest_client: &RestClientSet,
+) -> Result<()> {
     // Wait for 60 seconds for any rebuilds to kick in.
     tokio::time::sleep(Duration::from_secs(60_u64)).await;
     while is_rebuilding(rest_client).await? {
-        tracing::info!(node.name = %node_name, "Waiting for volume rebuild to complete");
+        match rebuild_stage {
+            RebuildValidationStage::NodeIsDrained => {
+                tracing::info!(node.name = %node_name, "Waiting for volume rebuild to complete after node is drained")
+            }
+            RebuildValidationStage::NodeIsUncordoned => {
+                tracing::info!(node.name = %node_name, "Waiting for volume rebuild to complete after node is uncordoned ")
+            }
+        }
         tokio::time::sleep(Duration::from_secs(10_u64)).await;
     }
     Ok(())
