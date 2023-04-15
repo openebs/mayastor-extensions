@@ -1,9 +1,8 @@
 use crate::common::{
     constants::PRODUCT,
     error::{
-        EventChannelSend, EventFinalAcknowledgementSend, EventPublish, EventRecorderOptionsAbsent,
-        GetPod, JobPodHasTooManyOwners, JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result,
-        SerializeEventNote,
+        EventChannelSend, EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
+        JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result, SerializeEventNote,
     },
     kube_client::KubeClientSet,
 };
@@ -153,16 +152,8 @@ impl EventRecorderBuilder {
         };
 
         let (tx, mut rx) = mpsc::unbounded_channel::<Event>();
-        let (ack_sender, ack_receiver) = mpsc::channel::<()>(1);
 
-        let event_recorder = EventRecorder {
-            event_sender: Some(tx),
-            ack_receiver,
-            from_version,
-            to_version,
-        };
-
-        tokio::spawn(async move {
+        let event_loop_handle = tokio::spawn(async move {
             let event_handler =
                 Recorder::new(k8s_client.client(), pod_owner.name.into(), job_obj_ref);
 
@@ -187,26 +178,21 @@ impl EventRecorderBuilder {
                     event = rx.recv() => { current_event = event }
                 }
             }
-
-            // Acknowledgement for exit of event loop, i.e. all events published, nothing left
-            // behind in the channel.
-            if let Err(error) = ack_sender
-                .send(())
-                .await
-                .context(EventFinalAcknowledgementSend)
-            {
-                error!(%error);
-            }
         });
 
-        Ok(event_recorder)
+        Ok(EventRecorder {
+            event_sender: Some(tx),
+            event_loop_handle,
+            from_version,
+            to_version,
+        })
     }
 }
 
 /// This is a wrapper around a kube::runtime::events::Recorder.
 pub(crate) struct EventRecorder {
     event_sender: Option<mpsc::UnboundedSender<Event>>,
-    ack_receiver: mpsc::Receiver<()>,
+    event_loop_handle: tokio::task::JoinHandle<()>,
     from_version: String,
     to_version: String,
 }
@@ -279,6 +265,6 @@ impl EventRecorder {
     pub(crate) async fn shutdown_worker(mut self) {
         let _ = self.event_sender.take();
 
-        self.ack_receiver.recv().await;
+        let _ = self.event_loop_handle.await;
     }
 }
