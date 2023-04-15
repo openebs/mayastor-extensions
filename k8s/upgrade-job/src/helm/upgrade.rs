@@ -14,6 +14,7 @@ use semver::Version;
 
 use snafu::{ensure, ResultExt};
 use std::path::PathBuf;
+use tracing::info;
 
 /// This is the helm chart variant of the helm chart installed in the cluster.
 /// The PRODUCT may be installed using either of these options, but never both.
@@ -184,8 +185,14 @@ impl HelmUpgrade {
 
     /// Use the HelmReleaseClient's upgrade method to upgrade the installed helm release.
     pub(crate) fn run(self) -> Result<()> {
+        info!("Starting helm upgrade...");
+
         self.client
-            .upgrade(self.release_name, self.chart_dir, Some(self.extra_args))
+            .upgrade(self.release_name, self.chart_dir, Some(self.extra_args))?;
+
+        info!("Helm upgrade successful!");
+
+        Ok(())
     }
 
     pub(crate) fn upgrade_from_version(&self) -> String {

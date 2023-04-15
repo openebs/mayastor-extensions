@@ -1,8 +1,9 @@
 use crate::common::{
     constants::PRODUCT,
     error::{
-        EventChannelSend, EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
-        JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result, SerializeEventNote,
+        EventChannelSend, EventFinalAcknowledgementSend, EventPublish, EventRecorderOptionsAbsent,
+        GetPod, JobPodHasTooManyOwners, JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result,
+        SerializeEventNote,
     },
     kube_client::KubeClientSet,
 };
@@ -11,7 +12,8 @@ use kube::runtime::events::{Event, EventType, Recorder};
 use serde::Serialize;
 use snafu::{ensure, ResultExt};
 use std::{fmt::Display, time::Duration};
-use tokio::{select, sync::mpsc, task, time::sleep};
+use tokio::{select, sync::mpsc, time::sleep};
+use tracing::error;
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all(serialize = "camelCase"))]
@@ -43,7 +45,6 @@ impl EventNote {
 pub(crate) struct EventRecorderBuilder {
     pod_name: Option<String>,
     namespace: Option<String>,
-    reporter_name: Option<String>,
     from_version: Option<String>,
     to_version: Option<String>,
 }
@@ -71,13 +72,6 @@ impl EventRecorderBuilder {
         self
     }
 
-    /// This is a builder option to build add the reporter controller name.
-    #[must_use]
-    pub(crate) fn with_reporter_name(mut self, reporter_name: String) -> Self {
-        self.reporter_name = Some(reporter_name);
-        self
-    }
-
     /// This is a builder option add the from-version in upgrade.
     #[must_use]
     pub(crate) fn with_from_version(mut self, from: String) -> Self {
@@ -97,14 +91,12 @@ impl EventRecorderBuilder {
     /// This builds the EventRecorder. This fails if Kubernetes API requests fail.
     pub(crate) async fn build(&self) -> Result<EventRecorder> {
         ensure!(
-            self.reporter_name.is_some()
-                && self.pod_name.is_some()
+            self.pod_name.is_some()
                 && self.namespace.is_some()
                 && self.from_version.is_some()
                 && self.to_version.is_some(),
             EventRecorderOptionsAbsent
         );
-        let reporter_name = self.reporter_name.clone().unwrap();
         let pod_name = self.pod_name.clone().unwrap();
         let namespace = self.namespace.clone().unwrap();
         let from_version = self.from_version.clone().unwrap();
@@ -153,7 +145,7 @@ impl EventRecorderBuilder {
         let job_obj_ref = ObjectReference {
             api_version: Some(pod_owner.api_version),
             kind: Some(pod_owner.kind),
-            name: Some(pod_owner.name),
+            name: Some(pod_owner.name.clone()),
             namespace: Some(namespace),
             uid: Some(pod_owner.uid),
             field_path: None,
@@ -161,10 +153,18 @@ impl EventRecorderBuilder {
         };
 
         let (tx, mut rx) = mpsc::unbounded_channel::<Event>();
+        let (ack_sender, ack_receiver) = mpsc::channel::<()>(1);
 
-        let aborter = tokio::spawn(async move {
+        let event_recorder = EventRecorder {
+            event_sender: Some(tx),
+            ack_receiver,
+            from_version,
+            to_version,
+        };
+
+        tokio::spawn(async move {
             let event_handler =
-                Recorder::new(k8s_client.client(), reporter_name.into(), job_obj_ref);
+                Recorder::new(k8s_client.client(), pod_owner.name.into(), job_obj_ref);
 
             // Function exits when 'None'. Avoids panics.
             let mut current_event = rx.recv().await;
@@ -179,7 +179,7 @@ impl EventRecorderBuilder {
                     secondary: event.secondary.clone(),
                 };
                 if let Err(error) = event_handler.publish(event).await.context(EventPublish) {
-                    tracing::error!(?error, "Failed to publish event");
+                    error!(%error);
                 }
 
                 select! {
@@ -187,31 +187,28 @@ impl EventRecorderBuilder {
                     event = rx.recv() => { current_event = event }
                 }
             }
-        })
-        .abort_handle();
 
-        Ok(EventRecorder {
-            event_loop_killswitch: aborter,
-            event_sender: tx,
-            from_version,
-            to_version,
-        })
+            // Acknowledgement for exit of event loop, i.e. all events published, nothing left
+            // behind in the channel.
+            if let Err(error) = ack_sender
+                .send(())
+                .await
+                .context(EventFinalAcknowledgementSend)
+            {
+                error!(%error);
+            }
+        });
+
+        Ok(event_recorder)
     }
 }
 
 /// This is a wrapper around a kube::runtime::events::Recorder.
 pub(crate) struct EventRecorder {
-    event_loop_killswitch: task::AbortHandle,
-    event_sender: mpsc::UnboundedSender<Event>,
+    event_sender: Option<mpsc::UnboundedSender<Event>>,
+    ack_receiver: mpsc::Receiver<()>,
     from_version: String,
     to_version: String,
-}
-
-impl Drop for EventRecorder {
-    fn drop(&mut self) {
-        // Cancel the tokio task.
-        self.event_loop_killswitch.abort();
-    }
 }
 
 impl EventRecorder {
@@ -222,10 +219,11 @@ impl EventRecorder {
 
     /// This function is a wrapper around kube::runtime::events' recorder.publish().
     async fn publish(&self, event: Event) -> Result<()> {
-        self.event_sender
-            .clone()
-            .send(event)
-            .map_err(|_| EventChannelSend.build())
+        if let Some(sender) = self.event_sender.clone() {
+            sender.send(event).map_err(|_| EventChannelSend.build())?;
+        }
+
+        Ok(())
     }
 
     /// This is a helper method with calls the publish method above and fills out the boilerplate
@@ -274,6 +272,13 @@ impl EventRecorder {
         let _ = self
             .publish_warning(format!("Failed to upgrade: {err}"), "Failed")
             .await
-            .map_err(|error| tracing::error!(%error, "Failed to upgrade {PRODUCT}"));
+            .map_err(|error| error!(%error, "Failed to upgrade {PRODUCT}"));
+    }
+
+    /// Shuts down the event channel which makes the event loop worker exit its loop and return.
+    pub(crate) async fn shutdown_worker(mut self) {
+        let _ = self.event_sender.take();
+
+        self.ack_receiver.recv().await;
     }
 }
