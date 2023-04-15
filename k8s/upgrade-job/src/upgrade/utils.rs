@@ -5,6 +5,7 @@ use crate::common::{
 use k8s_openapi::api::core::v1::Pod;
 use kube::{api::ObjectList, ResourceExt};
 use snafu::ResultExt;
+use tracing::{info, warn};
 
 /// Function to check for any volume rebuild in progress across the cluster
 pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
@@ -41,10 +42,9 @@ pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
 /// ObjectList<Pod> have their Ready status.condition value set to true.
 pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> bool {
     let not_ready_warning = |pod_name: &String, namespace: &String| {
-        tracing::warn!(
+        warn!(
             "Couldn't verify the ready condition of Pod '{}' in namespace '{}' to be true",
-            pod_name,
-            namespace
+            pod_name, namespace
         );
     };
     for pod in pod_list.into_iter() {
@@ -58,7 +58,7 @@ pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> bool {
                     if condition.type_.eq("Ready") {
                         if condition.status.eq("True") {
                             let pod_name = pod.name_any();
-                            tracing::info!(pod.name = %pod_name, "Pod is Ready");
+                            info!(pod.name = %pod_name, "Pod is Ready");
                             break;
                         }
                         not_ready_warning(&pod.name_any(), &pod.namespace().unwrap_or_default());

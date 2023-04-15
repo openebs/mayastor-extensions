@@ -8,11 +8,6 @@ pub(crate) const UMBRELLA_CHART_NAME: &str = "openebs";
 /// This is the name of the Helm chart of this project.
 pub(crate) const CORE_CHART_NAME: &str = "mayastor";
 
-/// This is the name of the event reporter. This code should be running inside a Kubernetes Pod
-/// which will post events. The reporter for those events will be set using the value of this
-/// constant.
-pub(crate) const KUBE_EVENT_REPORTER_NAME: &str = "mayastor-upgrade-job";
-
 /// This is the shared Pod label of the <helm-release>-io-engine DaemonSet.
 pub(crate) const IO_ENGINE_LABEL: &str = "app=io-engine";
 

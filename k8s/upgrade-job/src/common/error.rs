@@ -409,6 +409,17 @@ pub(crate) enum Error {
     /// synchronisation tool.
     #[snafu(display("Failed to send Event over the channel"))]
     EventChannelSend,
+
+    /// Error when trying to send a unit type through the channel as acknowledgement for completed
+    /// event publishes.
+    #[snafu(display(
+        "Failed to send acknowledgement of completed Event publishes over the channel: {}",
+        source
+    ))]
+    EventFinalAcknowledgementSend {
+        source: tokio::sync::mpsc::error::SendError<()>,
+    },
 }
+
 /// A wrapper type to remove repeated Result<T, Error> returns.
 pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;

@@ -21,6 +21,7 @@ use kube::{
 use openapi::models::CordonDrainState;
 use snafu::ResultExt;
 use std::time::Duration;
+use tracing::info;
 use utils::{API_REST_LABEL, ETCD_LABEL};
 
 // The stages after which rebuild validation will start
@@ -50,6 +51,8 @@ pub(crate) async fn upgrade_data_plane(
     let io_engine_listparam =
         ListParams::default().labels(yet_to_upgrade_io_engine_label_selector.as_str());
     let namespace = namespace.clone();
+
+    info!("Starting data-plane upgrade...");
 
     // Validate the control plane pod is up and running before we start.
     verify_control_plane_is_running(namespace.clone(), &k8s_client, &upgrade_to_version).await?;
@@ -86,7 +89,7 @@ pub(crate) async fn upgrade_data_plane(
             )?
             .as_str();
 
-        tracing::info!(
+        info!(
             pod.name = %pod.name_any(),
             node.name = %node_name,
             "Upgrade starting for data-plane pod"
@@ -130,6 +133,9 @@ pub(crate) async fn upgrade_data_plane(
         verify_control_plane_is_running(namespace.clone(), &k8s_client, &upgrade_to_version)
             .await?;
     }
+
+    info!("Successfully upgraded data-plane!");
+
     Ok(())
 }
 
@@ -169,7 +175,7 @@ async fn uncordon_node(node_id: &str, rest_client: &RestClientSet) -> Result<()>
                         node_id: node_id.to_string(),
                     })?;
 
-                tracing::info!(node.id = %node_id,
+                info!(node.id = %node_id,
                     label = %DRAIN_FOR_UPGRADE,
                     "Removed drain label from {PRODUCT} Node"
                 );
@@ -188,7 +194,7 @@ async fn delete_data_plane_pod(
 ) -> Result<()> {
     // Deleting the io-engine pod
     let pod_name = pod.name_any();
-    tracing::info!(
+    info!(
         pod.name = pod_name.clone(),
         node.name = node_name,
         "Deleting the pod"
@@ -201,7 +207,7 @@ async fn delete_data_plane_pod(
             name: pod_name,
             node: node_name.to_string(),
         })?;
-    tracing::info!(node.name = %node_name, "Pod delete command issued");
+    info!(node.name = %node_name, "Pod delete command issued");
     Ok(())
 }
 
@@ -214,7 +220,7 @@ async fn verify_data_plane_pod_is_running(
 ) -> Result<()> {
     let duration = Duration::from_secs(5_u64);
     // Validate the new pod is up and running
-    tracing::info!(node.name = %node_name, "Waiting for data-plane Pod to come to Ready state...");
+    info!(node.name = %node_name, "Waiting for data-plane Pod to come to Ready state");
     while !data_plane_pod_is_running(node_name, namespace.clone(), upgrade_to_version, k8s_client)
         .await?
     {
@@ -234,10 +240,10 @@ async fn wait_for_rebuild(
     while is_rebuilding(rest_client).await? {
         match rebuild_stage {
             RebuildValidationStage::NodeIsDrained => {
-                tracing::info!(node.name = %node_name, "Waiting for volume rebuild to complete after node is drained")
+                info!(node.name = %node_name, "Waiting for volume rebuild to complete after node is drained")
             }
             RebuildValidationStage::NodeIsUncordoned => {
-                tracing::info!(node.name = %node_name, "Waiting for volume rebuild to complete after node is uncordoned ")
+                info!(node.name = %node_name, "Waiting for volume rebuild to complete after node is uncordoned ")
             }
         }
         tokio::time::sleep(Duration::from_secs(10_u64)).await;
@@ -273,14 +279,14 @@ async fn drain_storage_node(node_id: &str, rest_client: &RestClientSet) -> Resul
             Some(CordonDrainState::drainingstate(drain_state))
                 if drain_state.drainlabels.contains(&drain_label_for_upgrade) =>
             {
-                tracing::info!(node.id = %node_id, "Waiting for {PRODUCT} Node drain to complete...");
+                info!(node.id = %node_id, "Waiting for {PRODUCT} Node drain to complete");
                 // Wait for node drain to complete.
                 tokio::time::sleep(sleep_duration).await;
             }
             Some(CordonDrainState::drainedstate(drain_state))
                 if drain_state.drainlabels.contains(&drain_label_for_upgrade) =>
             {
-                tracing::info!(node.id = %node_id, "Drain completed for {PRODUCT} Node");
+                info!(node.id = %node_id, "Drain completed for {PRODUCT} Node");
                 return Ok(());
             }
             _ => {
@@ -292,7 +298,7 @@ async fn drain_storage_node(node_id: &str, rest_client: &RestClientSet) -> Resul
                         node_id: node_id.to_string(),
                     })?;
 
-                tracing::info!(node.id = %node_id, "Drain started for {PRODUCT} Node");
+                info!(node.id = %node_id, "Drain started for {PRODUCT} Node");
             }
         }
     }
