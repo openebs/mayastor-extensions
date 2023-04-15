@@ -9,7 +9,7 @@ use k8s_openapi::serde;
 use serde::Deserialize;
 use snafu::{ensure, ResultExt};
 use std::{process::Command, str};
-use tracing::{debug, info};
+use tracing::debug;
 
 /// This struct is used to deserialize the output of `helm list -n <namespace> --deployed -o yaml`.
 #[derive(Clone, Deserialize)]
@@ -230,8 +230,6 @@ impl HelmReleaseClient {
                     .to_string()
             }
         );
-
-        info!("Helm upgrade successful!");
 
         Ok(())
     }
