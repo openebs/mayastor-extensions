@@ -13,6 +13,7 @@ pub struct Pool {
     used: u64,
     capacity: u64,
     state: u64,
+    committed: u64,
 }
 
 impl Pool {
@@ -29,6 +30,11 @@ impl Pool {
     /// Get total capacity of the pool.
     pub fn capacity(&self) -> u64 {
         self.capacity
+    }
+
+    /// Get the pool commitment in bytes.
+    pub fn committed(&self) -> u64 {
+        self.committed
     }
 
     /// Get state of the pool.
@@ -57,6 +63,7 @@ impl From<rpc::io_engine::Pool> for Pool {
             used: value.used,
             capacity: value.capacity,
             state: value.state as u64,
+            committed: value.used,
         }
     }
 }
@@ -68,6 +75,7 @@ impl From<rpc::v1::pool::Pool> for Pool {
             used: value.used,
             capacity: value.capacity,
             state: value.state as u64,
+            committed: value.committed,
         }
     }
 }

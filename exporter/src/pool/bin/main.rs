@@ -9,7 +9,7 @@ use exporter::pool::{
         grpc_client::{GrpcClient, GrpcContext, Timeouts},
         ApiVersion,
     },
-    collector::pools_collector::PoolsCollector,
+    collector::pools_collector::{get_node_name, PoolsCollector},
     config::ExporterConfig,
     error::ExporterError,
 };
@@ -26,6 +26,7 @@ fn initialize_exporter(args: &Cli) {
 async fn initialize_client(api_version: ApiVersion) -> Result<GrpcClient, ExporterError> {
     let timeout = Timeouts::new(Duration::from_secs(1), Duration::from_secs(5));
     let pod_ip = get_pod_ip()?;
+    let _ = get_node_name()?;
     let endpoint = Uri::builder()
         .scheme("https")
         .authority(format!("{pod_ip}:10124"))
@@ -99,6 +100,7 @@ async fn main() -> Result<(), String> {
     HttpServer::new(app)
         .bind(ExporterConfig::get_config().metrics_endpoint())
         .unwrap()
+        .workers(1)
         .run()
         .await
         .expect("Port should be free to expose the metrics");
