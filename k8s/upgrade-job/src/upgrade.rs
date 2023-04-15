@@ -1,8 +1,5 @@
 use crate::{
-    common::{
-        constants::{KUBE_EVENT_REPORTER_NAME, PRODUCT},
-        error::Result,
-    },
+    common::{constants::PRODUCT, error::Result},
     events::event_recorder::EventRecorder,
     helm::upgrade::HelmUpgrade,
     opts::CliArgs,
@@ -33,7 +30,6 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
     let event = EventRecorder::builder()
         .with_pod_name(&opts.pod_name())
         .with_namespace(&opts.namespace())
-        .with_reporter_name(KUBE_EVENT_REPORTER_NAME.to_string())
         .with_from_version(from_version.clone())
         .with_to_version(to_version.clone())
         .build()
@@ -99,5 +95,6 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
         .publish_normal(format!("Successfully upgraded {PRODUCT}"), "Successful")
         .await?;
 
+    event.shutdown_worker().await;
     Ok(())
 }

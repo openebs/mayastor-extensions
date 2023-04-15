@@ -8,7 +8,7 @@ use crate::{
 use clap::Parser;
 
 use opts::CliArgs;
-use tracing::info;
+use tracing::{error, info};
 use upgrade::upgrade;
 use utils::{
     raw_version_str,
@@ -26,12 +26,12 @@ async fn main() -> Result<()> {
     init_logging();
 
     let opts = parse_cli_args().await.map_err(|error| {
-        tracing::error!(%error, "Failed to upgrade {PRODUCT}");
+        error!(%error, "Failed to upgrade {PRODUCT}");
         error
     })?;
 
     upgrade(&opts).await.map_err(|error| {
-        tracing::error!(%error, "Failed to upgrade {PRODUCT}");
+        error!(%error, "Failed to upgrade {PRODUCT}");
         flush_traces();
         error
     })
