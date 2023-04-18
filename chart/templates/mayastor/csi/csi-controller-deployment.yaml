@@ -40,6 +40,7 @@ spec:
             - "--feature-gates=Topology=true"
             - "--strict-topology=false"
             - "--default-fstype=ext4"
+            - "--extra-create-metadata" # This is needed for volume group feature to work
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
