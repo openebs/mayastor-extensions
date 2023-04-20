@@ -30,7 +30,7 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
     let event = EventRecorder::builder()
         .with_pod_name(&opts.pod_name())
         .with_namespace(&opts.namespace())
-        .with_from_version(from_version.clone())
+        .with_from_version(from_version)
         .with_to_version(to_version.clone())
         .build()
         .await?;
@@ -71,13 +71,8 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
             )
             .await?;
 
-        if let Err(error) = upgrade_data_plane(
-            opts.namespace(),
-            opts.rest_endpoint(),
-            from_version,
-            to_version,
-        )
-        .await
+        if let Err(error) =
+            upgrade_data_plane(opts.namespace(), opts.rest_endpoint(), to_version).await
         {
             event.publish_unrecoverable(&error).await;
             return Err(error);
