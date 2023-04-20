@@ -1,5 +1,5 @@
 use crate::{
-    common::constants::{CORE_CHART_NAME, PRODUCT, UMBRELLA_CHART_NAME},
+    common::constants::{CHART_VERSION_LABEL_KEY, CORE_CHART_NAME, PRODUCT, UMBRELLA_CHART_NAME},
     events::event_recorder::EventNote,
 };
 use snafu::Snafu;
@@ -87,7 +87,11 @@ pub(crate) enum Error {
     NoInputHelmChartDir { chart_name: String },
 
     /// Error for when the input Pod's owner does not exists.
-    #[snafu(display(".metadata.ownerReferences empty for Pod {} in {} namespace, while trying to find Pod's Job owner", pod_name, pod_namespace))]
+    #[snafu(display(
+        ".metadata.ownerReferences empty for Pod {} in {} namespace, while trying to find Pod's Job owner",
+        pod_name,
+        pod_namespace
+    ))]
     JobPodOwnerNotFound {
         pod_name: String,
         pod_namespace: String,
@@ -105,7 +109,11 @@ pub(crate) enum Error {
     },
 
     /// Error for when the owner of this Pod is not a Job.
-    #[snafu(display("Pod {} in {} namespace has an owner which is not a Job, while trying to find Pod's Job owner", pod_name, pod_namespace))]
+    #[snafu(display(
+        "Pod {} in {} namespace has an owner which is not a Job, while trying to find Pod's Job owner",
+        pod_name,
+        pod_namespace
+    ))]
     JobPodOwnerIsNotJob {
         pod_name: String,
         pod_namespace: String,
@@ -396,11 +404,6 @@ pub(crate) enum Error {
     #[snafu(display("Too many io-engine Pods in Node '{}'", node_name))]
     TooManyIoEnginePods { node_name: String },
 
-    #[snafu(display(
-        "The installed helm chart version is the same as the target upgrade version"
-    ))]
-    InstalledVersionSameAsUpgradeVersion,
-
     /// Error for when the thin-provisioning option are absent, but still tried to fetch it.
     #[snafu(display("The agents.core.capacity yaml object is absent amongst the helm values"))]
     ThinProvisioningOptionsAbsent,
@@ -409,6 +412,32 @@ pub(crate) enum Error {
     /// synchronisation tool.
     #[snafu(display("Failed to send Event over the channel"))]
     EventChannelSend,
+
+    /// Error for when the 'chart' member of a crate::helm::client::HelmReleaseElement cannot be
+    /// split at the first occurrence of '-', e.g. <chart-name>-2.1.0-rc8.
+    #[snafu(display(
+        "Failed to split helm chart name '{}', at the first occurrence of '{}'",
+        chart_name,
+        delimiter
+    ))]
+    HelmChartNameSplit { chart_name: String, delimiter: char },
+
+    /// Error for when the no value for version label is found on the helm chart.
+    #[snafu(display(
+        "Failed to get the value of the {} label in Pod {} in Namespace {}",
+        CHART_VERSION_LABEL_KEY,
+        pod_name,
+        namespace
+    ))]
+    HelmChartVersionLabelHasNoValue { pod_name: String, namespace: String },
+
+    /// Error for when a pod does not have Namespace set on it.
+    #[snafu(display(
+        "Found None when trying to get Namespace for Pod {}, context: {}",
+        pod_name,
+        context
+    ))]
+    NoNamespaceInPod { pod_name: String, context: String },
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.
