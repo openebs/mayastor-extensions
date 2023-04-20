@@ -2,8 +2,8 @@ use crate::{
     common::{
         constants::{CORE_CHART_NAME, UMBRELLA_CHART_NAME},
         error::{
-            HelmUpgradeOptionsAbsent, InstalledVersionSameAsUpgradeVersion, InvalidUpgradePath,
-            NoInputHelmChartDir, NotAKnownHelmChart, RegexCompile, Result,
+            HelmUpgradeOptionsAbsent, InvalidUpgradePath, NoInputHelmChartDir, NotAKnownHelmChart,
+            RegexCompile, Result,
         },
     },
     helm::{client::HelmReleaseClient, values::generate_values_args},
@@ -139,11 +139,12 @@ impl HelmUpgradeBuilder {
         let from_version = upgrade::path::version_from_release_chart(chart)?;
         let upgrade_path_is_valid =
             upgrade::path::is_valid(chart_variant.clone(), &from_version, &to_version)?;
+        let already_upgraded = to_version.eq(&from_version);
+
         ensure!(
-            to_version.ne(&from_version),
-            InstalledVersionSameAsUpgradeVersion
+            upgrade_path_is_valid || already_upgraded,
+            InvalidUpgradePath
         );
-        ensure!(upgrade_path_is_valid, InvalidUpgradePath);
 
         // Generate args to pass to the `helm upgrade` command.
         let mut values_yaml_path = chart_dir.clone();
@@ -154,9 +155,12 @@ impl HelmUpgradeBuilder {
             &client,
             release_name.clone(),
         )?;
-        upgrade_args.push("--wait".to_string()); // To wait for all Pods, PVCs to come to a ready state.
+        // To roll back to previous release, in case helm upgrade fails, also
+        // to wait for all Pods, PVCs to come to a ready state.
+        upgrade_args.push("--atomic".to_string());
 
         Ok(HelmUpgrade {
+            already_upgraded,
             chart_dir: chart_dir.to_string_lossy().to_string(),
             release_name,
             client,
@@ -169,6 +173,7 @@ impl HelmUpgradeBuilder {
 
 /// This type can generate and execute the `helm upgrade` command.
 pub(crate) struct HelmUpgrade {
+    already_upgraded: bool,
     chart_dir: String,
     release_name: String,
     client: HelmReleaseClient,
@@ -185,11 +190,17 @@ impl HelmUpgrade {
 
     /// Use the HelmReleaseClient's upgrade method to upgrade the installed helm release.
     pub(crate) fn run(self) -> Result<()> {
-        info!("Starting helm upgrade...");
+        if self.already_upgraded {
+            info!(
+                "Skipping helm upgrade, as the version of the installed helm chart is the same \
+                as that of this upgrade-job's helm chart"
+            );
+            return Ok(());
+        }
 
+        info!("Starting helm upgrade...");
         self.client
             .upgrade(self.release_name, self.chart_dir, Some(self.extra_args))?;
-
         info!("Helm upgrade successful!");
 
         Ok(())

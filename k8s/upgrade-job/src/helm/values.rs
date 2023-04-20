@@ -28,10 +28,10 @@ pub(crate) fn generate_values_args(
     let from_values_yaml_string = str::from_utf8(from_values_yaml.as_slice())
         .context(U8VectorToString)?
         .to_string();
-    // Helm chart flags -- reuse all values, except for the image tag. Modify
-    // io_engine DaemonSet PodSpec logLevel if set to from-chart default, and
-    // to-chart default differs from the from-chart default.
-    let mut upgrade_args: Vec<String> = Vec::with_capacity(15);
+    // Helm chart flags -- reuse all values, except for the image tag. For new values,
+    // use from installed-release's values, if present, else use defaults from to-chart.
+    // Includes capacity for the "--atomic" flag.
+    let mut upgrade_args: Vec<String> = Vec::with_capacity(19);
 
     let image_key = "image";
     let tag_key = "tag";

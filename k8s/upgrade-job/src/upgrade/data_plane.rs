@@ -5,13 +5,13 @@ use crate::{
         },
         error::{
             DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
-            ListPodsWithLabel, ListPodsWithLabelAndField, PodDelete, Result, StorageNodeUncordon,
-            TooManyIoEnginePods,
+            ListPodsWithLabel, ListPodsWithLabelAndField, ListStorageNodes, PodDelete, Result,
+            StorageNodeUncordon, TooManyIoEnginePods,
         },
         kube_client::KubeClientSet,
         rest_client::RestClientSet,
     },
-    upgrade::utils::{all_pods_are_ready, is_rebuilding},
+    upgrade::utils::{all_pods_are_ready, data_plane_is_upgraded, is_rebuilding},
 };
 use k8s_openapi::api::core::v1::Pod;
 use kube::{
@@ -24,11 +24,11 @@ use std::time::Duration;
 use tracing::info;
 use utils::{API_REST_LABEL, ETCD_LABEL};
 
-// The stages after which rebuild validation will start
+// The stages after which rebuild validation will start.
 enum RebuildValidationStage {
-    // Rebuild validation after the node is drained
+    // Rebuild validation after the node is drained.
     NodeIsDrained,
-    // Rebuild validation after the node is uncordoned
+    // Rebuild validation after the node is uncordoned.
     NodeIsUncordoned,
 }
 
@@ -36,102 +36,145 @@ enum RebuildValidationStage {
 pub(crate) async fn upgrade_data_plane(
     namespace: String,
     rest_endpoint: String,
-    upgrade_from_version: String,
     upgrade_to_version: String,
 ) -> Result<()> {
+    // Generate k8s clients.
     let k8s_client = KubeClientSet::builder()
         .with_namespace(namespace.clone())
         .build()
         .await?;
 
-    let rest_client = RestClientSet::new_with_url(rest_endpoint)?;
+    // This makes data-plane upgrade idempotent.
+    let io_engine_label = format!("{IO_ENGINE_LABEL},{CHART_VERSION_LABEL_KEY}");
+    let io_engine_listparams = ListParams::default().labels(io_engine_label.as_str());
+    let io_engine_pod_list = k8s_client
+        .pods_api()
+        .list(&io_engine_listparams)
+        .await
+        .context(ListPodsWithLabel {
+            label: io_engine_label,
+            namespace: namespace.clone(),
+        })?;
+    if data_plane_is_upgraded(&upgrade_to_version, &io_engine_pod_list).await? {
+        info!("Skipping data-plane upgrade: All data-plane Pods are already upgraded");
+        return Ok(());
+    }
+
+    // If here, then there is a need to proceed to data-plane upgrade.
 
     let yet_to_upgrade_io_engine_label_selector =
-        format!("{IO_ENGINE_LABEL},{CHART_VERSION_LABEL_KEY}={upgrade_from_version}");
-    let io_engine_listparam =
+        format!("{IO_ENGINE_LABEL},{CHART_VERSION_LABEL_KEY}!={upgrade_to_version}");
+    let io_engine_listparams =
         ListParams::default().labels(yet_to_upgrade_io_engine_label_selector.as_str());
     let namespace = namespace.clone();
+
+    // Generate storage REST API client.
+    let rest_client = RestClientSet::new_with_url(rest_endpoint)?;
 
     info!("Starting data-plane upgrade...");
 
     // Validate the control plane pod is up and running before we start.
     verify_control_plane_is_running(namespace.clone(), &k8s_client, &upgrade_to_version).await?;
 
-    let initial_io_engine_pod_list: ObjectList<Pod> = k8s_client
-        .pods_api()
-        .list(&io_engine_listparam)
+    info!(
+        "Trying to remove upgrade {PRODUCT} Node Drain label from {PRODUCT} Nodes, \
+        if any left over from previous upgrade attempts..."
+    );
+
+    let storage_nodes_resp = rest_client
+        .nodes_api()
+        .get_nodes()
         .await
-        .context(ListPodsWithLabel {
-            label: yet_to_upgrade_io_engine_label_selector,
-            namespace: namespace.clone(),
-        })?;
+        .context(ListStorageNodes)?;
+    let storage_nodes = storage_nodes_resp.body();
+    for storage_node in storage_nodes {
+        uncordon_node(storage_node.id.as_str(), &rest_client).await?;
+    }
 
-    for pod in initial_io_engine_pod_list.iter() {
-        // Fetch the node name on which the io-engine pod is running
-        let node_name = pod
-            .spec
-            .as_ref()
-            .ok_or(
-                EmptyPodSpec {
-                    name: pod.name_any(),
-                    namespace: namespace.clone(),
-                }
-                .build(),
-            )?
-            .node_name
-            .as_ref()
-            .ok_or(
-                EmptyPodNodeName {
-                    name: pod.name_any(),
-                    namespace: namespace.clone(),
-                }
-                .build(),
-            )?
-            .as_str();
+    loop {
+        let initial_io_engine_pod_list: ObjectList<Pod> = k8s_client
+            .pods_api()
+            .list(&io_engine_listparams)
+            .await
+            .context(ListPodsWithLabel {
+                label: yet_to_upgrade_io_engine_label_selector.clone(),
+                namespace: namespace.clone(),
+            })?;
 
-        info!(
-            pod.name = %pod.name_any(),
-            node.name = %node_name,
-            "Upgrade starting for data-plane pod"
-        );
+        // Infinite loop exit.
+        if initial_io_engine_pod_list.items.is_empty() {
+            break;
+        }
 
-        // Issue node drain command
-        drain_storage_node(node_name, &rest_client).await?;
+        for pod in initial_io_engine_pod_list.iter() {
+            // Fetch the node name on which the io-engine pod is running
+            let node_name = pod
+                .spec
+                .as_ref()
+                .ok_or(
+                    EmptyPodSpec {
+                        name: pod.name_any(),
+                        namespace: namespace.clone(),
+                    }
+                    .build(),
+                )?
+                .node_name
+                .as_ref()
+                .ok_or(
+                    EmptyPodNodeName {
+                        name: pod.name_any(),
+                        namespace: namespace.clone(),
+                    }
+                    .build(),
+                )?
+                .as_str();
 
-        // Wait for any rebuild to complete
-        wait_for_rebuild(
-            RebuildValidationStage::NodeIsDrained,
-            node_name,
-            &rest_client,
-        )
-        .await?;
+            info!(
+                pod.name = %pod.name_any(),
+                node.name = %node_name,
+                "Starting upgrade for the data-plane pod"
+            );
 
-        // restart the data plane pod
-        delete_data_plane_pod(node_name, pod, &k8s_client).await?;
+            // Issue node drain command
+            drain_storage_node(node_name, &rest_client).await?;
 
-        // validate the new pod is up and running
-        verify_data_plane_pod_is_running(
-            node_name,
-            namespace.clone(),
-            &upgrade_to_version,
-            &k8s_client,
-        )
-        .await?;
-
-        // Uncordon the drained node
-        uncordon_node(node_name, &rest_client).await?;
-
-        // Wait for any rebuild to complete
-        wait_for_rebuild(
-            RebuildValidationStage::NodeIsUncordoned,
-            node_name,
-            &rest_client,
-        )
-        .await?;
-
-        // Validate the control plane pod is up and running
-        verify_control_plane_is_running(namespace.clone(), &k8s_client, &upgrade_to_version)
+            // Wait for any rebuild to complete
+            wait_for_rebuild(
+                RebuildValidationStage::NodeIsDrained,
+                node_name,
+                &rest_client,
+            )
             .await?;
+
+            // restart the data plane pod
+            delete_data_plane_pod(node_name, pod, &k8s_client).await?;
+
+            // validate the new pod is up and running
+            verify_data_plane_pod_is_running(
+                node_name,
+                namespace.clone(),
+                &upgrade_to_version,
+                &k8s_client,
+            )
+            .await?;
+
+            // Uncordon the drained node
+            uncordon_node(node_name, &rest_client).await?;
+
+            // Wait for any rebuild to complete
+            wait_for_rebuild(
+                RebuildValidationStage::NodeIsUncordoned,
+                node_name,
+                &rest_client,
+            )
+            .await?;
+
+            // Validate the control plane pod is up and running
+            verify_control_plane_is_running(namespace.clone(), &k8s_client, &upgrade_to_version)
+                .await?;
+        }
+
+        info!("Checking to see if new {PRODUCT} Nodes have been added to the cluster, which require upgrade");
     }
 
     info!("Successfully upgraded data-plane!");
