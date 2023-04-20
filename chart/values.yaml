@@ -154,6 +154,10 @@ agents:
         cpu: "500m"
         # -- Memory requests for core agents
         memory: "32Mi"
+    # -- How long core agent waits for a faulted child's replica to come back online so that
+    # the agent can attempt to make same child online and in turn utilize fast rebuild capability.
+    # A blank value "" means internally derived value will be used.
+    faultedChildWaitPeriod: ""
   ha:
     enabled: true
     node:
