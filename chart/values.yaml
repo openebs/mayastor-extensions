@@ -342,7 +342,7 @@ etcd:
     # -- Will define which storageClass to use in etcd's StatefulSets
     # a `manual` storageClass will provision a hostpath PV on the same node
     # an empty storageClass will use the default StorageClass on the cluster
-    storageClass: ""
+    storageClassName: ""
     # -- Volume size
     size: 2Gi
     # -- PVC's reclaimPolicy
