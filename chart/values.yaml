@@ -154,10 +154,11 @@ agents:
         cpu: "500m"
         # -- Memory requests for core agents
         memory: "32Mi"
-    # -- How long core agent waits for a faulted child's replica to come back online so that
-    # the agent can attempt to make same child online and in turn utilize fast rebuild capability.
+    # -- If a faulted replica comes back online within this time period then it will be
+    # rebuilt using the partial rebuild capability (using a log of missed IO), hence a bit
+    # faster depending on the log size. Otherwise, the replica will be fully rebuilt.
     # A blank value "" means internally derived value will be used.
-    faultedChildWaitPeriod: ""
+    partialRebuildWaitPeriod: ""
   ha:
     enabled: true
     node:
