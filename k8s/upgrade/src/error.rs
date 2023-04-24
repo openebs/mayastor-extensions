@@ -72,6 +72,7 @@ pub enum Error {
     /// No message in upgrade event.
     #[error("No Message present in event.")]
     MessageInEventNotPresent,
+
     /// No upgrade event present.
     #[error("No upgrade event present.")]
     UpgradeEventNotPresent,
@@ -111,6 +112,22 @@ pub enum Error {
     /// Error for when the image format is invalid.
     #[error("Failed to find a valid image in Deployment.")]
     ReferenceDeploymentInvalidImage,
+
+    /// No installed version label.
+    #[error("No label for version present.")]
+    VersionLabelNotPresent,
+
+    /// Source and target version are same.
+    #[error("Source and target version are same.")]
+    SourceTargetVersionSame,
+
+    /// Not a valid source version for upgrade.
+    #[error("Not a valid source version for upgrade.")]
+    NotAValidSourceForUpgrade,
+
+    /// Not a valid UpgradePath.
+    #[error("Not a valid upgrade path.")]
+    NotAValidUpgradePath,
 }
 
 impl From<anyhow::Error> for Error {

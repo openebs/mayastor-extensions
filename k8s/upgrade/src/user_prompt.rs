@@ -38,3 +38,15 @@ pub const UPGRADE_DRY_RUN_SUMMARY: &str =
 /// Information about successful start of upgrade process.
 pub const UPGRADE_JOB_STARTED: &str =
     "\nThe upgrade has started. You can see the recent upgrade status using 'get upgrade-status` command.";
+
+/// Source and target version are same.
+pub const SOURCE_TARGET_VERSION_SAME: &str =
+    "\nThe upgrade cannot proceed as target version is same as source version.\nVersion:";
+
+/// Source and target version are same.
+pub const NOT_A_VALID_UPGRADE_PATH: &str =
+    "\nNot a valid upgrade path.\nThe valid upgrade path are:";
+
+/// Not a valid source for upgrade.
+pub const NOT_A_VALID_SOURCE_FOR_UPGRADE: &str =
+    "\nNot a valid source for upgrade. \nThe valid upgrade path are:";

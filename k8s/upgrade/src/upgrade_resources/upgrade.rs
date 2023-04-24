@@ -2,10 +2,10 @@ use crate::{
     constant::{
         get_image_version_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
         AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_IMAGE_REGISTRY,
-        DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, IO_ENGINE_POD_LABEL, UPGRADE_EVENT_REASON,
-        UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
-        UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX,
-        UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+        DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, HELM_RELEASE_VERSION_LABEL,
+        IO_ENGINE_POD_LABEL, UPGRADE_EVENT_REASON, UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
+        UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX, UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO,
+        UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     error::Error,
     upgrade_resources::objects,
@@ -803,5 +803,19 @@ impl ImageProperties {
 
     fn pull_policy(&self) -> Option<String> {
         self.pull_policy.clone()
+    }
+}
+
+/// Return the installed version.
+pub async fn get_source_version(ns: &str) -> Result<String, Error> {
+    match get_deployment_for_rest(ns).await {
+        Ok(deployment) => match &deployment.metadata.labels {
+            Some(label) => match label.get(HELM_RELEASE_VERSION_LABEL) {
+                Some(value) => Ok("v".to_owned() + value),
+                None => Err(Error::UpgradeEventNotPresent),
+            },
+            None => Err(Error::UpgradeEventNotPresent),
+        },
+        Err(error) => Err(error),
     }
 }

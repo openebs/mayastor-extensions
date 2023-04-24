@@ -12,8 +12,8 @@ pub fn info(message: &str, data: &str) {
 /// Print error on console.
 pub fn error(message: &str, data: &str) {
     eprintln!(
-        "{} \n {} ",
-        Cyan.bold().italic().paint(message),
+        "{} \n{} ",
+        Red.bold().italic().paint(message),
         Red.bold().italic().paint(data)
     );
 }

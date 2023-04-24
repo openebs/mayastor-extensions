@@ -1,9 +1,15 @@
 use crate::{
-    constant::SINGLE_REPLICA_VOLUME, error::Error, upgrade_lib,
-    upgrade_resources::upgrade::get_pvc_from_uuid, user_prompt,
+    constant::{get_image_version_tag, SINGLE_REPLICA_VOLUME, VALID_UPGRADE_PATHS},
+    error::Error,
+    upgrade_lib,
+    upgrade_resources::upgrade::{get_pvc_from_uuid, get_source_version},
+    user_prompt,
 };
 use openapi::models::CordonDrainState;
-use std::{collections::HashSet, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 use tracing::error;
 
 /// Validation to be done before applying upgrade.
@@ -31,6 +37,9 @@ pub async fn preflight_check(
         })?;
     let rest_client = upgrade_lib::RestClient::new_with_config(config);
 
+    // version validation
+    version_check(namespace).await?;
+
     if !skip_replica_rebuild {
         rebuild_in_progress_validation(&rest_client).await?;
     }
@@ -43,6 +52,71 @@ pub async fn preflight_check(
         single_volume_replica_validation(&rest_client).await?;
     }
     Ok(())
+}
+
+/// Version validation.
+pub async fn version_check(ns: &str) -> Result<(), Error> {
+    let source_version = get_source_version(ns).await?;
+    let destination_version = get_image_version_tag();
+    if source_version.eq(&destination_version) {
+        console_logger::error(
+            user_prompt::SOURCE_TARGET_VERSION_SAME,
+            &destination_version,
+        );
+        return Err(Error::SourceTargetVersionSame);
+    }
+
+    let valid_paths = parse_key_value_pairs(VALID_UPGRADE_PATHS);
+    let data = get_valid_upgrade_paths(valid_paths.clone());
+    match valid_paths.get(&source_version) {
+        Some(target_set) => {
+            if !target_set.contains(&destination_version) {
+                console_logger::error(user_prompt::NOT_A_VALID_UPGRADE_PATH, data.as_str());
+                return Err(Error::NotAValidUpgradePath);
+            }
+        }
+        None => {
+            console_logger::error(user_prompt::NOT_A_VALID_SOURCE_FOR_UPGRADE, data.as_ref());
+            return Err(Error::NotAValidSourceForUpgrade);
+        }
+    }
+    Ok(())
+}
+
+// This function creates the output valid upgrade paths from the map.
+fn get_valid_upgrade_paths(upgrade_paths: HashMap<String, HashSet<String>>) -> String {
+    let mut valid_paths: String = String::new();
+    for (key, val) in upgrade_paths.iter() {
+        for dest in val.iter() {
+            valid_paths.push_str(key);
+            valid_paths.push_str(" -> ");
+            valid_paths.push_str(dest);
+            valid_paths.push('\n');
+        }
+    }
+    valid_paths
+}
+
+// The function parses VALID_UPGRADE_PATHS and creates map
+// where key is source version value is hashset of destination versions.
+fn parse_key_value_pairs(input: &str) -> HashMap<String, HashSet<String>> {
+    input
+        .split(';')
+        .filter(|s| !s.is_empty())
+        .map(|s| {
+            let mut iter = s.split(':');
+            (
+                iter.next().unwrap_or("").to_string(),
+                iter.next().unwrap_or("").to_string(),
+            )
+        })
+        .fold(
+            HashMap::new(),
+            |mut acc: HashMap<String, HashSet<String>>, (key, value)| {
+                acc.entry(key).or_insert_with(HashSet::new).insert(value);
+                acc
+            },
+        )
 }
 
 /// Prompt to user and error out if some nodes are already in cordoned state.
