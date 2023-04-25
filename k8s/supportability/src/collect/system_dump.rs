@@ -180,6 +180,7 @@ impl SystemDumper {
         // Fetch required logging resources
         let mut resources = self.logger.get_control_plane_logging_services().await?;
         resources.extend(self.logger.get_data_plane_logging_services().await?);
+        resources.extend(self.logger.get_upgrade_logging_services().await?);
         // NOTE: MAYASTOR-IO services will not be available when MAYASTOR-IO pod is down.
         //       Lets add information from mayastor node resources.
         if let Some(topologer) = node_topologer {
