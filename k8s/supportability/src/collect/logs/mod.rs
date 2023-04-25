@@ -4,7 +4,7 @@ mod loki;
 use crate::collect::{
     constants::{
         CONTROL_PLANE_SERVICES, DATA_PLANE_SERVICES, HOST_NAME_REQUIRED_SERVICES,
-        LOGGING_LABEL_SELECTOR,
+        LOGGING_LABEL_SELECTOR, UPGRADE_JOB_SERVICE,
     },
     k8s_resources::{
         client::{ClientSet, K8sResourceError},
@@ -314,6 +314,33 @@ impl Logger for LogCollection {
 
         self.get_logging_resources(data_plane_pods).await
     }
+
+    async fn get_upgrade_logging_services(&self) -> Result<HashSet<LogResource>, LogError> {
+        // NOTE: We have to get historic logs of non-running pods, so passing field selector as
+        // empty value
+        let pods = self
+            .k8s_logger_client
+            .get_k8s_clientset()
+            .get_pods(LOGGING_LABEL_SELECTOR, "")
+            .await?;
+
+        let upgrade_pod = pods
+            .into_iter()
+            .filter(|pod| {
+                let service_name = pod
+                    .metadata
+                    .labels
+                    .as_ref()
+                    .unwrap_or(&std::collections::BTreeMap::new())
+                    .get("app")
+                    .unwrap_or(&"".to_string())
+                    .clone();
+                UPGRADE_JOB_SERVICE.contains_key::<str>(&service_name)
+            })
+            .collect::<Vec<Pod>>();
+
+        self.get_logging_resources(upgrade_pod).await
+    }
 }
 
 fn is_host_name_required(service_name: String) -> bool {
@@ -338,4 +365,5 @@ pub(crate) trait Logger {
     ) -> Result<(), LogError>;
     async fn get_data_plane_logging_services(&self) -> Result<HashSet<LogResource>, LogError>;
     async fn get_control_plane_logging_services(&self) -> Result<HashSet<LogResource>, LogError>;
+    async fn get_upgrade_logging_services(&self) -> Result<HashSet<LogResource>, LogError>;
 }

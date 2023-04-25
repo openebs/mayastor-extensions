@@ -6,6 +6,7 @@ macro_rules! upgrade_labels {
     () => {
         btreemap! {
            "app" => UPGRADE_JOB_NAME_SUFFIX,
+           "openebs.io/logging" => "true",
         }
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
