@@ -25,6 +25,10 @@ image:
 nodeSelector:
   kubernetes.io/arch: amd64
 
+# -- Pod scheduling priority
+# ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+priorityClassName: ""
+
 earlyEvictionTolerations:
   - effect: NoExecute
     key: node.kubernetes.io/unreachable
