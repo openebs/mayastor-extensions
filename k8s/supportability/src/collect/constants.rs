@@ -40,6 +40,9 @@ pub(crate) const DATA_PLANE_CONTAINER_NAME: &str = "io-engine";
 /// Defines the logging label(key-value pair) on mayastor services
 pub(crate) const LOGGING_LABEL_SELECTOR: &str = "openebs.io/logging=true";
 
+/// Defines the name of upgrade service
+pub(crate) const UPGRADE_SERVICE: &str = "upgrade";
+
 lazy_static! {
     /// List of resources fall under control plane services
     pub(crate) static ref CONTROL_PLANE_SERVICES: HashMap<&'static str, bool> =
@@ -60,6 +63,12 @@ lazy_static! {
         HashMap::from([
             (MAYASTOR_SERVICE, true),
         ]);
+
+        /// List of resources fall under upgrade services
+    pub(crate) static ref UPGRADE_JOB_SERVICE: HashMap<&'static str, bool> =
+    HashMap::from([
+        (UPGRADE_SERVICE, true),
+    ]);
 
     /// Represents the list of services that requires hostname to collect logs
     pub(crate) static ref HOST_NAME_REQUIRED_SERVICES: HashMap<&'static str, bool> =
