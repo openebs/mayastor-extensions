@@ -404,7 +404,7 @@ pub(crate) enum Error {
     #[snafu(display("Too many io-engine Pods in Node '{}'", node_name))]
     TooManyIoEnginePods { node_name: String },
 
-    /// Error for when the thin-provisioning option are absent, but still tried to fetch it.
+    /// Error for when the thin-provisioning options are absent, but still tried to fetch it.
     #[snafu(display("The agents.core.capacity yaml object is absent amongst the helm values"))]
     ThinProvisioningOptionsAbsent,
 
@@ -438,6 +438,10 @@ pub(crate) enum Error {
         context
     ))]
     NoNamespaceInPod { pod_name: String, context: String },
+
+    /// Error for when the priorityClassName option is absent, but still tried to fetch it.
+    #[snafu(display("The priorityClassName yaml object is absent amongst the helm values"))]
+    PriorityClassOptionAbsent,
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.
