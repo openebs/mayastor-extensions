@@ -31,7 +31,7 @@ pub(crate) fn generate_values_args(
     // Helm chart flags -- reuse all values, except for the image tag. For new values,
     // use from installed-release's values, if present, else use defaults from to-chart.
     // Includes capacity for the "--atomic" flag.
-    let mut upgrade_args: Vec<String> = Vec::with_capacity(19);
+    let mut upgrade_args: Vec<String> = Vec::with_capacity(21);
 
     let image_key = "image";
     let tag_key = "tag";
@@ -46,6 +46,7 @@ pub(crate) fn generate_values_args(
     let thin_volume_commitment_key = "volumeCommitment";
     let thin_pool_commitment_key = "poolCommitment";
     let thin_volume_commitment_init_key = "volumeCommitmentInitial";
+    let priority_class_name_key = "priorityClassName";
     match chart_variant {
         HelmChart::Umbrella => {
             upgrade_args.push("--set".to_string());
@@ -138,6 +139,17 @@ pub(crate) fn generate_values_args(
                 upgrade_args.push(core_thin_vol_commitment_initial_arg);
             }
 
+            if from_values.priority_class_name_is_absent() {
+                upgrade_args.push("--set".to_string());
+                let priority_class_name_val = to_values.priority_class_name()?;
+                let priority_class_name_arg = format!(
+                    "{CORE_CHART_NAME}.{priority_class_name_key}={priority_class_name_val}"
+                );
+
+                // helm upgrade .. --set <core-chart>.priorityClassName=<priority-class-name>
+                upgrade_args.push(priority_class_name_arg);
+            }
+
             // helm upgrade .. --set release.version=<umbrella-chart-semver>
             upgrade_args.push("--set".to_string());
             let umbrella_release_arg: String = format!("release.version={TO_UMBRELLA_SEMVER}");
@@ -225,6 +237,16 @@ pub(crate) fn generate_values_args(
                 );
                 // helm upgrade .. --set agents.core.capacity.thin.volumeCommitmentInitial=<value>
                 upgrade_args.push(core_thin_vol_commitment_initial_arg);
+            }
+
+            if from_values.priority_class_name_is_absent() {
+                upgrade_args.push("--set".to_string());
+                let priority_class_name_val = to_values.priority_class_name()?;
+                let priority_class_name_arg =
+                    format!("{priority_class_name_key}={priority_class_name_val}");
+
+                // helm upgrade .. --set priorityClassName=<priority-class-name>
+                upgrade_args.push(priority_class_name_arg);
             }
         }
     }
