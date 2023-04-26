@@ -49,8 +49,8 @@ spec:
             - "--grpc-server-addr=0.0.0.0:50051"
             - "--pool-commitment={{ .Values.agents.core.capacity.thin.poolCommitment }}"
             - "--volume-commitment-initial={{ .Values.agents.core.capacity.thin.volumeCommitmentInitial }}"
-            - "--volume-commitment={{ .Values.agents.core.capacity.thin.volumeCommitment }}"
-            - "--faulted-child-wait-period={{ .Values.agents.core.partialRebuildWaitPeriod }}"
+            - "--volume-commitment={{ .Values.agents.core.capacity.thin.volumeCommitment }}"{{ if .Values.agents.core.partialRebuildWaitPeriod }}
+            - "--faulted-child-wait-period={{ .Values.agents.core.partialRebuildWaitPeriod }}"{{ end }}
           ports:
             - containerPort: 50051
           env:
