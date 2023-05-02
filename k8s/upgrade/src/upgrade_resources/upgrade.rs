@@ -39,7 +39,8 @@ pub enum DeleteResources {
 /// Delete Upgrade resource.
 #[derive(clap::Args, Debug)]
 pub struct DeleteUpgradeArgs {
-    /// If set then upgrade will skip the io-engine pods restart
+    /// Used for fetching the name of the upgrade resources.
+    /// Pass the name of the branch to which upgrade has happened earlier.
     #[clap(global = true, hide = true, long, short = 'u')]
     pub upgrade_to_branch: Option<String>,
 }
@@ -97,6 +98,10 @@ pub struct UpgradeArgs {
     /// Upgrade to the specified branch.
     #[clap(global = true, hide = true, long, short = 'u')]
     pub upgrade_to_branch: Option<String>,
+
+    /// Upgrade tag for testing, contains timestamp.
+    #[clap(hide = true, long)]
+    pub image_tag: Option<String>,
 }
 
 impl UpgradeArgs {
@@ -107,6 +112,7 @@ impl UpgradeArgs {
             namespace,
             self.skip_data_plane_restart,
             self.upgrade_to_branch.as_ref(),
+            self.image_tag.as_ref(),
         )
         .await;
         console_logger::info(UPGRADE_JOB_STARTED, "");
@@ -487,6 +493,7 @@ impl UpgradeResources {
         action: Actions,
         skip_data_plane_restart: bool,
         upgrade_to_branch: Option<&String>,
+        image_tag: Option<&String>,
     ) -> Result<(), Error> {
         let job_name = upgrade_name_concat(
             &self.release_name,
@@ -515,7 +522,7 @@ impl UpgradeResources {
         } else {
             match action {
                 Actions::Create => {
-                    let upgrade_job_image_tag = get_image_version_tag();
+                    let upgrade_job_image_tag = get_image_version_tag(image_tag);
                     let rest_deployment = get_deployment_for_rest(ns).await?;
                     let img = ImageProperties::try_from(rest_deployment)?;
                     let upgrade_deploy = objects::upgrade_job(
@@ -562,6 +569,7 @@ impl UpgradeResources {
         ns: &str,
         skip_data_plane_restart: bool,
         upgrade_to_branch: Option<&String>,
+        image_tag: Option<&String>,
     ) {
         match UpgradeResources::new(ns).await {
             Ok(uo) => {
@@ -599,6 +607,7 @@ impl UpgradeResources {
                         Actions::Create,
                         skip_data_plane_restart,
                         upgrade_to_branch,
+                        image_tag,
                     )
                     .await
                     .map_err(|error| {
@@ -616,7 +625,7 @@ impl UpgradeResources {
             Ok(uo) => {
                 // Delete the job
                 let _job = uo
-                    .job_actions(ns, Actions::Delete, false, upgrade_to_branch)
+                    .job_actions(ns, Actions::Delete, false, upgrade_to_branch, None)
                     .await
                     .map_err(|error| {
                         println!("Failure: {error}");

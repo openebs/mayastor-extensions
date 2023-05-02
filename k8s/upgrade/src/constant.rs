@@ -37,15 +37,20 @@ pub(crate) fn upgrade_obj_suffix() -> String {
 }
 
 /// Fetch the image tag for upgrade job's pod.
-pub(crate) fn get_image_version_tag() -> String {
-    let version = release_version();
-    match version {
-        Some(upgrade_job_image_tag) => upgrade_job_image_tag,
-        None => UPGRADE_JOB_IMAGE_TAG.to_string(),
+pub(crate) fn get_image_version_tag(image_tag: Option<&String>) -> String {
+    match image_tag {
+        Some(tag) => tag.to_string(),
+        None => {
+            let version = release_version();
+            match version {
+                Some(upgrade_job_image_tag) => upgrade_job_image_tag,
+                None => UPGRADE_JOB_IMAGE_TAG.to_string(),
+            }
+        }
     }
 }
 
-/// Returns the git tag version (if tag is found) or simply returns the commit hash (12 characters).
+/// Returns the git tag version (if tag is found)
 pub(crate) fn release_version() -> Option<String> {
     let version_info = version_info!();
     version_info.version_tag
