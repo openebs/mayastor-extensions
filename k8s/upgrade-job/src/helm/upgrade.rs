@@ -93,8 +93,8 @@ impl HelmUpgradeBuilder {
 
         // Assign HelmChart variant and validate directory path input for the said
         // variant's chart based on the 'chart' member of the HelmReleaseElement.
-        let mut chart_variant: HelmChart = Default::default();
-        let mut chart_dir: PathBuf = Default::default();
+        let chart_variant: HelmChart;
+        let chart_dir: PathBuf;
         // Case: HelmChart::Umbrella.
         if Regex::new(umbrella_chart_regex.as_str())
             .context(RegexCompile {
@@ -105,10 +105,12 @@ impl HelmUpgradeBuilder {
             chart_variant = HelmChart::Umbrella;
             match self.umbrella_chart_dir {
                 Some(umbrella_dir) => chart_dir = umbrella_dir,
-                None => NoInputHelmChartDir {
-                    chart_name: UMBRELLA_CHART_NAME.to_string(),
+                None => {
+                    return NoInputHelmChartDir {
+                        chart_name: UMBRELLA_CHART_NAME.to_string(),
+                    }
+                    .fail()
                 }
-                .fail()?,
             }
         } else if Regex::new(core_chart_regex.as_str()) // Case: HelmChart::Core.
             .context(RegexCompile {
@@ -119,17 +121,16 @@ impl HelmUpgradeBuilder {
             chart_variant = HelmChart::Core;
             match self.core_chart_dir {
                 Some(core_dir) => chart_dir = core_dir,
-                None => NoInputHelmChartDir {
-                    chart_name: CORE_CHART_NAME.to_string(),
+                None => {
+                    return NoInputHelmChartDir {
+                        chart_name: CORE_CHART_NAME.to_string(),
+                    }
+                    .fail()
                 }
-                .fail()?,
             }
         } else {
             // Case: Helm chart release is not a known helm chart installation.
-            NotAKnownHelmChart {
-                chart_name: chart.clone(),
-            }
-            .fail()?;
+            return NotAKnownHelmChart { chart_name: chart }.fail();
         }
 
         // Validating upgrade path.

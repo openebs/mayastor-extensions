@@ -1,135 +1,195 @@
-use openapi::{clients, models::RestJsonError};
-use thiserror::Error;
+use snafu::Snafu;
 
-/// Contains Errors that may generate while execution of kubectl upgrade client.
-#[derive(Debug, Error)]
-#[allow(clippy::enum_variant_names)]
+/// For use with multiple fallible operations which may fail for different reasons, but are
+/// defined withing the same scope and must return to the outer scope (calling scope) using
+/// the try operator -- '?'.
+#[derive(Debug, Snafu)]
+#[snafu(visibility(pub))]
+#[snafu(context(suffix(false)))]
 pub enum Error {
-    /// K8s client error.
-    #[error("K8Client Error: {}", source)]
-    K8sClientError { source: kube::Error },
-
-    /// Failed in creating service account.
-    #[error("Service account creation failed Error: {}", source)]
-    ServiceAccountCreateError { source: kube::Error },
-
-    /// Failed in creating cluster role.
-    #[error("Cluster role creation failed Error: {}", source)]
-    ClusterRoleCreateError { source: kube::Error },
-
-    /// Failed in creating cluster role binding.
-    #[error("Cluster role binding creation failed Error: {}", source)]
-    ClusterRoleBindingCreateError { source: kube::Error },
-
-    /// Failed in creating upgrade job.
-    #[error("Upgrade Job creation failed Error: {}", source)]
-    UpgradeJobCreateError { source: kube::Error },
-
-    /// Failed in deleting upgrade job.
-    #[error("Upgrade Job deleting failed Error: {}", source)]
-    UpgradeJobDeleteError { source: kube::Error },
-
-    /// Failed in deletion service account.
-    #[error("Service account deletion failed Error: {}", source)]
-    ServiceAccountDeleteError { source: kube::Error },
-
-    /// Failed in deletion cluster role.
-    #[error("Cluster role creation deletion Error: {}", source)]
-    ClusterRoleDeleteError { source: kube::Error },
-
-    /// Failed in deletion cluster role binding.
-    #[error("Cluster role binding deletion failed Error: {}", source)]
-    ClusterRoleBindingDeleteError { source: kube::Error },
-
-    /// Openapi configuration error.
-    #[error("openapi configuration Error: {}", source)]
-    OpenapiClientConfigurationErr { source: anyhow::Error },
-
-    /// HTTP request error.
-    #[error("HTTP request error: {}", source)]
-    Request {
-        source: clients::tower::RequestError,
-    },
-
-    /// HTTP response error.
-    #[error("HTTP response error: {}", source)]
-    Response {
-        source: clients::tower::ResponseError<RestJsonError>,
-    },
-
-    /// Node spec not present error.
-    #[error("Node spec not present, node: {}", node)]
-    NodeSpecNotPresent { node: String },
-
-    /// Pod Name not present error.
-    #[error("Pod name not present: {}", source)]
-    PodNameNotPresent { source: kube::Error },
-
-    /// Deserialization error for event.
-    #[error("Error in deserializing upgrade event.")]
-    EventSerdeDeserializationError,
-
-    /// No message in upgrade event.
-    #[error("No Message present in event.")]
-    MessageInEventNotPresent,
-    /// No upgrade event present.
-    #[error("No upgrade event present.")]
+    /// Error for no upgrade event present.
+    #[snafu(display("No upgrade event present."))]
     UpgradeEventNotPresent,
 
-    /// No Deployment event present.
-    #[error("No deployment present.")]
+    /// Error for no Deployment present.
+    #[snafu(display("No deployment present."))]
     NoDeploymentPresent,
 
+    /// No message in upgrade event.
+    #[snafu(display("No Message present in event."))]
+    MessageInEventNotPresent,
+
     /// Nodes are in cordoned state.
-    #[error("Nodes are in cordoned state.")]
+    #[snafu(display("Nodes are in cordoned state."))]
     NodesInCordonedState,
 
     /// Single replica volume present in cluster.
-    #[error("Single replica volume present in cluster.")]
+    #[snafu(display("Single replica volume present in cluster."))]
     SingleReplicaVolumeErr,
 
     /// Cluster is rebuilding replica of some volumes.
-    #[error("Cluster is rebuilding replica of some volumes.")]
-    VolumeRebuildInProgressErr,
+    #[snafu(display("Cluster is rebuilding replica of some volumes."))]
+    VolumeRebuildInProgress,
+
+    /// K8s client error.
+    #[snafu(display("K8Client Error: {}", source))]
+    K8sClient { source: kube::Error },
+
+    /// Deserialization error for event.
+    #[snafu(display("Error in deserializing upgrade event {} Error {}", event, source))]
+    EventSerdeDeserialization {
+        event: String,
+        source: serde_json::Error,
+    },
+
+    /// Failed in creating service account.
+    #[snafu(display("Service account: {} creation failed Error: {}", name, source))]
+    ServiceAccountCreate { name: String, source: kube::Error },
+
+    /// Failed in deletion service account.
+    #[snafu(display("Service account: {} deletion failed Error: {}", name, source))]
+    ServiceAccountDelete { name: String, source: kube::Error },
+
+    /// Failed in creating cluster role.
+    #[snafu(display("Cluster role: {} creation failed Error: {}", name, source))]
+    ClusterRoleCreate { name: String, source: kube::Error },
+
+    /// Failed in deletion cluster role.
+    #[snafu(display("Cluster role: {} deletion Error: {}", name, source))]
+    ClusterRoleDelete { name: String, source: kube::Error },
+
+    /// Failed in deletion cluster role binding.
+    #[snafu(display("Cluster role binding: {} deletion failed Error: {}", name, source))]
+    ClusterRoleBindingDelete { name: String, source: kube::Error },
+
+    /// Failed in creating cluster role binding.
+    #[snafu(display("Cluster role binding: {} creation failed Error: {}", name, source))]
+    ClusterRoleBindingCreate { name: String, source: kube::Error },
+
+    /// Failed in creating upgrade job.
+    #[snafu(display("Upgrade Job: {} creation failed Error: {}", name, source))]
+    UpgradeJobCreate { name: String, source: kube::Error },
+
+    /// Failed in deleting upgrade job.
+    #[snafu(display("Upgrade Job: {} deletion failed Error: {}", name, source))]
+    UpgradeJobDelete { name: String, source: kube::Error },
+
+    /// Error for when the image format is invalid.
+    #[snafu(display("Failed to find a valid image in Deployment."))]
+    ReferenceDeploymentInvalidImage,
+
+    /// Error for when the .spec.template.spec.contains[0].image is a None.
+    #[snafu(display("Failed to find an image in Deployment."))]
+    ReferenceDeploymentNoImage,
 
     /// Error for when .spec is None for the reference Deployment.
-    #[error("No .spec found for the reference Deployment")]
+    #[snafu(display("No .spec found for the reference Deployment"))]
     ReferenceDeploymentNoSpec,
 
     /// Error for when .spec.template.spec is None for the reference Deployment.
-    #[error("No .spec.template.spec found for the reference Deployment")]
+    #[snafu(display("No .spec.template.spec found for the reference Deployment"))]
     ReferenceDeploymentNoPodTemplateSpec,
 
     /// Error for when .spec.template.spec.contains[0] does not exist.
-    #[error("Failed to find the first container of the Deployment.")]
+    #[snafu(display("Failed to find the first container of the Deployment."))]
     ReferenceDeploymentNoContainers,
 
-    /// Error for when the .spec.template.spec.contains[0].image is a None.
-    #[error("Failed to find an image in Deployment.")]
-    ReferenceDeploymentNoImage,
+    /// Node spec not present error.
+    #[snafu(display("Node spec not present, node: {}", node))]
+    NodeSpecNotPresent { node: String },
 
-    /// Error for when the image format is invalid.
-    #[error("Failed to find a valid image in Deployment.")]
-    ReferenceDeploymentInvalidImage,
+    /// Error for when the pod.metadata.name is a None.
+    #[snafu(display("Pod name not present."))]
+    PodNameNotPresent,
+
+    /// Error for when the job.status is a None.
+    #[snafu(display("Upgrade Job: {} status not present.", name))]
+    UpgradeJobStatusNotPresent { name: String },
+
+    /// Error for when the job.status is a None.
+    #[snafu(display("Upgrade Job: {} not completed.", name))]
+    UpgradeJobNotCompleted { name: String },
+
+    /// Error for when a Kubernetes API request for GET-ing a list of Pods filtered by label(s)
+    /// fails.
+    #[snafu(display(
+        "Failed to list Pods with label {} in namespace {}: {}",
+        label,
+        namespace,
+        source
+    ))]
+    ListPodsWithLabel {
+        source: kube::Error,
+        label: String,
+        namespace: String,
+    },
+
+    /// Error for when a Kubernetes API request for GET-ing a list of Deployments filtered by
+    /// label(s) fails.
+    #[snafu(display(
+        "Failed to list Deployments with label {} in namespace {}: {}",
+        label,
+        namespace,
+        source
+    ))]
+    ListDeploymantsWithLabel {
+        source: kube::Error,
+        label: String,
+        namespace: String,
+    },
+
+    /// Error for when a Kubernetes API request for GET-ing a list of events filtered by
+    /// filed selector fails.
+    #[snafu(display("Failed to list Events with field selector {}: {}", field, source))]
+    ListEventsWithFieldSelector { source: kube::Error, field: String },
+
+    /// Error listing the pvc list.
+    #[snafu(display("Failed to list pvc : {}", source))]
+    ListPVC { source: kube::Error },
+
+    /// Error listing the volumes.
+    #[snafu(display("Failed to list volumes : {}", source))]
+    ListVolumes {
+        source: openapi::tower::client::Error<openapi::models::RestJsonError>,
+    },
+
+    /// Error when a Get Upgrade job fails.
+    #[snafu(display("Failed to get Upgrade Job {}: {}", name, source))]
+    GetUpgradeJob { source: kube::Error, name: String },
+
+    /// Error when a Get ServiceAccount fails.
+    #[snafu(display("Failed to get service account {}: {}", name, source))]
+    GetServiceAccount { source: kube::Error, name: String },
+
+    /// Error when a Get ClusterRole fails.
+    #[snafu(display("Failed to get cluster role {}: {}", name, source))]
+    GetClusterRole { source: kube::Error, name: String },
+
+    /// Error when a Get CLusterRoleBinding fails.
+    #[snafu(display("Failed to get cluster role binding {}: {}", name, source))]
+    GetClusterRoleBinding { source: kube::Error, name: String },
+
+    /// Error for when Kubernetes API client generation fails.
+    #[snafu(display("Failed to generate kubernetes client: {}", source))]
+    K8sClientGeneration { source: kube::Error },
+
+    /// Error for when REST API configuration fails.
+    #[snafu(display("Failed to configure REST API client : {:?}", source,))]
+    RestClientConfiguration {
+        #[snafu(source(false))]
+        source: openapi::clients::tower::configuration::Error,
+    },
+
+    /// Error for when listing storage nodes fails.
+    #[snafu(display("Failed to list Nodes: {}", source))]
+    ListStorageNodes {
+        source: openapi::tower::client::Error<openapi::models::RestJsonError>,
+    },
+
+    /// Openapi configuration error.
+    #[snafu(display("openapi configuration Error: {}", source))]
+    OpenapiClientConfiguration { source: anyhow::Error },
 }
 
-impl From<anyhow::Error> for Error {
-    fn from(source: anyhow::Error) -> Self {
-        Self::OpenapiClientConfigurationErr { source }
-    }
-}
-
-impl From<clients::tower::Error<RestJsonError>> for Error {
-    fn from(source: clients::tower::Error<RestJsonError>) -> Self {
-        match source {
-            clients::tower::Error::Request(source) => Self::Request { source },
-            clients::tower::Error::Response(source) => Self::Response { source },
-        }
-    }
-}
-
-impl From<kube::Error> for Error {
-    fn from(source: kube::Error) -> Self {
-        Self::K8sClientError { source }
-    }
-}
+/// A wrapper type to remove repeated Result<T, Error> returns.
+pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;

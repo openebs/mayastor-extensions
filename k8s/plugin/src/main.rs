@@ -164,7 +164,7 @@ async fn execute(cli_args: CliArgs) {
                 });
 
                 if resources.dry_run {
-                    let _ = resources.dummy_apply(&cli_args.namespace).await;
+                    _ = resources.dummy_apply(&cli_args.namespace).await;
                 } else {
                     resources.apply(&cli_args.namespace).await;
                 }
