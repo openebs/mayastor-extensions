@@ -31,8 +31,8 @@ spec:
         {{- include "base_init_ha_node_containers" . }}
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
-      {{- if .Values.priorityClassName }}
-      priorityClassName: {{ .Values.priorityClassName }}
+      {{- if $pcName := include "priority_class" (dict "template" . "localPriorityClass" .Values.agents.ha.node.priorityClassName) }}
+      priorityClassName: {{ $pcName }}
       {{- end }}
       nodeSelector:
         {{- if .Values.nodeSelector }}
