@@ -44,6 +44,7 @@ Options:
   --skip-publish             Don't publish built images.
   --image           <image>  Specify what image to build.
   --alias-tag       <tag>    Explicit alias for short commit hash tag.
+  --tag             <tag>    Explicit tag (overrides the git tag).
   --incremental              Builds components in two stages allowing for faster rebuilds during development.
   --build-bins               Builds all the static binaries.
   --build-bin                Specify which binary to build.
@@ -122,6 +123,14 @@ while [ "$#" -gt 0 ]; do
       ALIAS=$1
       shift
       ;;
+    --tag)
+      shift
+      if [ "$TAG" != "" ] && [ "$TAG" != "$1" ]; then
+        echo "Overriding $TAG with $1"
+      fi
+      TAG=$1
+      shift
+      ;;
     --image)
       shift
       IMAGES="$IMAGES $1"
@@ -166,14 +175,6 @@ done
 
 cd $SCRIPTDIR/..
 
-if [ -n "$BUILD_BINARIES" ]; then
-  mkdir -p $BINARY_OUT_LINK
-  for name in $BUILD_BINARIES; do
-    echo "Building static $name ..."
-    $NIX_BUILD --out-link $BINARY_OUT_LINK/$name -A utils.$BUILD_TYPE.$BIN_TARGET_PLAT.$name
-  done
-fi
-
 if [ -z "$IMAGES" ]; then
   IMAGES="$DEFAULT_IMAGES"
 elif [ $(echo "$IMAGES" | wc -w) == "1" ]; then
@@ -190,15 +191,21 @@ fi
 alias_tag=
 if [ -n "$ALIAS" ]; then
   alias_tag=$ALIAS
+  # when alias is created from branch-name we want to keep the hash and have it pushed to CI because
+  # the alias will change daily.
+  OVERRIDE_COMMIT_HASH="true"
 elif [ "$BRANCH" == "develop" ]; then
   alias_tag="$BRANCH"
 elif [ "${BRANCH#release-}" != "${BRANCH}" ]; then
   alias_tag="${BRANCH}"
 fi
 
-if [ -z "$CI" ] && [ -z "$TAG" ] && [ -n "$alias_tag" ]; then
-  OVERRIDE_COMMIT_HASH="true"
+if [ -n "$TAG" ] && [ "$TAG" != "$(get_tag)" ]; then
+  # Set the TAG which basically allows building the binaries as if it were a git tag
+  NIX_TAG_ARGS="--argstr tag $TAG"
+  NIX_BUILD="$NIX_BUILD $NIX_TAG_ARGS"
 fi
+
 TAG=${TAG:-$HASH}
 if [ -n "$OVERRIDE_COMMIT_HASH" ]; then
   # Set the TAG to the alias and remove the alias
@@ -206,6 +213,14 @@ if [ -n "$OVERRIDE_COMMIT_HASH" ]; then
   NIX_BUILD="$NIX_BUILD $NIX_TAG_ARGS"
   TAG="$alias_tag"
   alias_tag=
+fi
+
+if [ -n "$BUILD_BINARIES" ]; then
+  mkdir -p $BINARY_OUT_LINK
+  for name in $BUILD_BINARIES; do
+    echo "Building static $name ..."
+    $NIX_BUILD --out-link $BINARY_OUT_LINK/$name -A utils.$BUILD_TYPE.$BIN_TARGET_PLAT.$name
+  done
 fi
 
 # This variable will be used to flag if the helm chart dependencies have been
@@ -224,9 +239,9 @@ for name in $IMAGES; do
         echo "Updating helm chart dependencies..."
         # Helm chart directory path -- /scripts --> /chart
         CHART_DIR="${SCRIPT_DIR}/../chart"
-        
+
         nix-shell --run "helm dependency update ${CHART_DIR}"
-        
+
         # Set flag to true
         _helm_dependencies_updated=true
         break
@@ -254,7 +269,7 @@ done
 if [ -n "$UPLOAD" ] && [ -z "$SKIP_PUBLISH" ]; then
   # Upload them
   for img in $UPLOAD; do
-    if [ -z "$REGISTRY" ] && [ -z "$OVERRIDE_COMMIT_HASH" ] && dockerhub_tag_exists $image $TAG; then
+    if [ -z "$REGISTRY" ] && [ -n "$CI" ] && dockerhub_tag_exists $image $TAG; then
       echo "Skipping $image:$TAG that already exists"
       continue
     fi
