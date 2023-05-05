@@ -7,15 +7,13 @@ use crate::{
         UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX,
         UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
-    error::Error,
+    error,
     upgrade_resources::objects,
     user_prompt::{
         upgrade_dry_run_summary, CONTROL_PLANE_PODS_LIST, DATA_PLANE_PODS_LIST,
         DATA_PLANE_PODS_LIST_SKIP_RESTART, UPGRADE_DRY_RUN_SUMMARY, UPGRADE_JOB_STARTED,
     },
 };
-use serde::Deserialize;
-
 use k8s_openapi::api::{
     apps::v1::Deployment,
     batch::v1::Job,
@@ -27,6 +25,8 @@ use kube::{
     core::ObjectList,
     Client,
 };
+use serde::Deserialize;
+use snafu::ResultExt;
 use std::collections::HashSet;
 
 /// Arguments to be passed for upgrade.
@@ -48,7 +48,8 @@ impl DeleteUpgradeArgs {
     /// Delete the upgrade resources
     pub async fn delete(&self, ns: &str) {
         // Delete upgrade resources once job completes
-        match upgrade_job_completed(ns, self.upgrade_to_branch.as_ref()).await {
+
+        match is_upgrade_job_completed(ns, self.upgrade_to_branch.as_ref()).await {
             Ok(job_completed) => {
                 if job_completed {
                     UpgradeResources::delete_upgrade_resources(ns, self.upgrade_to_branch.as_ref())
@@ -56,7 +57,9 @@ impl DeleteUpgradeArgs {
                 }
             }
             Err(error) => {
-                eprintln!("Failure: {error}");
+                eprintln!(
+                    "error occured while fetching the completion status of upgrade job {error}"
+                );
             }
         }
     }
@@ -113,7 +116,7 @@ impl UpgradeArgs {
     }
 
     ///  Dummy upgrade the resources.
-    pub async fn dummy_apply(&self, namespace: &str) -> Result<(), Error> {
+    pub async fn dummy_apply(&self, namespace: &str) -> error::Result<()> {
         let mut pods_names: Vec<String> = Vec::new();
         list_pods(AGENT_CORE_POD_LABEL, namespace, &mut pods_names).await?;
         list_pods(API_REST_POD_LABEL, namespace, &mut pods_names).await?;
@@ -137,16 +140,20 @@ impl UpgradeArgs {
     }
 }
 
-pub async fn list_pods(
+pub(crate) async fn list_pods(
     label: &str,
     namespace: &str,
     pods_names: &mut Vec<String>,
-) -> Result<(), Error> {
-    let client = Client::try_default()
-        .await
-        .map_err(|source| Error::K8sClientError { source })?;
+) -> error::Result<()> {
+    let client = Client::try_default().await.context(error::K8sClient)?;
     let pods: Api<Pod> = Api::namespaced(client, namespace);
-    let pod_list: ObjectList<Pod> = pods.list(&ListParams::default().labels(label)).await?;
+    let pod_list: ObjectList<Pod> = pods
+        .list(&ListParams::default().labels(label))
+        .await
+        .context(error::ListPodsWithLabel {
+            label: label.to_string(),
+            namespace: namespace.to_string(),
+        })?;
 
     for pod in pod_list.iter() {
         // Fetch the pod name
@@ -154,7 +161,7 @@ pub async fn list_pods(
             .metadata
             .name
             .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("pod.metadata.name is empty"))?
+            .ok_or(error::PodNameNotPresent.build())?
             .as_str();
         let _ = &pods_names.push(pod_name.to_string());
     }
@@ -192,8 +199,10 @@ struct UpgradeEventClient {
 
 /// Methods implemented by UpgradeEventClient.
 impl UpgradeEventClient {
-    pub async fn new(ns: &str) -> Result<Self, Error> {
-        let client = Client::try_default().await?;
+    pub async fn new(ns: &str) -> error::Result<Self> {
+        let client = Client::try_default()
+            .await
+            .context(error::K8sClientGeneration)?;
         Ok(Self {
             upgrade_event: Api::<Event>::namespaced(client, ns),
         })
@@ -205,19 +214,18 @@ impl UpgradeEventClient {
     }
 
     /// Fetch upgrade events and print.
-    pub async fn get_and_log(&self, release_name: String) -> Result<(), Error> {
+    pub async fn get_and_log(&self, release_name: String) -> error::Result<()> {
+        let selector = upgrade_event_selector(release_name.as_str(), UPGRADE_JOB_NAME_SUFFIX);
         let event_lp = ListParams {
-            field_selector: Some(upgrade_event_selector(
-                release_name.as_str(),
-                UPGRADE_JOB_NAME_SUFFIX,
-            )),
+            field_selector: Some(selector.clone()),
             ..Default::default()
         };
 
         let mut event_list = self
             .api_client()
             .list(&event_lp)
-            .await?
+            .await
+            .context(error::ListEventsWithFieldSelector { field: selector })?
             .into_iter()
             .filter(|e| e.reason == Some(UPGRADE_EVENT_REASON.to_string()))
             .collect::<Vec<_>>();
@@ -227,20 +235,20 @@ impl UpgradeEventClient {
             Some(event) => match event.message.clone() {
                 Some(data) => {
                     let e: UpgradeEvent = serde_json::from_str(data.as_str())
-                        .map_err(|_| Error::EventSerdeDeserializationError)?;
+                        .context(error::EventSerdeDeserialization { event: data })?;
                     println!("Upgrade From: {}", e.from_version);
                     println!("Upgrade To: {}", e.to_version);
                     println!("Upgrade Status: {}", e.message);
                     Ok(())
                 }
-                None => Err(Error::MessageInEventNotPresent),
+                None => error::MessageInEventNotPresent.fail(),
             },
-            None => Err(Error::UpgradeEventNotPresent),
+            None => error::UpgradeEventNotPresent.fail(),
         }
     }
 
     /// Create resources for fetching upgrade events.
-    pub async fn create_get_upgrade_resource(ns: &str) -> Result<(), Error> {
+    pub async fn create_get_upgrade_resource(ns: &str) -> error::Result<()> {
         let release_name = get_release_name(ns).await?;
         let gur = UpgradeEventClient::new(ns).await?;
         gur.get_and_log(release_name).await?;
@@ -260,8 +268,10 @@ struct UpgradeResources {
 /// Methods implemented by UpgradesResources.
 impl UpgradeResources {
     /// Returns an instance of UpgradesResources
-    pub async fn new(ns: &str) -> anyhow::Result<Self, Error> {
-        let client = Client::try_default().await?;
+    pub async fn new(ns: &str) -> error::Result<Self> {
+        let client = Client::try_default()
+            .await
+            .context(error::K8sClientGeneration)?;
         let release_name = get_release_name(ns).await?;
         Ok(Self {
             service_account: Api::<ServiceAccount>::namespaced(client.clone(), ns),
@@ -278,14 +288,21 @@ impl UpgradeResources {
         ns: &str,
         action: Actions,
         upgrade_to_branch: Option<&String>,
-    ) -> Result<(), Error> {
+    ) -> error::Result<()> {
         let service_account_name = upgrade_name_concat(
             &self.release_name,
             UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
             upgrade_to_branch,
         );
 
-        if let Some(sa) = self.service_account.get_opt(&service_account_name).await? {
+        if let Some(sa) = self
+            .service_account
+            .get_opt(&service_account_name)
+            .await
+            .context(error::GetServiceAccount {
+                name: service_account_name.clone(),
+            })?
+        {
             match action {
                 Actions::Create => {
                     println!(
@@ -295,20 +312,14 @@ impl UpgradeResources {
                     );
                 }
                 Actions::Delete => {
-                    match self
+                    let _sa = self
                         .service_account
                         .delete(&service_account_name, &DeleteParams::default())
                         .await
-                    {
-                        Ok(_) => {
-                            println!(
-                                "ServiceAccount {service_account_name} in namespace {ns} deleted"
-                            );
-                        }
-                        Err(source) => {
-                            return Err(Error::ServiceAccountDeleteError { source });
-                        }
-                    }
+                        .context(error::ServiceAccountDelete {
+                            name: service_account_name.clone(),
+                        })?;
+                    println!("ServiceAccount {service_account_name} in namespace {ns} deleted");
                 }
             }
         } else {
@@ -316,20 +327,20 @@ impl UpgradeResources {
                 Actions::Create => {
                     let ns = Some(ns.to_string());
                     let service_account =
-                        objects::upgrade_job_service_account(ns, service_account_name);
+                        objects::upgrade_job_service_account(ns, service_account_name.clone());
                     let pp = PostParams::default();
-                    match self.service_account.create(&pp, &service_account).await {
-                        Ok(sa) => {
-                            println!(
-                                "ServiceAccount: {} created in namespace: {}",
-                                sa.metadata.name.unwrap(),
-                                sa.metadata.namespace.unwrap()
-                            )
-                        }
-                        Err(source) => {
-                            return Err(Error::ServiceAccountCreateError { source });
-                        }
-                    }
+                    let sa = self
+                        .service_account
+                        .create(&pp, &service_account)
+                        .await
+                        .context(error::ServiceAccountCreate {
+                            name: service_account_name.clone(),
+                        })?;
+                    println!(
+                        "ServiceAccount: {} created in namespace: {}",
+                        sa.metadata.name.unwrap(),
+                        sa.metadata.namespace.unwrap()
+                    );
                 }
                 Actions::Delete => {
                     println!(
@@ -347,14 +358,21 @@ impl UpgradeResources {
         ns: &str,
         action: Actions,
         upgrade_to_branch: Option<&String>,
-    ) -> Result<(), Error> {
+    ) -> error::Result<()> {
         let cluster_role_name = upgrade_name_concat(
             &self.release_name,
             UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
             upgrade_to_branch,
         );
 
-        if let Some(cr) = self.cluster_role.get_opt(&cluster_role_name).await? {
+        if let Some(cr) = self
+            .cluster_role
+            .get_opt(&cluster_role_name)
+            .await
+            .context(error::GetClusterRole {
+                name: cluster_role_name.clone(),
+            })?
+        {
             match action {
                 Actions::Create => {
                     println!(
@@ -364,38 +382,33 @@ impl UpgradeResources {
                     );
                 }
                 Actions::Delete => {
-                    match self
+                    let _role = self
                         .cluster_role
                         .delete(&cluster_role_name, &DeleteParams::default())
                         .await
-                    {
-                        Ok(_) => {
-                            println!("ClusterRole {cluster_role_name} in namespace {ns} deleted");
-                        }
-                        Err(source) => {
-                            return Err(Error::ClusterRoleDeleteError { source });
-                        }
-                    }
+                        .context(error::ClusterRoleDelete {
+                            name: cluster_role_name.clone(),
+                        })?;
+                    println!("ClusterRole {cluster_role_name} in namespace {ns} deleted");
                 }
             }
         } else {
             match action {
                 Actions::Create => {
                     let namespace = Some(ns.to_string());
-                    let role = objects::upgrade_job_cluster_role(namespace, cluster_role_name);
+                    let role =
+                        objects::upgrade_job_cluster_role(namespace, cluster_role_name.clone());
                     let pp = PostParams::default();
-                    match self.cluster_role.create(&pp, &role).await {
-                        Ok(cr) => {
-                            println!(
-                                "Cluster Role: {} in namespace {} created",
-                                cr.metadata.name.unwrap(),
-                                ns
-                            );
-                        }
-                        Err(source) => {
-                            return Err(Error::ClusterRoleCreateError { source });
-                        }
-                    }
+                    let cr = self.cluster_role.create(&pp, &role).await.context(
+                        error::ClusterRoleCreate {
+                            name: cluster_role_name,
+                        },
+                    )?;
+                    println!(
+                        "Cluster Role: {} in namespace {} created",
+                        cr.metadata.name.unwrap(),
+                        ns
+                    );
                 }
                 Actions::Delete => {
                     println!("cluster role {cluster_role_name} in namespace {ns} does not exist");
@@ -411,7 +424,7 @@ impl UpgradeResources {
         ns: &str,
         action: Actions,
         upgrade_to_branch: Option<&String>,
-    ) -> Result<(), Error> {
+    ) -> error::Result<()> {
         let cluster_role_binding_name = upgrade_name_concat(
             &self.release_name,
             UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
@@ -420,7 +433,10 @@ impl UpgradeResources {
         if let Some(crb) = self
             .cluster_role_binding
             .get_opt(&cluster_role_binding_name)
-            .await?
+            .await
+            .context(error::GetClusterRoleBinding {
+                name: cluster_role_binding_name.clone(),
+            })?
         {
             match action {
                 Actions::Create => {
@@ -431,20 +447,16 @@ impl UpgradeResources {
                     );
                 }
                 Actions::Delete => {
-                    match self
+                    let _crb = self
                         .cluster_role_binding
                         .delete(&cluster_role_binding_name, &DeleteParams::default())
                         .await
-                    {
-                        Ok(_) => {
-                            println!(
-                                "ClusterRoleBinding {cluster_role_binding_name} in namespace {ns} deleted"
-                            );
-                        }
-                        Err(source) => {
-                            return Err(Error::ClusterRoleBindingDeleteError { source });
-                        }
-                    }
+                        .context(error::ClusterRoleBindingDelete {
+                            name: cluster_role_binding_name.clone(),
+                        })?;
+                    println!(
+                        "ClusterRoleBinding {cluster_role_binding_name} in namespace {ns} deleted"
+                    );
                 }
             }
         } else {
@@ -457,18 +469,18 @@ impl UpgradeResources {
                         upgrade_to_branch,
                     );
                     let pp = PostParams::default();
-                    match self.cluster_role_binding.create(&pp, &role_binding).await {
-                        Ok(crb) => {
-                            println!(
-                                "ClusterRoleBinding: {} in namespace {} created",
-                                crb.metadata.name.unwrap(),
-                                ns
-                            );
-                        }
-                        Err(source) => {
-                            return Err(Error::ClusterRoleBindingCreateError { source });
-                        }
-                    }
+                    let crb = self
+                        .cluster_role_binding
+                        .create(&pp, &role_binding)
+                        .await
+                        .context(error::ClusterRoleBindingCreate {
+                            name: cluster_role_binding_name,
+                        })?;
+                    println!(
+                        "ClusterRoleBinding: {} in namespace {} created",
+                        crb.metadata.name.unwrap(),
+                        ns
+                    );
                 }
                 Actions::Delete => {
                     println!(
@@ -487,13 +499,20 @@ impl UpgradeResources {
         action: Actions,
         skip_data_plane_restart: bool,
         upgrade_to_branch: Option<&String>,
-    ) -> Result<(), Error> {
+    ) -> error::Result<()> {
         let job_name = upgrade_name_concat(
             &self.release_name,
             UPGRADE_JOB_NAME_SUFFIX,
             upgrade_to_branch,
         );
-        if let Some(job) = self.job.get_opt(&job_name).await? {
+        if let Some(job) = self
+            .job
+            .get_opt(&job_name)
+            .await
+            .context(error::GetUpgradeJob {
+                name: job_name.clone(),
+            })?
+        {
             match action {
                 Actions::Create => {
                     println!(
@@ -502,15 +521,16 @@ impl UpgradeResources {
                         job.metadata.namespace.as_ref().unwrap()
                     );
                 }
-                Actions::Delete => match self.job.delete(&job_name, &DeleteParams::default()).await
-                {
-                    Ok(_) => {
-                        println!("Job {job_name} in namespace {ns} deleted");
-                    }
-                    Err(source) => {
-                        return Err(Error::UpgradeJobDeleteError { source });
-                    }
-                },
+                Actions::Delete => {
+                    let _job = self
+                        .job
+                        .delete(&job_name, &DeleteParams::default())
+                        .await
+                        .context(error::UpgradeJobDelete {
+                            name: job_name.clone(),
+                        })?;
+                    println!("Job {job_name} in namespace {ns} deleted");
+                }
             }
         } else {
             match action {
@@ -532,22 +552,16 @@ impl UpgradeResources {
                         img.pull_secrets(),
                         img.pull_policy(),
                     );
-                    match self
+                    let dep = self
                         .job
                         .create(&PostParams::default(), &upgrade_deploy)
                         .await
-                    {
-                        Ok(dep) => {
-                            println!(
-                                "Job: {} created in namespace: {}",
-                                dep.metadata.name.unwrap(),
-                                dep.metadata.namespace.unwrap()
-                            );
-                        }
-                        Err(source) => {
-                            return Err(Error::UpgradeJobCreateError { source });
-                        }
-                    }
+                        .context(error::UpgradeJobCreate { name: job_name })?;
+                    println!(
+                        "Job: {} created in namespace: {}",
+                        dep.metadata.name.unwrap(),
+                        dep.metadata.namespace.unwrap()
+                    );
                 }
                 Actions::Delete => {
                     println!("Job {job_name} in namespace {ns} does not exist");
@@ -570,7 +584,7 @@ impl UpgradeResources {
                     .service_account_actions(ns, Actions::Create, upgrade_to_branch)
                     .await
                     .map_err(|error| {
-                        println!("Failure: {error}");
+                        eprintln!("Failure: {error}");
                         std::process::exit(1);
                     });
 
@@ -579,7 +593,7 @@ impl UpgradeResources {
                     .cluster_role_actions(ns, Actions::Create, upgrade_to_branch)
                     .await
                     .map_err(|error| {
-                        println!("Failure: {error}");
+                        eprintln!("Failure: {error}");
                         std::process::exit(1);
                     });
 
@@ -588,7 +602,7 @@ impl UpgradeResources {
                     .cluster_role_binding_actions(ns, Actions::Create, upgrade_to_branch)
                     .await
                     .map_err(|error| {
-                        println!("Failure: {error}");
+                        eprintln!("Failure: {error}");
                         std::process::exit(1);
                     });
 
@@ -602,7 +616,7 @@ impl UpgradeResources {
                     )
                     .await
                     .map_err(|error| {
-                        println!("Failure: {error}");
+                        eprintln!("Failure: {error}");
                         std::process::exit(1);
                     });
             }
@@ -655,11 +669,11 @@ impl UpgradeResources {
     }
 }
 
-pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> Result<Vec<String>, Error> {
-    let client = Client::try_default().await?;
+pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> error::Result<Vec<String>> {
+    let client = Client::try_default().await.context(error::K8sClient)?;
     let pvclaim = Api::<PersistentVolumeClaim>::all(client);
     let lp = ListParams::default();
-    let pvc_list = pvclaim.list(&lp).await?;
+    let pvc_list = pvclaim.list(&lp).await.context(error::ListPVC)?;
     let mut single_replica_volumes_pvc = Vec::new();
     for pvc in pvc_list {
         if let Some(uuid) = pvc.metadata.uid {
@@ -674,73 +688,79 @@ pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> Result<Vec<String>
 }
 
 /// Return results as list of deployments.
-pub async fn get_deployment_for_rest(ns: &str) -> Result<Deployment, Error> {
-    let client = Client::try_default().await?;
+pub async fn get_deployment_for_rest(ns: &str) -> error::Result<Deployment> {
+    let client = Client::try_default().await.context(error::K8sClient)?;
     let deployment = Api::<Deployment>::namespaced(client, ns);
     let lp = ListParams::default().labels(API_REST_LABEL_SELECTOR);
-    let deployment_list = deployment.list(&lp).await?;
+    let deployment_list = deployment
+        .list(&lp)
+        .await
+        .context(error::ListDeploymantsWithLabel {
+            label: API_REST_LABEL_SELECTOR.to_string(),
+            namespace: ns.to_string(),
+        })?;
     let deployment = deployment_list
         .items
         .first()
-        .ok_or(Error::NoDeploymentPresent)?
+        .ok_or(error::NoDeploymentPresent.build())?
         .clone();
 
     Ok(deployment)
 }
 
 /// Return the release name.
-pub async fn get_release_name(ns: &str) -> Result<String, Error> {
-    match get_deployment_for_rest(ns).await {
-        Ok(deployment) => match &deployment.metadata.labels {
-            Some(label) => match label.get(HELM_RELEASE_NAME_LABEL) {
-                Some(value) => Ok(value.to_string()),
-                None => Ok(DEFAULT_RELEASE_NAME.to_string()),
-            },
+pub async fn get_release_name(ns: &str) -> error::Result<String> {
+    let deployment = get_deployment_for_rest(ns).await?;
+    match &deployment.metadata.labels {
+        Some(label) => match label.get(HELM_RELEASE_NAME_LABEL) {
+            Some(value) => Ok(value.to_string()),
             None => Ok(DEFAULT_RELEASE_NAME.to_string()),
         },
-
-        Err(e) => {
-            eprintln!("Failed in fetching deployment {e:?}");
-            std::process::exit(1);
-        }
+        None => Ok(DEFAULT_RELEASE_NAME.to_string()),
     }
 }
 
 /// Return true if upgrade job is completed
-pub async fn upgrade_job_completed(
+pub async fn is_upgrade_job_completed(
     ns: &str,
     upgrade_to_branch: Option<&String>,
-) -> Result<bool, Error> {
-    match UpgradeResources::new(ns).await {
-        Ok(uo) => {
-            let job_name =
-                upgrade_name_concat(&uo.release_name, UPGRADE_JOB_NAME_SUFFIX, upgrade_to_branch);
-            let option_job = uo
-                .job
-                .get_opt(&job_name)
-                .await
-                .map_err(|err| anyhow::anyhow!(err.to_string()))?;
-            match option_job {
-                Some(job) => {
-                    if matches!(
-                        job.status
-                            .as_ref()
-                            .ok_or_else(|| anyhow::anyhow!("upgrade job.status is empty"))?
-                            .succeeded
-                            .as_ref()
-                            .ok_or_else(|| anyhow::anyhow!("upgrade job has not completed yet."))?,
-                        1
-                    ) {
-                        return Ok(true);
-                    }
-                }
-                None => {
-                    eprintln!("Upgrade job {job_name} in namespace {ns} does not exist");
-                }
+) -> error::Result<bool> {
+    let uo = UpgradeResources::new(ns).await?;
+    let job_name =
+        upgrade_name_concat(&uo.release_name, UPGRADE_JOB_NAME_SUFFIX, upgrade_to_branch);
+    let option_job = uo
+        .job
+        .get_opt(&job_name)
+        .await
+        .context(error::GetUpgradeJob {
+            name: job_name.clone(),
+        })?;
+    match option_job {
+        Some(job) => {
+            if matches!(
+                job.status
+                    .as_ref()
+                    .ok_or(
+                        error::UpgradeJobStatusNotPresent {
+                            name: job_name.clone()
+                        }
+                        .build()
+                    )?
+                    .succeeded
+                    .as_ref()
+                    .ok_or(
+                        error::UpgradeJobNotCompleted {
+                            name: job_name.clone()
+                        }
+                        .build()
+                    )?,
+                1
+            ) {
+                return Ok(true);
             }
         }
-        Err(error) => {
-            return Err(error);
+        None => {
+            eprintln!("Upgrade job {job_name} in namespace {ns} does not exist");
         }
     }
     Ok(false)
@@ -755,27 +775,27 @@ struct ImageProperties {
 impl TryFrom<Deployment> for ImageProperties {
     type Error = crate::error::Error;
 
-    fn try_from(d: Deployment) -> Result<Self, Error> {
+    fn try_from(d: Deployment) -> error::Result<Self> {
         let pod_spec = d
             .spec
-            .ok_or(Error::ReferenceDeploymentNoSpec)?
+            .ok_or(error::ReferenceDeploymentNoSpec.build())?
             .template
             .spec
-            .ok_or(Error::ReferenceDeploymentNoPodTemplateSpec)?;
+            .ok_or(error::ReferenceDeploymentNoPodTemplateSpec.build())?;
 
         let container = pod_spec
             .containers
             .first()
-            .ok_or(Error::ReferenceDeploymentNoContainers)?;
+            .ok_or(error::ReferenceDeploymentNoContainers.build())?;
 
         let image = container
             .image
             .clone()
-            .ok_or(Error::ReferenceDeploymentNoImage)?;
+            .ok_or(error::ReferenceDeploymentNoImage.build())?;
 
         let image_sections: Vec<&str> = image.split('/').collect();
         if image_sections.is_empty() || image_sections.len() == 1 {
-            return Err(Error::ReferenceDeploymentInvalidImage);
+            return error::ReferenceDeploymentInvalidImage.fail();
         }
 
         let registry = match image_sections.len() {

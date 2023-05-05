@@ -375,7 +375,7 @@ async fn data_plane_pod_is_running(
     }
 
     if pod_list.items.len() != 1 {
-        TooManyIoEnginePods { node_name: node }.fail()?;
+        return TooManyIoEnginePods { node_name: node }.fail();
     }
 
     Ok(all_pods_are_ready(pod_list))

@@ -55,7 +55,7 @@ pub(crate) fn validate_helm_release(name: String, namespace: String) -> Result<(
         .context(RegexCompile { expression: regex })?
         .is_match(output.stdout.as_slice())
     {
-        HelmRelease { name, namespace }.fail()?;
+        return HelmRelease { name, namespace }.fail();
     }
 
     Ok(())
@@ -98,10 +98,10 @@ pub(crate) fn validate_helmv3_in_path() -> Result<()> {
         })?
         .is_match(output.stdout.as_slice())
     {
-        HelmVersion {
+        return HelmVersion {
             version: stdout_str.to_string(),
         }
-        .fail()?;
+        .fail();
     }
 
     Ok(())

@@ -25,6 +25,6 @@ http = "0.2.8"
 async-trait = "0.1.64"
 serde = "1.0.152"
 serde_json = "1.0.93"
-thiserror = "1.0.38"
+snafu = "0.7.4"
 # Tracing
 tracing = "0.1.37"

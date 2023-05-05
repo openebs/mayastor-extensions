@@ -3646,7 +3646,7 @@ dependencies = [
  "openapi",
  "serde",
  "serde_json",
- "thiserror",
+ "snafu",
  "tower",
  "tracing",
  "utils",
