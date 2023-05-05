@@ -48,6 +48,7 @@ pub(crate) fn get_image_version_tag() -> String {
 /// Returns the git tag version (if tag is found) or simply returns the commit hash (12 characters).
 pub(crate) fn release_version() -> Option<String> {
     let version_info = version_info!();
+    println!("version_info {:#?}", version_info);
     version_info.version_tag
 }
 
@@ -69,9 +70,11 @@ pub(crate) fn upgrade_event_selector(release_name: &str, component_name: &str) -
     let name_value = format!("{release_name}-{component_name}-{tag}");
     format!("{kind},{name_key}={name_value}")
 }
-
+/// Installed release name.
 pub(crate) const HELM_RELEASE_NAME_LABEL: &str = "openebs.io/release";
-
+/// Installed release version.
+pub(crate) const HELM_RELEASE_VERSION_LABEL: &str = "openebs.io/version";
+/// Default image repository.
 pub(crate) const DEFAULT_IMAGE_REGISTRY: &str = "docker.io";
 /// The upgrade job will use the UPGRADE_JOB_IMAGE_NAME image (below) with this tag.
 pub(crate) const UPGRADE_JOB_IMAGE_TAG: &str = "develop";
@@ -105,3 +108,13 @@ pub(crate) const AGENT_CORE_POD_LABEL: &str = "app=agent-core";
 pub(crate) const API_REST_POD_LABEL: &str = "app=api-rest";
 /// UPGRADE_EVENT_REASON is the reason field in upgrade job.
 pub(crate) const UPGRADE_EVENT_REASON: &str = "MayastorUpgrade";
+
+/// This is the allowed upgrade to-version/to-version-range for the Core chart.
+pub(crate) const TO_CORE_SEMVER: &str = ">=2.2.0-rc.0, <=2.2.0";
+
+/// This is the allowed upgrade to-version/to-version-range for the Core chart.
+pub(crate) const TO_DEVELOP_SEMVER: &str = "0.0.0";
+
+/// This version range will be only allowed to upgrade to TO_CORE_SEMVER above. This range applies
+/// to the Core chart.
+pub(crate) const FROM_CORE_SEMVER: &str = ">=2.0.0, <=2.1.0";

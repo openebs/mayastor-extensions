@@ -3644,6 +3644,7 @@ dependencies = [
  "kube-proxy",
  "maplit",
  "openapi",
+ "semver",
  "serde",
  "serde_json",
  "snafu",

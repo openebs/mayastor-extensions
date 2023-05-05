@@ -38,3 +38,10 @@ pub const UPGRADE_DRY_RUN_SUMMARY: &str =
 /// Information about successful start of upgrade process.
 pub const UPGRADE_JOB_STARTED: &str =
     "\nThe upgrade has started. You can see the recent upgrade status using 'get upgrade-status` command.";
+
+/// Source and target version are same.
+pub const SOURCE_TARGET_VERSION_SAME: &str =
+    "\nThe upgrade cannot proceed as target version is same as source version.\nVersion:";
+
+/// Info about the data plane pods.
+pub const UPGRADE_PATH_NOT_VALID: &str = "\nThe upgrade path is not valid.";

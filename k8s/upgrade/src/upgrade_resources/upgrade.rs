@@ -2,10 +2,10 @@ use crate::{
     constant::{
         get_image_version_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
         AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_IMAGE_REGISTRY,
-        DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, IO_ENGINE_POD_LABEL, UPGRADE_EVENT_REASON,
-        UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
-        UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX,
-        UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+        DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, HELM_RELEASE_VERSION_LABEL,
+        IO_ENGINE_POD_LABEL, UPGRADE_EVENT_REASON, UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
+        UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX, UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO,
+        UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     error,
     upgrade_resources::objects,
@@ -695,7 +695,7 @@ pub async fn get_deployment_for_rest(ns: &str) -> error::Result<Deployment> {
     let deployment_list = deployment
         .list(&lp)
         .await
-        .context(error::ListDeploymantsWithLabel {
+        .context(error::ListDeploymentsWithLabel {
             label: API_REST_LABEL_SELECTOR.to_string(),
             namespace: ns.to_string(),
         })?;
@@ -824,4 +824,17 @@ impl ImageProperties {
     fn pull_policy(&self) -> Option<String> {
         self.pull_policy.clone()
     }
+}
+
+/// Return the installed version.
+pub async fn get_source_version(ns: &str) -> error::Result<String> {
+    let deployment = get_deployment_for_rest(ns).await?;
+    let value = &deployment
+        .metadata
+        .labels
+        .ok_or(error::NoDeploymentPresent.build())?
+        .get(HELM_RELEASE_VERSION_LABEL)
+        .ok_or(error::NoDeploymentPresent.build())?
+        .to_string();
+    Ok(value.to_string())
 }

@@ -19,6 +19,10 @@ pub enum Error {
     #[snafu(display("No Message present in event."))]
     MessageInEventNotPresent,
 
+    /// Source and target version are same.
+    #[snafu(display("Source and target version are same for upgrade."))]
+    SourceTargetVersionSame,
+
     /// Nodes are in cordoned state.
     #[snafu(display("Nodes are in cordoned state."))]
     NodesInCordonedState,
@@ -132,7 +136,7 @@ pub enum Error {
         namespace,
         source
     ))]
-    ListDeploymantsWithLabel {
+    ListDeploymentsWithLabel {
         source: kube::Error,
         label: String,
         namespace: String,
@@ -189,6 +193,17 @@ pub enum Error {
     /// Openapi configuration error.
     #[snafu(display("openapi configuration Error: {}", source))]
     OpenapiClientConfiguration { source: anyhow::Error },
+
+    /// Error for failures in generating semver::Value from a &str input.
+    #[snafu(display("Failed to parse {} as a valid semver: {}", version_string, source))]
+    SemverParse {
+        source: semver::Error,
+        version_string: String,
+    },
+
+    /// Error for when the detected upgrade path for PRODUCT is not supported.
+    #[snafu(display("The upgrade path is invalid"))]
+    InvalidUpgradePath,
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.
