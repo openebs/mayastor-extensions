@@ -34,6 +34,9 @@ spec:
       {{- if .Values.nodeSelector }}
       nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}
+      {{- if $tolerations := include "tolerations" (dict "template" . "localTolerations" .Values.csi.controller.tolerations) }}
+      tolerations: {{ $tolerations }}
+      {{- end }}
       containers:
         - name: csi-provisioner
           image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-provisioner:{{ .Values.csi.image.provisionerTag }}"
