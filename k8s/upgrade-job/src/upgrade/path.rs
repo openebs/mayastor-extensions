@@ -1,6 +1,9 @@
 use crate::{
     common::{
-        constants::{FROM_CORE_SEMVER, FROM_UMBRELLA_SEMVER, TO_CORE_SEMVER, TO_UMBRELLA_SEMVER},
+        constants::{
+            FROM_CORE_SEMVER, FROM_UMBRELLA_SEMVER, TO_CORE_SEMVER, TO_DEVELOP_SEMVER,
+            TO_UMBRELLA_SEMVER,
+        },
         error::{HelmChartNameSplit, OpeningFile, Result, SemverParse, YamlParseFromFile},
     },
     helm::{chart::Chart, upgrade::HelmChart},
@@ -41,6 +44,20 @@ pub(crate) fn is_valid(chart_variant: HelmChart, from: &Version, to: &Version) -
             Ok(false)
         }
     }
+}
+
+/// Validates the upgrade to target as develop branch.
+pub(crate) fn upgrade_to_develop(from: &Version, to: &Version) -> Result<bool> {
+    let to_develop = VersionReq::parse(TO_DEVELOP_SEMVER).context(SemverParse {
+        version_string: TO_DEVELOP_SEMVER.to_string(),
+    })?;
+    if to_develop.matches(to) {
+        let from_req = VersionReq::parse(FROM_CORE_SEMVER).context(SemverParse {
+            version_string: FROM_CORE_SEMVER.to_string(),
+        })?;
+        return Ok(from_req.matches(from));
+    }
+    Ok(false)
 }
 
 /// Generate a semver::Version from the helm chart in local directory.

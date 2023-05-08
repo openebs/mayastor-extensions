@@ -137,13 +137,15 @@ impl HelmUpgradeBuilder {
         let mut chart_yaml_path = chart_dir.clone();
         chart_yaml_path.push("Chart.yaml");
         let to_version = upgrade::path::version_from_chart_yaml_file(chart_yaml_path)?;
+
         let from_version = upgrade::path::version_from_release_chart(chart)?;
         let upgrade_path_is_valid =
             upgrade::path::is_valid(chart_variant.clone(), &from_version, &to_version)?;
+        let upgrade_to_develop = upgrade::path::upgrade_to_develop(&from_version, &to_version)?;
         let already_upgraded = to_version.eq(&from_version);
 
         ensure!(
-            upgrade_path_is_valid || already_upgraded,
+            upgrade_path_is_valid || already_upgraded || upgrade_to_develop,
             InvalidUpgradePath
         );
 
