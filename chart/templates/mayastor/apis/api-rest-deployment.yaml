@@ -28,7 +28,9 @@ spec:
       {{- if .Values.nodeSelector }}
       nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}
-      tolerations: {{- toYaml .Values.earlyEvictionTolerations | nindent 8 }}
+      {{- if $tolerations := include "tolerations_with_early_eviction" (dict "template" . "localTolerations" .Values.apis.rest.tolerations) }}
+      tolerations: {{ $tolerations }}
+      {{- end }}
       containers:
         - name: api-rest
           resources:

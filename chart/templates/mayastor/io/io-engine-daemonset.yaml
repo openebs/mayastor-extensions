@@ -31,6 +31,9 @@ spec:
       {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName }}
       {{- end }}
+      {{- if $tolerations := include "tolerations" (dict "template" . "localTolerations" .Values.io_engine.tolerations) }}
+      tolerations: {{ $tolerations }}
+      {{- end }}
       initContainers:
         {{- include "base_init_containers" . }}
       containers:

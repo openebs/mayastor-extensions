@@ -39,6 +39,11 @@ earlyEvictionTolerations:
     operator: Exists
     tolerationSeconds: 5
 
+# -- Tolerations to be applied to all components except external Chart dependencies.
+# If any component has tolerations set, then it would override this value.
+# For external components like etcd, jaeger and loki-stack, tolerations can only be set at component level.
+tolerations: []
+
 base:
   # -- Request timeout for rest & core agents
   default_req_timeout: 5s
@@ -115,6 +120,8 @@ operators:
         cpu: "50m"
         # -- Memory requests for diskpool operator
         memory: "16Mi"
+    # -- Set tolerations, overrides global
+    tolerations: []
 
 jaeger-operator:
   # Name of jaeger operator
@@ -128,6 +135,7 @@ jaeger-operator:
   rbac:
     # Create a clusterRole for Jaeger
     clusterRole: true
+  tolerations: []
 
 agents:
   core:
@@ -163,6 +171,8 @@ agents:
     # faster depending on the log size. Otherwise, the replica will be fully rebuilt.
     # A blank value "" means internally derived value will be used.
     partialRebuildWaitPeriod: ""
+    # -- Set tolerations, overrides global
+    tolerations: []
   ha:
     enabled: true
     node:
@@ -179,6 +189,8 @@ agents:
           cpu: "100m"
           # -- Memory requests for ha node agent
           memory: "64Mi"
+      # -- Set tolerations, overrides global
+      tolerations: []
     cluster:
       # -- Log level for the ha cluster service
       logLevel: info
@@ -221,6 +233,8 @@ apis:
         http: 30011
         # NodePort associated with https port
         https: 30010
+    # -- Set tolerations, overrides global
+    tolerations: []
 
 csi:
   image:
@@ -251,6 +265,8 @@ csi:
         cpu: "16m"
         # -- Memory requests for csi controller
         memory: "64Mi"
+    # -- Set tolerations, overrides global
+    tolerations: []
   node:
     logLevel: info
     topology:
@@ -280,6 +296,8 @@ csi:
     kubeletDir: /var/lib/kubelet
     pluginMounthPath: /csi
     socketPath: csi.sock
+    # -- Set tolerations, overrides global
+    tolerations: []
 
 io_engine:
   # -- Log level for the io-engine service
@@ -322,6 +340,8 @@ io_engine:
       memory: "1Gi"
       # -- Hugepage size available on the nodes
       hugepages2Mi: "2Gi"
+  # -- Set tolerations, overrides global
+  tolerations: []
 
 etcd:
   # Pod labels; okay to remove the openebs logging label if required
@@ -408,6 +428,7 @@ etcd:
       # Port from where etcd endpoints are accessible from outside cluster
       clientPort: 31379
       peerPort: ""
+  tolerations: []
 
 loki-stack:
   # -- Enable loki log collection for our components
@@ -481,6 +502,7 @@ loki-stack:
       port: 3100
       # Port where REST endpoints of Loki are accessible from outside cluster
       nodePort: 31001
+    tolerations: []
 
   # promtail configuration
   promtail:
@@ -554,3 +576,5 @@ obs:
         cpu: "50m"
         # -- Memory requests for callhome
         memory: "16Mi"
+    # -- Set tolerations, overrides global
+    tolerations: []
