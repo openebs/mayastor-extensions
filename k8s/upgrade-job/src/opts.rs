@@ -41,9 +41,21 @@ pub(crate) struct CliArgs {
     )]
     core_chart_dir: Option<PathBuf>,
 
+    /// This is the path to upgrade exception file.
+    #[arg(
+        long,
+        env = "UPGRADE_EXCEPTION_FILE_PATH",
+        default_value = "/k8s/upgrade/config/unsupported_versions.yaml"
+    )]
+    upgrade_exception_file: PathBuf,
+
     /// If not set, this skips the Kubernetes Pod restarts for the io-engine DaemonSet.
     #[arg(long, default_value_t = false)]
     skip_data_plane_restart: bool,
+
+    /// If set then this skips the upgrade path validation.
+    #[arg(long, default_value_t = false)]
+    skip_upgrade_path_validation: bool,
 
     /// The name of the Kubernetes Job Pod. The Job object will be used to post upgrade event.
     #[arg(env = "POD_NAME")]
@@ -77,10 +89,20 @@ impl CliArgs {
         self.core_chart_dir.clone()
     }
 
+    /// This returns the path to find unsupported upgrade version yaml file.
+    pub(crate) fn upgrade_exception_file(&self) -> PathBuf {
+        self.upgrade_exception_file.clone()
+    }
+
     /// This is a predicate to decide if <release-name>-io-engine Kubernetes DaemonSet Pods should
     /// be restarted as a part of the data-plane upgrade.
     pub(crate) fn skip_data_plane_restart(&self) -> bool {
         self.skip_data_plane_restart
+    }
+
+    /// This decides to skip upgrade path validation or not.
+    pub(crate) fn skip_upgrade_path_validation(&self) -> bool {
+        self.skip_upgrade_path_validation
     }
 
     /// This returns the name of the Kubernetes Pod where this binary will be running.

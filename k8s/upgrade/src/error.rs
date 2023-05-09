@@ -1,4 +1,5 @@
 use snafu::Snafu;
+use std::path::PathBuf;
 
 /// For use with multiple fallible operations which may fail for different reasons, but are
 /// defined withing the same scope and must return to the outer scope (calling scope) using
@@ -189,7 +190,95 @@ pub enum Error {
     /// Openapi configuration error.
     #[snafu(display("openapi configuration Error: {}", source))]
     OpenapiClientConfiguration { source: anyhow::Error },
+
+    /// Error when opening a file.
+    #[snafu(display("Failed to open file {}: {}", filepath.display(), source))]
+    OpeningFile {
+        source: std::io::Error,
+        filepath: PathBuf,
+    },
+
+    /// Error for when yaml could not be parsed from a file (Reader).
+    #[snafu(display("Failed to parse YAML at {}: {}", filepath.display(), source))]
+    YamlParseFromFile {
+        source: serde_yaml::Error,
+        filepath: PathBuf,
+    },
+
+    /// Error for failures in generating semver::Value from a &str input.
+    #[snafu(display("Failed to parse {} as a valid semver: {}", version_string, source))]
+    SemverParse {
+        source: semver::Error,
+        version_string: String,
+    },
+
+    #[snafu(display("Failed to get current directory: {}", source))]
+    GetCurrentDirectory { source: std::io::Error },
+
+    /// Source and target version are same.
+    #[snafu(display("Source and target version are same for upgrade."))]
+    SourceTargetVersionSame,
+
+    /// Error when source version is not a valid for upgrade.
+    #[snafu(display("Not a valid source version for upgrade."))]
+    NotAValidSourceForUpgrade,
+
+    /// Error for when the detected upgrade path for PRODUCT is not supported.
+    #[snafu(display("The upgrade path is invalid"))]
+    InvalidUpgradePath,
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.
 pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
+
+impl From<Error> for i32 {
+    fn from(err: Error) -> Self {
+        match err {
+            Error::GetCurrentDirectory { .. } => 401,
+            Error::UpgradeEventNotPresent { .. } => 401,
+            Error::NoDeploymentPresent { .. } => 403,
+            Error::MessageInEventNotPresent { .. } => 404,
+            Error::NodesInCordonedState { .. } => 405,
+            Error::SingleReplicaVolumeErr { .. } => 406,
+            Error::VolumeRebuildInProgress { .. } => 407,
+            Error::K8sClient { .. } => 408,
+            Error::EventSerdeDeserialization { .. } => 409,
+            Error::ServiceAccountCreate { .. } => 410,
+            Error::ServiceAccountDelete { .. } => 411,
+            Error::ClusterRoleCreate { .. } => 412,
+            Error::ClusterRoleDelete { .. } => 413,
+            Error::ClusterRoleBindingDelete { .. } => 414,
+            Error::ClusterRoleBindingCreate { .. } => 415,
+            Error::UpgradeJobCreate { .. } => 416,
+            Error::UpgradeJobDelete { .. } => 417,
+            Error::ReferenceDeploymentInvalidImage { .. } => 418,
+            Error::ReferenceDeploymentNoImage { .. } => 419,
+            Error::ReferenceDeploymentNoSpec { .. } => 420,
+            Error::ReferenceDeploymentNoPodTemplateSpec { .. } => 421,
+            Error::ReferenceDeploymentNoContainers { .. } => 422,
+            Error::NodeSpecNotPresent { .. } => 423,
+            Error::PodNameNotPresent { .. } => 424,
+            Error::UpgradeJobStatusNotPresent { .. } => 425,
+            Error::UpgradeJobNotCompleted { .. } => 426,
+            Error::ListPodsWithLabel { .. } => 427,
+            Error::ListDeploymantsWithLabel { .. } => 428,
+            Error::ListEventsWithFieldSelector { .. } => 429,
+            Error::ListPVC { .. } => 430,
+            Error::ListVolumes { .. } => 431,
+            Error::GetUpgradeJob { .. } => 432,
+            Error::GetServiceAccount { .. } => 433,
+            Error::GetClusterRole { .. } => 434,
+            Error::GetClusterRoleBinding { .. } => 435,
+            Error::K8sClientGeneration { .. } => 436,
+            Error::RestClientConfiguration { .. } => 437,
+            Error::ListStorageNodes { .. } => 438,
+            Error::OpenapiClientConfiguration { .. } => 439,
+            Error::OpeningFile { .. } => 440,
+            Error::YamlParseFromFile { .. } => 441,
+            Error::SemverParse { .. } => 442,
+            Error::SourceTargetVersionSame { .. } => 443,
+            Error::NotAValidSourceForUpgrade { .. } => 444,
+            Error::InvalidUpgradePath { .. } => 445,
+        }
+    }
+}

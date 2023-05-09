@@ -15,15 +15,8 @@ macro_rules! upgrade_labels {
 }
 
 /// Append the release name to k8s objects.
-pub(crate) fn upgrade_name_concat(
-    release_name: &str,
-    component_name: &str,
-    upgrade_to_branch: Option<&String>,
-) -> String {
-    let version = match upgrade_to_branch {
-        Some(tag) => tag.to_string(),
-        None => upgrade_obj_suffix(),
-    };
+pub(crate) fn upgrade_name_concat(release_name: &str, component_name: &str) -> String {
+    let version = upgrade_obj_suffix();
     format!("{release_name}-{component_name}-{version}")
 }
 
@@ -105,3 +98,7 @@ pub(crate) const AGENT_CORE_POD_LABEL: &str = "app=agent-core";
 pub(crate) const API_REST_POD_LABEL: &str = "app=api-rest";
 /// UPGRADE_EVENT_REASON is the reason field in upgrade job.
 pub(crate) const UPGRADE_EVENT_REASON: &str = "MayastorUpgrade";
+/// Installed release version.
+pub(crate) const HELM_RELEASE_VERSION_LABEL: &str = "openebs.io/version";
+/// File contating unsupported versions.
+pub(crate) const UNSUPPORTED_VERSION_FILE: &str = "k8s/upgrade/config/unsupported_versions.yaml";

@@ -2,10 +2,10 @@ use crate::{
     constant::{
         get_image_version_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
         AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_IMAGE_REGISTRY,
-        DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, IO_ENGINE_POD_LABEL, UPGRADE_EVENT_REASON,
-        UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
-        UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX,
-        UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+        DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, HELM_RELEASE_VERSION_LABEL,
+        IO_ENGINE_POD_LABEL, UPGRADE_EVENT_REASON, UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
+        UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX, UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO,
+        UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     error,
     upgrade_resources::objects,
@@ -38,22 +38,21 @@ pub enum DeleteResources {
 
 /// Delete Upgrade resource.
 #[derive(clap::Args, Debug)]
-pub struct DeleteUpgradeArgs {
-    /// If set then upgrade will skip the io-engine pods restart
-    #[clap(global = true, hide = true, long, short = 'u')]
-    pub upgrade_to_branch: Option<String>,
-}
+pub struct DeleteUpgradeArgs {}
 
 impl DeleteUpgradeArgs {
     /// Delete the upgrade resources
     pub async fn delete(&self, ns: &str) {
         // Delete upgrade resources once job completes
 
-        match is_upgrade_job_completed(ns, self.upgrade_to_branch.as_ref()).await {
+        match is_upgrade_job_completed(ns).await {
             Ok(job_completed) => {
                 if job_completed {
-                    UpgradeResources::delete_upgrade_resources(ns, self.upgrade_to_branch.as_ref())
-                        .await;
+                    _ = UpgradeResources::delete_upgrade_resources(ns)
+                        .await
+                        .map_err(|error| {
+                            std::process::exit(error.into());
+                        });
                 }
             }
             Err(error) => {
@@ -97,21 +96,24 @@ pub struct UpgradeArgs {
     #[clap(global = true, long, short = 'C')]
     pub skip_cordoned_node_validation: bool,
 
-    /// Upgrade to the specified branch.
-    #[clap(global = true, hide = true, long, short = 'u')]
-    pub upgrade_to_branch: Option<String>,
+    /// Upgrade to an unsupported version.
+    #[clap(global = true, hide = true, long, default_value_t = false)]
+    pub skip_upgrade_path_validation_for_unsupported_version: bool,
 }
 
 impl UpgradeArgs {
     ///  Upgrade the resources.
     pub async fn apply(&self, namespace: &str) {
         // Create resources for upgrade
-        UpgradeResources::create_upgrade_resources(
+        _ = UpgradeResources::create_upgrade_resources(
             namespace,
             self.skip_data_plane_restart,
-            self.upgrade_to_branch.as_ref(),
+            self.skip_upgrade_path_validation_for_unsupported_version,
         )
-        .await;
+        .await
+        .map_err(|error| {
+            std::process::exit(error.into());
+        });
         console_logger::info(UPGRADE_JOB_STARTED, "");
     }
 
@@ -176,10 +178,11 @@ impl GetUpgradeArgs {
     ///  Upgrade the resources.
     pub async fn get_upgrade(&self, namespace: &str) {
         // Create resources for getting upgrade status
-        match UpgradeEventClient::create_get_upgrade_resource(namespace).await {
-            Ok(_) => {}
-            Err(error) => eprintln! {"Failure {error}"},
-        }
+        _ = UpgradeEventClient::create_get_upgrade_resource(namespace)
+            .await
+            .map_err(|error| {
+                std::process::exit(error.into());
+            });
     }
 }
 
@@ -283,17 +286,9 @@ impl UpgradeResources {
     }
 
     /// Create/Delete ServiceAction.
-    pub async fn service_account_actions(
-        &self,
-        ns: &str,
-        action: Actions,
-        upgrade_to_branch: Option<&String>,
-    ) -> error::Result<()> {
-        let service_account_name = upgrade_name_concat(
-            &self.release_name,
-            UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
-            upgrade_to_branch,
-        );
+    pub async fn service_account_actions(&self, ns: &str, action: Actions) -> error::Result<()> {
+        let service_account_name =
+            upgrade_name_concat(&self.release_name, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX);
 
         if let Some(sa) = self
             .service_account
@@ -353,17 +348,9 @@ impl UpgradeResources {
     }
 
     /// Create/Delete cluster role
-    pub async fn cluster_role_actions(
-        &self,
-        ns: &str,
-        action: Actions,
-        upgrade_to_branch: Option<&String>,
-    ) -> error::Result<()> {
-        let cluster_role_name = upgrade_name_concat(
-            &self.release_name,
-            UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
-            upgrade_to_branch,
-        );
+    pub async fn cluster_role_actions(&self, ns: &str, action: Actions) -> error::Result<()> {
+        let cluster_role_name =
+            upgrade_name_concat(&self.release_name, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX);
 
         if let Some(cr) = self
             .cluster_role
@@ -423,12 +410,10 @@ impl UpgradeResources {
         &self,
         ns: &str,
         action: Actions,
-        upgrade_to_branch: Option<&String>,
     ) -> error::Result<()> {
         let cluster_role_binding_name = upgrade_name_concat(
             &self.release_name,
             UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
-            upgrade_to_branch,
         );
         if let Some(crb) = self
             .cluster_role_binding
@@ -466,7 +451,6 @@ impl UpgradeResources {
                     let role_binding = objects::upgrade_job_cluster_role_binding(
                         namespace,
                         self.release_name.clone(),
-                        upgrade_to_branch,
                     );
                     let pp = PostParams::default();
                     let crb = self
@@ -498,13 +482,9 @@ impl UpgradeResources {
         ns: &str,
         action: Actions,
         skip_data_plane_restart: bool,
-        upgrade_to_branch: Option<&String>,
+        skip_upgrade_path_validation: bool,
     ) -> error::Result<()> {
-        let job_name = upgrade_name_concat(
-            &self.release_name,
-            UPGRADE_JOB_NAME_SUFFIX,
-            upgrade_to_branch,
-        );
+        let job_name = upgrade_name_concat(&self.release_name, UPGRADE_JOB_NAME_SUFFIX);
         if let Some(job) = self
             .job
             .get_opt(&job_name)
@@ -548,7 +528,7 @@ impl UpgradeResources {
                         ),
                         self.release_name.clone(),
                         skip_data_plane_restart,
-                        upgrade_to_branch,
+                        skip_upgrade_path_validation,
                         img.pull_secrets(),
                         img.pull_policy(),
                     );
@@ -575,97 +555,47 @@ impl UpgradeResources {
     pub async fn create_upgrade_resources(
         ns: &str,
         skip_data_plane_restart: bool,
-        upgrade_to_branch: Option<&String>,
-    ) {
-        match UpgradeResources::new(ns).await {
-            Ok(uo) => {
-                // Create Service Account
-                let _svc_acc = uo
-                    .service_account_actions(ns, Actions::Create, upgrade_to_branch)
-                    .await
-                    .map_err(|error| {
-                        eprintln!("Failure: {error}");
-                        std::process::exit(1);
-                    });
+        skip_upgrade_path_validation: bool,
+    ) -> error::Result<()> {
+        let uo = UpgradeResources::new(ns).await?;
 
-                // Create Cluser role
-                let _cl_role = uo
-                    .cluster_role_actions(ns, Actions::Create, upgrade_to_branch)
-                    .await
-                    .map_err(|error| {
-                        eprintln!("Failure: {error}");
-                        std::process::exit(1);
-                    });
+        // Create Service Account
+        uo.service_account_actions(ns, Actions::Create).await?;
 
-                // Create Cluster role binding
-                let _cl_role_binding = uo
-                    .cluster_role_binding_actions(ns, Actions::Create, upgrade_to_branch)
-                    .await
-                    .map_err(|error| {
-                        eprintln!("Failure: {error}");
-                        std::process::exit(1);
-                    });
+        // Create Cluser role
+        uo.cluster_role_actions(ns, Actions::Create).await?;
 
-                // Create Service Account
-                let _job = uo
-                    .job_actions(
-                        ns,
-                        Actions::Create,
-                        skip_data_plane_restart,
-                        upgrade_to_branch,
-                    )
-                    .await
-                    .map_err(|error| {
-                        eprintln!("Failure: {error}");
-                        std::process::exit(1);
-                    });
-            }
-            Err(e) => println!("Failed to create upgrade resources. Error {e:?}"),
-        };
+        // Create Cluster role binding
+        uo.cluster_role_binding_actions(ns, Actions::Create).await?;
+
+        // Create Service Account
+        uo.job_actions(
+            ns,
+            Actions::Create,
+            skip_data_plane_restart,
+            skip_upgrade_path_validation,
+        )
+        .await?;
+
+        Ok(())
     }
 
     /// Delete the upgrade resources
-    pub async fn delete_upgrade_resources(ns: &str, upgrade_to_branch: Option<&String>) {
-        match UpgradeResources::new(ns).await {
-            Ok(uo) => {
-                // Delete the job
-                let _job = uo
-                    .job_actions(ns, Actions::Delete, false, upgrade_to_branch)
-                    .await
-                    .map_err(|error| {
-                        println!("Failure: {error}");
-                        std::process::exit(1);
-                    });
+    pub async fn delete_upgrade_resources(ns: &str) -> error::Result<()> {
+        let uo = UpgradeResources::new(ns).await?;
 
-                // Delete cluster role binding
-                let _cl_role_binding = uo
-                    .cluster_role_binding_actions(ns, Actions::Delete, upgrade_to_branch)
-                    .await
-                    .map_err(|error| {
-                        println!("Failure: {error}");
-                        std::process::exit(1);
-                    });
+        // Delete the job
+        uo.job_actions(ns, Actions::Delete, false, false).await?;
 
-                // Delete cluster role
-                let _cl_role = uo
-                    .cluster_role_actions(ns, Actions::Delete, upgrade_to_branch)
-                    .await
-                    .map_err(|error| {
-                        println!("Failure: {error}");
-                        std::process::exit(1);
-                    });
+        // Delete cluster role binding
+        uo.cluster_role_binding_actions(ns, Actions::Delete).await?;
 
-                // Delete service account
-                let _svc_acc = uo
-                    .service_account_actions(ns, Actions::Delete, upgrade_to_branch)
-                    .await
-                    .map_err(|error| {
-                        println!("Failure: {error}");
-                        std::process::exit(1);
-                    });
-            }
-            Err(e) => println!("Failed to uninstall. Error {e}"),
-        };
+        // Delete cluster role
+        uo.cluster_role_actions(ns, Actions::Delete).await?;
+
+        // Delete service account
+        uo.service_account_actions(ns, Actions::Delete).await?;
+        Ok(())
     }
 }
 
@@ -721,13 +651,9 @@ pub async fn get_release_name(ns: &str) -> error::Result<String> {
 }
 
 /// Return true if upgrade job is completed
-pub async fn is_upgrade_job_completed(
-    ns: &str,
-    upgrade_to_branch: Option<&String>,
-) -> error::Result<bool> {
+pub async fn is_upgrade_job_completed(ns: &str) -> error::Result<bool> {
     let uo = UpgradeResources::new(ns).await?;
-    let job_name =
-        upgrade_name_concat(&uo.release_name, UPGRADE_JOB_NAME_SUFFIX, upgrade_to_branch);
+    let job_name = upgrade_name_concat(&uo.release_name, UPGRADE_JOB_NAME_SUFFIX);
     let option_job = uo
         .job
         .get_opt(&job_name)
@@ -824,4 +750,17 @@ impl ImageProperties {
     fn pull_policy(&self) -> Option<String> {
         self.pull_policy.clone()
     }
+}
+
+/// Return the installed version.
+pub async fn get_source_version(ns: &str) -> error::Result<String> {
+    let deployment = get_deployment_for_rest(ns).await?;
+    let value = &deployment
+        .metadata
+        .labels
+        .ok_or(error::NoDeploymentPresent.build())?
+        .get(HELM_RELEASE_VERSION_LABEL)
+        .ok_or(error::NoDeploymentPresent.build())?
+        .to_string();
+    Ok(value.to_string())
 }
