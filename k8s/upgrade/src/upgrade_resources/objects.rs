@@ -222,7 +222,6 @@ pub(crate) fn upgrade_job_cluster_role(
 pub(crate) fn upgrade_job_cluster_role_binding(
     namespace: Option<String>,
     release_name: String,
-    upgrade_to_branch: Option<&String>,
 ) -> ClusterRoleBinding {
     ClusterRoleBinding {
         metadata: ObjectMeta {
@@ -230,7 +229,6 @@ pub(crate) fn upgrade_job_cluster_role_binding(
             name: Some(upgrade_name_concat(
                 &release_name,
                 UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
-                upgrade_to_branch,
             )),
             namespace: namespace.clone(),
             ..Default::default()
@@ -238,19 +236,11 @@ pub(crate) fn upgrade_job_cluster_role_binding(
         role_ref: RoleRef {
             api_group: "rbac.authorization.k8s.io".to_string(),
             kind: "ClusterRole".to_string(),
-            name: upgrade_name_concat(
-                &release_name,
-                UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
-                upgrade_to_branch,
-            ),
+            name: upgrade_name_concat(&release_name, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX),
         },
         subjects: Some(vec![Subject {
             kind: "ServiceAccount".to_string(),
-            name: upgrade_name_concat(
-                &release_name,
-                UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
-                upgrade_to_branch,
-            ),
+            name: upgrade_name_concat(&release_name, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX),
             namespace,
             ..Default::default()
         }]),
@@ -262,7 +252,7 @@ pub(crate) fn upgrade_job(
     upgrade_image: String,
     release_name: String,
     skip_data_plane_restart: bool,
-    upgrade_to_branch: Option<&String>,
+    skip_upgrade_path_validation: bool,
     image_pull_secrets: Option<Vec<k8s_openapi::api::core::v1::LocalObjectReference>>,
     image_pull_policy: Option<String>,
 ) -> Job {
@@ -274,15 +264,14 @@ pub(crate) fn upgrade_job(
     if skip_data_plane_restart {
         job_args.push("--skip-data-plane-restart".to_string());
     }
+    if skip_upgrade_path_validation {
+        job_args.push("--skip-upgrade-path-validation".to_string());
+    }
 
     Job {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!()),
-            name: Some(upgrade_name_concat(
-                &release_name,
-                UPGRADE_JOB_NAME_SUFFIX,
-                upgrade_to_branch,
-            )),
+            name: Some(upgrade_name_concat(&release_name, UPGRADE_JOB_NAME_SUFFIX)),
             namespace: Some(namespace.to_string()),
             ..Default::default()
         },
@@ -339,7 +328,6 @@ pub(crate) fn upgrade_job(
                     service_account_name: Some(upgrade_name_concat(
                         &release_name,
                         UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
-                        upgrade_to_branch,
                     )),
                     ..Default::default()
                 }),
