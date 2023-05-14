@@ -23,23 +23,9 @@ pub(crate) struct CliArgs {
     #[arg(long)]
     release_name: String,
 
-    /// This is the Helm chart directory filepath for the umbrella helm chart variant.
-    #[arg(
-        long,
-        env = "UMBRELLA_CHART_DIR",
-        value_name = "DIR PATH",
-        required_unless_present = "core_chart_dir"
-    )]
-    umbrella_chart_dir: Option<PathBuf>,
-
     /// This is the Helm chart directory filepath for the core Helm chart variant.
-    #[arg(
-        long,
-        env = "CORE_CHART_DIR",
-        value_name = "DIR PATH",
-        required_unless_present = "umbrella_chart_dir"
-    )]
-    core_chart_dir: Option<PathBuf>,
+    #[arg(long, env = "CORE_CHART_DIR", value_name = "DIR PATH")]
+    core_chart_dir: PathBuf,
 
     /// This is the path to upgrade exception file.
     #[arg(
@@ -78,14 +64,8 @@ impl CliArgs {
         self.release_name.clone()
     }
 
-    /// This returns the Helm chart directory filepath for a
-    /// crate::helm::upgrade::HelmChart::Umbrella.
-    pub(crate) fn umbrella_chart_dir(&self) -> Option<PathBuf> {
-        self.umbrella_chart_dir.clone()
-    }
-
     /// This returns the Helm chart directory filepath for a crate::helm::upgrade::HelmChart::Core.
-    pub(crate) fn core_chart_dir(&self) -> Option<PathBuf> {
+    pub(crate) fn core_chart_dir(&self) -> PathBuf {
         self.core_chart_dir.clone()
     }
 

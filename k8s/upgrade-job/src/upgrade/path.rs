@@ -1,39 +1,25 @@
 use crate::{
     common::{
-        constants::{FROM_UMBRELLA_SEMVER, TO_UMBRELLA_SEMVER},
-        error::{HelmChartNameSplit, OpeningFile, Result, SemverParse, YamlParseFromFile},
+        constants::CHART_VERSION_LABEL_KEY,
+        error::{
+            ListDeploymentsWithLabel, NoRestDeployment, NoVersionLabelInDeployment, OpeningFile,
+            Result, SemverParse, YamlParseFromFile,
+        },
+        kube_client::KubeClientSet,
     },
-    helm::{chart::Chart, upgrade::HelmChart},
+    helm::chart::Chart,
 };
-use semver::{Version, VersionReq};
+use kube_client::{api::ListParams, ResourceExt};
+use semver::Version;
+use serde::Deserialize;
+use snafu::{ensure, ResultExt};
+use std::{fs::File, path::PathBuf};
+use utils::API_REST_LABEL;
 
-use serde::{Deserialize, Serialize};
-use snafu::ResultExt;
-use std::{collections::HashSet, fs::File, path::PathBuf};
-
-/// Validates the upgrade path from 'from' Version to 'to' Version for 'chart_variant' helm chart.
-pub(crate) fn is_valid(
-    chart_variant: HelmChart,
-    from: &Version,
-    to: &Version,
-    invalid_upgrade_path: HashSet<Version>,
-) -> Result<bool> {
-    match chart_variant {
-        HelmChart::Umbrella => {
-            let to_req = VersionReq::parse(TO_UMBRELLA_SEMVER).context(SemverParse {
-                version_string: TO_UMBRELLA_SEMVER.to_string(),
-            })?;
-
-            if to_req.matches(to) {
-                let from_req = VersionReq::parse(FROM_UMBRELLA_SEMVER).context(SemverParse {
-                    version_string: FROM_UMBRELLA_SEMVER.to_string(),
-                })?;
-                return Ok(from_req.matches(from));
-            }
-            Ok(false)
-        }
-        HelmChart::Core => Ok(!invalid_upgrade_path.contains(from)),
-    }
+/// Validates the upgrade path from 'from' Version to 'to' Version for the Core helm chart.
+pub(crate) fn is_valid_for_core_chart(from: &Version, upgrade_path_file: PathBuf) -> Result<bool> {
+    let unsupported_versions = UnsupportedVersions::try_from(upgrade_path_file)?;
+    Ok(!unsupported_versions.contains(from))
 }
 
 /// Generate a semver::Version from the helm chart in local directory.
@@ -48,46 +34,80 @@ pub(crate) fn version_from_chart_yaml_file(path: PathBuf) -> Result<Version> {
     Ok(to_chart.version().clone())
 }
 
-/// Generate a semver::Version from the 'chart' member of the Helm chart's ReleaseElement.
-/// The output of `helm ls -n <namespace> -o yaml` is a list of ReleaseElements.
-pub(crate) fn version_from_release_chart(chart_name: String) -> Result<Version> {
-    let delimiter: char = '-';
-    // e.g. <chart>-1.2.3-rc.5 -- here the 2nd chunk is the version
-    let (_, version) = chart_name.as_str().split_once(delimiter).ok_or(
-        HelmChartNameSplit {
-            chart_name: chart_name.clone(),
-            delimiter,
+/// Generate a semver::Version from the CHART_VERSION_LABEL_KEY label on the Storage REST API
+/// Deployment.
+pub(crate) async fn version_from_rest_deployment_label(ns: &str) -> Result<Version> {
+    let labels = format!("{API_REST_LABEL},{CHART_VERSION_LABEL_KEY}");
+
+    let k8s_client = KubeClientSet::builder().with_namespace(ns).build().await?;
+    let mut deploy_list = k8s_client
+        .deployments_api()
+        .list(&ListParams::default().labels(labels.as_str()))
+        .await
+        .context(ListDeploymentsWithLabel {
+            namespace: ns.to_string(),
+            label_selector: labels.clone(),
+        })?;
+
+    ensure!(
+        !deploy_list.items.is_empty(),
+        NoRestDeployment {
+            namespace: ns.to_string(),
+            label_selector: labels
+        }
+    );
+
+    // The most recent one sits on top.
+    deploy_list
+        .items
+        .sort_by_key(|b| std::cmp::Reverse(b.creation_timestamp()));
+
+    // The only ways there could be more than one version of the Storage REST API Pod in the
+    // namespace are: 1. More than one version of the Storage cluster is deployed, by means of
+    // multiple helm charts or otherwise         This will never come to a stable state, as some
+    // of the components will be trying to claim the same         resources. So, in this case
+    // the Storage cluster isn't broken because of upgrade-job. Upgrade should
+    //         eventually fail for these cases, because the component containers keep erroring out.
+    // 2. Helm upgrade is stuck with the older REST API Pod in 'Terminating' state:
+    //         This scenario is more likely than the one above. This may result is more-than-one
+    // REST API deployments.         If the helm upgrade has succeeded already, we'd want to hit
+    // the 'already_upgraded' case in         crate::helm::upgrade. The upgraded version will be
+    // on the latest-created REST API deployment.
+    let deploy = &deploy_list.items[0];
+    let deploy_version = deploy.labels().get(CHART_VERSION_LABEL_KEY).ok_or(
+        NoVersionLabelInDeployment {
+            deployment_name: deploy.name_any(),
+            namespace: ns.to_string(),
         }
         .build(),
     )?;
-
-    Version::parse(version).context(SemverParse {
-        version_string: version.to_string(),
+    Version::parse(deploy_version.as_str()).context(SemverParse {
+        version_string: deploy_version.clone(),
     })
 }
 
 /// Struct to deserialize the unsupported version yaml.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize)]
 struct UnsupportedVersions {
-    unsupported_versions: Vec<String>,
+    unsupported_versions: Vec<Version>,
 }
 
-/// Returns the HashSet of invalid source versions.
-pub(crate) fn invalid_upgrade_path(path: PathBuf) -> Result<HashSet<Version>> {
-    let unsupported_versions_yaml = File::open(path.as_path()).context(OpeningFile {
-        filepath: path.clone(),
-    })?;
-
-    let unsupported: UnsupportedVersions = serde_yaml::from_reader(unsupported_versions_yaml)
-        .context(YamlParseFromFile { filepath: path })?;
-
-    let mut unsupported_versions_set: HashSet<Version> = HashSet::new();
-
-    for version in unsupported.unsupported_versions.iter() {
-        let unsupported_version = Version::parse(version.as_str()).context(SemverParse {
-            version_string: version.clone(),
-        })?;
-        unsupported_versions_set.insert(unsupported_version);
+impl UnsupportedVersions {
+    fn contains(&self, v: &Version) -> bool {
+        self.unsupported_versions.contains(v)
     }
-    Ok(unsupported_versions_set)
+}
+
+impl TryFrom<PathBuf> for UnsupportedVersions {
+    type Error = crate::common::error::Error;
+
+    /// Returns an UnsupportedVersions object.
+    fn try_from(path: PathBuf) -> Result<Self> {
+        let unsupported_versions_yaml = File::open(path.as_path()).context(OpeningFile {
+            filepath: path.clone(),
+        })?;
+
+        serde_yaml::from_reader(unsupported_versions_yaml)
+            .context(YamlParseFromFile { filepath: path })
+    }
 }
