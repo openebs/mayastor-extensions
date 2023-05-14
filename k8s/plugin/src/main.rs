@@ -157,10 +157,11 @@ async fn execute(cli_args: CliArgs) {
                     resources.skip_single_replica_volume_validation,
                     resources.skip_replica_rebuild,
                     resources.skip_cordoned_node_validation,
+                    resources.skip_upgrade_path_validation_for_unsupported_version,
                 )
                 .await
-                .map_err(|_e| {
-                    std::process::exit(1);
+                .map_err(|error| {
+                    std::process::exit(error.into());
                 });
 
                 if resources.dry_run {

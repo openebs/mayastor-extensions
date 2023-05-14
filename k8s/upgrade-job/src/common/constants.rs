@@ -20,13 +20,6 @@ pub(crate) const CHART_VERSION_LABEL_KEY: &str = "openebs.io/version";
 /// This is the label set on a storage API Node resource when a 'Node Drain' is issued.
 pub(crate) const DRAIN_FOR_UPGRADE: &str = "mayastor-upgrade";
 
-/// This is the allowed upgrade to-version/to-version-range for the Core chart.
-pub(crate) const TO_CORE_SEMVER: &str = ">=2.1.0-rc.0, <=2.1.0";
-
-/// This version range will be only allowed to upgrade to TO_CORE_SEMVER above. This range applies
-/// to the Core chart.
-pub(crate) const FROM_CORE_SEMVER: &str = ">=2.0.0, <=2.0.1";
-
 /// This is the allowed upgrade to-version/to-version-range for the Umbrella chart.
 pub(crate) const TO_UMBRELLA_SEMVER: &str = "3.6.0";
 

@@ -32,6 +32,8 @@ pub(crate) struct HelmUpgradeBuilder {
     namespace: Option<String>,
     umbrella_chart_dir: Option<PathBuf>,
     core_chart_dir: Option<PathBuf>,
+    upgrade_path_file: PathBuf,
+    skip_upgrade_path_validation: bool,
 }
 
 impl HelmUpgradeBuilder {
@@ -66,6 +68,23 @@ impl HelmUpgradeBuilder {
     #[must_use]
     pub(crate) fn with_core_chart_dir(mut self, dir: Option<PathBuf>) -> Self {
         self.core_chart_dir = dir;
+        self
+    }
+
+    /// This is a builder option to set the path for the unsupported version yaml.
+    #[must_use]
+    pub(crate) fn with_upgrade_path_file(mut self, file: PathBuf) -> Self {
+        self.upgrade_path_file = file;
+        self
+    }
+
+    /// This sets the flag to skip upgrade path validation.
+    #[must_use]
+    pub(crate) fn with_skip_upgrade_path_validation(
+        mut self,
+        skip_upgrade_path_validation: bool,
+    ) -> Self {
+        self.skip_upgrade_path_validation = skip_upgrade_path_validation;
         self
     }
 
@@ -133,19 +152,25 @@ impl HelmUpgradeBuilder {
             return NotAKnownHelmChart { chart_name: chart }.fail();
         }
 
-        // Validating upgrade path.
         let mut chart_yaml_path = chart_dir.clone();
         chart_yaml_path.push("Chart.yaml");
         let to_version = upgrade::path::version_from_chart_yaml_file(chart_yaml_path)?;
         let from_version = upgrade::path::version_from_release_chart(chart)?;
-        let upgrade_path_is_valid =
-            upgrade::path::is_valid(chart_variant.clone(), &from_version, &to_version)?;
-        let already_upgraded = to_version.eq(&from_version);
+        let invalid_upgrades = upgrade::path::invalid_upgrade_path(self.upgrade_path_file)?;
 
-        ensure!(
-            upgrade_path_is_valid || already_upgraded,
-            InvalidUpgradePath
-        );
+        // Check for already upgraded
+        let already_upgraded = to_version.eq(&from_version);
+        ensure!(!already_upgraded, InvalidUpgradePath);
+
+        if !self.skip_upgrade_path_validation {
+            let upgrade_path_is_valid = upgrade::path::is_valid(
+                chart_variant.clone(),
+                &from_version,
+                &to_version,
+                invalid_upgrades,
+            )?;
+            ensure!(upgrade_path_is_valid, InvalidUpgradePath);
+        }
 
         // Generate args to pass to the `helm upgrade` command.
         let mut values_yaml_path = chart_dir.clone();

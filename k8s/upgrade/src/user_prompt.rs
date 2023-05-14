@@ -38,3 +38,11 @@ pub const UPGRADE_DRY_RUN_SUMMARY: &str =
 /// Information about successful start of upgrade process.
 pub const UPGRADE_JOB_STARTED: &str =
     "\nThe upgrade has started. You can see the recent upgrade status using 'get upgrade-status` command.";
+
+/// Upgrade path not valid.
+pub const UPGRADE_PATH_NOT_VALID: &str =
+    "\nThe upgrade path is not valid. The source version is in the list of unsupported versions:";
+
+/// Upgrade to unsuppoted version not valid.
+pub const UPGRADE_TO_UNSUPPORTED_VERSION: &str =
+    "\nUpgrade failed as destination version is unsupported. Please try with `--skip-upgrade-path-validation-for-unsupported-version";

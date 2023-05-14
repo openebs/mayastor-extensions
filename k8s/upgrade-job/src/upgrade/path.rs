@@ -1,18 +1,23 @@
 use crate::{
     common::{
-        constants::{FROM_CORE_SEMVER, FROM_UMBRELLA_SEMVER, TO_CORE_SEMVER, TO_UMBRELLA_SEMVER},
+        constants::{FROM_UMBRELLA_SEMVER, TO_UMBRELLA_SEMVER},
         error::{HelmChartNameSplit, OpeningFile, Result, SemverParse, YamlParseFromFile},
     },
     helm::{chart::Chart, upgrade::HelmChart},
 };
-
 use semver::{Version, VersionReq};
 
+use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
-use std::{fs::File, path::PathBuf};
+use std::{collections::HashSet, fs::File, path::PathBuf};
 
 /// Validates the upgrade path from 'from' Version to 'to' Version for 'chart_variant' helm chart.
-pub(crate) fn is_valid(chart_variant: HelmChart, from: &Version, to: &Version) -> Result<bool> {
+pub(crate) fn is_valid(
+    chart_variant: HelmChart,
+    from: &Version,
+    to: &Version,
+    invalid_upgrade_path: HashSet<Version>,
+) -> Result<bool> {
     match chart_variant {
         HelmChart::Umbrella => {
             let to_req = VersionReq::parse(TO_UMBRELLA_SEMVER).context(SemverParse {
@@ -27,19 +32,7 @@ pub(crate) fn is_valid(chart_variant: HelmChart, from: &Version, to: &Version) -
             }
             Ok(false)
         }
-        HelmChart::Core => {
-            let to_req = VersionReq::parse(TO_CORE_SEMVER).context(SemverParse {
-                version_string: TO_CORE_SEMVER.to_string(),
-            })?;
-
-            if to_req.matches(to) {
-                let from_req = VersionReq::parse(FROM_CORE_SEMVER).context(SemverParse {
-                    version_string: FROM_CORE_SEMVER.to_string(),
-                })?;
-                return Ok(from_req.matches(from));
-            }
-            Ok(false)
-        }
+        HelmChart::Core => Ok(!invalid_upgrade_path.contains(from)),
     }
 }
 
@@ -71,4 +64,30 @@ pub(crate) fn version_from_release_chart(chart_name: String) -> Result<Version> 
     Version::parse(version).context(SemverParse {
         version_string: version.to_string(),
     })
+}
+
+/// Struct to deserialize the unsupported version yaml.
+#[derive(Debug, Serialize, Deserialize)]
+struct UnsupportedVersions {
+    unsupported_versions: Vec<String>,
+}
+
+/// Returns the HashSet of invalid source versions.
+pub(crate) fn invalid_upgrade_path(path: PathBuf) -> Result<HashSet<Version>> {
+    let unsupported_versions_yaml = File::open(path.as_path()).context(OpeningFile {
+        filepath: path.clone(),
+    })?;
+
+    let unsupported: UnsupportedVersions = serde_yaml::from_reader(unsupported_versions_yaml)
+        .context(YamlParseFromFile { filepath: path })?;
+
+    let mut unsupported_versions_set: HashSet<Version> = HashSet::new();
+
+    for version in unsupported.unsupported_versions.iter() {
+        let unsupported_version = Version::parse(version.as_str()).context(SemverParse {
+            version_string: version.clone(),
+        })?;
+        unsupported_versions_set.insert(unsupported_version);
+    }
+    Ok(unsupported_versions_set)
 }
