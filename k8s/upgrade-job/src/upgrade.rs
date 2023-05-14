@@ -20,11 +20,11 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
     let helm_upgrade = HelmUpgrade::builder()
         .with_namespace(opts.namespace())
         .with_release_name(opts.release_name())
-        .with_umbrella_chart_dir(opts.umbrella_chart_dir())
         .with_core_chart_dir(opts.core_chart_dir())
         .with_upgrade_path_file(opts.upgrade_exception_file())
         .with_skip_upgrade_path_validation(opts.skip_upgrade_path_validation())
-        .build()?;
+        .build()
+        .await?;
 
     let from_version = helm_upgrade.upgrade_from_version();
     let to_version = helm_upgrade.upgrade_to_version();

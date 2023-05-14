@@ -1,6 +1,6 @@
 use crate::{
     common::{
-        constants::{CORE_CHART_NAME, UMBRELLA_CHART_NAME},
+        constants::CORE_CHART_NAME,
         error::{
             FindingHelmChart, GetNamespace, HelmCommand, HelmListCommand, HelmRelease, HelmVersion,
             HelmVersionCommand, ListStorageNodes, NotADirectory, NotAFile, OpeningFile,
@@ -10,7 +10,7 @@ use crate::{
         kube_client::KubeClientSet,
         rest_client::RestClientSet,
     },
-    helm::{chart::Chart, upgrade::HelmChart},
+    helm::chart::Chart,
     vec_to_strings,
 };
 use regex::bytes::Regex;
@@ -107,19 +107,9 @@ pub(crate) fn validate_helmv3_in_path() -> Result<()> {
     Ok(())
 }
 
-/// Validate the input helm chart directory path(s).
-pub(crate) fn validate_helm_chart_dirs(
-    umbrella_dir: Option<PathBuf>,
-    core_dir: Option<PathBuf>,
-) -> Result<()> {
-    if let Some(path) = umbrella_dir {
-        validate_helm_chart_variant_in_dir(HelmChart::Umbrella, path)?;
-    }
-    if let Some(path) = core_dir {
-        validate_helm_chart_variant_in_dir(HelmChart::Core, path)?;
-    }
-
-    Ok(())
+/// Validate the input helm chart directory path.
+pub(crate) fn validate_helm_chart_dir(core_dir: PathBuf) -> Result<()> {
+    validate_core_helm_chart_variant_in_dir(core_dir)
 }
 
 /// Validate the input helm chart directory path:
@@ -127,7 +117,7 @@ pub(crate) fn validate_helm_chart_dirs(
 /// - validate if the expected directory structure is present.
 /// - validate if the expected helm chart files are present.
 /// - validate if the chart name if the chart name in the Chart.yaml file is correct.
-fn validate_helm_chart_variant_in_dir(chart_variant: HelmChart, dir_path: PathBuf) -> Result<()> {
+fn validate_core_helm_chart_variant_in_dir(dir_path: PathBuf) -> Result<()> {
     let path_exists_and_is_dir = |path: PathBuf| -> Result<bool> {
         fs::metadata(path.clone())
             .map(|m| m.is_dir())
@@ -138,13 +128,6 @@ fn validate_helm_chart_variant_in_dir(chart_variant: HelmChart, dir_path: PathBu
         fs::metadata(path.clone())
             .map(|m| m.is_file())
             .context(ValidateFilePath { path })
-    };
-
-    let is_valid_helm_chart_variant = |chart_variant: HelmChart, chart_name: &str| -> bool {
-        match chart_variant {
-            HelmChart::Umbrella => chart_name.eq(UMBRELLA_CHART_NAME),
-            HelmChart::Core => chart_name.eq(CORE_CHART_NAME),
-        }
     };
 
     ensure!(
@@ -171,7 +154,7 @@ fn validate_helm_chart_variant_in_dir(chart_variant: HelmChart, dir_path: PathBu
         })?;
 
     ensure!(
-        is_valid_helm_chart_variant(chart_variant, chart_yaml.name()),
+        chart_yaml.name().eq(CORE_CHART_NAME),
         FindingHelmChart { path: dir_path }
     );
 
