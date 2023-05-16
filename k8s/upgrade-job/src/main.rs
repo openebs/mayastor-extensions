@@ -1,7 +1,7 @@
 use crate::{
     common::{constants::PRODUCT, error::Result},
     opts::validators::{
-        validate_helm_chart_dirs, validate_helm_release, validate_helmv3_in_path,
+        validate_helm_chart_dir, validate_helm_release, validate_helmv3_in_path,
         validate_namespace, validate_rest_endpoint,
     },
 };
@@ -54,7 +54,7 @@ pub(crate) async fn parse_cli_args() -> Result<CliArgs> {
 
     validate_helmv3_in_path()?;
     validate_helm_release(opts.release_name(), opts.namespace())?;
-    validate_helm_chart_dirs(opts.umbrella_chart_dir(), opts.core_chart_dir())?;
+    validate_helm_chart_dir(opts.core_chart_dir())?;
 
     info!("Validated all inputs");
 
