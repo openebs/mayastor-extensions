@@ -205,15 +205,16 @@ pub enum Error {
         filepath: PathBuf,
     },
 
+    /// Error for when yaml could not be parsed from bytes.
+    #[snafu(display("Failed to parse unsupported versions yaml: {}", source))]
+    YamlParseBufferForUnsupportedVersion { source: serde_yaml::Error },
+
     /// Error for failures in generating semver::Value from a &str input.
     #[snafu(display("Failed to parse {} as a valid semver: {}", version_string, source))]
     SemverParse {
         source: semver::Error,
         version_string: String,
     },
-
-    #[snafu(display("Failed to get current directory: {}", source))]
-    GetCurrentDirectory { source: std::io::Error },
 
     /// Source and target version are same.
     #[snafu(display("Source and target version are same for upgrade."))]
@@ -234,8 +235,8 @@ pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
 impl From<Error> for i32 {
     fn from(err: Error) -> Self {
         match err {
-            Error::GetCurrentDirectory { .. } => 401,
-            Error::UpgradeEventNotPresent { .. } => 401,
+            Error::YamlParseBufferForUnsupportedVersion { .. } => 401,
+            Error::UpgradeEventNotPresent { .. } => 402,
             Error::NoDeploymentPresent { .. } => 403,
             Error::MessageInEventNotPresent { .. } => 404,
             Error::NodesInCordonedState { .. } => 405,

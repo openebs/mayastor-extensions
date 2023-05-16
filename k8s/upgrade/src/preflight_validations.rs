@@ -1,15 +1,15 @@
 use crate::{
-    constant::{get_image_version_tag, SINGLE_REPLICA_VOLUME, UNSUPPORTED_VERSION_FILE},
+    constant::{get_image_version_tag, SINGLE_REPLICA_VOLUME, UPGRADE_TO_DEVELOP_BRANCH},
     error, upgrade_lib,
     upgrade_resources::upgrade::{get_pvc_from_uuid, get_source_version},
     user_prompt,
 };
 use openapi::models::CordonDrainState;
 use semver::Version;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_yaml;
 use snafu::ResultExt;
-use std::{collections::HashSet, fs::File, path::PathBuf};
+use std::{collections::HashSet, path::PathBuf};
 
 /// Validation to be done before applying upgrade.
 pub async fn preflight_check(
@@ -166,17 +166,30 @@ pub async fn is_rebuild_in_progress(client: &upgrade_lib::RestClient) -> error::
 }
 
 /// Struct to deserialize the unsupported version yaml.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Deserialize)]
 struct UnsupportedVersions {
-    unsupported_versions: Vec<String>,
+    unsupported_versions: Vec<Version>,
+}
+
+impl UnsupportedVersions {
+    fn contains(&self, v: &Version) -> bool {
+        self.unsupported_versions.contains(v)
+    }
+}
+
+impl TryFrom<&[u8]> for UnsupportedVersions {
+    type Error = serde_yaml::Error;
+
+    /// Returns an UnsupportedVersions object.
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        serde_yaml::from_reader(bytes)
+    }
 }
 
 pub async fn upgrade_path_validation(namespace: &str) -> error::Result<()> {
-    let path = std::env::current_dir()
-        .context(error::GetCurrentDirectory)?
-        .join(UNSUPPORTED_VERSION_FILE);
-
-    let unsupported_versions = get_unsupported_versions(path)?;
+    let unsupported_version_buf = &std::include_bytes!("../config/unsupported_versions.yaml")[..];
+    let unsupported_versions = UnsupportedVersions::try_from(unsupported_version_buf)
+        .context(error::YamlParseBufferForUnsupportedVersion)?;
     let source_version = get_source_version(namespace).await?;
 
     let source = Version::parse(source_version.as_str()).context(error::SemverParse {
@@ -184,8 +197,8 @@ pub async fn upgrade_path_validation(namespace: &str) -> error::Result<()> {
     })?;
 
     if unsupported_versions.contains(&source) {
-        let mut invalid_source_list: String = String::new();
-        for val in unsupported_versions.iter() {
+        let mut invalid_source_list: String = Default::default();
+        for val in unsupported_versions.unsupported_versions.iter() {
             invalid_source_list.push_str(val.to_string().as_str());
             invalid_source_list.push('\n');
         }
@@ -197,29 +210,9 @@ pub async fn upgrade_path_validation(namespace: &str) -> error::Result<()> {
     }
     let destination_version = get_image_version_tag();
 
-    if destination_version.contains("develop") {
+    if destination_version.contains(UPGRADE_TO_DEVELOP_BRANCH) {
         console_logger::error("", user_prompt::UPGRADE_TO_UNSUPPORTED_VERSION);
         return error::InvalidUpgradePath.fail();
     }
     Ok(())
-}
-
-/// Return the unsupported version by parsing the unsupported_versions.yaml file.
-pub fn get_unsupported_versions(path: PathBuf) -> error::Result<HashSet<Version>> {
-    let unsupported_versions_yaml = File::open(path.as_path()).context(error::OpeningFile {
-        filepath: path.clone(),
-    })?;
-
-    let unsupported: UnsupportedVersions = serde_yaml::from_reader(unsupported_versions_yaml)
-        .context(error::YamlParseFromFile { filepath: path })?;
-
-    let mut unsupported_versions_set: HashSet<Version> = HashSet::new();
-
-    for version in unsupported.unsupported_versions.iter() {
-        let unsupported_version = Version::parse(version.as_str()).context(error::SemverParse {
-            version_string: version.clone(),
-        })?;
-        unsupported_versions_set.insert(unsupported_version);
-    }
-    Ok(unsupported_versions_set)
 }

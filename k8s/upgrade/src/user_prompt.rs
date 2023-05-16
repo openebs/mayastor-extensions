@@ -45,4 +45,4 @@ pub const UPGRADE_PATH_NOT_VALID: &str =
 
 /// Upgrade to unsuppoted version not valid.
 pub const UPGRADE_TO_UNSUPPORTED_VERSION: &str =
-    "\nUpgrade failed as destination version is unsupported. Please try with `--skip-upgrade-path-validation-for-unsupported-version";
+    "\nUpgrade failed as destination version is unsupported. Please try with `--skip-upgrade-path-validation-for-unsupported-version`";
