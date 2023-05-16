@@ -50,12 +50,24 @@ rules:
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["list", "watch", "create", "update", "patch"]
+
+  # external snapshotter and snapshot-controller
 - apiGroups: ["snapshot.storage.k8s.io"]
-  resources: ["volumesnapshots"]
-  verbs: ["get", "list"]
+  resources: ["volumesnapshotclasses"]
+  verbs: ["get", "list", "watch"]
 - apiGroups: ["snapshot.storage.k8s.io"]
   resources: ["volumesnapshotcontents"]
-  verbs: ["get", "list"]
+  verbs: ["create","get", "list", "watch", "update", "patch", "delete"]
+- apiGroups: ["snapshot.storage.k8s.io"]
+  resources: ["volumesnapshotcontents/status"]
+  verbs: ["update", "patch"]
+- apiGroups: ["snapshot.storage.k8s.io"]
+  resources: ["volumesnapshots"]
+  verbs: ["get", "list", "watch", "update", "patch", "delete"]
+- apiGroups: ["snapshot.storage.k8s.io"]
+  resources: ["volumesnapshots/status"]
+  verbs: ["update", "patch"]
+
 - apiGroups: [""]
   resources: ["nodes"]
   verbs: ["get", "list", "watch"]
@@ -71,7 +83,6 @@ rules:
 - apiGroups: ["storage.k8s.io"]
   resources: ["csinodes"]
   verbs: ["get", "list", "watch"]
-
   # get kube-system namespace to retrieve Uid
 - apiGroups: [""]
   resources: ["namespaces"]

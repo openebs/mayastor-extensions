@@ -103,6 +103,8 @@ $ helm install my-release openebs/mayastor
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;registrarTag | csi-node-driver-registrar image release tag | `"v2.1.0"` |
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;registry | Image registry to pull all CSI Sidecar images | `"registry.k8s.io"` |
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;repo | Image registry's namespace | `"sig-storage"` |
+| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;snapshotControllerTag | csi-snapshot-controller image release tag | `"v6.2.1"` |
+| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;snapshotterTag | csi-snapshotter image release tag | `"v6.2.1"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;kubeletDir | The kubeletDir directory for the csi-node plugin | `"/var/lib/kubelet"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nvme.&ZeroWidthSpace;ctrl_loss_tmo | The ctrl_loss_tmo (controller loss timeout) in seconds | `"1980"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nvme.&ZeroWidthSpace;io_timeout | The nvme_core module io timeout in seconds | `"30"` |
