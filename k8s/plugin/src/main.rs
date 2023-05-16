@@ -161,6 +161,7 @@ async fn execute(cli_args: CliArgs) {
                 )
                 .await
                 .map_err(|error| {
+                    eprintln!("{error}");
                     std::process::exit(error.into());
                 });
 

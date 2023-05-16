@@ -1,4 +1,4 @@
-use crate::common::error::{PriorityClassOptionAbsent, Result, ThinProvisioningOptionsAbsent};
+use crate::common::error::{Result, ThinProvisioningOptionsAbsent};
 use semver::Version;
 use serde::Deserialize;
 
@@ -8,7 +8,6 @@ pub(crate) struct Chart {
     /// This is the name of the helm chart.
     name: String,
     /// This is the version of the helm chart.
-    #[serde(deserialize_with = "Version::deserialize")]
     version: Version,
 }
 
@@ -24,52 +23,6 @@ impl Chart {
     }
 }
 
-/// This is used to deserialize the values.yaml file of the Umbrella chart.
-#[derive(Deserialize)]
-pub(crate) struct UmbrellaValues {
-    /// The Umbrella chart embeds the values options of the Core chart in a yaml object with the
-    /// same name as the name of the Core chart. The Core chart is a dependency-chart for the
-    /// Umbrella chart.
-    #[serde(rename(deserialize = "mayastor"))]
-    core: CoreValues,
-}
-
-impl UmbrellaValues {
-    /// This is a getter for the container image tag of the Umbrella chart.
-    pub(crate) fn image_tag(&self) -> &str {
-        self.core.image_tag()
-    }
-
-    /// This is the logLevel of the io-engine DaemonSet Pods.
-    pub(crate) fn io_engine_log_level(&self) -> &str {
-        self.core.io_engine_log_level()
-    }
-
-    pub(crate) fn core_capacity_is_absent(&self) -> bool {
-        self.core.core_capacity_is_absent()
-    }
-
-    pub(crate) fn core_thin_pool_commitment(&self) -> Result<String> {
-        self.core.core_thin_pool_commitment()
-    }
-
-    pub(crate) fn core_thin_volume_commitment(&self) -> Result<String> {
-        self.core.core_thin_volume_commitment()
-    }
-
-    pub(crate) fn core_thin_volume_commitment_initial(&self) -> Result<String> {
-        self.core.core_thin_volume_commitment_initial()
-    }
-
-    pub(crate) fn priority_class_name_is_absent(&self) -> bool {
-        self.core.priority_class_name_is_absent()
-    }
-
-    pub(crate) fn priority_class_name(&self) -> Result<String> {
-        self.core.priority_class_name()
-    }
-}
-
 /// This is used to deserialize the values.yaml of the Core chart.
 #[derive(Deserialize)]
 pub(crate) struct CoreValues {
@@ -80,9 +33,6 @@ pub(crate) struct CoreValues {
     io_engine: IoEngine,
     /// This is the .agents yaml object in the helm value.yaml.
     agents: Agents,
-    /// This is the priorityClassName override helm value.
-    #[serde(rename(deserialize = "priorityClassName"))]
-    priority_class_name: Option<String>,
 }
 
 impl CoreValues {
@@ -110,20 +60,6 @@ impl CoreValues {
 
     pub(crate) fn core_thin_volume_commitment_initial(&self) -> Result<String> {
         self.agents.core_thin_volume_commitment_initial()
-    }
-
-    /// The priorityClassName values key may be absent from the to_chart, and this function asserts
-    /// this condition.
-    pub(crate) fn priority_class_name_is_absent(&self) -> bool {
-        self.priority_class_name.is_none()
-    }
-
-    pub(crate) fn priority_class_name(&self) -> Result<String> {
-        Ok(self
-            .priority_class_name
-            .as_ref()
-            .ok_or(PriorityClassOptionAbsent.build())?
-            .clone())
     }
 }
 

@@ -1,5 +1,8 @@
 use crate::common::error::{K8sClientGeneration, KubeClientSetBuilderNs, Result};
-use k8s_openapi::api::core::v1::{Namespace, Pod};
+use k8s_openapi::api::{
+    apps::v1::Deployment,
+    core::v1::{Namespace, Pod},
+};
 use kube::{api::Api, Client};
 use snafu::ResultExt;
 
@@ -31,7 +34,8 @@ impl KubeClientSetBuilder {
         return Ok(KubeClientSet {
             client: client.clone(),
             pods_api: Api::namespaced(client.clone(), namespace.as_str()),
-            namespaces_api: Api::all(client),
+            namespaces_api: Api::all(client.clone()),
+            deployments_api: Api::namespaced(client, namespace.as_str()),
         });
     }
 }
@@ -41,6 +45,7 @@ pub(crate) struct KubeClientSet {
     client: Client,
     pods_api: Api<Pod>,
     namespaces_api: Api<Namespace>,
+    deployments_api: Api<Deployment>,
 }
 
 impl KubeClientSet {
@@ -55,6 +60,11 @@ impl KubeClientSet {
     /// Generate the Namespace api client.
     pub(crate) fn namespaces_api(&self) -> &Api<Namespace> {
         &self.namespaces_api
+    }
+
+    /// Generate the Deployment api client.
+    pub(crate) fn deployments_api(&self) -> &Api<Deployment> {
+        &self.deployments_api
     }
 
     /// Get a clone of the kube::Client.

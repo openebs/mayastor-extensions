@@ -1,9 +1,10 @@
 use crate::{
     common::{
-        constants::{CORE_CHART_NAME, UMBRELLA_CHART_NAME},
+        constants::{CORE_CHART_NAME, TO_UMBRELLA_SEMVER, UMBRELLA_CHART_NAME},
         error::{
-            HelmUpgradeOptionsAbsent, InvalidUpgradePath, NoInputHelmChartDir, NotAKnownHelmChart,
-            RegexCompile, Result,
+            CoreChartUpgradeNoneChartDir, HelmUpgradeOptionsAbsent, InvalidHelmUpgrade,
+            InvalidUpgradePath, NoInputHelmChartDir, NotAKnownHelmChart, RegexCompile, Result,
+            UmbrellaChartNotUpgraded,
         },
     },
     helm::{client::HelmReleaseClient, values::generate_values_args},
@@ -30,14 +31,12 @@ pub(crate) enum HelmChart {
 pub(crate) struct HelmUpgradeBuilder {
     release_name: Option<String>,
     namespace: Option<String>,
-    umbrella_chart_dir: Option<PathBuf>,
     core_chart_dir: Option<PathBuf>,
-    upgrade_path_file: PathBuf,
     skip_upgrade_path_validation: bool,
 }
 
 impl HelmUpgradeBuilder {
-    /// This is a builder option to add the Namespace of the helm chart to be upgrade.
+    /// This is a builder option to add the Namespace of the helm chart to be upgraded.
     #[must_use]
     pub(crate) fn with_namespace<J>(mut self, ns: J) -> Self
     where
@@ -59,22 +58,8 @@ impl HelmUpgradeBuilder {
 
     /// This is a builder option to set the directory path of the Umbrella helm chart CLI option.
     #[must_use]
-    pub(crate) fn with_umbrella_chart_dir(mut self, dir: Option<PathBuf>) -> Self {
-        self.umbrella_chart_dir = dir;
-        self
-    }
-
-    /// This is a builder option to set the directory path of the Umbrella helm chart CLI option.
-    #[must_use]
-    pub(crate) fn with_core_chart_dir(mut self, dir: Option<PathBuf>) -> Self {
-        self.core_chart_dir = dir;
-        self
-    }
-
-    /// This is a builder option to set the path for the unsupported version yaml.
-    #[must_use]
-    pub(crate) fn with_upgrade_path_file(mut self, file: PathBuf) -> Self {
-        self.upgrade_path_file = file;
+    pub(crate) fn with_core_chart_dir(mut self, dir: PathBuf) -> Self {
+        self.core_chart_dir = Some(dir);
         self
     }
 
@@ -88,20 +73,37 @@ impl HelmUpgradeBuilder {
         self
     }
 
-    /// This adds buiilds the HelmUpgrade object.
-    pub(crate) fn build(self) -> Result<HelmUpgrade> {
+    /// This builds the HelmUpgrade object.
+    pub(crate) async fn build(self) -> Result<HelmUpgrade> {
         ensure!(
             self.release_name.is_some() && self.namespace.is_some(),
             HelmUpgradeOptionsAbsent
         );
-
         let release_name = self.release_name.clone().unwrap();
+        let namespace = self.namespace.clone().unwrap();
+
         // Generate HelmReleaseClient.
         let client = HelmReleaseClient::builder()
-            .with_namespace(self.namespace.clone().unwrap())
+            .with_namespace(namespace.clone())
             .build()?;
+
         // Get HelmReleaseElement object for the release specified in CLI options.
         let chart = client.release_info(release_name.clone())?.chart();
+
+        // The version of the Core helm chart (installed as a the parent chart or as a dependent
+        // chart) which is installed in the cluster.
+        let from_version: Version =
+            upgrade::path::version_from_rest_deployment_label(namespace.as_str()).await?;
+
+        // The version of the Core chart which we are (maybe) going to.
+        let chart_dir: PathBuf = self.core_chart_dir.ok_or(
+            NoInputHelmChartDir {
+                chart_name: CORE_CHART_NAME.to_string(),
+            }
+            .build(),
+        )?;
+        let chart_yaml_path = chart_dir.join("Chart.yaml");
+        let to_version: Version = upgrade::path::version_from_chart_yaml_file(chart_yaml_path)?;
 
         // Define regular expression to pick out the chart name from the
         // <chart-name>-<chart-version> string.
@@ -110,27 +112,22 @@ impl HelmUpgradeBuilder {
         let core_chart_regex =
             format!(r"^({CORE_CHART_NAME}-[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?)$");
 
-        // Assign HelmChart variant and validate directory path input for the said
-        // variant's chart based on the 'chart' member of the HelmReleaseElement.
+        // Validate if already upgraded for Umbrella chart, and prepare for upgrade for Core chart.
         let chart_variant: HelmChart;
-        let chart_dir: PathBuf;
-        // Case: HelmChart::Umbrella.
-        if Regex::new(umbrella_chart_regex.as_str())
+        let mut already_upgraded = false;
+        let mut core_chart_dir: Option<String> = None;
+        let mut core_chart_extra_args: Option<Vec<String>> = None;
+
+        if Regex::new(umbrella_chart_regex.as_str()) // Case: HelmChart::Umbrella.
             .context(RegexCompile {
                 expression: umbrella_chart_regex.clone(),
             })?
             .is_match(chart.as_str())
         {
             chart_variant = HelmChart::Umbrella;
-            match self.umbrella_chart_dir {
-                Some(umbrella_dir) => chart_dir = umbrella_dir,
-                None => {
-                    return NoInputHelmChartDir {
-                        chart_name: UMBRELLA_CHART_NAME.to_string(),
-                    }
-                    .fail()
-                }
-            }
+
+            already_upgraded = to_version.eq(&from_version);
+            ensure!(already_upgraded, UmbrellaChartNotUpgraded);
         } else if Regex::new(core_chart_regex.as_str()) // Case: HelmChart::Core.
             .context(RegexCompile {
                 expression: core_chart_regex.clone(),
@@ -138,59 +135,43 @@ impl HelmUpgradeBuilder {
             .is_match(chart.as_str())
         {
             chart_variant = HelmChart::Core;
-            match self.core_chart_dir {
-                Some(core_dir) => chart_dir = core_dir,
-                None => {
-                    return NoInputHelmChartDir {
-                        chart_name: CORE_CHART_NAME.to_string(),
-                    }
-                    .fail()
-                }
+
+            // Skip upgrade-path validation and allow all upgrades for the Core helm chart, if the
+            // flag is set.
+            if !self.skip_upgrade_path_validation {
+                // Check for already upgraded
+                already_upgraded = to_version.eq(&from_version);
+
+                let upgrade_path_is_valid = upgrade::path::is_valid_for_core_chart(&from_version)?;
+                ensure!(
+                    upgrade_path_is_valid || already_upgraded,
+                    InvalidUpgradePath
+                );
             }
+
+            // Generate args to pass to the `helm upgrade` command.
+            let values_yaml_path = chart_dir.join("values.yaml");
+            let upgrade_args: Vec<String> = generate_values_args(
+                &from_version,
+                values_yaml_path,
+                &client,
+                release_name.clone(),
+            )?;
+
+            core_chart_dir = Some(chart_dir.to_string_lossy().to_string());
+            core_chart_extra_args = Some(upgrade_args);
         } else {
             // Case: Helm chart release is not a known helm chart installation.
             return NotAKnownHelmChart { chart_name: chart }.fail();
         }
 
-        let mut chart_yaml_path = chart_dir.clone();
-        chart_yaml_path.push("Chart.yaml");
-        let to_version = upgrade::path::version_from_chart_yaml_file(chart_yaml_path)?;
-        let from_version = upgrade::path::version_from_release_chart(chart)?;
-        let invalid_upgrades = upgrade::path::invalid_upgrade_path(self.upgrade_path_file)?;
-
-        // Check for already upgraded
-        let already_upgraded = to_version.eq(&from_version);
-        ensure!(!already_upgraded, InvalidUpgradePath);
-
-        if !self.skip_upgrade_path_validation {
-            let upgrade_path_is_valid = upgrade::path::is_valid(
-                chart_variant.clone(),
-                &from_version,
-                &to_version,
-                invalid_upgrades,
-            )?;
-            ensure!(upgrade_path_is_valid, InvalidUpgradePath);
-        }
-
-        // Generate args to pass to the `helm upgrade` command.
-        let mut values_yaml_path = chart_dir.clone();
-        values_yaml_path.push("values.yaml");
-        let mut upgrade_args: Vec<String> = generate_values_args(
-            chart_variant,
-            values_yaml_path,
-            &client,
-            release_name.clone(),
-        )?;
-        // To roll back to previous release, in case helm upgrade fails, also
-        // to wait for all Pods, PVCs to come to a ready state.
-        upgrade_args.push("--atomic".to_string());
-
         Ok(HelmUpgrade {
+            chart_variant,
             already_upgraded,
-            chart_dir: chart_dir.to_string_lossy().to_string(),
+            core_chart_dir,
             release_name,
             client,
-            extra_args: upgrade_args,
+            core_chart_extra_args,
             from_version,
             to_version,
         })
@@ -199,11 +180,12 @@ impl HelmUpgradeBuilder {
 
 /// This type can generate and execute the `helm upgrade` command.
 pub(crate) struct HelmUpgrade {
+    chart_variant: HelmChart,
     already_upgraded: bool,
-    chart_dir: String,
+    core_chart_dir: Option<String>,
     release_name: String,
     client: HelmReleaseClient,
-    extra_args: Vec<String>,
+    core_chart_extra_args: Option<Vec<String>>,
     from_version: Version,
     to_version: Version,
 }
@@ -216,18 +198,38 @@ impl HelmUpgrade {
 
     /// Use the HelmReleaseClient's upgrade method to upgrade the installed helm release.
     pub(crate) fn run(self) -> Result<()> {
-        if self.already_upgraded {
-            info!(
-                "Skipping helm upgrade, as the version of the installed helm chart is the same \
-                as that of this upgrade-job's helm chart"
-            );
-            return Ok(());
-        }
+        match self.chart_variant {
+            HelmChart::Umbrella if self.already_upgraded => {
+                info!(
+                    "Verified that {UMBRELLA_CHART_NAME} helm chart release '{}' has version {TO_UMBRELLA_SEMVER}",
+                    self.release_name.as_str()
+                );
+            }
+            HelmChart::Umbrella if !self.already_upgraded => {
+                // It should be impossible to hit this error.
+                return UmbrellaChartNotUpgraded.fail();
+            }
+            HelmChart::Core if self.already_upgraded => {
+                info!(
+                    "Skipping helm upgrade, as the version of the installed helm chart is the same \
+                    as that of this upgrade-job's helm chart"
+                );
+            }
+            HelmChart::Core if !self.already_upgraded => {
+                // It should be impossible to hit this error.
+                let chart_dir = self
+                    .core_chart_dir
+                    .ok_or(CoreChartUpgradeNoneChartDir.build())?;
 
-        info!("Starting helm upgrade...");
-        self.client
-            .upgrade(self.release_name, self.chart_dir, Some(self.extra_args))?;
-        info!("Helm upgrade successful!");
+                info!("Starting helm upgrade...");
+                self.client
+                    .upgrade(self.release_name, chart_dir, self.core_chart_extra_args)?;
+                info!("Helm upgrade successful!");
+            }
+            _ => {
+                return InvalidHelmUpgrade.fail();
+            }
+        }
 
         Ok(())
     }

@@ -23,31 +23,9 @@ pub(crate) struct CliArgs {
     #[arg(long)]
     release_name: String,
 
-    /// This is the Helm chart directory filepath for the umbrella helm chart variant.
-    #[arg(
-        long,
-        env = "UMBRELLA_CHART_DIR",
-        value_name = "DIR PATH",
-        required_unless_present = "core_chart_dir"
-    )]
-    umbrella_chart_dir: Option<PathBuf>,
-
     /// This is the Helm chart directory filepath for the core Helm chart variant.
-    #[arg(
-        long,
-        env = "CORE_CHART_DIR",
-        value_name = "DIR PATH",
-        required_unless_present = "umbrella_chart_dir"
-    )]
-    core_chart_dir: Option<PathBuf>,
-
-    /// This is the path to upgrade exception file.
-    #[arg(
-        long,
-        env = "UPGRADE_EXCEPTION_FILE_PATH",
-        default_value = "/k8s/upgrade/config/unsupported_versions.yaml"
-    )]
-    upgrade_exception_file: PathBuf,
+    #[arg(long, env = "CORE_CHART_DIR", value_name = "DIR PATH")]
+    core_chart_dir: PathBuf,
 
     /// If not set, this skips the Kubernetes Pod restarts for the io-engine DaemonSet.
     #[arg(long, default_value_t = false)]
@@ -78,20 +56,9 @@ impl CliArgs {
         self.release_name.clone()
     }
 
-    /// This returns the Helm chart directory filepath for a
-    /// crate::helm::upgrade::HelmChart::Umbrella.
-    pub(crate) fn umbrella_chart_dir(&self) -> Option<PathBuf> {
-        self.umbrella_chart_dir.clone()
-    }
-
     /// This returns the Helm chart directory filepath for a crate::helm::upgrade::HelmChart::Core.
-    pub(crate) fn core_chart_dir(&self) -> Option<PathBuf> {
+    pub(crate) fn core_chart_dir(&self) -> PathBuf {
         self.core_chart_dir.clone()
-    }
-
-    /// This returns the path to find unsupported upgrade version yaml file.
-    pub(crate) fn upgrade_exception_file(&self) -> PathBuf {
-        self.upgrade_exception_file.clone()
     }
 
     /// This is a predicate to decide if <release-name>-io-engine Kubernetes DaemonSet Pods should

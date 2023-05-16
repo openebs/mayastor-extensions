@@ -1,5 +1,8 @@
 use crate::{
-    common::constants::{CHART_VERSION_LABEL_KEY, CORE_CHART_NAME, PRODUCT, UMBRELLA_CHART_NAME},
+    common::constants::{
+        CHART_VERSION_LABEL_KEY, CORE_CHART_NAME, PRODUCT, TO_UMBRELLA_SEMVER, UMBRELLA_CHART_NAME,
+        UMBRELLA_CHART_UPGRADE_DOCS_URL,
+    },
     events::event_recorder::EventNote,
 };
 use snafu::Snafu;
@@ -132,6 +135,10 @@ pub(crate) enum Error {
         source: serde_yaml::Error,
         filepath: PathBuf,
     },
+
+    /// Error for when yaml could not be parsed from bytes.
+    #[snafu(display("Failed to parse unsupported versions yaml: {}", source))]
+    YamlParseBufferForUnsupportedVersion { source: serde_yaml::Error },
 
     /// Error for when the Helm chart installed in the cluster is not of the umbrella or core
     /// variant.
@@ -413,15 +420,6 @@ pub(crate) enum Error {
     #[snafu(display("Failed to send Event over the channel"))]
     EventChannelSend,
 
-    /// Error for when the 'chart' member of a crate::helm::client::HelmReleaseElement cannot be
-    /// split at the first occurrence of '-', e.g. <chart-name>-2.1.0-rc8.
-    #[snafu(display(
-        "Failed to split helm chart name '{}', at the first occurrence of '{}'",
-        chart_name,
-        delimiter
-    ))]
-    HelmChartNameSplit { chart_name: String, delimiter: char },
-
     /// Error for when the no value for version label is found on the helm chart.
     #[snafu(display(
         "Failed to get the value of the {} label in Pod {} in Namespace {}",
@@ -439,9 +437,68 @@ pub(crate) enum Error {
     ))]
     NoNamespaceInPod { pod_name: String, context: String },
 
-    /// Error for when the priorityClassName option is absent, but still tried to fetch it.
-    #[snafu(display("The priorityClassName yaml object is absent amongst the helm values"))]
-    PriorityClassOptionAbsent,
+    /// Error for the Umbrella chart is not upgraded.
+    #[snafu(display(
+        "The {} helm chart is not upgraded to version {}: Upgrade for helm chart {} is not \
+        supported, refer to the instructions at {} to upgrade your release of the {} helm \
+        chart to version {}",
+        UMBRELLA_CHART_NAME,
+        TO_UMBRELLA_SEMVER,
+        UMBRELLA_CHART_NAME,
+        UMBRELLA_CHART_UPGRADE_DOCS_URL,
+        UMBRELLA_CHART_NAME,
+        TO_UMBRELLA_SEMVER,
+    ))]
+    UmbrellaChartNotUpgraded,
+
+    /// Error for when the helm upgrade for the Core chart does not have a chart directory.
+    #[snafu(display(
+        "The {} helm chart could not be upgraded as input chart directory is absent",
+        CORE_CHART_NAME
+    ))]
+    CoreChartUpgradeNoneChartDir,
+
+    /// Error for when the Storage REST API Deployment is absent.
+    #[snafu(display(
+        "Found no {} REST API Deployments in the namespace {} with labelSelector {}",
+        PRODUCT,
+        namespace,
+        label_selector
+    ))]
+    NoRestDeployment {
+        namespace: String,
+        label_selector: String,
+    },
+
+    /// Error for when the CHART_VERSION_LABEL_KEY is missing amongst the labels in a Deployment.
+    #[snafu(display(
+        "A label with the key {} was not found for Deployment {} in namespace {}",
+        CHART_VERSION_LABEL_KEY,
+        deployment_name,
+        namespace
+    ))]
+    NoVersionLabelInDeployment {
+        deployment_name: String,
+        namespace: String,
+    },
+
+    /// Error for when a Kubernetes API request for GET-ing a list of Deployments filtered by
+    /// label(s) fails.
+    #[snafu(display(
+        "Failed to list Deployments with label {} in namespace {}: {}",
+        label_selector,
+        namespace,
+        source
+    ))]
+    ListDeploymentsWithLabel {
+        source: kube::Error,
+        namespace: String,
+        label_selector: String,
+    },
+
+    /// Error for when the helm upgrade run is that of an invalid chart configuration.
+    #[snafu(display("Invalid helm upgrade request"))]
+    InvalidHelmUpgrade,
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.
