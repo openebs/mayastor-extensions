@@ -3,7 +3,7 @@ use crate::{
         constants::CHART_VERSION_LABEL_KEY,
         error::{
             ListDeploymentsWithLabel, NoRestDeployment, NoVersionLabelInDeployment, OpeningFile,
-            Result, SemverParse, YamlParseFromFile,
+            Result, SemverParse, YamlParseBufferForUnsupportedVersion, YamlParseFromFile,
         },
         kube_client::KubeClientSet,
     },
@@ -17,8 +17,11 @@ use std::{fs::File, path::PathBuf};
 use utils::API_REST_LABEL;
 
 /// Validates the upgrade path from 'from' Version to 'to' Version for the Core helm chart.
-pub(crate) fn is_valid_for_core_chart(from: &Version, upgrade_path_file: PathBuf) -> Result<bool> {
-    let unsupported_versions = UnsupportedVersions::try_from(upgrade_path_file)?;
+pub(crate) fn is_valid_for_core_chart(from: &Version) -> Result<bool> {
+    let unsupported_version_buf =
+        &std::include_bytes!("../../../upgrade/config/unsupported_versions.yaml")[..];
+    let unsupported_versions = UnsupportedVersions::try_from(unsupported_version_buf)
+        .context(YamlParseBufferForUnsupportedVersion)?;
     Ok(!unsupported_versions.contains(from))
 }
 
@@ -98,16 +101,11 @@ impl UnsupportedVersions {
     }
 }
 
-impl TryFrom<PathBuf> for UnsupportedVersions {
-    type Error = crate::common::error::Error;
+impl TryFrom<&[u8]> for UnsupportedVersions {
+    type Error = serde_yaml::Error;
 
     /// Returns an UnsupportedVersions object.
-    fn try_from(path: PathBuf) -> Result<Self> {
-        let unsupported_versions_yaml = File::open(path.as_path()).context(OpeningFile {
-            filepath: path.clone(),
-        })?;
-
-        serde_yaml::from_reader(unsupported_versions_yaml)
-            .context(YamlParseFromFile { filepath: path })
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        serde_yaml::from_reader(bytes)
     }
 }

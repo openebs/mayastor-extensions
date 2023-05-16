@@ -100,5 +100,5 @@ pub(crate) const API_REST_POD_LABEL: &str = "app=api-rest";
 pub(crate) const UPGRADE_EVENT_REASON: &str = "MayastorUpgrade";
 /// Installed release version.
 pub(crate) const HELM_RELEASE_VERSION_LABEL: &str = "openebs.io/version";
-/// File contating unsupported versions.
-pub(crate) const UNSUPPORTED_VERSION_FILE: &str = "k8s/upgrade/config/unsupported_versions.yaml";
+/// Upgrade to develop.
+pub(crate) const UPGRADE_TO_DEVELOP_BRANCH: &str = "develop";
