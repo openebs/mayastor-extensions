@@ -6,7 +6,6 @@
 let
   whitelistSource = extensions.project-builder.whitelistSource;
   helm_chart = whitelistSource ../../.. [ "chart" "scripts/helm" ];
-  upgrade_path = whitelistSource ../../.. [ "k8s/upgrade/config" ];
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
   tag = if img_tag != "" then img_tag else extensions.version;
   build-extensions-image = { pname, buildType, package, extraCommands ? '''', contents ? [ ], config ? { } }:
@@ -50,7 +49,7 @@ let
     chmod -w build/chart
     chmod -w build/chart/*.yaml
 
-    mkdir -p $out && cp -drf --preserve=mode build/chart $out/chart && cp -drf --preserve=mode ${upgrade_path}/* $out/k8s
+    mkdir -p $out && cp -drf --preserve=mode build/chart $out/chart
   '';
   build-upgrade-image = { buildType, name }:
     build-extensions-image rec{
@@ -59,7 +58,7 @@ let
       contents = [ kubernetes-helm-wrapped busybox tagged_helm_chart ];
       pname = package.pname;
       config = {
-        Env = [ "CORE_CHART_DIR=/chart" "UPGRADE_EXCEPTION_FILE_PATH=/k8s/upgrade/config/unsupported_versions.yaml" ];
+        Env = [ "CORE_CHART_DIR=/chart" ];
     };
   };
   build-obs-callhome-image = { buildType }:

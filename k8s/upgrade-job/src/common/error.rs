@@ -136,6 +136,10 @@ pub(crate) enum Error {
         filepath: PathBuf,
     },
 
+    /// Error for when yaml could not be parsed from bytes.
+    #[snafu(display("Failed to parse unsupported versions yaml: {}", source))]
+    YamlParseBufferForUnsupportedVersion { source: serde_yaml::Error },
+
     /// Error for when the Helm chart installed in the cluster is not of the umbrella or core
     /// variant.
     #[snafu(display(

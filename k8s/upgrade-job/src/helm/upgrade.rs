@@ -32,7 +32,6 @@ pub(crate) struct HelmUpgradeBuilder {
     release_name: Option<String>,
     namespace: Option<String>,
     core_chart_dir: Option<PathBuf>,
-    upgrade_path_file: PathBuf,
     skip_upgrade_path_validation: bool,
 }
 
@@ -61,13 +60,6 @@ impl HelmUpgradeBuilder {
     #[must_use]
     pub(crate) fn with_core_chart_dir(mut self, dir: PathBuf) -> Self {
         self.core_chart_dir = Some(dir);
-        self
-    }
-
-    /// This is a builder option to set the path for the unsupported version yaml.
-    #[must_use]
-    pub(crate) fn with_upgrade_path_file(mut self, file: PathBuf) -> Self {
-        self.upgrade_path_file = file;
         self
     }
 
@@ -150,8 +142,7 @@ impl HelmUpgradeBuilder {
                 // Check for already upgraded
                 already_upgraded = to_version.eq(&from_version);
 
-                let upgrade_path_is_valid =
-                    upgrade::path::is_valid_for_core_chart(&from_version, self.upgrade_path_file)?;
+                let upgrade_path_is_valid = upgrade::path::is_valid_for_core_chart(&from_version)?;
                 ensure!(
                     upgrade_path_is_valid || already_upgraded,
                     InvalidUpgradePath

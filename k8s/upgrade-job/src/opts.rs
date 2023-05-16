@@ -27,14 +27,6 @@ pub(crate) struct CliArgs {
     #[arg(long, env = "CORE_CHART_DIR", value_name = "DIR PATH")]
     core_chart_dir: PathBuf,
 
-    /// This is the path to upgrade exception file.
-    #[arg(
-        long,
-        env = "UPGRADE_EXCEPTION_FILE_PATH",
-        default_value = "/k8s/upgrade/config/unsupported_versions.yaml"
-    )]
-    upgrade_exception_file: PathBuf,
-
     /// If not set, this skips the Kubernetes Pod restarts for the io-engine DaemonSet.
     #[arg(long, default_value_t = false)]
     skip_data_plane_restart: bool,
@@ -67,11 +59,6 @@ impl CliArgs {
     /// This returns the Helm chart directory filepath for a crate::helm::upgrade::HelmChart::Core.
     pub(crate) fn core_chart_dir(&self) -> PathBuf {
         self.core_chart_dir.clone()
-    }
-
-    /// This returns the path to find unsupported upgrade version yaml file.
-    pub(crate) fn upgrade_exception_file(&self) -> PathBuf {
-        self.upgrade_exception_file.clone()
     }
 
     /// This is a predicate to decide if <release-name>-io-engine Kubernetes DaemonSet Pods should

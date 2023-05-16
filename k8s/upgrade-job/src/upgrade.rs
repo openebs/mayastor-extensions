@@ -21,7 +21,6 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
         .with_namespace(opts.namespace())
         .with_release_name(opts.release_name())
         .with_core_chart_dir(opts.core_chart_dir())
-        .with_upgrade_path_file(opts.upgrade_exception_file())
         .with_skip_upgrade_path_validation(opts.skip_upgrade_path_validation())
         .build()
         .await?;
