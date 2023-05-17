@@ -499,6 +499,17 @@ pub(crate) enum Error {
     /// Error for when the helm upgrade run is that of an invalid chart configuration.
     #[snafu(display("Invalid helm upgrade request"))]
     InvalidHelmUpgrade,
+
+    /// Error for when the helm upgrade run is that of an invalid chart configuration.
+    #[snafu(display(
+        "Failed to upgrade from {} to {}: upgrade to an earlier-released version is forbidden",
+        from_version,
+        to_version
+    ))]
+    RollbackForbidden {
+        from_version: String,
+        to_version: String,
+    },
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.

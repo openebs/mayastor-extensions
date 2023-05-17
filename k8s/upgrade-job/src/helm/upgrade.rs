@@ -4,7 +4,7 @@ use crate::{
         error::{
             CoreChartUpgradeNoneChartDir, HelmUpgradeOptionsAbsent, InvalidHelmUpgrade,
             InvalidUpgradePath, NoInputHelmChartDir, NotAKnownHelmChart, RegexCompile, Result,
-            UmbrellaChartNotUpgraded,
+            RollbackForbidden, UmbrellaChartNotUpgraded,
         },
     },
     helm::{client::HelmReleaseClient, values::generate_values_args},
@@ -105,6 +105,18 @@ impl HelmUpgradeBuilder {
         let chart_yaml_path = chart_dir.join("Chart.yaml");
         let to_version: Version = upgrade::path::version_from_chart_yaml_file(chart_yaml_path)?;
 
+        // Basic validation.
+        // Rollbacks not supported.
+        ensure!(
+            to_version.ge(&from_version),
+            RollbackForbidden {
+                from_version: from_version.to_string(),
+                to_version: to_version.to_string()
+            }
+        );
+        // Check if already upgraded.
+        let already_upgraded = to_version.eq(&from_version);
+
         // Define regular expression to pick out the chart name from the
         // <chart-name>-<chart-version> string.
         let umbrella_chart_regex = format!(r"^({UMBRELLA_CHART_NAME}-[0-9]+\.[0-9]+\.[0-9]+)$");
@@ -114,7 +126,6 @@ impl HelmUpgradeBuilder {
 
         // Validate if already upgraded for Umbrella chart, and prepare for upgrade for Core chart.
         let chart_variant: HelmChart;
-        let mut already_upgraded = false;
         let mut core_chart_dir: Option<String> = None;
         let mut core_chart_extra_args: Option<Vec<String>> = None;
 
@@ -125,8 +136,6 @@ impl HelmUpgradeBuilder {
             .is_match(chart.as_str())
         {
             chart_variant = HelmChart::Umbrella;
-
-            already_upgraded = to_version.eq(&from_version);
             ensure!(already_upgraded, UmbrellaChartNotUpgraded);
         } else if Regex::new(core_chart_regex.as_str()) // Case: HelmChart::Core.
             .context(RegexCompile {
@@ -139,14 +148,8 @@ impl HelmUpgradeBuilder {
             // Skip upgrade-path validation and allow all upgrades for the Core helm chart, if the
             // flag is set.
             if !self.skip_upgrade_path_validation {
-                // Check for already upgraded
-                already_upgraded = to_version.eq(&from_version);
-
                 let upgrade_path_is_valid = upgrade::path::is_valid_for_core_chart(&from_version)?;
-                ensure!(
-                    upgrade_path_is_valid || already_upgraded,
-                    InvalidUpgradePath
-                );
+                ensure!(upgrade_path_is_valid, InvalidUpgradePath);
             }
 
             // Generate args to pass to the `helm upgrade` command.
