@@ -67,7 +67,7 @@ pub(crate) const HELM_RELEASE_NAME_LABEL: &str = "openebs.io/release";
 
 pub(crate) const DEFAULT_IMAGE_REGISTRY: &str = "docker.io";
 /// The upgrade job will use the UPGRADE_JOB_IMAGE_NAME image (below) with this tag.
-pub(crate) const UPGRADE_JOB_IMAGE_TAG: &str = "develop";
+pub(crate) const UPGRADE_JOB_IMAGE_TAG: &str = "release-2.2";
 /// Upgrade job container image repository.
 pub(crate) const UPGRADE_JOB_IMAGE_REPO: &str = "openebs";
 /// Upgrade job container image name.
