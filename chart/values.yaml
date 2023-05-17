@@ -263,6 +263,10 @@ csi:
     provisionerTag: v2.2.1
     # -- csi-attacher image release tag
     attacherTag: v3.2.1
+    # -- csi-snapshotter image release tag
+    snapshotterTag: v6.2.1
+    # -- csi-snapshot-controller image release tag
+    snapshotControllerTag: v6.2.1
     # -- csi-node-driver-registrar image release tag
     registrarTag: v2.1.0
 
