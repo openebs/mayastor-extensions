@@ -19,6 +19,7 @@ pub(crate) fn generate_values_args(
     values_yaml_path: PathBuf,
     client: &HelmReleaseClient,
     release_name: String,
+    custom_image_tag: Option<String>,
 ) -> Result<Vec<String>> {
     let to_values_yaml = File::open(values_yaml_path.as_path()).context(OpeningFile {
         filepath: values_yaml_path.clone(),
@@ -107,7 +108,14 @@ pub(crate) fn generate_values_args(
 
     upgrade_args.push("--set".to_string());
 
-    let image_tag_arg = format!("{image_key}.{tag_key}={}", to_values.image_tag());
+    let image_tag_arg = match custom_image_tag {
+        Some(image_tag) => {
+            format!("{image_key}.{tag_key}={}", image_tag.as_str())
+        }
+        None => {
+            format!("{image_key}.{tag_key}={}", to_values.image_tag())
+        }
+    };
 
     // helm upgrade .. --set image.tag=<version>
     upgrade_args.push(image_tag_arg);

@@ -23,6 +23,10 @@ pub(crate) struct CliArgs {
     #[arg(long)]
     release_name: String,
 
+    /// Custom image tag to upgrade to.
+    #[arg(long)]
+    custom_image_tag: Option<String>,
+
     /// This is the Helm chart directory filepath for the core Helm chart variant.
     #[arg(long, env = "CORE_CHART_DIR", value_name = "DIR PATH")]
     core_chart_dir: PathBuf,
@@ -70,6 +74,11 @@ impl CliArgs {
     /// This decides to skip upgrade path validation or not.
     pub(crate) fn skip_upgrade_path_validation(&self) -> bool {
         self.skip_upgrade_path_validation
+    }
+
+    /// This returns custom image tag passed.
+    pub(crate) fn custom_image_tag(&self) -> Option<String> {
+        self.custom_image_tag.clone()
     }
 
     /// This returns the name of the Kubernetes Pod where this binary will be running.

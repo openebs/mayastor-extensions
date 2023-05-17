@@ -33,6 +33,7 @@ pub(crate) struct HelmUpgradeBuilder {
     namespace: Option<String>,
     core_chart_dir: Option<PathBuf>,
     skip_upgrade_path_validation: bool,
+    custom_image_tag: Option<String>,
 }
 
 impl HelmUpgradeBuilder {
@@ -70,6 +71,13 @@ impl HelmUpgradeBuilder {
         skip_upgrade_path_validation: bool,
     ) -> Self {
         self.skip_upgrade_path_validation = skip_upgrade_path_validation;
+        self
+    }
+
+    /// This sets image tag to custom tag.
+    #[must_use]
+    pub(crate) fn with_custom_image_tag(mut self, custom_image_tag: Option<String>) -> Self {
+        self.custom_image_tag = custom_image_tag;
         self
     }
 
@@ -156,6 +164,7 @@ impl HelmUpgradeBuilder {
                 values_yaml_path,
                 &client,
                 release_name.clone(),
+                self.custom_image_tag,
             )?;
 
             core_chart_dir = Some(chart_dir.to_string_lossy().to_string());

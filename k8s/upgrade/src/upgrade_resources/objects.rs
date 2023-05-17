@@ -1,7 +1,8 @@
 use crate::{
     constant::{
-        upgrade_name_concat, UPGRADE_BINARY_NAME, UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
-        UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX, UPGRADE_JOB_CONTAINER_NAME, UPGRADE_JOB_NAME_SUFFIX,
+        get_image_version_tag, upgrade_name_concat, UPGRADE_BINARY_NAME,
+        UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
+        UPGRADE_JOB_CONTAINER_NAME, UPGRADE_JOB_NAME_SUFFIX,
         UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     upgrade_labels,
@@ -256,10 +257,12 @@ pub(crate) fn upgrade_job(
     image_pull_secrets: Option<Vec<k8s_openapi::api::core::v1::LocalObjectReference>>,
     image_pull_policy: Option<String>,
 ) -> Job {
+    let image_tag = get_image_version_tag();
     let mut job_args: Vec<String> = vec![
         format!("--rest-endpoint=http://{release_name}-api-rest:8081"),
         format!("--namespace={namespace}"),
         format!("--release-name={release_name}"),
+        format!("--custom-image-tag={image_tag}"),
     ];
     if skip_data_plane_restart {
         job_args.push("--skip-data-plane-restart".to_string());
