@@ -43,7 +43,7 @@ let
 
     # if tag is not semver just keep whatever is checked-in
     # todo: handle this properly?
-    if [ "$(semver validate "tag")" == "valid" ]; then
+    if [ "$(semver validate ${tag})" = "valid" ]; then
       CHART_FILE=build/chart/Chart.yaml build/scripts/helm/publish-chart-yaml.sh --app-tag ${tag} --override-index ""
     fi
     chmod -w build/chart
