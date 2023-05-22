@@ -587,6 +587,32 @@ loki-stack:
               - __meta_kubernetes_pod_uid
               - __meta_kubernetes_pod_container_name
               target_label: __path__
+
+# Cloud Native Messaging System
+nats:
+  # -- Enable nats for transmitting events to subscribers
+  enabled: true
+  nats:
+    image:
+      pullPolicy: IfNotPresent
+      # Defaults to docker.io
+      registry: ""
+    jetstream:
+      enabled: true
+      memStorage:
+        enabled: true
+        # Size of nats message is around 0.3 KB, so it can store around 10K messages.
+        size: "5Mi"
+      fileStorage:
+        enabled: false
+  cluster:
+    enabled: true
+    replicas: 3
+  # The nats box can be installed for debugging, by default its enabled.
+  natsbox:
+    enabled: false
+
+
 obs:
   callhome:
     # -- Enable callhome

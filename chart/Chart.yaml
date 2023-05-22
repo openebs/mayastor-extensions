@@ -36,4 +36,8 @@ dependencies:
     version: 2.6.4
     repository: https://grafana.github.io/helm-charts
     condition: loki-stack.enabled
-# add a condition to disable Loki
+  - name: nats
+    version: 0.19.14
+    repository: https://nats-io.github.io/k8s/helm/charts/
+    condition: nats.enabled
+
