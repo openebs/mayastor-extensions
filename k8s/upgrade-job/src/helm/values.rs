@@ -41,6 +41,20 @@ pub(crate) fn generate_values_args(
     // use from installed-release's values, if present, else use defaults from to-chart.
     let mut upgrade_args: Vec<String> = Vec::with_capacity(18);
 
+    // For the rest of the this function's body, the flags which must be included to achieve
+    // a successful helm upgrade will be added to the 'upgrade_args' vector.
+    // There are two types of flags -- 1. Default flags, 2. Version-specific flags.
+    // Default flags set helm values options which must be included with all of the upgrade
+    // source versions.
+    // The version-specific flags set options which are required only in case the version of
+    // the source helm chart matches some ranges, e.g. the 2.0.x helm charts, including the
+    // pre-release versions.
+
+    // Version-specific set flags for 2.0.x source helm versions.
+    // For instance, These did not have the thin-provisioning options when they
+    // were released, and require explicit helm `--set` flags (when using the
+    // `--reuse-values`) to successfully generate the helm templates (the
+    // 'default' template function cannot work with a nil value).
     let version_two_dot_o = VersionReq::parse(TWO_DOT_O).context(SemverParse {
         version_string: TWO_DOT_O.to_string(),
     })?;
