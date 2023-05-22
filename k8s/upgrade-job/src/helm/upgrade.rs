@@ -105,15 +105,6 @@ impl HelmUpgradeBuilder {
         let chart_yaml_path = chart_dir.join("Chart.yaml");
         let to_version: Version = upgrade::path::version_from_chart_yaml_file(chart_yaml_path)?;
 
-        // Basic validation.
-        // Rollbacks not supported.
-        ensure!(
-            to_version.ge(&from_version),
-            RollbackForbidden {
-                from_version: from_version.to_string(),
-                to_version: to_version.to_string()
-            }
-        );
         // Check if already upgraded.
         let already_upgraded = to_version.eq(&from_version);
 
@@ -148,6 +139,15 @@ impl HelmUpgradeBuilder {
             // Skip upgrade-path validation and allow all upgrades for the Core helm chart, if the
             // flag is set.
             if !self.skip_upgrade_path_validation {
+                // Rollbacks not supported.
+                ensure!(
+                    to_version.ge(&from_version),
+                    RollbackForbidden {
+                        from_version: from_version.to_string(),
+                        to_version: to_version.to_string()
+                    }
+                );
+
                 let upgrade_path_is_valid = upgrade::path::is_valid_for_core_chart(&from_version)?;
                 ensure!(upgrade_path_is_valid, InvalidUpgradePath);
             }
