@@ -27,5 +27,5 @@ pub(crate) const TO_UMBRELLA_SEMVER: &str = "3.7.0";
 pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str =
     "https://openebs.io/docs/user-guides/upgrade#mayastor-upgrade";
 
-/// This defines the range of helm chart versions for the 2.1 release of the Core helm chart.
-pub(crate) const TWO_DOT_ONE: &str = ">=2.1.0-rc.0, <=2.1.0";
+/// This defines the range of helm chart versions for the 2.0 release of the Core helm chart.
+pub(crate) const TWO_DOT_O: &str = ">=2.0.0-rc.0, <=2.0.1";
