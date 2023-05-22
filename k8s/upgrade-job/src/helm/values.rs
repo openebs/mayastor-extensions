@@ -1,6 +1,6 @@
 use crate::{
     common::{
-        constants::TWO_DOT_ONE,
+        constants::TWO_DOT_O,
         error::{
             OpeningFile, Result, SemverParse, U8VectorToString, YamlParseFromFile,
             YamlParseFromSlice,
@@ -41,10 +41,10 @@ pub(crate) fn generate_values_args(
     // use from installed-release's values, if present, else use defaults from to-chart.
     let mut upgrade_args: Vec<String> = Vec::with_capacity(18);
 
-    let version_two_dot_one = VersionReq::parse(TWO_DOT_ONE).context(SemverParse {
-        version_string: TWO_DOT_ONE.to_string(),
+    let version_two_dot_o = VersionReq::parse(TWO_DOT_O).context(SemverParse {
+        version_string: TWO_DOT_O.to_string(),
     })?;
-    if version_two_dot_one.matches(from_version) {
+    if version_two_dot_o.matches(from_version) {
         let io_engine_key = "io_engine";
         let log_level_key = "logLevel";
         let log_level_to_replace = "info,io_engine=info";
