@@ -34,7 +34,7 @@ pub enum Operations {
     Dump(DumpArgs),
     /// `Upgrade` the deployment.
     Upgrade(UpgradeArgs),
-    /// `Delete` the resources.
+    /// `Delete` the upgrade resources.
     #[clap(subcommand)]
     Delete(DeleteResources),
 }
