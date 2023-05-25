@@ -28,11 +28,10 @@ Commands:
   scale      'Scale' resources
   cordon     'Cordon' resources
   uncordon   'Uncordon' resources
-  dump       `Dump` resources
-  install    `Install` resources
-  uninstall  `Uninstall` resources
-  upgrade    `Upgrade` resources
-  help       Print this message or the help of the given subcommand(s)
+  dump       'Dump' resources
+  upgrade    'Upgrade' the deployment
+  delete     'Delete' the upgrade resources
+  help        Print this message or the help of the given subcommand(s)
 
 Options:
   -r, --rest <REST>
@@ -46,7 +45,7 @@ Options:
   -t, --timeout <TIMEOUT>
           Timeout for the REST operations [default: 10s]
   -n, --namespace <NAMESPACE>
-          Kubernetes namespace of mayastor service, defaults to mayastor [default: mayastor]
+          Kubernetes namespace of mayastor service
   -h, --help
           Print help
   -V, --version
@@ -278,7 +277,7 @@ Options:
   -d, --output-directory-path <OUTPUT_DIRECTORY_PATH>
           Output directory path to store archive file [default: ./]
   -n, --namespace <NAMESPACE>
-          Kubernetes namespace of mayastor service, defaults to mayastor [default: mayastor]
+          Kubernetes namespace of mayastor service[default: mayastor]
   -o, --output <OUTPUT>
           The Output, viz yaml, json [default: none]
   -j, --jaeger <JAEGER>
@@ -347,25 +346,14 @@ Supportability - collects state & log information of services and dumps it to a 
       kubectl mayastor dump volume volume-1 -d /mayastor-dump -r http://127.0.0.1:30011 -l http://127.0.0.1:3100 -e http://127.0.0.1:2379 -n mayastor
       ```
 
+</details>
 <details>
 <summary> Upgrade operations </summary>
 
 **Examples**:
 
-1. To install upgrade resources need for executing upgrade operation
-   ```sh
-   ## Command
-   kubectl mayastor install upgrade-operator -n <mayastor_namespace>
-   ```
-
-2. To uninstall upgrade resources need for executing upgrade operation
-   ```sh
-   ## Command
-   kubectl mayastor uninstall upgrade-operator -n <mayastor_namespace>
-   ```
-
-1. To upgrade the installation
-```sh
+1. Upgrade deployment
+```
   ## Command
   kubectl mayastor upgrade
   `Upgrade` the deployment
@@ -373,31 +361,76 @@ Supportability - collects state & log information of services and dumps it to a 
   Usage: kubectl-mayastor upgrade [OPTIONS]
 
   Options:
-    -d, --dry-run
+  -d, --dry-run
         Display all the validations output but will not execute upgrade
-    -r, --rest <REST>
+  -r, --rest <REST>
         The rest endpoint to connect to
-    -k, --kube-config-path <KUBE_CONFIG_PATH>
-        Path to kubeconfig file
-    -s, --skip-data-plane-restart
+  -D, --skip-data-plane-restart
         If set then upgrade will skip the io-engine pods restart
-    --skip-single-replica-volume-validation
+  -k, --kube-config-path <KUBE_CONFIG_PATH>
+        Path to kubeconfig file
+  -S, --skip-single-replica-volume-validation
         If set then it will continue with upgrade without validating singla replica volume
-    --skip-replica-rebuild
+  -R, --skip-replica-rebuild
         If set then upgrade will skip the repilca rebuild in progress validation
-    -o, --output <OUTPUT>
+  -C, --skip-cordoned-node-validation
+        If set then upgrade will skip the cordoned node validation
+  -o, --output <OUTPUT>
         The Output, viz yaml, json [default: none]
-    -j, --jaeger <JAEGER>
+  -j, --jaeger <JAEGER>
         Trace rest requests to the Jaeger endpoint agent
-    -n, --namespace <NAMESPACE>
-        Kubernetes namespace of mayastor service, defaults to mayastor [default: mayastor]
-    -h, --help
+  -n, --namespace <NAMESPACE>
+        Kubernetes namespace of mayastor service [default: mayastor]
+  -h, --help
         Print help
 ```
 
-4. To get the upgrade status
-   ```sh
+2. Get the upgrade status
+```
    ## Command
    kubectl mayastor get upgrade-status
+   `Get` the upgrade status
+
+   Usage: kubectl-mayastor get upgrade-status [OPTIONS]
+
+   Options:
+   -r, --rest <REST>
+        The rest endpoint to connect to
+   -k, --kube-config-path <KUBE_CONFIG_PATH>
+        Path to kubeconfig file
+   -o, --output <OUTPUT>
+        The Output, viz yaml, json [default: none]
+   -j, --jaeger <JAEGER>
+        Trace rest requests to the Jaeger endpoint agent
+   -n, --namespace <NAMESPACE>
+        Kubernetes namespace of mayastor service [default: mayastor]
+   -h, --help
+        Print help
    ```
+
+3. Delete upgrade resources
+```
+   ## Command
+   kubectl mayastor delete upgrade
+  `Delete` the upgrade resources
+
+  Usage: kubectl-mayastor delete upgrade [OPTIONS]
+
+  Options:
+  -f, --force
+        If true, immediately remove upgrade resources bypass graceful deletion
+  -r, --rest <REST>
+        The rest endpoint to connect to
+  -k, --kube-config-path <KUBE_CONFIG_PATH>
+        Path to kubeconfig file
+  -o, --output <OUTPUT>
+        The Output, viz yaml, json [default: none]
+  -j, --jaeger <JAEGER>
+        Trace rest requests to the Jaeger endpoint agent
+  -n, --namespace <NAMESPACE>
+        Kubernetes namespace of mayastor service [default: mayastor]
+  -h, --help
+          Print help    
+
+```
 </details>

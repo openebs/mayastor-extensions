@@ -44,7 +44,7 @@ pub struct SupportArgs {
     #[clap(global = true, long, short = 'd', default_value = "./")]
     output_directory_path: String,
 
-    /// Kubernetes namespace of mayastor service, defaults to mayastor
+    /// Kubernetes namespace of mayastor service
     #[clap(global = true, long, short = 'n', default_value = "mayastor")]
     namespace: String,
 }
