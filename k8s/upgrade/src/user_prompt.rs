@@ -43,6 +43,10 @@ pub const UPGRADE_JOB_STARTED: &str =
 pub const UPGRADE_PATH_NOT_VALID: &str =
     "\nThe upgrade path is not valid. The source version is in the list of unsupported versions:";
 
-/// Upgrade to unsuppoted version not valid.
+/// Upgrade to unsupported version not valid.
 pub const UPGRADE_TO_UNSUPPORTED_VERSION: &str =
-    "\nUpgrade failed as destination version is unsupported. Please try with `--skip-upgrade-path-validation-for-unsupported-version`";
+    "\nUpgrade failed as destination version is unsupported. Please try with `--skip-upgrade-path-validation-for-unsupported-version.`";
+
+/// Delete an incomplete job.
+pub const DELETE_INCOMPLETE_JOB: &str =
+    "\n Cant delete an incomplete upgrade job. Please try with `--force` flag to forcefully remove upgrade resources and bypass graceful deletion.";
