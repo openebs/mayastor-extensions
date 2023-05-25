@@ -107,9 +107,9 @@ pub enum Error {
     #[snafu(display("Upgrade Job: {} status not present.", name))]
     UpgradeJobStatusNotPresent { name: String },
 
-    /// Error for when the job.status is a None.
-    #[snafu(display("Upgrade Job: {} not completed.", name))]
-    UpgradeJobNotCompleted { name: String },
+    /// Error for when the upgrade job is not present.
+    #[snafu(display("Upgrade Job: {} in namespace {} does not exist.", name, namespace))]
+    UpgradeJobNotPresent { name: String, namespace: String },
 
     /// Error for when a Kubernetes API request for GET-ing a list of Pods filtered by label(s)
     /// fails.
@@ -260,7 +260,7 @@ impl From<Error> for i32 {
             Error::NodeSpecNotPresent { .. } => 423,
             Error::PodNameNotPresent { .. } => 424,
             Error::UpgradeJobStatusNotPresent { .. } => 425,
-            Error::UpgradeJobNotCompleted { .. } => 426,
+            Error::UpgradeJobNotPresent { .. } => 426,
             Error::ListPodsWithLabel { .. } => 427,
             Error::ListDeploymantsWithLabel { .. } => 428,
             Error::ListEventsWithFieldSelector { .. } => 429,

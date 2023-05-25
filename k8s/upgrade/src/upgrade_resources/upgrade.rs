@@ -11,7 +11,8 @@ use crate::{
     upgrade_resources::objects,
     user_prompt::{
         upgrade_dry_run_summary, CONTROL_PLANE_PODS_LIST, DATA_PLANE_PODS_LIST,
-        DATA_PLANE_PODS_LIST_SKIP_RESTART, UPGRADE_DRY_RUN_SUMMARY, UPGRADE_JOB_STARTED,
+        DATA_PLANE_PODS_LIST_SKIP_RESTART, DELETE_INCOMPLETE_JOB, UPGRADE_DRY_RUN_SUMMARY,
+        UPGRADE_JOB_STARTED,
     },
 };
 use k8s_openapi::api::{
@@ -38,16 +39,21 @@ pub enum DeleteResources {
 
 /// Delete Upgrade resource.
 #[derive(clap::Args, Debug)]
-pub struct DeleteUpgradeArgs {}
+pub struct DeleteUpgradeArgs {
+    /// If true, immediately remove upgrade resources bypass graceful deletion.
+    #[clap(global = false, long, short, default_value_t = false)]
+    pub force: bool,
+}
 
 impl DeleteUpgradeArgs {
     /// Delete the upgrade resources
     pub async fn delete(&self, ns: &str) {
-        // Delete upgrade resources once job completes
-
         match is_upgrade_job_completed(ns).await {
             Ok(job_completed) => {
-                if job_completed {
+                if !job_completed && !self.force {
+                    console_logger::error("", DELETE_INCOMPLETE_JOB);
+                }
+                if job_completed || self.force {
                     _ = UpgradeResources::delete_upgrade_resources(ns)
                         .await
                         .map_err(|error| {
@@ -56,9 +62,8 @@ impl DeleteUpgradeArgs {
                 }
             }
             Err(error) => {
-                eprintln!(
-                    "error occured while fetching the completion status of upgrade job {error}"
-                );
+                eprintln!("error : {error}");
+                std::process::exit(error.into());
             }
         }
     }
@@ -663,33 +668,26 @@ pub async fn is_upgrade_job_completed(ns: &str) -> error::Result<bool> {
         })?;
     match option_job {
         Some(job) => {
-            if matches!(
-                job.status
-                    .as_ref()
-                    .ok_or(
-                        error::UpgradeJobStatusNotPresent {
-                            name: job_name.clone()
-                        }
-                        .build()
-                    )?
-                    .succeeded
-                    .as_ref()
-                    .ok_or(
-                        error::UpgradeJobNotCompleted {
-                            name: job_name.clone()
-                        }
-                        .build()
-                    )?,
-                1
-            ) {
-                return Ok(true);
-            }
+            let status = job.status.as_ref().ok_or(
+                error::UpgradeJobStatusNotPresent {
+                    name: job_name.clone(),
+                }
+                .build(),
+            )?;
+
+            let is_job_completed = match status.succeeded {
+                None => false,
+                Some(count) => count == 1,
+            };
+            Ok(is_job_completed)
         }
-        None => {
-            eprintln!("Upgrade job {job_name} in namespace {ns} does not exist");
+
+        None => error::UpgradeJobNotPresent {
+            name: job_name,
+            namespace: ns,
         }
+        .fail(),
     }
-    Ok(false)
 }
 
 struct ImageProperties {
