@@ -588,10 +588,13 @@ loki-stack:
               - __meta_kubernetes_pod_container_name
               target_label: __path__
 
-# Cloud Native Messaging System
-nats:
-  # -- Enable nats for transmitting events to subscribers
+# Eventing component which enables or disables eventing-related components.
+eventing:
   enabled: true
+
+# Configuration for the nats message-bus. This is an eventing component, and is enabled when
+# 'eventing.enabled' is set to 'true'.
+nats:
   nats:
     image:
       pullPolicy: IfNotPresent
