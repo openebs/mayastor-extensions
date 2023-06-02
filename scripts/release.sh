@@ -59,6 +59,7 @@ SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
 DOCKER="docker"
 NIX_BUILD="nix-build"
 NIX_EVAL="nix eval$(nix_experimental)"
+NIX_SHELL="nix-shell"
 RM="rm"
 SCRIPTDIR=$(dirname "$0")
 TAG=`get_tag`
@@ -105,6 +106,7 @@ while [ "$#" -gt 0 ]; do
     -d|--dry-run)
       DOCKER="echo $DOCKER"
       NIX_BUILD="echo $NIX_BUILD"
+      NIX_SHELL="echo $NIX_SHELL"
       RM="echo $RM"
       shift
       ;;
@@ -204,10 +206,11 @@ if [ -n "$TAG" ] && [ "$TAG" != "$(get_tag)" ]; then
   # Set the TAG which basically allows building the binaries as if it were a git tag
   NIX_TAG_ARGS="--argstr tag $TAG"
   NIX_BUILD="$NIX_BUILD $NIX_TAG_ARGS"
+  alias_tag=
 fi
 
 TAG=${TAG:-$HASH}
-if [ -n "$OVERRIDE_COMMIT_HASH" ]; then
+if [ -n "$OVERRIDE_COMMIT_HASH" ] && [ -n "$alias_tag" ]; then
   # Set the TAG to the alias and remove the alias
   NIX_TAG_ARGS="--argstr img_tag $alias_tag"
   NIX_BUILD="$NIX_BUILD $NIX_TAG_ARGS"
@@ -240,7 +243,7 @@ for name in $IMAGES; do
         # Helm chart directory path -- /scripts --> /chart
         CHART_DIR="${SCRIPT_DIR}/../chart"
 
-        nix-shell --run "helm dependency update ${CHART_DIR}"
+        $NIX_SHELL --run "helm dependency update ${CHART_DIR}"
 
         # Set flag to true
         _helm_dependencies_updated=true
