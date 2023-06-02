@@ -38,7 +38,7 @@ let
     };
     upgrade = rec {
       recurseForDerivations = true;
-      upgrade_builder = { buildType, builder, cargoBuildFlags ? [ "-p upgrade-job" ] }: builder.build { inherit buildType cargoBuildFlags; };
+      upgrade_builder = { buildType, builder, cargoBuildFlags ? [ "-p upgrade" ] }: builder.build { inherit buildType cargoBuildFlags; };
       upgrade_installer = { pname, src }: installer { inherit pname src; };
       job = upgrade_installer {
         src =

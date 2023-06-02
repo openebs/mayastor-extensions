@@ -1,5 +1,5 @@
-use crate::{
-    constant::{
+use crate::plugin::{
+    constants::{
         get_image_version_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
         AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_IMAGE_REGISTRY,
         DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, HELM_RELEASE_VERSION_LABEL,
@@ -7,8 +7,7 @@ use crate::{
         UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX, UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO,
         UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
-    error,
-    upgrade_resources::objects,
+    error, objects,
     user_prompt::{
         upgrade_dry_run_summary, CONTROL_PLANE_PODS_LIST, DATA_PLANE_PODS_LIST,
         DATA_PLANE_PODS_LIST_SKIP_RESTART, DELETE_INCOMPLETE_JOB, UPGRADE_DRY_RUN_SUMMARY,
@@ -604,7 +603,7 @@ impl UpgradeResources {
     }
 }
 
-pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> error::Result<Vec<String>> {
+pub(crate) async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> error::Result<Vec<String>> {
     let client = Client::try_default().await.context(error::K8sClient)?;
     let pvclaim = Api::<PersistentVolumeClaim>::all(client);
     let lp = ListParams::default();
@@ -623,7 +622,7 @@ pub async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> error::Result<Vec<
 }
 
 /// Return results as list of deployments.
-pub async fn get_deployment_for_rest(ns: &str) -> error::Result<Deployment> {
+pub(crate) async fn get_deployment_for_rest(ns: &str) -> error::Result<Deployment> {
     let client = Client::try_default().await.context(error::K8sClient)?;
     let deployment = Api::<Deployment>::namespaced(client, ns);
     let lp = ListParams::default().labels(API_REST_LABEL_SELECTOR);
@@ -644,7 +643,7 @@ pub async fn get_deployment_for_rest(ns: &str) -> error::Result<Deployment> {
 }
 
 /// Return the release name.
-pub async fn get_release_name(ns: &str) -> error::Result<String> {
+pub(crate) async fn get_release_name(ns: &str) -> error::Result<String> {
     let deployment = get_deployment_for_rest(ns).await?;
     match &deployment.metadata.labels {
         Some(label) => match label.get(HELM_RELEASE_NAME_LABEL) {
@@ -656,7 +655,7 @@ pub async fn get_release_name(ns: &str) -> error::Result<String> {
 }
 
 /// Return true if upgrade job is completed
-pub async fn is_upgrade_job_completed(ns: &str) -> error::Result<bool> {
+pub(crate) async fn is_upgrade_job_completed(ns: &str) -> error::Result<bool> {
     let uo = UpgradeResources::new(ns).await?;
     let job_name = upgrade_name_concat(&uo.release_name, UPGRADE_JOB_NAME_SUFFIX);
     let option_job = uo
@@ -697,7 +696,7 @@ struct ImageProperties {
 }
 
 impl TryFrom<Deployment> for ImageProperties {
-    type Error = crate::error::Error;
+    type Error = crate::plugin::error::Error;
 
     fn try_from(d: Deployment) -> error::Result<Self> {
         let pod_spec = d
@@ -751,7 +750,7 @@ impl ImageProperties {
 }
 
 /// Return the installed version.
-pub async fn get_source_version(ns: &str) -> error::Result<String> {
+pub(crate) async fn get_source_version(ns: &str) -> error::Result<String> {
     let deployment = get_deployment_for_rest(ns).await?;
     let value = &deployment
         .metadata

@@ -1,3 +1,4 @@
+use crate::resources::GetResourcesK8s;
 use anyhow::Result;
 use clap::Parser;
 use openapi::tower::client::Url;
@@ -10,11 +11,11 @@ use plugin::{
     },
     rest_wrapper::RestClient,
 };
-use std::{env, path::PathBuf};
-mod resources;
-use crate::resources::GetResourcesK8s;
 use resources::Operations;
-use upgrade::{preflight_validations, upgrade_resources::upgrade::DeleteResources};
+use std::{env, path::PathBuf};
+use upgrade::plugin::{preflight_validations, upgrade::DeleteResources};
+
+mod resources;
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]

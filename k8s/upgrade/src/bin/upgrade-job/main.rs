@@ -9,7 +9,7 @@ use clap::Parser;
 
 use opts::CliArgs;
 use tracing::{error, info};
-use upgrade::upgrade;
+use upgrade_components::upgrade;
 use utils::{
     raw_version_str,
     tracing_telemetry::{default_tracing_tags, flush_traces, init_tracing},
@@ -19,7 +19,7 @@ mod common;
 mod events;
 mod helm;
 mod opts;
-mod upgrade;
+mod upgrade_components;
 
 #[tokio::main]
 async fn main() -> Result<()> {
