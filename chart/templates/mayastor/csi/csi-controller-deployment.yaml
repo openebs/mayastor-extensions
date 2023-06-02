@@ -47,6 +47,8 @@ spec:
             - "--strict-topology=false"
             - "--default-fstype=ext4"
             - "--extra-create-metadata" # This is needed for volume group feature to work
+            - "--timeout=36s"
+            - "--worker-threads=10" # 10 for create and 10 for delete
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
