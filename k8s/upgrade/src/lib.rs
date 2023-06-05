@@ -1,12 +1,13 @@
-/// Module for upgrade related constants.
-pub mod constant;
-/// Module for upgrade client errors.
-pub mod error;
+pub mod plugin;
+
+/// Module for mayastor upgrade.
+pub use plugin::upgrade;
+
 /// Validations before applying upgrade.
-pub mod preflight_validations;
-/// Library for upgrade module.
-pub mod upgrade_lib;
-/// Module for resources of upgrade.
-pub mod upgrade_resources;
-/// Module for user messages.
-pub mod user_prompt;
+pub use plugin::preflight_validations;
+
+/// Module for plugin constant.
+pub use plugin::constants;
+
+/// Module for upgrade client errors.
+pub use plugin::error;

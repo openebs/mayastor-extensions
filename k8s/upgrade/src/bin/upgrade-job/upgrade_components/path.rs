@@ -19,7 +19,7 @@ use utils::API_REST_LABEL;
 /// Validates the upgrade path from 'from' Version to 'to' Version for the Core helm chart.
 pub(crate) fn is_valid_for_core_chart(from: &Version) -> Result<bool> {
     let unsupported_version_buf =
-        &include_bytes!("../../../upgrade/config/unsupported_versions.yaml")[..];
+        &include_bytes!("../../../../../upgrade/config/unsupported_versions.yaml")[..];
     let unsupported_versions = UnsupportedVersions::try_from(unsupported_version_buf)
         .context(YamlParseBufferForUnsupportedVersion)?;
     Ok(!unsupported_versions.contains(from))

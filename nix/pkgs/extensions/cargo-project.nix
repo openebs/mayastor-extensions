@@ -59,7 +59,7 @@ let
     "rpc"
     "console-logger"
     "call-home"
-    "upgrade-job"
+    "upgrade"
     "dependencies/control-plane/openapi/Cargo.toml"
     "dependencies/control-plane/openapi/build.rs"
     "dependencies/control-plane/control-plane/plugin"
@@ -117,7 +117,7 @@ in
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if allInOne then
-      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p exporter" "-p call-home" "-p upgrade-job" ]; }
+      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p exporter" "-p call-home" "-p upgrade" ]; }
     else
       builder { inherit buildType cargoBuildFlags; };
 }

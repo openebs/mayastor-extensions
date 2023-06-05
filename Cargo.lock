@@ -3641,27 +3641,9 @@ dependencies = [
  "hyper",
  "k8s-openapi",
  "kube",
+ "kube-client",
  "kube-proxy",
  "maplit",
- "openapi",
- "semver",
- "serde",
- "serde_json",
- "serde_yaml 0.9.19",
- "snafu",
- "tower",
- "tracing",
- "utils",
-]
-
-[[package]]
-name = "upgrade-job"
-version = "0.1.0"
-dependencies = [
- "clap",
- "k8s-openapi",
- "kube",
- "kube-client",
  "openapi",
  "regex",
  "semver",
@@ -3670,6 +3652,7 @@ dependencies = [
  "serde_yaml 0.9.19",
  "snafu",
  "tokio",
+ "tower",
  "tracing",
  "url",
  "utils",

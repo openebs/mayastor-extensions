@@ -1,8 +1,7 @@
 use clap::Parser;
 use plugin::resources::{CordonResources, DrainResources, GetResources, ScaleResources};
 use supportability::DumpArgs;
-
-use upgrade::upgrade_resources::upgrade::{DeleteResources, GetUpgradeArgs, UpgradeArgs};
+use upgrade::plugin::upgrade::{DeleteResources, GetUpgradeArgs, UpgradeArgs};
 
 #[derive(clap::Subcommand, Debug)]
 pub enum GetResourcesK8s {
