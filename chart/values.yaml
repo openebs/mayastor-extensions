@@ -588,6 +588,10 @@ loki-stack:
               - __meta_kubernetes_pod_container_name
               target_label: __path__
 
+# Eventing which enables or disables eventing-related components.
+eventing:
+  enabled: true
+
 # Configuration for the nats message-bus. This is an eventing component, and is enabled when
 # 'eventing.enabled' is set to 'true'.
 nats:

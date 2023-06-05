@@ -75,6 +75,18 @@ let
       };
     };
 
+  build-obs-callhome-stats-image = { buildType }:
+    build-extensions-image rec{
+      inherit buildType;
+      package = extensions.${buildType}.obs.stats;
+      pname = package.pname;
+      config = {
+        ExposedPorts = {
+          "9090/tcp" = { };
+        };
+      };
+    };
+
 in
 let
   build-exporter-images = { buildType }: {
@@ -93,6 +105,11 @@ let
       inherit buildType;
     };
   };
+  build-stats-images = { buildType }: {
+    aggregator = build-obs-callhome-stats-image {
+      inherit buildType;
+    };
+  };
 in
 let
   build-images = { buildType }: {
@@ -103,6 +120,9 @@ let
       recurseForDerivations = true;
     };
     obs = build-obs-images { inherit buildType; } // {
+      recurseForDerivations = true;
+    };
+    stats = build-stats-images { inherit buildType; } // {
       recurseForDerivations = true;
     };
   };

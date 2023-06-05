@@ -39,5 +39,5 @@ dependencies:
   - name: nats
     version: 0.19.14
     repository: https://nats-io.github.io/k8s/helm/charts/
-    condition: obs.callhome.enabled
+    condition: eventing.enabled
 

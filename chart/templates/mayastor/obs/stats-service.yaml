@@ -4,7 +4,7 @@ kind: Service
 metadata:
   name: {{ .Release.Name }}-obs-callhome-stats
   labels:
-    app: obs-callhome-stats
+    app: obs-callhome
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
     {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
@@ -24,6 +24,6 @@ spec:
       nodePort: {{ .Values.obs.stats.service.nodePorts.http }}
       {{- end }}
   selector:
-    app: obs-callhome-stats
+    app: obs-callhome
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
 {{- end }}
