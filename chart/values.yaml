@@ -615,6 +615,21 @@ nats:
   natsbox:
     enabled: false
 
+stats:
+  # -- Enable stats only when eventing is true
+  # -- Log level for stats
+  logLevel: "info"
+  resources:
+    limits:
+      # -- Cpu limits for stats
+      cpu: "100m"
+      # -- Memory limits for stats
+      memory: "32Mi"
+    requests:
+      # -- Cpu requests for stats
+      cpu: "50m"
+      # -- Memory requests for stats
+      memory: "16Mi"
 
 obs:
   callhome:

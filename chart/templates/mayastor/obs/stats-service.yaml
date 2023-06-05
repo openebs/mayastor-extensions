@@ -1,0 +1,19 @@
+{{- if .Values.stats.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-stats-aggregator
+  labels:
+    app: stats-aggreagter
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+spec:
+  ports:
+    - name: stats
+      port: 9505
+      targetPort: 9505
+      protocol: TCP
+  selector:
+    app: stats-aggregator
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+{{- end }}

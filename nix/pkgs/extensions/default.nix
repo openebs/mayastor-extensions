@@ -62,6 +62,19 @@ let
         pname = "obs-callhome";
       };
     };
+    stats = rec {
+      recurseForDerivations = true;
+      stats_builder = { buildType, builder, cargoBuildFlags ? [ "-p stats" ] }: builder.build { inherit buildType cargoBuildFlags; };
+      stats_installer = { pname, src }: installer { inherit pname src; };
+      aggregator = stats_installer {
+        src =
+          if allInOne then
+            stats_builder { inherit buildType builder; cargoBuildFlags = [ "-p stats" ]; }
+          else
+            stats_builder { inherit buildType builder; cargoBuildFlags = [ "--bin stats-aggregator" ]; };
+        pname = "stats-aggregator";
+      };
+    };
   };
 in
 {

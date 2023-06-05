@@ -1,0 +1,49 @@
+{{- if .Values.eventing.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-stats-aggregator
+  labels:
+    app: stats-aggregator
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stats-aggregator
+      {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: stats-aggregator
+        {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+        {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+    spec:
+      serviceAccount: {{ .Release.Name }}-service-account
+      imagePullSecrets:
+        - name: dockersecret
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: stats-aggregator
+          image: "{{ .Values.image.registry }}/sinhaashish/{{ .Chart.Name }}-stats-aggregator:stats"
+          command:
+            - stats-aggregator
+          ports:
+            - containerPort: 9090
+              protocol: TCP
+              name: stats
+          env:
+            - name: RUST_LOG
+              value: {{ .Values.stats.logLevel }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            limits:
+              cpu: {{ .Values.stats.resources.limits.cpu | quote }}
+              memory: {{ .Values.stats.resources.limits.memory | quote }}
+            requests:
+              cpu: {{ .Values.stats.resources.requests.cpu | quote }}
+              memory: {{ .Values.stats.resources.requests.memory | quote }}
+{{- end }}
