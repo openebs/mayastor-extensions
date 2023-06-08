@@ -58,7 +58,7 @@ pub(crate) async fn already_cordoned_nodes_validation(client: &RestClient) -> er
     let mut cordoned_nodes_list = Vec::new();
     let nodes = client
         .nodes_api()
-        .get_nodes()
+        .get_nodes(None)
         .await
         .context(error::ListStorageNodes)?;
     let nodelist = nodes.into_body();

@@ -235,7 +235,7 @@ pub(crate) async fn validate_rest_endpoint(rest_endpoint: String) -> Result<()> 
 
     rest_client
         .nodes_api()
-        .get_nodes()
+        .get_nodes(None)
         .await
         .context(ListStorageNodes)?;
 
