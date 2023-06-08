@@ -138,7 +138,7 @@ async fn generate_report(
         }
     };
 
-    let nodes = http_client.nodes_api().get_nodes().await;
+    let nodes = http_client.nodes_api().get_nodes(None).await;
     match nodes {
         Ok(nodes) => report.storage_node_count = nodes.into_body().len() as u8,
         Err(err) => {

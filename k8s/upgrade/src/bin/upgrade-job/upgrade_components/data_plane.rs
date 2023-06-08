@@ -83,7 +83,7 @@ pub(crate) async fn upgrade_data_plane(
 
     let storage_nodes_resp = rest_client
         .nodes_api()
-        .get_nodes()
+        .get_nodes(None)
         .await
         .context(ListStorageNodes)?;
     let storage_nodes = storage_nodes_resp.body();

@@ -160,7 +160,17 @@ VOLUME-ID                              ID                                    NOD
  └─                                    39431c11-0eea-48e7-970f-a2359ebbb9d1  kworker3  pool-1-kworker3  Online  60MiB     60MiB      Online        <none>               <none>
 ```
 
-10. Get BlockDevices by NodeID
+10. Volume Snapshots by volumeID
+```
+❯ kubectl mayastor get volume-snapshots --volume dc4e66fd-3b33-4439-b504-d49aba53da26
+ ID                                    TIMESTAMP                        SIZE  SOURCE-VOL
+ 11823425-41fa-434a-9efd-a356b70b5d7c  2023-06-06T05:49:13.987Z         0     dc4e66fd-3b33-4439-b504-d49aba53da26
+ 22823425-41fa-434a-9efd-a356b70b5d7c  2023-06-06T05:50:14.980Z         0     dc4e66fd-3b33-4439-b504-d49aba53da26
+
+```
+**NOTE: The above command lists volume snapshots for all volumes if `--volume` or `--snapshot` or a combination of both flags is not used.**
+
+11. Get BlockDevices by NodeID
 ```
 ❯ kubectl mayastor get block-devices kworker1 --all
  DEVNAME          DEVTYPE    SIZE       AVAILABLE  MODEL                       DEVPATH                                                         FSTYPE  FSUUID  MOUNTPOINT  PARTTYPE                              MAJOR            MINOR                                     DEVLINKS
