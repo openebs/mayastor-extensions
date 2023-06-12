@@ -69,10 +69,10 @@ let
       aggregator = stats_installer {
         src =
           if allInOne then
-            stats_builder { inherit buildType builder; cargoBuildFlags = [ "-p stats" ]; }
+            stats_builder { inherit buildType builder; }
           else
-            stats_builder { inherit buildType builder; cargoBuildFlags = [ "--bin stats-aggregator" ]; };
-        pname = "stats-aggregator";
+            stats_builder { inherit buildType builder; cargoBuildFlags = [ "--bin stats" ]; };
+        pname = "stats";
       };
     };
   };

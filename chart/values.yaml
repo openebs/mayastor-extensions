@@ -589,8 +589,24 @@ loki-stack:
               target_label: __path__
 
 # Eventing component which enables or disables eventing-related components.
+# Eventing component which enables or disables eventing-related components.
 eventing:
   enabled: true
+  stats:
+    # -- Enable stats only when eventing is true
+    # -- Log level for stats
+    logLevel: "info"
+    resources:
+      limits:
+        # -- Cpu limits for stats
+        cpu: "100m"
+        # -- Memory limits for stats
+        memory: "32Mi"
+      requests:
+        # -- Cpu requests for stats
+        cpu: "50m"
+        # -- Memory requests for stats
+        memory: "16Mi"
 
 # Configuration for the nats message-bus. This is an eventing component, and is enabled when
 # 'eventing.enabled' is set to 'true'.
@@ -614,22 +630,6 @@ nats:
   # The nats box can be installed for debugging, by default its enabled.
   natsbox:
     enabled: false
-
-stats:
-  # -- Enable stats only when eventing is true
-  # -- Log level for stats
-  logLevel: "info"
-  resources:
-    limits:
-      # -- Cpu limits for stats
-      cpu: "100m"
-      # -- Memory limits for stats
-      memory: "32Mi"
-    requests:
-      # -- Cpu requests for stats
-      cpu: "50m"
-      # -- Memory requests for stats
-      memory: "16Mi"
 
 obs:
   callhome:

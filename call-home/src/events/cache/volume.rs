@@ -1,4 +1,4 @@
-use crate::common::error;
+use crate::common::errors;
 use mbus_api::message::Action;
 use serde::{Deserialize, Serialize};
 
@@ -10,13 +10,16 @@ pub struct Volume {
 }
 
 impl Volume {
-    pub fn inc_counter(&mut self, action: Action) -> error::Result<()> {
+    pub(crate) fn inc_counter(&mut self, action: Action) -> errors::Result<()> {
         match action {
             Action::CreateEvent => {
                 self.volume_created += 1;
             }
             Action::DeleteEvent => {
                 self.volume_deleted += 1;
+            }
+            Action::Unknown => {
+                return Ok(());
             }
         }
         Ok(())

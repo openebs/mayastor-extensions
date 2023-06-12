@@ -1,0 +1,11 @@
+{{- if .Values.eventing.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-event-store
+  labels:
+    app: event-store
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+data:
+{{- end }}

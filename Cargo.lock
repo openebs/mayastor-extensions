@@ -561,6 +561,7 @@ name = "call-home"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
  "chrono",
  "clap",
  "futures",
@@ -568,6 +569,8 @@ dependencies = [
  "jsonpath_lib",
  "k8s-openapi",
  "kube",
+ "mbus-api",
+ "once_cell",
  "openapi",
  "rand",
  "reqwest",
@@ -3248,26 +3251,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c01a0c15da1b0b0e1494112e7af814a678fec9bd157881b49beac661e9b6f32"
 dependencies = [
  "der",
-]
-
-[[package]]
-name = "stats"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytes",
- "clap",
- "k8s-openapi",
- "kube",
- "mbus-api",
- "once_cell",
- "serde",
- "serde_json",
- "snafu",
- "time 0.3.20",
- "tokio",
- "tracing",
- "utils",
 ]
 
 [[package]]
