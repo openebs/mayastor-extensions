@@ -11,7 +11,7 @@ use crate::{
         kube_client::KubeClientSet,
         rest_client::RestClientSet,
     },
-    upgrade_components::utils::{all_pods_are_ready, data_plane_is_upgraded, is_rebuilding},
+    upgrade::utils::{all_pods_are_ready, data_plane_is_upgraded, is_rebuilding},
 };
 use k8s_openapi::api::core::v1::Pod;
 use kube::{

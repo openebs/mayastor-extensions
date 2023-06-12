@@ -7,9 +7,9 @@ use crate::{
 };
 use clap::Parser;
 
+use crate::upgrade::upgrade;
 use opts::CliArgs;
 use tracing::{error, info};
-use upgrade_components::upgrade;
 use utils::{
     raw_version_str,
     tracing_telemetry::{default_tracing_tags, flush_traces, init_tracing},
@@ -19,7 +19,7 @@ mod common;
 mod events;
 mod helm;
 mod opts;
-mod upgrade_components;
+mod upgrade;
 
 #[tokio::main]
 async fn main() -> Result<()> {
