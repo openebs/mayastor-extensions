@@ -560,6 +560,7 @@ dependencies = [
 name = "call-home"
 version = "0.1.0"
 dependencies = [
+ "actix-web",
  "anyhow",
  "bytes",
  "chrono",
@@ -570,8 +571,10 @@ dependencies = [
  "k8s-openapi",
  "kube",
  "mbus-api",
+ "mime",
  "once_cell",
  "openapi",
+ "prometheus",
  "rand",
  "reqwest",
  "reqwest-middleware",

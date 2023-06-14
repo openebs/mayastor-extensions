@@ -1,2 +1,2 @@
-/// Module for evnt store.
+/// Module for event store.
 pub mod events_store;

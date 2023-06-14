@@ -1,11 +1,10 @@
 use clap::Parser;
-mod common;
-mod events;
 use crate::{
     common::errors,
     events::{
         cache::events_cache::{Cache, EventSet},
         store::events_store::initialize,
+        collector::events_collector::StatsCollector,
     },
 };
 use k8s_openapi::api::core::v1::ConfigMap;
@@ -16,6 +15,13 @@ use utils::{
     raw_version_str,
     tracing_telemetry::{default_tracing_tags, flush_traces, init_tracing},
 };
+use actix_web::{http::header, middleware, web, HttpResponse, HttpServer, Responder};
+use prometheus::{Encoder, Registry};
+
+mod common;
+mod events;
+mod exporter;
+mod collector;
 
 pub(crate) async fn mbus_init(mbus_url: &str) -> errors::Result<NatsMessageBus> {
     let message_bus: NatsMessageBus = message_bus_init(mbus_url).await;
@@ -92,9 +98,22 @@ async fn main() -> errors::Result<()> {
                 error
             })
     });
-    for _n in 1..101 {
-        tokio::time::sleep(Duration::from_secs(30)).await;
-    }
+
+
+    let app = move || {
+        actix_web::App::new()
+            .wrap(middleware::Logger::default())
+            .configure(stats_route)
+    };
+
+
+    HttpServer::new(app)
+    .bind(exporter::exporter_config::ExporterConfig::get_config().metrics_endpoint())
+    .unwrap()
+    .run()
+    .await
+    .expect("Port should be free to expose the stats");
+
     Ok(())
 }
 
@@ -103,4 +122,39 @@ pub(crate) fn init_logging() {
     let tags = default_tracing_tags(raw_version_str(), env!("CARGO_PKG_VERSION"));
 
     init_tracing("stats", tags, None);
+}
+
+
+
+fn stats_route(cfg: &mut web::ServiceConfig) {
+    cfg.route("/stats", web::get().to(metrics_handlers));
+}
+
+async fn metrics_handlers() -> impl Responder {
+    // Initialize stats collector
+    let stats_collector = StatsCollector::default();
+    // Create a new registry for prometheus
+    let registry = Registry::default();
+    // Register stats collector in the registry
+    if let Err(error) = Registry::register(&registry, Box::new(stats_collector)) {
+        tracing::warn!(%error, "Stats collector already registered");
+    }
+    let mut buffer = Vec::new();
+
+    let encoder = prometheus::TextEncoder::new();
+    // Starts collecting metrics via calling gatherers
+    if let Err(error) = encoder.encode(&registry.gather(), &mut buffer) {
+        error!(%error, "Could not encode custom metrics");
+    };
+
+    let res_custom = match String::from_utf8(buffer.clone()) {
+        Ok(v) => v,
+        Err(error) => {
+            error!(%error, "Prometheus metrics could not be parsed from_utf8'd");
+            String::default()
+        }
+    };
+    HttpResponse::Ok()
+        .insert_header(header::ContentType(mime::TEXT_PLAIN))
+        .body(res_custom)
 }
