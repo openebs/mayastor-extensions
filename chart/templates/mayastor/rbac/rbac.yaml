@@ -35,7 +35,7 @@ rules:
   # must read cm info
 - apiGroups: [""]
   resources: ["configmaps"]
-  verbs: ["get", "update"]
+  verbs: ["create", "get", "update", "patch"]
   # must get deployments info
 - apiGroups: ["apps"]
   resources: ["deployments"]

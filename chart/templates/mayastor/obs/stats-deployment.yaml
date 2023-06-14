@@ -1,22 +1,22 @@
-{{- if .Values.eventing.enabled }}
+{{- if .Values.obs.callhome.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-stats
+  name: {{ .Release.Name }}-obs-callhome-stats
   labels:
-    app: stats
+    app: obs-callhome-stats
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
     {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: stats
+      app: obs-callhome-stats
       {{ include "label_prefix" . }}/release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: stats
+        app: obs-callhome-stats
         {{ include "label_prefix" . }}/release: {{ .Release.Name }}
         {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
     spec:
@@ -28,22 +28,20 @@ spec:
       {{- end }}
       containers:
         - name: stats
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-stats:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
-          command:
-            - stats
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-obs-callhome-stats:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
           ports:
             - containerPort: 9090
               protocol: TCP
               name: stats
           env:
             - name: RUST_LOG
-              value: {{ .Values.eventing.stats.logLevel }}
+              value: {{ .Values.obs.stats.logLevel }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           resources:
             limits:
-              cpu: {{ .Values.eventing.stats.resources.limits.cpu | quote }}
-              memory: {{ .Values.eventing.stats.resources.limits.memory | quote }}
+              cpu: {{ .Values.obs.stats.resources.limits.cpu | quote }}
+              memory: {{ .Values.obs.stats.resources.limits.memory | quote }}
             requests:
-              cpu: {{ .Values.eventing.stats.resources.requests.cpu | quote }}
-              memory: {{ .Values.eventing.stats.resources.requests.memory | quote }}
+              cpu: {{ .Values.obs.stats.resources.requests.cpu | quote }}
+              memory: {{ .Values.obs.stats.resources.requests.memory | quote }}
 {{- end }}

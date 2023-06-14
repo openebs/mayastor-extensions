@@ -588,25 +588,6 @@ loki-stack:
               - __meta_kubernetes_pod_container_name
               target_label: __path__
 
-# Eventing component which enables or disables eventing-related components.
-eventing:
-  enabled: false
-  stats:
-    # -- Enable stats only when eventing is true
-    # -- Log level for stats
-    logLevel: "info"
-    resources:
-      limits:
-        # -- Cpu limits for stats
-        cpu: "100m"
-        # -- Memory limits for stats
-        memory: "32Mi"
-      requests:
-        # -- Cpu requests for stats
-        cpu: "50m"
-        # -- Memory requests for stats
-        memory: "16Mi"
-
 # Configuration for the nats message-bus. This is an eventing component, and is enabled when
 # 'eventing.enabled' is set to 'true'.
 nats:
@@ -652,3 +633,27 @@ obs:
     tolerations: []
     # -- Set PriorityClass, overrides global
     priorityClassName: ""
+  # Eventing component enabled/disabled based on obs.callhome.enabled value
+  stats:
+    # -- Log level for stats
+    logLevel: "info"
+    resources:
+      limits:
+        # -- Cpu limits for stats
+        cpu: "100m"
+        # -- Memory limits for stats
+        memory: "32Mi"
+      requests:
+        # -- Cpu requests for stats
+        cpu: "50m"
+        # -- Memory requests for stats
+        memory: "16Mi"
+    service:
+      # -- Rest K8s service type
+      type: ClusterIP
+      # Ports from where rest endpoints are accessible from outside the cluster, only valid if type is NodePort
+      nodePorts:
+        # NodePort associated with http port
+        http: 90011
+        # NodePort associated with https port
+        https: 90010

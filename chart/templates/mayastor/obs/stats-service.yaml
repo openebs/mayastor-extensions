@@ -1,19 +1,29 @@
-{{- if .Values.eventing.enabled }}
+{{- if .Values.obs.callhome.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-stats
+  name: {{ .Release.Name }}-obs-callhome-stats
   labels:
-    app: stats-aggreagtor
+    app: obs-callhome-stats
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
     {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
   ports:
-    - name: stats
-      port: 9090
+    - port: 9090
+      name: https
       targetPort: 9090
       protocol: TCP
+      {{- if eq .Values.obs.stats.service.type "NodePort" }}
+      nodePort: {{ .Values.obs.stats.service.nodePorts.https }}
+      {{- end }}
+    - port: 9091
+      name: http
+      targetPort: 9091
+      protocol: TCP
+      {{- if eq .Values.obs.stats.service.type "NodePort" }}
+      nodePort: {{ .Values.obs.stats.service.nodePorts.http }}
+      {{- end }}
   selector:
-    app: stats
+    app: obs-callhome-stats
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
 {{- end }}
