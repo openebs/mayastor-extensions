@@ -88,7 +88,7 @@ pipeline {
       steps{
         sh """
         printenv
-        if [[ "${env.WORKSPACE_TMP}" =~ "@" ]];
+        if [[ "${env.WORKSPACE}" =~ "@" ]];
         then
             newpath=\$(echo ${env.WORKSPACE} | sed s/"@"/"__"/)
             mv "${env.WORKSPACE}" newpath
