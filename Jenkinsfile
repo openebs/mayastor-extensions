@@ -90,8 +90,9 @@ pipeline {
         printenv
         if [[ ${env.WORKSPACE} =~ "@" ]];
         then
-        newpath=$(echo ${env.WORKSPACE} | sed s/"@"/"__"/)
-        mv ${env.WORKSPACE} newpath
+          newpath=$(echo ${env.WORKSPACE} | sed s/"@"/"__"/)
+          mv ${env.WORKSPACE} newpath
+        fi
         printenv
         """
       }
