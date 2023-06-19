@@ -91,7 +91,7 @@ pipeline {
         if [[ "${env.WORKSPACE}" =~ "@" ]];
         then
             newpath=\$(echo ${env.WORKSPACE} | sed s/"@"/"__"/)
-            mv "${env.WORKSPACE}" $newpath
+            mv "${env.WORKSPACE}" "${newpath}"
             echo "Inside if"
         else
             echo "Not needed"
