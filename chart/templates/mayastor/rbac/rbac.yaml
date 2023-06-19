@@ -32,6 +32,14 @@ rules:
 - apiGroups: ["openebs.io"]
   resources: ["diskpools/status"]
   verbs: ["update", "patch"]
+  # must read cm info
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create", "get", "update", "patch"]
+  # must get deployments info
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list"]
   # external provisioner & attacher
 - apiGroups: [""]
   resources: ["persistentvolumes"]
