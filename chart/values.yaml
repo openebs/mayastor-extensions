@@ -12,9 +12,9 @@ image:
     #       release/pre-release container image tags.
     #       The below tag values will be picked for images by default.
     #       If not specified, 'tag' option provided above will be picked.
-    controlPlane: bcb2e822999c
-    dataPlane: 9bb69564f49d
-    extensions: 91e6401cc8f2
+    controlPlane: 455773003ffe
+    dataPlane: ae3fe9af0472
+    extensions: 9077f3e8af74
   # -- ImagePullPolicy for our images
   pullPolicy: Always
 
@@ -110,7 +110,7 @@ base:
 operators:
   pool:
     # -- Log level for diskpool operator service
-    logLevel: info
+    logLevel: debug
     resources:
       limits:
         # -- Cpu limits for diskpool operator
@@ -145,7 +145,7 @@ jaeger-operator:
 agents:
   core:
     # -- Log level for the core service
-    logLevel: info
+    logLevel: debug
     capacity:
       thin:
         # -- The allowed pool commitment limit when dealing with thin provisioned volumes.
@@ -186,7 +186,7 @@ agents:
     enabled: true
     node:
       # -- Log level for the ha node service
-      logLevel: info
+      logLevel: debug
       resources:
         limits:
           # -- Cpu limits for ha node agent
@@ -204,7 +204,7 @@ agents:
       priorityClassName: ""
     cluster:
       # -- Log level for the ha cluster service
-      logLevel: info
+      logLevel: debug
       resources:
         limits:
           # -- Cpu limits for ha cluster agent
@@ -220,7 +220,7 @@ agents:
 apis:
   rest:
     # -- Log level for the rest service
-    logLevel: info
+    logLevel: debug
     # -- Number of replicas of rest
     replicaCount: 1
     resources:
@@ -272,7 +272,7 @@ csi:
 
   controller:
     # -- Log level for the csi controller
-    logLevel: info
+    logLevel: debug
     resources:
       limits:
         # -- Cpu limits for csi controller
@@ -289,7 +289,7 @@ csi:
     # -- Set PriorityClass, overrides global
     priorityClassName: ""
   node:
-    logLevel: info
+    logLevel: debug
     topology:
       segments:
         openebs.io/csi-node: mayastor
@@ -324,7 +324,7 @@ csi:
 
 io_engine:
   # -- Log level for the io-engine service
-  logLevel: info
+  logLevel: debug
   api: "v1"
   target:
     nvmf:
@@ -617,7 +617,7 @@ obs:
     # -- Enable callhome
     enabled: true
     # -- Log level for callhome
-    logLevel: "info"
+    logLevel: debug
     resources:
       limits:
         # -- Cpu limits for callhome
@@ -636,7 +636,7 @@ obs:
   # Eventing component enabled/disabled based on obs.callhome.enabled value
   stats:
     # -- Log level for stats
-    logLevel: "info"
+    logLevel: debug
     resources:
       limits:
         # -- Cpu limits for stats
