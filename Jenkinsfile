@@ -22,7 +22,7 @@ def notifySlackUponStateChange(build) {
       slackSend(
         channel: '#mayastor',
         color: 'normal',
-        message: "In Mayastor-Extensions repo, branch e has been fixed :beers: (<${env.BUILD_URL}|Open>)"
+        message: "In Mayastor-Extensions repo, branch ${env.BRANCH_NAME} has been fixed :beers: (<${env.BUILD_URL}|Open>)"
       )
     } else if (prev == 'SUCCESS') {
       slackSend(
