@@ -22,7 +22,7 @@ def notifySlackUponStateChange(build) {
       slackSend(
         channel: '#mayastor',
         color: 'normal',
-        message: "In Mayastor-Extensions repo, branch ${env.BRANCH_NAME} has been fixed :beers: (<${env.BUILD_URL}|Open>)"
+        message: "In Mayastor-Extensions repo, branch e has been fixed :beers: (<${env.BUILD_URL}|Open>)"
       )
     } else if (prev == 'SUCCESS') {
       slackSend(
@@ -88,10 +88,13 @@ pipeline {
       steps{
         sh """
         printenv
-        if [ ${env.WORKSPACE} =~ "@" ];
+        if [[ "${env.WORKSPACE_TMP}" =~ "@" ]];
         then
-          newpath=$(echo ${env.WORKSPACE} | sed s/"@"/"__"/)
-          mv ${env.WORKSPACE} newpath
+            newpath=\$(echo ${env.WORKSPACE} | sed s/"@"/"__"/)
+            mv "${env.WORKSPACE}" newpath
+            echo "Inside if"
+        else
+            echo "Not needed"
         fi
         printenv
         """
