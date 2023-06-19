@@ -82,6 +82,20 @@ pipeline {
         ])
       }
     }
+
+    stage('Rename jenkins workspace path') {
+      agent {label 'nixos-mayastor'}
+      steps{
+        sh """
+        printenv
+        if [[ ${env.WORKSPACE} =~ "@" ]];
+        then
+        newpath=$(echo ${env.WORKSPACE} | sed s/"@"/"__"/)
+        mv ${env.WORKSPACE} newpath
+        printenv
+        """
+      }
+    }
     stage('linter') {
       agent { label 'nixos-mayastor' }
       when {
