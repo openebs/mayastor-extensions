@@ -43,6 +43,9 @@ pub(crate) const LOGGING_LABEL_SELECTOR: &str = "openebs.io/logging=true";
 /// Defines the name of upgrade service
 pub(crate) const UPGRADE_SERVICE: &str = "upgrade";
 
+/// Defines the name of callhome service
+pub(crate) const CALLHOME_SERVICE: &str = "obs-callhome";
+
 lazy_static! {
     /// List of resources fall under control plane services
     pub(crate) static ref CONTROL_PLANE_SERVICES: HashMap<&'static str, bool> =
@@ -64,10 +67,16 @@ lazy_static! {
             (MAYASTOR_SERVICE, true),
         ]);
 
-        /// List of resources fall under upgrade services
+    /// List of resources fall under upgrade services
     pub(crate) static ref UPGRADE_JOB_SERVICE: HashMap<&'static str, bool> =
     HashMap::from([
         (UPGRADE_SERVICE, true),
+    ]);
+
+    /// List of resources fall under callhome services
+    pub(crate) static ref CALLHOME_JOB_SERVICE: HashMap<&'static str, bool> =
+    HashMap::from([
+        (CALLHOME_SERVICE, true),
     ]);
 
     /// Represents the list of services that requires hostname to collect logs
