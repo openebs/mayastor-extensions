@@ -5,7 +5,7 @@
 { dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, runCommand, img_tag ? "" }:
 let
   whitelistSource = extensions.project-builder.whitelistSource;
-  helm_chart = whitelistSource ../../.. [ "chart" "scripts/helm" ];
+  helm_chart = whitelistSource ../../.. [ "chart" "scripts/helm" ] "mayastor-extensions";
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
   tag = if img_tag != "" then img_tag else extensions.version;
   build-extensions-image = { pname, buildType, package, extraCommands ? '''', contents ? [ ], config ? { } }:
@@ -59,8 +59,8 @@ let
       pname = package.pname;
       config = {
         Env = [ "CORE_CHART_DIR=/chart" ];
+      };
     };
-  };
   build-obs-callhome-image = { buildType }:
     build-extensions-image rec{
       inherit buildType;
