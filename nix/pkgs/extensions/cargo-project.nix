@@ -39,16 +39,18 @@ let
     rustc = stable_channel.rustc;
     cargo = stable_channel.cargo;
   };
-  whitelistSource = src: allowedPrefixes:
-    builtins.filterSource
-      (path: type:
+  whitelistSource = src: allowedPrefixes: dirName:
+    builtins.path {
+      filter = (path: type:
         lib.any
           (allowedPrefix:
             (lib.hasPrefix (toString (src + "/${allowedPrefix}")) path) ||
             (type == "directory" && lib.hasPrefix path (toString (src + "/${allowedPrefix}")))
           )
-          allowedPrefixes)
-      src;
+          allowedPrefixes);
+      path = src;
+      name = dirName;
+    };
   PROTOC = "${protobuf}/bin/protoc";
   PROTOC_INCLUDE = "${protobuf}/include";
   version = gitVersions.version;
@@ -73,7 +75,7 @@ let
     "dependencies/control-plane/k8s/operators"
     "k8s"
   ];
-  src = whitelistSource ../../../. src_list;
+  src = whitelistSource ../../../. src_list "mayastor-extensions";
   buildProps = rec {
     name = "extensions-${version}";
     inherit version src;

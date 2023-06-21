@@ -1,16 +1,18 @@
 { lib, stdenv, git, tag ? "" }:
 let
-  whitelistSource = src: allowedPrefixes:
-    builtins.filterSource
-      (path: type:
+  whitelistSource = src: allowedPrefixes: dirName:
+    builtins.path {
+      filter = (path: type:
         lib.any
           (allowedPrefix: lib.hasPrefix (toString (src + "/${allowedPrefix}")) path)
-          allowedPrefixes)
-      src;
+          allowedPrefixes);
+      path = src;
+      name = dirName;
+    };
 in
 stdenv.mkDerivation {
   name = "git-version";
-  src = whitelistSource ../../. [ ".git" ];
+  src = whitelistSource ../../. [ ".git" ] "mayastor-extensions";
   outputs = [ "out" "long" "tag_or_long" ];
 
   buildCommand = ''
