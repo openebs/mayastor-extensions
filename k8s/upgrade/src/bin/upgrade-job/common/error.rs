@@ -176,9 +176,9 @@ pub(crate) enum Error {
     #[snafu(display("{} is not a file", path.display()))]
     NotAFile { path: PathBuf },
 
-    /// Error when opening a file.
-    #[snafu(display("Failed to open file {}: {}", filepath.display(), source))]
-    OpeningFile {
+    /// Error when reading a file.
+    #[snafu(display("Failed to read from file {}: {}", filepath.display(), source))]
+    ReadingFile {
         source: std::io::Error,
         filepath: PathBuf,
     },
@@ -500,7 +500,7 @@ pub(crate) enum Error {
     #[snafu(display("Invalid helm upgrade request"))]
     InvalidHelmUpgrade,
 
-    /// Error for when the helm upgrade run is that of an invalid chart configuration.
+    /// Error for when the helm upgrade's target version is lower the source version.
     #[snafu(display(
         "Failed to upgrade from {} to {}: upgrade to an earlier-released version is forbidden",
         from_version,
@@ -509,6 +509,77 @@ pub(crate) enum Error {
     RollbackForbidden {
         from_version: String,
         to_version: String,
+    },
+
+    /// Error for when yq command execution fails.
+    #[snafu(display(
+        "Failed to run yq command,\ncommand: {},\nargs: {:?},\ncommand_error: {}",
+        command,
+        args,
+        source
+    ))]
+    YqCommandExec {
+        source: std::io::Error,
+        command: String,
+        args: Vec<String>,
+    },
+
+    /// Error for when the `yq -V` command returns an error.
+    #[snafu(display(
+        "`yq -V` command return an error,\ncommand: {},\narg: {},\nstd_err: {}",
+        command,
+        arg,
+        std_err,
+    ))]
+    YqVersionCommand {
+        command: String,
+        arg: String,
+        std_err: String,
+    },
+
+    /// Error for when the `yq eq` command returns an error.
+    #[snafu(display(
+        "`yq ea` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
+        command,
+        args,
+        std_err,
+    ))]
+    YqMergeCommand {
+        command: String,
+        args: Vec<String>,
+        std_err: String,
+    },
+
+    /// Error for when the yq version present is not v4.x.y.
+    #[snafu(display("yq version is not v4"))]
+    NotYqV4,
+
+    /// Error for when temporary file creation fails.
+    #[snafu(display("Failed to create temporary file: {}", source))]
+    TempFileCreation { source: std::io::Error },
+
+    /// Error for when we fail to write to a temporary file.
+    #[snafu(display("Failed to write to temporary file {}: {}", filepath.display(), source))]
+    WriteToTempFile {
+        source: std::io::Error,
+        filepath: PathBuf,
+    },
+
+    /// Error for when the input yaml key for a string value isn't a valid one.
+    #[snafu(display("{} is not a valid yaml key for a string value", key))]
+    NotAValidYamlKeyForStringValue { key: String },
+
+    /// Error for when the yq command to update the value of a yaml field returns an error.
+    #[snafu(display(
+        "`yq` set-value-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
+        command,
+        args,
+        std_err,
+    ))]
+    YqSetCommand {
+        command: String,
+        args: Vec<String>,
+        std_err: String,
     },
 }
 

@@ -9,3 +9,6 @@ pub(crate) mod values;
 
 /// Contains the structs required to deserialize yaml files from the helm charts.
 pub(crate) mod chart;
+
+/// This contains tools for use with yaml files.
+pub(crate) mod yaml;

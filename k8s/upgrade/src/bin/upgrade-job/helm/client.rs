@@ -110,8 +110,6 @@ impl HelmReleaseClient {
                 args: args.clone(),
             })?;
 
-        let stdout_str = str::from_utf8(output.stdout.as_slice()).context(U8VectorToString)?;
-        debug!(stdout=%stdout_str, "Helm get values command standard output");
         ensure!(
             output.stderr.is_empty(),
             HelmGetValuesCommand {

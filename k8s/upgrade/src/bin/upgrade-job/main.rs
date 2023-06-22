@@ -4,10 +4,9 @@ use crate::{
         validate_helm_chart_dir, validate_helm_release, validate_helmv3_in_path,
         validate_namespace, validate_rest_endpoint,
     },
+    upgrade::upgrade,
 };
 use clap::Parser;
-
-use crate::upgrade::upgrade;
 use opts::CliArgs;
 use tracing::{error, info};
 use utils::{
