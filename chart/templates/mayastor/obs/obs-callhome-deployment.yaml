@@ -19,6 +19,7 @@ spec:
         app: obs-callhome
         {{ include "label_prefix" . }}/release: {{ .Release.Name }}
         {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+        {{ include "label_prefix" . }}/logging: "true"
     spec:
       serviceAccount: {{ .Release.Name }}-service-account
       imagePullSecrets:
