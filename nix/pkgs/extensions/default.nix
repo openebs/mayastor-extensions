@@ -61,6 +61,14 @@ let
             obs_builder { inherit buildType builder; cargoBuildFlags = [ "--bin obs-callhome" ]; };
         pname = "obs-callhome";
       };
+      stats = obs_installer {
+        src =
+          if allInOne then
+            obs_builder { inherit buildType builder; cargoBuildFlags = [ "-p call-home-stats" ];  }
+          else
+            obs_builder { inherit buildType builder; cargoBuildFlags = [ "--bin call-home-stats" ]; };
+        pname = "obs-callhome-stats";
+      };
     };
   };
 in

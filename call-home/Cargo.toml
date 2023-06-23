@@ -4,9 +4,18 @@ version = "0.1.0"
 edition = "2021"
 description = "Call-home for observability"
 
+
+[lib]
+name = "obs"
+path = "src/lib.rs"
+
 [[bin]]
 name = "obs-callhome"
-path = "src/main.rs"
+path = "src/bin/callhome/main.rs"
+
+[[bin]]
+name = "obs-callhome-stats"
+path = "src/bin/stats/main.rs"
 
 [dependencies]
 openapi = {path = "../dependencies/control-plane/openapi"}
@@ -32,4 +41,12 @@ chrono = "0.4.23"
 rand = "0.8.5"
 tempfile = "3.3.0"
 humantime = "2.1.0"
+once_cell = "1.16.0"
+bytes = "1.2.1"
 utils = { path = "../dependencies/control-plane/utils/utils-lib" }
+mbus-api = { path = "../dependencies/control-plane/utils/dependencies/mbus-api" }
+
+#exporter
+actix-web = { version = "4.3.0", features = ["rustls"] }
+prometheus = "0.13.3"
+mime = "0.3.16"

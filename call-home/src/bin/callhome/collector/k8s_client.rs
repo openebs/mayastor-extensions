@@ -1,6 +1,6 @@
-use crate::common::errors::K8sResourceError;
 use k8s_openapi::api::core::v1::{Namespace, Node};
 use kube::{Api, Client};
+use obs::common::errors::K8sResourceError;
 
 /// K8sClient contains k8s client.
 #[derive(Clone)]
