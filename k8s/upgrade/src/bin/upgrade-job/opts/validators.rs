@@ -3,7 +3,7 @@ use crate::{
         constants::CORE_CHART_NAME,
         error::{
             FindingHelmChart, GetNamespace, HelmCommand, HelmListCommand, HelmRelease, HelmVersion,
-            HelmVersionCommand, ListStorageNodes, NotADirectory, NotAFile, OpeningFile,
+            HelmVersionCommand, ListStorageNodes, NotADirectory, NotAFile, ReadingFile,
             RegexCompile, Result, U8VectorToString, ValidateDirPath, ValidateFilePath,
             YamlParseFromFile,
         },
@@ -119,13 +119,13 @@ pub(crate) fn validate_helm_chart_dir(core_dir: PathBuf) -> Result<()> {
 /// - validate if the chart name if the chart name in the Chart.yaml file is correct.
 fn validate_core_helm_chart_variant_in_dir(dir_path: PathBuf) -> Result<()> {
     let path_exists_and_is_dir = |path: PathBuf| -> Result<bool> {
-        fs::metadata(path.clone())
+        fs::metadata(path.as_path())
             .map(|m| m.is_dir())
             .context(ValidateDirPath { path })
     };
 
     let path_exists_and_is_file = |path: PathBuf| -> Result<bool> {
-        fs::metadata(path.clone())
+        fs::metadata(path.as_path())
             .map(|m| m.is_file())
             .context(ValidateFilePath { path })
     };
@@ -145,11 +145,11 @@ fn validate_core_helm_chart_variant_in_dir(dir_path: PathBuf) -> Result<()> {
         }
     );
 
-    let chart_yaml_file = fs::File::open(chart_yaml_path.as_path()).context(OpeningFile {
+    let chart_yaml_file = fs::read(chart_yaml_path.as_path()).context(ReadingFile {
         filepath: chart_yaml_path.clone(),
     })?;
     let chart_yaml: Chart =
-        serde_yaml::from_reader(chart_yaml_file).context(YamlParseFromFile {
+        serde_yaml::from_slice(chart_yaml_file.as_slice()).context(YamlParseFromFile {
             filepath: chart_yaml_path.clone(),
         })?;
 
@@ -159,12 +159,11 @@ fn validate_core_helm_chart_variant_in_dir(dir_path: PathBuf) -> Result<()> {
     );
 
     // Validate charts directory, it should exist if `helm dependency update` has been executed.
-    let mut charts_dir_path = dir_path.clone();
-    charts_dir_path.push("charts");
+    let charts_dir_path = dir_path.join("charts");
     ensure!(
         path_exists_and_is_dir(charts_dir_path.clone())?,
         NotADirectory {
-            path: charts_dir_path.clone()
+            path: charts_dir_path
         }
     );
 

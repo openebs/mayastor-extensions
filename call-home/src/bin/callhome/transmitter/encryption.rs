@@ -1,4 +1,5 @@
-use crate::{common::errors::EncryptError, Report};
+use crate::collector::report_models::Report;
+use obs::common::errors::EncryptError;
 use rand::{distributions::Alphanumeric, Rng};
 use std::{
     fs,

@@ -1,5 +1,4 @@
 mod collector;
-mod common;
 mod transmitter;
 
 use crate::{
@@ -7,10 +6,10 @@ use crate::{
         k8s_client::K8sClient,
         report_models::{Pools, Replicas, Report, Volumes},
     },
-    common::constants::*,
     transmitter::*,
 };
 use clap::Parser;
+use obs::common::constants::*;
 use openapi::tower::client::{ApiClient, Configuration};
 use sha256::digest;
 use std::time;

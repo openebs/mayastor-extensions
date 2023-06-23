@@ -55,7 +55,7 @@ let
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.upgrade.${name};
-      contents = [ kubernetes-helm-wrapped busybox tagged_helm_chart ];
+      contents = [ kubernetes-helm-wrapped busybox tagged_helm_chart yq-go ];
       pname = package.pname;
       config = {
         Env = [ "CORE_CHART_DIR=/chart" ];
@@ -72,6 +72,18 @@ let
       pname = package.pname;
       config = {
         Env = [ "KEY_FILEPATH=/key/public.gpg" "ENCRYPTION_DIR=/encryption_dir" ];
+      };
+    };
+
+  build-obs-callhome-stats-image = { buildType }:
+    build-extensions-image rec{
+      inherit buildType;
+      package = extensions.${buildType}.obs.stats;
+      pname = package.pname;
+      config = {
+        ExposedPorts = {
+          "9090/tcp" = { };
+        };
       };
     };
 
@@ -93,6 +105,11 @@ let
       inherit buildType;
     };
   };
+  build-stats-images = { buildType }: {
+    aggregator = build-obs-callhome-stats-image {
+      inherit buildType;
+    };
+  };
 in
 let
   build-images = { buildType }: {
@@ -103,6 +120,9 @@ let
       recurseForDerivations = true;
     };
     obs = build-obs-images { inherit buildType; } // {
+      recurseForDerivations = true;
+    };
+    stats = build-stats-images { inherit buildType; } // {
       recurseForDerivations = true;
     };
   };
