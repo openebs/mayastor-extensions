@@ -2,7 +2,7 @@ use crate::{
     common::{
         constants::CHART_VERSION_LABEL_KEY,
         error::{
-            ListDeploymentsWithLabel, NoRestDeployment, NoVersionLabelInDeployment, OpeningFile,
+            ListDeploymentsWithLabel, NoRestDeployment, NoVersionLabelInDeployment, ReadingFile,
             Result, SemverParse, YamlParseBufferForUnsupportedVersion, YamlParseFromFile,
         },
         kube_client::KubeClientSet,
@@ -13,7 +13,7 @@ use kube_client::{api::ListParams, ResourceExt};
 use semver::Version;
 use serde::Deserialize;
 use snafu::{ensure, ResultExt};
-use std::{fs::File, path::PathBuf};
+use std::{fs, path::PathBuf};
 use utils::API_REST_LABEL;
 
 /// Validates the upgrade path from 'from' Version to 'to' Version for the Core helm chart.
@@ -27,12 +27,12 @@ pub(crate) fn is_valid_for_core_chart(from: &Version) -> Result<bool> {
 
 /// Generate a semver::Version from the helm chart in local directory.
 pub(crate) fn version_from_chart_yaml_file(path: PathBuf) -> Result<Version> {
-    let values_yaml = File::open(path.as_path()).context(OpeningFile {
+    let values_yaml = fs::read(path.as_path()).context(ReadingFile {
         filepath: path.clone(),
     })?;
 
-    let to_chart: Chart =
-        serde_yaml::from_reader(values_yaml).context(YamlParseFromFile { filepath: path })?;
+    let to_chart: Chart = serde_yaml::from_slice(values_yaml.as_slice())
+        .context(YamlParseFromFile { filepath: path })?;
 
     Ok(to_chart.version().clone())
 }

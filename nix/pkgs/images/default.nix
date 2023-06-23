@@ -55,7 +55,7 @@ let
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.upgrade.${name};
-      contents = [ kubernetes-helm-wrapped busybox tagged_helm_chart ];
+      contents = [ kubernetes-helm-wrapped busybox tagged_helm_chart yq-go ];
       pname = package.pname;
       config = {
         Env = [ "CORE_CHART_DIR=/chart" ];
