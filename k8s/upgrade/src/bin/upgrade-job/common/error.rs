@@ -361,7 +361,8 @@ pub(crate) enum Error {
 
     /// Error for when detected helm chart name is not known helm chart.
     #[snafu(display(
-        "'{}' is not a known {} helm chart, only the '{}' and '{}' charts are supported",
+        "'{}' is not a known {} helm chart, only helm charts '{}-<version-tag>' and '{}-<version-tag>' \
+        are supported",
         chart_name,
         PRODUCT,
         CORE_CHART_NAME,
