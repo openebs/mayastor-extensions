@@ -189,6 +189,9 @@ impl HelmReleaseClient {
         C: ToString,
     {
         let command: &str = "helm";
+        // The --install flag is required to install CRDs when new ones are present,
+        // This will not create a fresh install as we check for a helm release in
+        // 'deployed' state before embarking on our upgrade journey.
         let mut args: Vec<String> = vec_to_strings![
             "upgrade",
             release_name,
@@ -196,7 +199,8 @@ impl HelmReleaseClient {
             "-n",
             self.namespace.as_str(),
             "--timeout",
-            "15m"
+            "15m",
+            "--install"
         ];
 
         // Extra args
