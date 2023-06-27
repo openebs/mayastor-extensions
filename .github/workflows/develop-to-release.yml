@@ -1,4 +1,4 @@
-name: Develop to Release Chart
+name: Develop to Release
 on:
   push:
     branches:
@@ -19,9 +19,19 @@ jobs:
           branch="${{ github.ref_name }}"
           nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch" --develop-to-release" ./scripts/helm/shell.nix
           nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
+      - name: Check if the submodules are correct
+        run: |
+          branch="${{ github.ref_name }}"
+          ./scripts/git/set-submodule-branches.sh --branch "$branch"
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v5
         with:
-          commit-message: "chore(ci): update helm chart versions"
-          title: Prepare Helm Chart for release branch
+          commit-message: "chore(ci): update helm chart versions and/or git submodules"
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          labels: |
+            prepare-release-branch
+            automated-pr
+          draft: false
+          title: Prepare repo for release branch
           signoff: true
