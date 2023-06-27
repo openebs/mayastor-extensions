@@ -118,6 +118,23 @@ impl SupportArgs {
         };
         let mut errors = Vec::new();
         match resource {
+            Resource::Loki => {
+                let mut system_dumper =
+                    collect::system_dump::SystemDumper::get_or_panic_system_dumper(config).await;
+                let node_topologer = NodeClientWrapper::new(system_dumper.rest_client())
+                    .get_topologer(None)
+                    .await
+                    .ok();
+                log("Completed collection of topology information".to_string());
+
+                system_dumper
+                    .collect_and_dump_loki_logs(node_topologer)
+                    .await?;
+                if let Err(e) = system_dumper.fill_archive_and_delete_tmp() {
+                    log(format!("Failed to copy content to archive, error: {e:?}"));
+                    errors.push(e);
+                }
+            }
             Resource::System => {
                 let mut system_dumper =
                     collect::system_dump::SystemDumper::get_or_panic_system_dumper(config).await;

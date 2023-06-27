@@ -5,11 +5,11 @@ use crate::{
         constants::MAYASTOR_SERVICE,
         error::Error,
         k8s_resources::k8s_resource_dump::K8sResourceDumperClient,
-        logs::{LogCollection, LogResource, Logger},
+        logs::{LogCollection, LogError, LogResource, Logger},
         persistent_store::etcd::EtcdStore,
         resources::{
-            node::NodeClientWrapper, pool::PoolClientWrapper, volume::VolumeClientWrapper,
-            Resourcer,
+            node::NodeClientWrapper, pool::PoolClientWrapper, traits::Topologer,
+            volume::VolumeClientWrapper, Resourcer,
         },
         rest_wrapper::RestClient,
         utils::{flush_tool_log_file, init_tool_log_file, write_to_log_file},
@@ -117,6 +117,45 @@ impl SystemDumper {
         }
     }
 
+    /// Collect and dump loki logs.
+    pub(crate) async fn collect_and_dump_loki_logs(
+        &mut self,
+        node_topologer: Option<Box<dyn Topologer>>,
+    ) -> Result<(), LogError> {
+        // Fetch required logging resources
+        let mut resources = self.logger.get_control_plane_logging_services().await?;
+        resources.extend(self.logger.get_data_plane_logging_services().await?);
+        resources.extend(self.logger.get_upgrade_logging_services().await?);
+        resources.extend(self.logger.get_callhome_logging_services().await?);
+
+        // NOTE: MAYASTOR-IO services will not be available when MAYASTOR-IO pod is down.
+        //       Lets add information from mayastor node resources.
+        if let Some(topologer) = node_topologer {
+            topologer
+                .get_all_resource_info()
+                .iter()
+                .for_each(|node_topo| {
+                    resources.insert(LogResource {
+                        container_name: node_topo.get_container_name(),
+                        host_name: Some(node_topo.get_host_name()),
+                        label_selector: node_topo.get_label_selector().as_string(','),
+                        service_type: MAYASTOR_SERVICE.to_string(),
+                    });
+                });
+        }
+
+        let _ = write_to_log_file(format!(
+            "Collecting logs of following services: \n {resources:#?}"
+        ));
+
+        log("Collecting logs...".to_string());
+        self.logger
+            .fetch_and_dump_logs(resources, self.dir_path.clone())
+            .await?;
+        log("Completed collection of logs".to_string());
+        Ok(())
+    }
+
     /// Dumps the state of the system
     pub(crate) async fn dump_system(&mut self) -> Result<(), Error> {
         let mut errors: Vec<Error> = Vec::new();
@@ -177,41 +216,10 @@ impl SystemDumper {
         };
         log("Completed collection of topology information".to_string());
 
-        // Fetch required logging resources
-        let mut resources = self.logger.get_control_plane_logging_services().await?;
-        resources.extend(self.logger.get_data_plane_logging_services().await?);
-        resources.extend(self.logger.get_upgrade_logging_services().await?);
-        resources.extend(self.logger.get_callhome_logging_services().await?);
-        // NOTE: MAYASTOR-IO services will not be available when MAYASTOR-IO pod is down.
-        //       Lets add information from mayastor node resources.
-        if let Some(topologer) = node_topologer {
-            topologer
-                .get_all_resource_info()
-                .iter()
-                .for_each(|node_topo| {
-                    resources.insert(LogResource {
-                        container_name: node_topo.get_container_name(),
-                        host_name: Some(node_topo.get_host_name()),
-                        label_selector: node_topo.get_label_selector().as_string(','),
-                        service_type: MAYASTOR_SERVICE.to_string(),
-                    });
-                });
+        if let Err(error) = self.collect_and_dump_loki_logs(node_topologer).await {
+            log("Error occurred while collecting logs".to_string());
+            errors.push(Error::LogCollectionError(error));
         }
-
-        let _ = write_to_log_file(format!(
-            "Collecting logs of following services: \n {resources:#?}"
-        ));
-
-        log("Collecting logs...".to_string());
-        let _ = self
-            .logger
-            .fetch_and_dump_logs(resources, self.dir_path.clone())
-            .await
-            .map_err(|e| {
-                log("Error occurred while collecting logs".to_string());
-                errors.push(Error::LogCollectionError(e));
-            });
-        log("Completed collection of logs".to_string());
 
         log("Collecting Kubernetes resources specific to mayastor service".to_string());
         let _ = self
@@ -266,6 +274,11 @@ impl SystemDumper {
             e
         })?;
         Ok(())
+    }
+
+    /// Get the rest client clone.
+    pub(crate) fn rest_client(&self) -> RestClient {
+        self.rest_client.clone()
     }
 
     fn delete_temporary_directory(&self) -> Result<(), Error> {
