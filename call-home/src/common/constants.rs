@@ -43,6 +43,12 @@ pub const DELETED: &str = "deleted";
 /// Field manager for Patch param, required for [`Patch::Apply`].
 pub const PATCH_PARAM_FILED_MANAGER: &str = "events_store_configmap";
 
+/// Default mbus url.
+pub const DEFAULT_MBUS_URL: &str = "nats://mayastor-nats:4222";
+
+/// Defines the default namespace.
+pub const DEFAULT_NAMESPACE: &str = "mayastor";
+
 /// DEFAULT_ENCRYPTION_DIR_PATH is the directory path for the temporary files generated during
 /// encryption.
 /// The function encryption_dir() returns the user defined directory path for the encryption

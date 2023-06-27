@@ -12,7 +12,10 @@ use mbus_api::{
     message::EventMessage,
     Bus,
 };
-use obs::common::errors;
+use obs::common::{
+    constants::{DEFAULT_MBUS_URL, DEFAULT_NAMESPACE, DEFAULT_RELEASE_NAME},
+    errors,
+};
 use prometheus::{Encoder, Registry};
 use snafu::ResultExt;
 use std::net::SocketAddr;
@@ -29,12 +32,16 @@ mod store;
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
 struct Cli {
     /// The url for mbus.
-    #[clap(long, default_value = "nats://mayastor-nats:4222")]
+    #[clap(long, default_value = DEFAULT_MBUS_URL)]
     mbus_url: String,
 
     /// The namespace we are supposed to operate in.
-    #[arg(short, long, default_value = "mayastor")]
+    #[arg(short, long, default_value = DEFAULT_NAMESPACE)]
     namespace: String,
+
+    /// The release name.
+    #[arg(short, long, default_value = DEFAULT_RELEASE_NAME)]
+    release_name: String,
 
     /// TCP address where events stats are exposed.
     #[clap(long, short, default_value = "0.0.0.0:9090")]
@@ -72,8 +79,11 @@ pub(crate) async fn initialize_events_cache(init_data: ConfigMap) -> errors::Res
 }
 
 /// Initialize events store.
-pub(crate) async fn initialize_events_store(namespace: &str) -> errors::Result<ConfigMap> {
-    let event_store: ConfigMap = initialize(namespace).await?;
+pub(crate) async fn initialize_events_store(
+    namespace: &str,
+    release_name: &str,
+) -> errors::Result<ConfigMap> {
+    let event_store: ConfigMap = initialize(namespace, release_name).await?;
     Ok(event_store)
 }
 
@@ -86,14 +96,13 @@ fn initialize_exporter(args: &Cli) {
 async fn main() -> errors::Result<()> {
     let args = Cli::args();
     utils::print_package_info!();
-    info!(?args, "stats aggregation started");
-
     init_logging(&args);
+    info!(?args, "stats aggregation started");
 
     let bus_sub = mbus_init(args.mbus_url.as_str()).await;
     info!("mbus initialized successfully!");
 
-    let init_data = initialize_events_store(&args.namespace).await?;
+    let init_data = initialize_events_store(&args.namespace, &args.release_name).await?;
     info!("event store initialized successfully!");
 
     initialize_events_cache(init_data).await?;
@@ -115,13 +124,17 @@ async fn main() -> errors::Result<()> {
 
     // spawn a new task to update the config map from cache.
     tokio::spawn(async move {
-        store::events_store::update_config_map_data(&args.namespace, args.update_period.into())
-            .await
-            .map_err(|error| {
-                error!(%error, "Error while persisting the stats to config map from cache");
-                flush_traces();
-                error
-            })
+        store::events_store::update_config_map_data(
+            &args.namespace,
+            &args.release_name,
+            args.update_period.into(),
+        )
+        .await
+        .map_err(|error| {
+            error!(%error, "Error while persisting the stats to config map from cache");
+            flush_traces();
+            error
+        })
     });
 
     let app = move || {
