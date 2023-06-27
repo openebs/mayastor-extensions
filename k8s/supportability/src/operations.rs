@@ -53,4 +53,8 @@ pub(crate) enum Resource {
         #[clap(long)]
         stdout: bool,
     },
+
+    /// Collects the Loki logs from the product's components
+    #[clap(hide = true)]
+    Loki,
 }
