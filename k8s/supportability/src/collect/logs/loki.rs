@@ -265,7 +265,7 @@ impl LokiClient {
             };
             is_written = true;
             for msg in result.iter() {
-                write!(log_file, "{msg}")?;
+                writeln!(log_file, "{}", msg.trim_end())?;
             }
         }
         Ok(())
