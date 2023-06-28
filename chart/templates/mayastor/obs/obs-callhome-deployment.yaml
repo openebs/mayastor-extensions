@@ -53,6 +53,10 @@ spec:
         {{- if .Values.obs.callhome.enabled }}
         - name: obs-callhome-stats
           image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-obs-callhome-stats:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
+          args:
+            - "--namespace={{ .Release.Namespace }}"
+            - "--release-name={{ .Release.Name }}"
+            - "--mbus-url=nats://{{ .Release.Name }}-nats:4222"
           ports:
             - containerPort: 9090
               protocol: TCP
