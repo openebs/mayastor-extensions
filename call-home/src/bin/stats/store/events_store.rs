@@ -8,16 +8,14 @@ use kube::{
 use obs::common::{
     constants::{EVENT_STATS_DATA, EVENT_STORE, EVENT_STORE_LABLE_KEY, PATCH_PARAM_FILED_MANAGER},
     errors,
-    utils::release_name,
 };
 use snafu::ResultExt;
 use std::{collections::BTreeMap, ops::DerefMut, time::Duration};
 use tracing::info;
 
 /// Initialize a config map for storing events.
-pub async fn initialize(namespace: &str) -> errors::Result<ConfigMap> {
+pub async fn initialize(namespace: &str, release_name: &str) -> errors::Result<ConfigMap> {
     let client = Client::try_default().await.context(errors::K8sClient)?;
-    let release_name = release_name(namespace, client.clone()).await?;
     let api: Api<ConfigMap> = Api::namespaced(client.clone(), namespace);
     let config_map_name = format!("{release_name}-{EVENT_STORE}");
 
@@ -91,10 +89,10 @@ fn init_config_map_data() -> errors::Result<BTreeMap<String, String>> {
 /// Function to update the config map data.
 pub async fn update_config_map_data(
     namespace: &str,
+    release_name: &str,
     update_duration: Duration,
 ) -> errors::Result<()> {
     let client = Client::try_default().await.context(errors::K8sClient)?;
-    let release_name = release_name(namespace, client.clone()).await?;
     let config_map_name = format!("{release_name}-{EVENT_STORE}");
     let api: Api<ConfigMap> = Api::namespaced(client.clone(), namespace);
     loop {
