@@ -46,7 +46,10 @@ bytes = "1.2.1"
 utils = { path = "../dependencies/control-plane/utils/utils-lib" }
 mbus-api = { path = "../dependencies/control-plane/utils/dependencies/mbus-api" }
 
-#exporter
+# exporter
 actix-web = { version = "4.3.0", features = ["rustls"] }
 prometheus = "0.13.3"
 mime = "0.3.16"
+
+# parse prometheus output
+prometheus-parse = "0.2.4"

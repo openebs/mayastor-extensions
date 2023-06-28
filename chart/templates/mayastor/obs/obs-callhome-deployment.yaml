@@ -39,6 +39,7 @@ spec:
           args:
             - "-e http://{{ .Release.Name }}-api-rest:8081"
             - "-n {{ .Release.Namespace }}"
+            - "--aggregator-url=http://{{ .Release.Name }}-obs-callhome-stats:9090/stats"
           env:
             - name: RUST_LOG
               value: {{ .Values.obs.callhome.logLevel }}

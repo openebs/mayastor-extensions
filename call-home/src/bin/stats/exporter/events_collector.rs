@@ -2,7 +2,7 @@ use crate::cache::events_cache::{Cache, EventSet};
 use obs::common::constants::{ACTION, CREATED, DELETED, POOL_STATS, VOLUME_STATS};
 use prometheus::{
     core::{Collector, Desc},
-    GaugeVec, Opts,
+    CounterVec, Opts,
 };
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, ops::DerefMut};
@@ -11,8 +11,8 @@ use tracing::error;
 /// StatsCollector contains the list of custom metrics that has to be exposed by exporter.
 #[derive(Clone, Debug)]
 pub struct StatsCollector {
-    volumes: GaugeVec,
-    pools: GaugeVec,
+    volumes: CounterVec,
+    pools: CounterVec,
     descs: Vec<Desc>,
 }
 
@@ -49,10 +49,10 @@ impl StatsCollector {
             .variable_labels(vec![ACTION.to_string()]);
         let mut descs = Vec::new();
 
-        let volumes = GaugeVec::new(volume_opts, &[ACTION])
-            .expect("Unable to create gauge metric type for volume stats");
-        let pools = GaugeVec::new(pool_opts, &[ACTION])
-            .expect("Unable to create gauge metric type for pool stats");
+        let volumes = CounterVec::new(volume_opts, &[ACTION])
+            .expect("Unable to create counter metric type for volume stats");
+        let pools = CounterVec::new(pool_opts, &[ACTION])
+            .expect("Unable to create counter metric type for pool stats");
         descs.extend(volumes.desc().into_iter().cloned());
         descs.extend(pools.desc().into_iter().cloned());
 
@@ -72,7 +72,7 @@ impl StatsCollector {
                 return metric_family;
             }
         };
-        volumes_created.set(events.volume.volume_created as f64);
+        volumes_created.inc_by(events.volume.volume_created as f64);
         let volumes_deleted = match self.volumes.get_metric_with_label_values(&[DELETED]) {
             Ok(volumes) => volumes,
             Err(error) => {
@@ -80,7 +80,7 @@ impl StatsCollector {
                 return metric_family;
             }
         };
-        volumes_deleted.set(events.volume.volume_deleted as f64);
+        volumes_deleted.inc_by(events.volume.volume_deleted as f64);
         metric_family.extend(volumes_created.collect().pop());
         metric_family.extend(volumes_deleted.collect().pop());
         metric_family
@@ -95,7 +95,7 @@ impl StatsCollector {
                 return metric_family;
             }
         };
-        pools_created.set(events.pool.pool_created as f64);
+        pools_created.inc_by(events.pool.pool_created as f64);
         let pools_deleted = match self.pools.get_metric_with_label_values(&[DELETED]) {
             Ok(pools) => pools,
             Err(error) => {
@@ -103,7 +103,7 @@ impl StatsCollector {
                 return metric_family;
             }
         };
-        pools_deleted.set(events.pool.pool_deleted as f64);
+        pools_deleted.inc_by(events.pool.pool_deleted as f64);
         metric_family.extend(pools_created.collect().pop());
         metric_family.extend(pools_deleted.collect().pop());
         metric_family
