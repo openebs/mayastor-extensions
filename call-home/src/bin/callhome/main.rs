@@ -27,7 +27,7 @@ struct CliArgs {
     endpoint: Url,
 
     /// The namespace we are supposed to operate in.
-    #[arg(short, long, default_value = "mayastor")]
+    #[arg(short, long, default_value = DEFAULT_NAMESPACE)]
     namespace: String,
 }
 impl CliArgs {
