@@ -10,7 +10,7 @@ use clap::Parser;
 use opts::CliArgs;
 use tracing::{error, info};
 use utils::{
-    raw_version_str,
+    print_package_info, raw_version_str,
     tracing_telemetry::{default_tracing_tags, flush_traces, init_tracing},
 };
 
@@ -22,6 +22,7 @@ mod upgrade;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    print_package_info!();
     init_logging();
 
     let opts = parse_cli_args().await.map_err(|error| {
