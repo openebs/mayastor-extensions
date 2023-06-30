@@ -5,7 +5,8 @@ use openapi::tower::client::Url;
 use opentelemetry::global;
 use plugin::{
     operations::{
-        Cordoning, Drain, Get, GetBlockDevices, GetSnapshots, List, ReplicaTopology, Scale,
+        Cordoning, Drain, Get, GetBlockDevices, GetSnapshots, List, RebuildHistory,
+        ReplicaTopology, Scale,
     },
     resources::{
         blockdevice, cordon, drain, node, pool, snapshot, volume, CordonResources, DrainResources,
@@ -118,6 +119,9 @@ async fn execute(cli_args: CliArgs) {
                             &cli_args.output,
                         )
                         .await
+                    }
+                    GetResources::RebuildHistory { id } => {
+                        volume::Volume::rebuild_history(&id, &cli_args.output).await
                     }
                 },
                 GetResourcesK8s::UpgradeStatus(resources) => {
