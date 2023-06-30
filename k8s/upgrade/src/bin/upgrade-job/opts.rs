@@ -24,7 +24,7 @@ pub(crate) struct CliArgs {
     release_name: String,
 
     /// This is the Helm chart directory filepath for the core Helm chart variant.
-    #[arg(long, env = "CORE_CHART_DIR", value_name = "DIR PATH")]
+    #[arg(long, env = "CORE_CHART_DIR", value_name = "DIR_PATH")]
     core_chart_dir: PathBuf,
 
     /// If not set, this skips the Kubernetes Pod restarts for the io-engine DaemonSet.
