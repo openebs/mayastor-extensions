@@ -168,9 +168,21 @@ VOLUME-ID                              ID                                    NOD
  22823425-41fa-434a-9efd-a356b70b5d7c  2023-06-06T05:50:14.980Z         0     dc4e66fd-3b33-4439-b504-d49aba53da26
 
 ```
+
+11. Volume Rebuild History by volumeID
+```
+❯ kubectl mayastor get rebuild-history e4b02813-644f-4285-9b7e-efc0c25979bf
+DST                                   SRC                                   STATE      BLKS-TOTAL  BLKS-RECOVERED  BLKS-TRANSFERRED  BLKS-SIZE  IS-PARTIAL  START-TIME                      END-TIME
+ 1324c40a-150e-4d7b-8ce1-d93e170fecbf  cadd71b8-d385-4acd-a538-c3b2393bf395  Completed  14KiB       14KiB           0 B               512B       true        2023-06-27T14:34:57.532859848Z  2023-06-27T14:34:57.533855129Z
+
+❯ kubectl mayastor get rebuild-history e4b02813-644f-4285-9b7e-efc0c25979bf -ojson
+{"targetUuid":"f405af02-8745-4997-bd61-42bb942fb414","records":[{"childUri":"nvmf://10.1.0.7:8420/nqn.2019-05.io.openebs:1324c40a-150e-4d7b-8ce1-d93e170fecbf?uuid=1324c40a-150e-4d7b-8ce1-d93e170fecbf","srcUri":"bdev:///cadd71b8-d385-4acd-a538-c3b2393bf395?uuid=cadd71b8-d385-4acd-a538-c3b2393bf395","rebuildJobState":"Completed","blocksTotal":14302,"blocksRecovered":14302,"blocksTransferred":0,"blocksRemaining":0,"blockSize":512,"isPartial":true,"startTime":"2023-06-27T14:34:57.532859848Z","endTime":"2023-06-27T14:34:57.533855129Z"}]}
+
+```
+
 **NOTE: The above command lists volume snapshots for all volumes if `--volume` or `--snapshot` or a combination of both flags is not used.**
 
-11. Get BlockDevices by NodeID
+12. Get BlockDevices by NodeID
 ```
 ❯ kubectl mayastor get block-devices kworker1 --all
  DEVNAME          DEVTYPE    SIZE       AVAILABLE  MODEL                       DEVPATH                                                         FSTYPE  FSUUID  MOUNTPOINT  PARTTYPE                              MAJOR            MINOR                                     DEVLINKS
@@ -440,7 +452,7 @@ Supportability - collects state & log information of services and dumps it to a 
   -n, --namespace <NAMESPACE>
         Kubernetes namespace of mayastor service [default: mayastor]
   -h, --help
-          Print help    
+          Print help
 
 ```
 </details>
