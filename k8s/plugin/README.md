@@ -143,21 +143,21 @@ Options:
 8. Replica topology for a specific volume
 ```
 ❯ kubectl mayastor get volume-replica-topology ec4e66fd-3b33-4439-b504-d49aba53da26
- ID                                    NODE      POOL             STATUS  CAPACITY  ALLOCATED  CHILD-STATUS  CHILD-STATUS-REASON  REBUILD
- b32769b8-e5b3-4e1c-9db0-89867470f6eb  kworker1  pool-1-kworker1  Online  384MiB    8MiB       Degraded      <none>               75 %
- d3856829-22b3-414d-a01b-4b6467db14fb  kworker2  pool-1-kworker2  Online  384MiB    8MiB       Online        <none>               <none>
+ ID                                    NODE      POOL             STATUS  CAPACITY  ALLOCATED SNAPSHOTS  CHILD-STATUS  REASON  REBUILD
+ b32769b8-e5b3-4e1c-9db0-89867470f6eb  kworker1  pool-1-kworker1  Online  384MiB    8MiB      12MiB      Degraded      <none>  75 %
+ d3856829-22b3-414d-a01b-4b6467db14fb  kworker2  pool-1-kworker2  Online  384MiB    8MiB      64MiB      Online        <none>  <none>
 ```
 
 9. Replica topology for all volumes
 ```
 ❯ kubectl mayastor get volume-replica-topologies
-VOLUME-ID                              ID                                    NODE      POOL             STATUS  CAPACITY  ALLOCATED  CHILD-STATUS  CHILD-STATUS-REASON  REBUILD
- c05ef923-a320-468c-b426-a260c1d84107  b58e1975-633f-4b34-9611-b648babf76a8  kworker1  pool-1-kworker1  Online  60MiB     36MiB      Degraded      OutOfSpace           <none>
- ├─                                    67a6ec31-5923-490f-84b7-0be1df3bfb53  kworker2  pool-1-kworker2  Online  60MiB     60MiB      Online        <none>               <none>
- └─                                    553aeb7c-4be4-4391-a403-ad241d96711f  kworker3  pool-1-kworker3  Online  60MiB     60MiB      Online        <none>               <none>
- 83241cc8-5dca-4bf1-b55a-c427c3e9b4a1  adde358f-70cd-4a2d-9dfb-f40d6663ecbc  kworker1  pool-1-kworker1  Online  20MiB     16MiB      Degraded      <none>               51%
- ├─                                    b5ff41b8-1a0a-4bc7-84bb-5bfdfe72a71e  kworker2  pool-1-kworker2  Online  60MiB     60MiB      Online        <none>               <none>
- └─                                    39431c11-0eea-48e7-970f-a2359ebbb9d1  kworker3  pool-1-kworker3  Online  60MiB     60MiB      Online        <none>               <none>
+VOLUME-ID                              ID                                    NODE      POOL             STATUS  CAPACITY  ALLOCATED SNAPSHOTS CHILD-STATUS  REASON      REBUILD
+ c05ef923-a320-468c-b426-a260c1d84107  b58e1975-633f-4b34-9611-b648babf76a8  kworker1  pool-1-kworker1  Online  60MiB     36MiB     0MiB      Degraded      OutOfSpace  <none>
+ ├─                                    67a6ec31-5923-490f-84b7-0be1df3bfb53  kworker2  pool-1-kworker2  Online  60MiB     60MiB     0MiB      Online        <none>      <none>
+ └─                                    553aeb7c-4be4-4391-a403-ad241d96711f  kworker3  pool-1-kworker3  Online  60MiB     60MiB     0MiB      Online        <none>      <none>
+ 83241cc8-5dca-4bf1-b55a-c427c3e9b4a1  adde358f-70cd-4a2d-9dfb-f40d6663ecbc  kworker1  pool-1-kworker1  Online  20MiB     16MiB     0MiB      Degraded      <none>      51%
+ ├─                                    b5ff41b8-1a0a-4bc7-84bb-5bfdfe72a71e  kworker2  pool-1-kworker2  Online  60MiB     60MiB     0MiB      Online        <none>      <none>
+ └─                                    39431c11-0eea-48e7-970f-a2359ebbb9d1  kworker3  pool-1-kworker3  Online  60MiB     60MiB     0MiB      Online        <none>      <none>
 ```
 
 10. Volume Snapshots by volumeID
@@ -173,7 +173,7 @@ VOLUME-ID                              ID                                    NOD
 ```
 ❯ kubectl mayastor get rebuild-history e4b02813-644f-4285-9b7e-efc0c25979bf
 DST                                   SRC                                   STATE      BLKS-TOTAL  BLKS-RECOVERED  BLKS-TRANSFERRED  BLKS-SIZE  IS-PARTIAL  START-TIME                      END-TIME
- 1324c40a-150e-4d7b-8ce1-d93e170fecbf  cadd71b8-d385-4acd-a538-c3b2393bf395  Completed  14KiB       14KiB           0 B               512B       true        2023-06-27T14:34:57.532859848Z  2023-06-27T14:34:57.533855129Z
+1324c40a-150e-4d7b-8ce1-d93e170fecbf  cadd71b8-d385-4acd-a538-c3b2393bf395  Completed  14KiB       14KiB           0 B               512B       true        2023-06-27T14:34:57.532859848Z  2023-06-27T14:34:57.533855129Z
 
 ❯ kubectl mayastor get rebuild-history e4b02813-644f-4285-9b7e-efc0c25979bf -ojson
 {"targetUuid":"f405af02-8745-4997-bd61-42bb942fb414","records":[{"childUri":"nvmf://10.1.0.7:8420/nqn.2019-05.io.openebs:1324c40a-150e-4d7b-8ce1-d93e170fecbf?uuid=1324c40a-150e-4d7b-8ce1-d93e170fecbf","srcUri":"bdev:///cadd71b8-d385-4acd-a538-c3b2393bf395?uuid=cadd71b8-d385-4acd-a538-c3b2393bf395","rebuildJobState":"Completed","blocksTotal":14302,"blocksRecovered":14302,"blocksTransferred":0,"blocksRemaining":0,"blockSize":512,"isPartial":true,"startTime":"2023-06-27T14:34:57.532859848Z","endTime":"2023-06-27T14:34:57.533855129Z"}]}
