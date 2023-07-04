@@ -135,7 +135,7 @@ impl HelmUpgradeBuilder {
 
         // Validate if already upgraded for Umbrella chart, and prepare for upgrade for Core chart.
         let chart_variant: HelmChart;
-        let mut core_chart_dir: Option<String> = None;
+        let mut core_chart_dir: Option<PathBuf> = None;
         let mut core_chart_extra_args: Option<Vec<String>> = None;
         let mut upgrade_values_file: Option<TempFile> = None;
 
@@ -179,7 +179,7 @@ impl HelmUpgradeBuilder {
                 release_name.clone(),
             )?;
 
-            core_chart_dir = Some(chart_dir.to_string_lossy().to_string());
+            core_chart_dir = Some(chart_dir);
 
             // helm upgrade .. -f <values-yaml> --atomic
             core_chart_extra_args = Some(vec_to_strings![
@@ -211,7 +211,7 @@ impl HelmUpgradeBuilder {
 pub(crate) struct HelmUpgrade {
     chart_variant: HelmChart,
     already_upgraded: bool,
-    core_chart_dir: Option<String>,
+    core_chart_dir: Option<PathBuf>,
     release_name: String,
     client: HelmReleaseClient,
     core_chart_extra_args: Option<Vec<String>>,
@@ -227,7 +227,7 @@ impl HelmUpgrade {
     }
 
     /// Use the HelmReleaseClient's upgrade method to upgrade the installed helm release.
-    pub(crate) fn run(mut self) -> Result<()> {
+    pub(crate) async fn run(mut self) -> Result<()> {
         match self.chart_variant {
             HelmChart::Umbrella if self.already_upgraded => {
                 info!(
@@ -253,7 +253,8 @@ impl HelmUpgrade {
 
                 info!("Starting helm upgrade...");
                 self.client
-                    .upgrade(self.release_name, chart_dir, self.core_chart_extra_args)?;
+                    .upgrade(self.release_name, chart_dir, self.core_chart_extra_args)
+                    .await?;
 
                 // This file is no longer required after the upgrade command has been executed.
                 self.upgrade_values_file = None;
