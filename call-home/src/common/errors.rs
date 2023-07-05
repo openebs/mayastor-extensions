@@ -143,6 +143,10 @@ pub enum Error {
     #[snafu(display("Referenced key not present in config map: {}", key))]
     ReferencedKeyNotPresent { key: String },
 
+    /// Reference Key not present in prometheus label.
+    #[snafu(display("Referenced key not present in prometheus label: {}", key))]
+    ReferencedKeyNotPresentInLabel { key: String },
+
     /// Deserialization error for event.
     #[snafu(display("Error in deserializing event {} Error {}", event, source))]
     EventSerdeDeserialization {
@@ -165,4 +169,24 @@ pub enum Error {
     /// Could not encode custom metrics
     #[snafu(display("Error while binding socket {} ", source))]
     SocketBindingFailure { source: std::io::Error },
+
+    /// Could not parse prometheus output.
+    #[snafu(display("Error while parsing prometheus output {} ", source))]
+    PrometheusOutPutParseFailure { source: std::io::Error },
+
+    /// Error for unknown prometheus metrics.
+    #[snafu(display("Unknown prometheus metrics."))]
+    UnknownMetrics,
+
+    /// Error for unknown prometheus label.
+    #[snafu(display("Unknown prometheus label."))]
+    UnknownLabel,
+
+    /// Error while getting the stats.
+    #[snafu(display("Error while getting the stats"))]
+    StatsFetchFailure,
+
+    /// Error while getting the response body.
+    #[snafu(display("Error while getting the response body"))]
+    GetRsponseBodyFailure,
 }
