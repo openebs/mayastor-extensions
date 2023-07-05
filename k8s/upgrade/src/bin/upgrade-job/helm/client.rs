@@ -1,15 +1,24 @@
 use crate::{
-    common::error::{
-        HelmClientNs, HelmCommand, HelmGetValuesCommand, HelmListCommand, HelmRelease,
-        HelmUpgradeCommand, Result, U8VectorToString, YamlParseFromSlice,
+    common::{
+        error::{
+            CollectDirEntries, CreateCrd, HelmClientNs, HelmCommand, HelmGetValuesCommand,
+            HelmListCommand, HelmRelease, HelmUpgradeCommand, InvalidHelmChartCrdDir,
+            ReadingDirectoryContents, ReadingFile, Result, U8VectorToString, YamlParseFromFile,
+            YamlParseFromSlice,
+        },
+        kube_client::KubeClientSet,
     },
     vec_to_strings,
 };
-use k8s_openapi::serde;
+use k8s_openapi::{
+    apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition as Crd, serde,
+};
+use kube::ResourceExt;
+use kube_client::{api::PostParams, Api};
 use serde::Deserialize;
-use snafu::{ensure, ResultExt};
-use std::{process::Command, str};
-use tracing::debug;
+use snafu::{ensure, IntoError, ResultExt};
+use std::{fs, path::PathBuf, process::Command, str};
+use tracing::{debug, info};
 
 /// This struct is used to deserialize the output of `helm list -n <namespace> --deployed -o yaml`.
 #[derive(Clone, Deserialize)]
@@ -177,30 +186,33 @@ impl HelmReleaseClient {
     }
 
     /// Runs command `helm upgrade -n <namespace> <release_name> <chart_dir>`.
-    pub(crate) fn upgrade<A, B, C>(
+    pub(crate) async fn upgrade<A, B>(
         &self,
         release_name: A,
-        chart_dir: B,
-        maybe_extra_args: Option<Vec<C>>,
+        chart_dir: PathBuf,
+        maybe_extra_args: Option<Vec<B>>,
     ) -> Result<()>
     where
         A: ToString,
         B: ToString,
-        C: ToString,
     {
+        // Install CRDs which may be missing from older release.
+        let k8s_client = KubeClientSet::builder()
+            .with_namespace(self.namespace.as_str())
+            .build()
+            .await?;
+        // Ref: https://helm.sh/docs/chart_best_practices/custom_resource_definitions
+        install_missing_crds(k8s_client.crd_api(), chart_dir.join("crds")).await?;
+
         let command: &str = "helm";
-        // The --install flag is required to install CRDs when new ones are present,
-        // This will not create a fresh install as we check for a helm release in
-        // 'deployed' state before embarking on our upgrade journey.
         let mut args: Vec<String> = vec_to_strings![
             "upgrade",
             release_name,
-            chart_dir,
+            chart_dir.to_string_lossy(),
             "-n",
             self.namespace.as_str(),
             "--timeout",
-            "15m",
-            "--install"
+            "15m"
         ];
 
         // Extra args
@@ -259,4 +271,65 @@ impl HelmReleaseClient {
         }
         .fail()
     }
+}
+
+/// Installs CRDs which are missing from the target helm chart cluster which are missing
+/// from the cluster.
+async fn install_missing_crds(crd_client: &Api<Crd>, crd_dir_path: PathBuf) -> Result<()> {
+    ensure!(
+        crd_dir_path.is_dir(),
+        InvalidHelmChartCrdDir { path: crd_dir_path }
+    );
+    // List the entries in the 'crds' directory.
+    let entries = fs::read_dir(crd_dir_path.as_path())
+        .context(ReadingDirectoryContents {
+            path: crd_dir_path.clone(),
+        })?
+        .map(|res| res.map(|e| e.path()))
+        .collect::<Result<Vec<_>, std::io::Error>>()
+        .context(CollectDirEntries { path: crd_dir_path })?;
+
+    // Walk through the entries in the directory and create the CRDs.
+    // This errors out if a file is not a CRD, but that is okay because the 'crds' directory
+    // is meant for use with CRDs only.
+    for entry in entries {
+        if entry.is_file() {
+            let crd_yaml = fs::read(entry.as_path()).context(ReadingFile {
+                filepath: entry.clone(),
+            })?;
+
+            let crd: Crd = serde_yaml::from_slice(crd_yaml.as_slice())
+                .context(YamlParseFromFile { filepath: entry })?;
+
+            // Create CRDs, and ignore creation failures due to the CRD already
+            // existing in the cluster.
+            let pp = PostParams::default();
+            let creation_result = crd_client.create(&pp, &crd).await;
+            if let Err(err) = creation_result {
+                match err {
+                    // Return early if creation has failed due to the CRD already existing in the
+                    // cluster.
+                    // Ref: https://github.com/kubernetes/apimachinery/blob/v0.27.3/pkg/apis/meta/v1/types.go#L846
+                    // TODO: It could be that the existing CRD registers a CR of a different version
+                    //       than the one bundled with the target helm chart. This needs to be
+                    // handled.
+                    kube::Error::Api(response) if response.reason.eq("AlreadyExists") => {
+                        info!(
+                            "CustomResourceDefinition '{}' already exists",
+                            crd.name_any()
+                        );
+                        continue;
+                    }
+                    _ => {
+                        return Err(CreateCrd {
+                            name: crd.name_any(),
+                        }
+                        .into_error(err))
+                    }
+                }
+            }
+            info!("Created CustomResourceDefinition '{}'", crd.name_any());
+        }
+    }
+    Ok(())
 }

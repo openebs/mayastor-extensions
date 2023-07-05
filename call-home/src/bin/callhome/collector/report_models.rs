@@ -1,5 +1,12 @@
+use obs::common::{constants::ACTION, errors};
 use openapi::models::Volume;
+use prometheus_parse::{Sample, Value};
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::{Deserialize, Serialize};
+use snafu::ResultExt;
+use std::convert::TryFrom;
+use url::Url;
 
 /// Volumes contains volume count, min, max, mean and capacity percentiles.
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -10,11 +17,13 @@ pub(crate) struct Volumes {
     mean_size_in_bytes: u64,
     max_size_in_bytes: u64,
     capacity_percentiles_in_bytes: Percentiles,
+    created: u32,
+    deleted: u32,
 }
 impl Volumes {
     /// Receives a openapi::models::Volumes object and returns a new report_models::volume object by
     /// using the data provided.
-    pub(crate) fn new(volumes: openapi::models::Volumes) -> Self {
+    pub(crate) fn new(volumes: openapi::models::Volumes, event_data: EventData) -> Self {
         let volumes_size_vector = get_volumes_size_vector(volumes.entries);
         Self {
             count: volumes_size_vector.len() as u64,
@@ -22,6 +31,8 @@ impl Volumes {
             min_size_in_bytes: get_min_value(volumes_size_vector.clone()),
             mean_size_in_bytes: get_mean_value(volumes_size_vector.clone()),
             capacity_percentiles_in_bytes: Percentiles::new(volumes_size_vector),
+            created: event_data.volume_created.value(),
+            deleted: event_data.volume_deleted.value(),
         }
     }
 }
@@ -35,11 +46,13 @@ pub(crate) struct Pools {
     min_size_in_bytes: u64,
     mean_size_in_bytes: u64,
     capacity_percentiles_in_bytes: Percentiles,
+    created: u32,
+    deleted: u32,
 }
 impl Pools {
     /// Receives a vector of openapi::models::Pool and returns a new report_models::Pools object by
     /// using the data provided.
-    pub(crate) fn new(pools: Vec<openapi::models::Pool>) -> Self {
+    pub(crate) fn new(pools: Vec<openapi::models::Pool>, event_data: EventData) -> Self {
         let pools_size_vector = get_pools_size_vector(pools);
         Self {
             count: pools_size_vector.len() as u64,
@@ -47,6 +60,8 @@ impl Pools {
             min_size_in_bytes: get_min_value(pools_size_vector.clone()),
             mean_size_in_bytes: get_mean_value(pools_size_vector.clone()),
             capacity_percentiles_in_bytes: Percentiles::new(pools_size_vector),
+            created: event_data.pool_created.value(),
+            deleted: event_data.pool_deleted.value(),
         }
     }
 }
@@ -183,4 +198,164 @@ fn get_pools_size_vector(pools: Vec<openapi::models::Pool>) -> Vec<u64> {
         };
     }
     pools_size_vector
+}
+
+/// EventData consists of pool and volume events.
+#[derive(Debug, Default, Clone)]
+pub(crate) struct EventData {
+    pub(crate) volume_created: VolumeCreated,
+    pub(crate) volume_deleted: VolumeDeleted,
+    pub(crate) pool_created: PoolCreated,
+    pub(crate) pool_deleted: PoolDeleted,
+}
+
+/// Record of events populated from prometheus.
+#[derive(Debug, Default, Clone)]
+pub struct EventsRecord {
+    record: Vec<Sample>,
+}
+
+/// Implements methods for wrapper.
+impl EventsRecord {
+    pub(crate) fn new(data: Vec<Sample>) -> Self {
+        Self { record: data }
+    }
+}
+
+/// Fetch the events stats.
+pub async fn event_stats(url: Url) -> errors::Result<EventsRecord> {
+    match fetch_stats_with_timeout(url.clone()).await {
+        Ok(response) => {
+            let body = match response.text().await {
+                Ok(text) => text,
+                Err(_) => {
+                    return errors::GetRsponseBodyFailure.fail();
+                }
+            };
+            let lines: Vec<_> = body.lines().map(|s| Ok(s.to_owned())).collect();
+            let metrics = prometheus_parse::Scrape::parse(lines.into_iter())
+                .context(errors::PrometheusOutPutParseFailure)?;
+            Ok(EventsRecord::new(metrics.samples))
+        }
+        Err(_) => errors::StatsFetchFailure.fail(),
+    }
+}
+
+async fn fetch_stats_with_timeout(
+    url: Url,
+) -> Result<reqwest::Response, reqwest_middleware::Error> {
+    new_client()
+        .get(url)
+        .timeout(std::time::Duration::from_secs(30))
+        .send()
+        .await
+}
+
+fn new_client() -> ClientWithMiddleware {
+    // Retry up to 20 times with increasing intervals between attempts.
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(20);
+    let client_config = reqwest::Client::new();
+    ClientBuilder::new(client_config)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build()
+}
+
+struct Record<'a>(&'a Sample);
+
+impl Record<'_> {
+    fn action(&self) -> Action {
+        Action::from(self.0.labels.get(ACTION).unwrap_or(""))
+    }
+    fn resource(&self) -> Resource {
+        Resource::from(self.0.metric.as_str())
+    }
+    fn counter_value(&self) -> u32 {
+        match self.0.value {
+            Value::Counter(v) => v as u32,
+            _ => 0,
+        }
+    }
+    fn try_counter(&self, resource: Resource, action: Action) -> Result<CounterValue, ()> {
+        if self.resource() == resource && self.action() == action {
+            return Ok(CounterValue(self.counter_value()));
+        }
+        Err(())
+    }
+}
+
+/// Metrics Resource.
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub(crate) enum Resource {
+    #[default]
+    Unknown,
+    Pool,
+    Volume,
+}
+/// Metrics action.
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub(crate) enum Action {
+    #[default]
+    Unknown,
+    Created,
+    Deleted,
+}
+
+impl From<&str> for Resource {
+    fn from(s: &str) -> Self {
+        match s {
+            "pool" => Resource::Pool,
+            "volume" => Resource::Volume,
+            _ => Resource::Unknown,
+        }
+    }
+}
+impl From<&str> for Action {
+    fn from(s: &str) -> Self {
+        match s {
+            "created" => Action::Created,
+            "deleted" => Action::Deleted,
+            _ => Action::Unknown,
+        }
+    }
+}
+
+macro_rules! make_counter {
+    ($name:ident, $resource:expr, $action:expr) => {
+        #[derive(Debug, Default, Clone)]
+        pub struct $name(CounterValue);
+        impl std::ops::Deref for $name {
+            type Target = CounterValue;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+        impl TryFrom<Record<'_>> for $name {
+            type Error = ();
+            fn try_from(record: Record<'_>) -> Result<Self, ()> {
+                record.try_counter($resource, $action).map($name)
+            }
+        }
+    };
+}
+
+/// A Counter represents a single numerical value that only increases.
+#[derive(Debug, Default, Clone)]
+pub struct CounterValue(u32);
+impl CounterValue {
+    /// Get the inner value.
+    pub(crate) fn value(&self) -> u32 {
+        self.0
+    }
+}
+
+make_counter!(VolumeCreated, Resource::Volume, Action::Created);
+make_counter!(VolumeDeleted, Resource::Volume, Action::Deleted);
+make_counter!(PoolCreated, Resource::Pool, Action::Created);
+make_counter!(PoolDeleted, Resource::Pool, Action::Deleted);
+
+impl<'a, T: TryFrom<Record<'a>>> From<&'a EventsRecord> for Option<T> {
+    fn from(src: &'a EventsRecord) -> Option<T> {
+        src.record.iter().find_map(|s| T::try_from(Record(s)).ok())
+    }
 }

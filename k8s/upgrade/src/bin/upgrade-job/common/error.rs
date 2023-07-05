@@ -582,6 +582,33 @@ pub(crate) enum Error {
         args: Vec<String>,
         std_err: String,
     },
+
+    /// Error for when we fail to read the entries of a directory.
+    #[snafu(display("Failed to read the contents of directory {}: {}", path.display(), source))]
+    ReadingDirectoryContents {
+        source: std::io::Error,
+        path: PathBuf,
+    },
+
+    /// Error for when the 'crds' directory inside a helm chart directory is either not a
+    /// directory, or it does not exist.
+    #[snafu(display("Helm chart 'crds' directory {} is invalid", path.display()))]
+    InvalidHelmChartCrdDir { path: PathBuf },
+
+    /// Error for when CRD creation fails.
+    #[snafu(display("Failed to create CustomResourceDefinition '{}': {}", name, source))]
+    CreateCrd { source: kube::Error, name: String },
+
+    /// Error for when unwraping of Result<DirEntry, std::io::Error> fails.
+    #[snafu(display(
+        "Failed to collect DirEntry list from read_dir() into a Vec<_> for directory {}: {}",
+        path.display(),
+        source
+    ))]
+    CollectDirEntries {
+        source: std::io::Error,
+        path: PathBuf,
+    },
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.

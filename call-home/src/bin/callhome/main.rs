@@ -4,7 +4,10 @@ mod transmitter;
 use crate::{
     collector::{
         k8s_client::K8sClient,
-        report_models::{Pools, Replicas, Report, Volumes},
+        report_models::{
+            event_stats, EventData, PoolCreated, PoolDeleted, Pools, Replicas, Report,
+            VolumeCreated, VolumeDeleted, Volumes,
+        },
     },
     transmitter::*,
 };
@@ -29,6 +32,10 @@ struct CliArgs {
     /// The namespace we are supposed to operate in.
     #[arg(short, long, default_value = DEFAULT_NAMESPACE)]
     namespace: String,
+
+    /// The endpoint to fetch events stats.
+    #[clap(long, short, default_value = DEFAULT_STATS_AGGREGATOR_URL)]
+    aggregator_url: Url,
 }
 impl CliArgs {
     fn args() -> Self {
@@ -52,6 +59,7 @@ async fn run() -> anyhow::Result<()> {
     let args = CliArgs::args();
     let version = release_version();
     let endpoint = args.endpoint;
+    let aggregator_url = args.aggregator_url;
     let namespace = digest(args.namespace);
 
     let sleep_duration = call_home_frequency();
@@ -91,6 +99,7 @@ async fn run() -> anyhow::Result<()> {
             k8s_cluster_id.clone(),
             namespace.clone(),
             version.clone(),
+            aggregator_url.clone(),
         )
         .await;
 
@@ -120,6 +129,7 @@ async fn generate_report(
     k8s_cluster_id: String,
     deploy_namespace: String,
     product_version: String,
+    aggregator_url: Url,
 ) -> Report {
     let mut report = Report {
         product_name: PRODUCT.to_string(),
@@ -127,6 +137,19 @@ async fn generate_report(
         deploy_namespace,
         product_version,
         ..Default::default()
+    };
+
+    let mut event_data = EventData::default();
+    match event_stats(aggregator_url.clone()).await {
+        Ok(data) => {
+            event_data.volume_created = Option::<VolumeCreated>::from(&data).unwrap_or_default();
+            event_data.volume_deleted = Option::<VolumeDeleted>::from(&data).unwrap_or_default();
+            event_data.pool_created = Option::<PoolCreated>::from(&data).unwrap_or_default();
+            event_data.pool_deleted = Option::<PoolDeleted>::from(&data).unwrap_or_default();
+        }
+        Err(err) => {
+            error!("{:?}", err);
+        }
     };
 
     let k8s_node_count = k8s_client.get_node_len().await;
@@ -147,7 +170,7 @@ async fn generate_report(
 
     let pools = http_client.pools_api().get_pools().await;
     match pools {
-        Ok(pools) => report.pools = Pools::new(pools.into_body()),
+        Ok(pools) => report.pools = Pools::new(pools.into_body(), event_data.clone()),
         Err(err) => {
             error!("{:?}", err);
         }
@@ -163,7 +186,7 @@ async fn generate_report(
     };
 
     if let Some(volumes) = &volumes {
-        report.volumes = Volumes::new(volumes.clone());
+        report.volumes = Volumes::new(volumes.clone(), event_data);
     }
 
     let replicas = http_client.replicas_api().get_replicas().await;

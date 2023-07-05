@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 
 /// Volume related events.
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct Volume {
-    pub volume_created: u32,
-    pub volume_deleted: u32,
+pub(crate) struct Volume {
+    pub(crate) volume_created: u32,
+    pub(crate) volume_deleted: u32,
 }
 
 impl StatsCounter for Volume {

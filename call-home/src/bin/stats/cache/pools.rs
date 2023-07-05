@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 
 /// Pool related events.
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct Pool {
-    pub pool_created: u32,
-    pub pool_deleted: u32,
+pub(crate) struct Pool {
+    pub(crate) pool_created: u32,
+    pub(crate) pool_deleted: u32,
 }
 
 impl StatsCounter for Pool {
