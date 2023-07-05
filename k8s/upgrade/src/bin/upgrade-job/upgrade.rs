@@ -51,7 +51,7 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
         .await?;
 
     // Control plane containers are updated in this step.
-    if let Err(error) = helm_upgrade.run() {
+    if let Err(error) = helm_upgrade.run().await {
         event.publish_unrecoverable(&error).await;
         return Err(error);
     }
