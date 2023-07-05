@@ -171,12 +171,13 @@ VOLUME-ID                              ID                                    NOD
 
 11. Volume Rebuild History by volumeID
 ```
-❯ kubectl mayastor get rebuild-history e4b02813-644f-4285-9b7e-efc0c25979bf
-DST                                   SRC                                   STATE      BLKS-TOTAL  BLKS-RECOVERED  BLKS-TRANSFERRED  BLKS-SIZE  IS-PARTIAL  START-TIME                      END-TIME
-1324c40a-150e-4d7b-8ce1-d93e170fecbf  cadd71b8-d385-4acd-a538-c3b2393bf395  Completed  14KiB       14KiB           0 B               512B       true        2023-06-27T14:34:57.532859848Z  2023-06-27T14:34:57.533855129Z
+❯ kubectl mayastor get rebuild-history e898106d-e735-4edf-aba2-932d42c3c58d
+DST                                   SRC                                   STATE      TOTAL  RECOVERED  TRANSFERRED  IS-PARTIAL  START-TIME            END-TIME
+b5de71a6-055d-433a-a1c5-2b39ade05d86  0dafa450-7a19-4e21-a919-89c6f9bd2a97  Completed  7MiB   7MiB       0 B          true        2023-07-04T05:45:47Z  2023-07-04T05:45:47Z
+b5de71a6-055d-433a-a1c5-2b39ade05d86  0dafa450-7a19-4e21-a919-89c6f9bd2a97  Completed  7MiB   7MiB       0 B          true        2023-07-04T05:45:46Z  2023-07-04T05:45:46Z
 
-❯ kubectl mayastor get rebuild-history e4b02813-644f-4285-9b7e-efc0c25979bf -ojson
-{"targetUuid":"f405af02-8745-4997-bd61-42bb942fb414","records":[{"childUri":"nvmf://10.1.0.7:8420/nqn.2019-05.io.openebs:1324c40a-150e-4d7b-8ce1-d93e170fecbf?uuid=1324c40a-150e-4d7b-8ce1-d93e170fecbf","srcUri":"bdev:///cadd71b8-d385-4acd-a538-c3b2393bf395?uuid=cadd71b8-d385-4acd-a538-c3b2393bf395","rebuildJobState":"Completed","blocksTotal":14302,"blocksRecovered":14302,"blocksTransferred":0,"blocksRemaining":0,"blockSize":512,"isPartial":true,"startTime":"2023-06-27T14:34:57.532859848Z","endTime":"2023-06-27T14:34:57.533855129Z"}]}
+❯ kubectl mayastor get rebuild-history e898106d-e735-4edf-aba2-932d42c3c58d -ojson
+{"targetUuid":"c9eb4172-e90c-40ca-9db0-26b2ae372b28","records":[{"childUri":"nvmf://10.1.0.9:8420/nqn.2019-05.io.openebs:b5de71a6-055d-433a-a1c5-2b39ade05d86?uuid=b5de71a6-055d-433a-a1c5-2b39ade05d86","srcUri":"bdev:///0dafa450-7a19-4e21-a919-89c6f9bd2a97?uuid=0dafa450-7a19-4e21-a919-89c6f9bd2a97","rebuildJobState":"Completed","blocksTotal":14302,"blocksRecovered":14302,"blocksTransferred":0,"blocksRemaining":0,"blockSize":512,"isPartial":true,"startTime":"2023-07-04T05:45:47.765932276Z","endTime":"2023-07-04T05:45:47.766825274Z"},{"childUri":"nvmf://10.1.0.9:8420/nqn.2019-05.io.openebs:b5de71a6-055d-433a-a1c5-2b39ade05d86?uuid=b5de71a6-055d-433a-a1c5-2b39ade05d86","srcUri":"bdev:///0dafa450-7a19-4e21-a919-89c6f9bd2a97?uuid=0dafa450-7a19-4e21-a919-89c6f9bd2a97","rebuildJobState":"Completed","blocksTotal":14302,"blocksRecovered":14302,"blocksTransferred":0,"blocksRemaining":0,"blockSize":512,"isPartial":true,"startTime":"2023-07-04T05:45:46.242015389Z","endTime":"2023-07-04T05:45:46.242927463Z"}]}
 
 ```
 
