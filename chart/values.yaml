@@ -160,6 +160,11 @@ agents:
         # -- Same as the `volumeCommitment` argument, but applicable only when creating replicas
         # for a new volume.
         volumeCommitmentInitial: "40%"
+        # -- When creating snapshots for an existing volume, each replica pool must have at least
+        # this much free space percentage of the volume size.
+        # Example: if this value is 40, the pool has 40GiB free, then the max volume size allowed
+        # to be snapped on the pool is 100GiB.
+        snapshotCommitment: "40%"
     resources:
       limits:
         # -- Cpu limits for core agents
