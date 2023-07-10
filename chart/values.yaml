@@ -627,6 +627,7 @@ obs:
     enabled: true
     # -- Log level for callhome
     logLevel: "info"
+    sendReport: true
     resources:
       limits:
         # -- Cpu limits for callhome
