@@ -594,8 +594,9 @@ loki-stack:
               target_label: __path__
 
 # Eventing which enables or disables eventing-related components.
+# This feature is in progress and will be available from next release.
 eventing:
-  enabled: true
+  enabled: false
 
 # Configuration for the nats message-bus. This is an eventing component, and is enabled when
 # 'eventing.enabled' is set to 'true'.
