@@ -33,6 +33,10 @@ struct CliArgs {
     #[arg(short, long, default_value = DEFAULT_NAMESPACE)]
     namespace: String,
 
+    /// Sends the report to the remote collection endpoint.
+    #[clap(long, short)]
+    send_report: bool,
+
     /// The endpoint to fetch events stats.
     #[clap(long, short, default_value = DEFAULT_STATS_AGGREGATOR_URL)]
     aggregator_url: Url,
@@ -60,8 +64,8 @@ async fn run() -> anyhow::Result<()> {
     let version = release_version();
     let endpoint = args.endpoint;
     let aggregator_url = args.aggregator_url;
+    let send_report = args.send_report;
     let namespace = digest(args.namespace);
-
     let sleep_duration = call_home_frequency();
     let encryption_dir = encryption_dir();
     let key_filepath = key_filepath();
@@ -113,9 +117,11 @@ async fn run() -> anyhow::Result<()> {
         let output = output.map_err(|error| anyhow::anyhow!("encryption failed: {:?}", error))?;
 
         // POST data to receiver API.
-        match receiver.post(output).await {
-            Ok(response) => info!(?response, "Success"),
-            Err(e) => error!(?e, "failed HTTP POST request"),
+        if send_report {
+            match receiver.post(output).await {
+                Ok(response) => info!(?response, "Success"),
+                Err(e) => error!(?e, "failed HTTP POST request"),
+            }
         }
 
         // Block until next transmission window.
