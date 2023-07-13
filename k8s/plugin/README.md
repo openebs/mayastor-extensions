@@ -163,9 +163,9 @@ VOLUME-ID                              ID                                    NOD
 10. Volume Snapshots by volumeID
 ```
 ❯ kubectl mayastor get volume-snapshots --volume dc4e66fd-3b33-4439-b504-d49aba53da26
- ID                                    TIMESTAMP             SIZE   SOURCE-VOL
- 11823425-41fa-434a-9efd-a356b70b5d7c  2023-06-06T05:49:13Z  12MiB  dc4e66fd-3b33-4439-b504-d49aba53da26
- 22823425-41fa-434a-9efd-a356b70b5d7c  2023-06-06T05:50:14Z  12MiB  dc4e66fd-3b33-4439-b504-d49aba53da26
+ ID                                    TIMESTAMP             SOURCE-SIZE  ALLOCATED-SIZE  TOTAL-ALLOCATED-SIZE  SOURCE-VOL
+ 25823425-41fa-434a-9efd-a356b70b5d7c  2023-07-07T13:20:17Z  10MiB        12MiB           12MiB                 ec4e66fd-3b33-4439-b504-d49aba53da26
+
 
 ```
 
