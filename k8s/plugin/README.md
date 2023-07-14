@@ -274,15 +274,9 @@ kubectl mayastor dump
 Usage: kubectl-mayastor dump [OPTIONS] <COMMAND>
 
 Commands:
-  system   Collects entire system information
-  volumes  Collects information about all volumes and its descendants (replicas/pools/nodes)
-  volume   Collects information about particular volume and its descendants matching to given volume ID
-  pools    Collects information about all pools and its descendants (nodes)
-  pool     Collects information about particular pool and its descendants matching to given pool ID
-  nodes    Collects information about all nodes
-  node     Collects information about particular node matching to given node ID
-  etcd     Collects information from etcd
-  help     Print this message or the help of the given subcommand(s)
+  system  Collects entire system information
+  etcd    Collects information from etcd
+  help    Print this message or the help of the given subcommand(s)
 
 Options:
   -r, --rest <REST>
@@ -300,7 +294,7 @@ Options:
   -d, --output-directory-path <OUTPUT_DIRECTORY_PATH>
           Output directory path to store archive file [default: ./]
   -n, --namespace <NAMESPACE>
-          Kubernetes namespace of mayastor service[default: mayastor]
+          Kubernetes namespace of mayastor service [default: mayastor]
   -o, --output <OUTPUT>
           The Output, viz yaml, json [default: none]
   -j, --jaeger <JAEGER>
@@ -316,58 +310,12 @@ Supportability - collects state & log information of services and dumps it to a 
 
 **Examples**:
 
-1. To collect entire mayastor system information into an archive file
-   ```sh
-   ## Command
-   kubectl mayastor dump system -d <output_directory> -n <mayastor_namespace>
-   ```
-
-    - Example command while running inside Kubernetes cluster nodes / system which
-      has access to cluster node ports
-      ```sh
-      kubectl mayastor dump system -d /mayastor-dump -n mayastor
-      ```
-    - Example command while running outside of Kubernetes cluster nodes where
-      nodes exist in private network (or) node ports are not exposed for outside cluster
-      ```sh
-      kubectl mayastor dump system -d /mayastor-dump -r http://127.0.0.1:30011 -l http://127.0.0.1:3100 -e http://127.0.0.1:2379 -n mayastor
-      ```
-
-2. To collect information about all mayastor volumes into an archive file
-   ```sh
-   ## Command
-   kubectl mayastor dump volumes -d <output_directory> -n <mayastor_namespace>
-   ```
-
-    - Example command while running inside Kubernetes cluster nodes / system which
-      has access to cluster node ports
-      ```sh
-      kubectl mayastor dump volumes -d /mayastor-dump -n mayastor
-      ```
-    - Example command while running outside of Kubernetes cluster nodes where
-      nodes exist in private network (or) node ports are not exposed for outside cluster
-      ```sh
-      kubectl mayastor dump volumes -d /mayastor-dump -r http://127.0.0.1:30011 -l http://127.0.0.1:3100 -e http://127.0.0.1:2379 -n mayastor
-      ```
-
-   **Note**: similarly to dump pools/nodes information then replace `volumes` with an associated resource type(`pools/nodes`).
-
-3. To collect information about particular volume into an archive file
-   ```sh
-   ## Command
-   kubectl mayastor dump volume <volume_name> -d <output_directory> -n <mayastor_namespace>
-   ```
-
-    - Example command while running inside Kubernetes cluster nodes / system which
-      has access to cluster node ports
-      ```sh
-      kubectl mayastor dump volume volume-1 -d /mayastor-dump -n mayastor
-      ```
-    - Example command while running outside of Kubernetes cluster nodes where
-      nodes exist in private network (or) node ports are not exposed for outside cluster
-      ```sh
-      kubectl mayastor dump volume volume-1 -d /mayastor-dump -r http://127.0.0.1:30011 -l http://127.0.0.1:3100 -e http://127.0.0.1:2379 -n mayastor
-      ```
+To collect entire mayastor system information into an archive file
+```sh
+## Command
+kubectl mayastor dump system -d <output_directory> -n <mayastor_namespace>
+```
+ <b>`--disable-log-collection` can be used to disable collection of logs.</b>
 
 </details>
 <details>
