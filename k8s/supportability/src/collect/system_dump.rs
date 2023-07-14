@@ -8,8 +8,9 @@ use crate::{
         logs::{LogCollection, LogError, LogResource, Logger},
         persistent_store::etcd::EtcdStore,
         resources::{
-            node::NodeClientWrapper, pool::PoolClientWrapper, traits::Topologer,
-            volume::VolumeClientWrapper, Resourcer,
+            node::NodeClientWrapper, pool::PoolClientWrapper,
+            snapshot::VolumeSnapshotClientWrapper, traits::Topologer, volume::VolumeClientWrapper,
+            Resourcer,
         },
         rest_wrapper::RestClient,
         utils::{flush_tool_log_file, init_tool_log_file, write_to_log_file},
@@ -28,6 +29,7 @@ pub(crate) struct SystemDumper {
     logger: Box<dyn Logger>,
     k8s_resource_dumper: K8sResourceDumperClient,
     etcd_dumper: Option<EtcdStore>,
+    disable_log_collection: bool,
 }
 
 impl SystemDumper {
@@ -35,7 +37,10 @@ impl SystemDumper {
     /// 1.1 Create new archive in given directory and create temporary directory
     /// in given directory to generate dump files
     /// 1.2 Instantiate all required objects to interact with various other modules
-    pub(crate) async fn get_or_panic_system_dumper(config: DumpConfig) -> Self {
+    pub(crate) async fn get_or_panic_system_dumper(
+        config: DumpConfig,
+        disable_log_collection: bool,
+    ) -> Self {
         // Creates a temporary directory inside user provided directory, to store
         // artifacts. If creation is failed then we can't continue the process.
         let new_dir = match common::create_and_get_tmp_directory(config.output_directory.clone()) {
@@ -114,6 +119,7 @@ impl SystemDumper {
             logger,
             k8s_resource_dumper,
             etcd_dumper,
+            disable_log_collection,
         }
     }
 
@@ -178,6 +184,22 @@ impl SystemDumper {
             Err(e) => errors.push(Error::ResourceError(e)),
         };
 
+        match VolumeSnapshotClientWrapper::new(self.rest_client.clone())
+            .get_topologer(None)
+            .await
+        {
+            Ok(topologer) => {
+                log("\t Collecting snapshot topology information".to_string());
+                let _ = topologer
+                    .dump_topology_info(format!("{}/topology/snapshot", self.dir_path.clone()))
+                    .map_err(|e| {
+                        errors.push(Error::ResourceError(e));
+                        log("\t Failed to dump snapshot topology information".to_string());
+                    });
+            }
+            Err(e) => errors.push(Error::ResourceError(e)),
+        };
+
         // Dump information of all pools topologies exist in the system
         match PoolClientWrapper::new(self.rest_client.clone())
             .get_topologer(None)
@@ -216,9 +238,11 @@ impl SystemDumper {
         };
         log("Completed collection of topology information".to_string());
 
-        if let Err(error) = self.collect_and_dump_loki_logs(node_topologer).await {
-            log("Error occurred while collecting logs".to_string());
-            errors.push(Error::LogCollectionError(error));
+        if !self.disable_log_collection {
+            if let Err(error) = self.collect_and_dump_loki_logs(node_topologer).await {
+                log("Error occurred while collecting logs".to_string());
+                errors.push(Error::LogCollectionError(error));
+            }
         }
 
         log("Collecting Kubernetes resources specific to mayastor service".to_string());
