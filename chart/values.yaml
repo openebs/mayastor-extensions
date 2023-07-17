@@ -110,7 +110,7 @@ base:
 operators:
   pool:
     # -- Log level for diskpool operator service
-    logLevel: debug
+    logLevel: info
     resources:
       limits:
         # -- Cpu limits for diskpool operator
@@ -145,7 +145,7 @@ jaeger-operator:
 agents:
   core:
     # -- Log level for the core service
-    logLevel: debug
+    logLevel: info
     capacity:
       thin:
         # -- The allowed pool commitment limit when dealing with thin provisioned volumes.
@@ -191,7 +191,7 @@ agents:
     enabled: true
     node:
       # -- Log level for the ha node service
-      logLevel: debug
+      logLevel: info
       resources:
         limits:
           # -- Cpu limits for ha node agent
@@ -209,7 +209,7 @@ agents:
       priorityClassName: ""
     cluster:
       # -- Log level for the ha cluster service
-      logLevel: debug
+      logLevel: info
       resources:
         limits:
           # -- Cpu limits for ha cluster agent
@@ -225,7 +225,7 @@ agents:
 apis:
   rest:
     # -- Log level for the rest service
-    logLevel: debug
+    logLevel: info
     # -- Number of replicas of rest
     replicaCount: 1
     resources:
@@ -277,7 +277,7 @@ csi:
 
   controller:
     # -- Log level for the csi controller
-    logLevel: debug
+    logLevel: info
     resources:
       limits:
         # -- Cpu limits for csi controller
@@ -294,7 +294,7 @@ csi:
     # -- Set PriorityClass, overrides global
     priorityClassName: ""
   node:
-    logLevel: debug
+    logLevel: info
     topology:
       segments:
         openebs.io/csi-node: mayastor
@@ -329,7 +329,7 @@ csi:
 
 io_engine:
   # -- Log level for the io-engine service
-  logLevel: debug
+  logLevel: info
   api: "v1"
   target:
     nvmf:
@@ -626,7 +626,7 @@ obs:
     # -- Enable callhome
     enabled: true
     # -- Log level for callhome
-    logLevel: debug
+    logLevel: "info"
     resources:
       limits:
         # -- Cpu limits for callhome
@@ -645,7 +645,7 @@ obs:
   # Eventing component enabled/disabled based on obs.callhome.enabled value
   stats:
     # -- Log level for stats
-    logLevel: debug
+    logLevel: "info"
     resources:
       limits:
         # -- Cpu limits for stats
