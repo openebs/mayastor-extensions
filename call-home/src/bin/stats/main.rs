@@ -6,12 +6,12 @@ use crate::{
     store::events_store::initialize,
 };
 use actix_web::{http::header, middleware, web, HttpResponse, HttpServer, Responder};
-use k8s_openapi::api::core::v1::ConfigMap;
-use mbus_api::{
+use events_api::{
+    event::EventMessage,
     mbus_nats::{message_bus_init, BusSubscription},
-    message::EventMessage,
     Bus,
 };
+use k8s_openapi::api::core::v1::ConfigMap;
 use obs::common::{
     constants::{DEFAULT_MBUS_URL, DEFAULT_NAMESPACE, DEFAULT_RELEASE_NAME},
     errors,
@@ -64,7 +64,7 @@ impl Cli {
 
 /// Intilize mbus.
 pub(crate) async fn mbus_init(mbus_url: &str) -> BusSubscription<EventMessage> {
-    let mut bus = message_bus_init(mbus_url).await;
+    let mut bus = message_bus_init(mbus_url, None).await;
     bus.subscribe::<EventMessage>()
         .await
         .map_err(|error| trace!("Error subscribing to jetstream: {error:?}"))

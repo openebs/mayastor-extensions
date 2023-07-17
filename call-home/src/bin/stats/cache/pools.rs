@@ -1,5 +1,5 @@
 use super::events_cache::StatsCounter;
-use mbus_api::message::Action;
+use events_api::event::EventAction;
 use serde::{Deserialize, Serialize};
 
 /// Pool related events.
@@ -10,15 +10,15 @@ pub(crate) struct Pool {
 }
 
 impl StatsCounter for Pool {
-    fn update_counter(&mut self, action: Action) {
+    fn update_counter(&mut self, action: EventAction) {
         match action {
-            Action::CreateEvent => {
+            EventAction::Create => {
                 self.pool_created += 1;
             }
-            Action::DeleteEvent => {
+            EventAction::Delete => {
                 self.pool_deleted += 1;
             }
-            Action::Unknown => {}
+            EventAction::UnknownAction => {}
         }
     }
 }
