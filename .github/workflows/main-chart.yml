@@ -17,6 +17,9 @@ jobs:
           export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
           echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
           nix-shell --pure --run "echo" ./scripts/helm/shell.nix
+      - name: Update loglevel to debug
+        run: |
+          sed -Ei "s~(logLevel: .*)~logLevel: debug~" chart/values.yaml
       - name: Prepare chart for publishing
         run: |
           branch="${{ github.ref_name }}"
