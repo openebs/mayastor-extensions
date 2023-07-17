@@ -183,7 +183,7 @@ entries:
     version: 0.0.0
   - apiVersion: v2
     appVersion: 0.0.0-main
-    created: "2023-07-17T18:30:48.319825086Z"
+    created: "2023-07-17T19:51:18.090058846Z"
     dependencies:
     - name: etcd
       repository: https://charts.bitnami.com/bitnami
@@ -201,10 +201,10 @@ entries:
       repository: https://nats-io.github.io/k8s/helm/charts/
       version: 0.19.14
     description: Mayastor Helm chart for Kubernetes
-    digest: b36dd91c692df1a60d81a10057bed922a9d2f2d88f2e02782dd313e8cb531787
+    digest: c8c9a407e133765a4bc3b2be4a0cec157ec10006cfa7aec3703a73afe193cb21
     name: mayastor
     type: application
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2023-07-17T18:30:48.294143774Z"
+generated: "2023-07-17T19:51:18.067160075Z"
