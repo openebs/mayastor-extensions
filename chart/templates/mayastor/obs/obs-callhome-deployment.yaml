@@ -41,7 +41,7 @@ spec:
             - "-n {{ .Release.Namespace }}"
             - "--aggregator-url=http://{{ .Release.Name }}-obs-callhome-stats:9090/stats"
             {{ if .Values.obs.callhome.sendReport }}
-            - "--save-report"
+            - "--send-report"
             {{ end }}
           env:
             - name: RUST_LOG
