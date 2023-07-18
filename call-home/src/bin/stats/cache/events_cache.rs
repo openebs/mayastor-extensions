@@ -1,9 +1,9 @@
 use crate::cache::{pools, volume};
-use k8s_openapi::api::core::v1::ConfigMap;
-use mbus_api::{
+use events_api::{
+    event::{EventAction, EventCategory, EventMessage},
     mbus_nats::BusSubscription,
-    message::{Action, Category, EventMessage},
 };
+use k8s_openapi::api::core::v1::ConfigMap;
 use obs::common::{constants::EVENT_STATS_DATA, errors};
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
@@ -36,11 +36,11 @@ impl EventSet {
         Ok(event_set)
     }
 
-    fn inc_counter(&mut self, category: Category, action: Action) {
+    fn inc_counter(&mut self, category: EventCategory, action: EventAction) {
         match category {
-            Category::Pool => self.pool.update_counter(action),
-            Category::Volume => self.volume.update_counter(action),
-            Category::Unknown => {}
+            EventCategory::Pool => self.pool.update_counter(action),
+            EventCategory::Volume => self.volume.update_counter(action),
+            EventCategory::UnknownCategory => {}
         }
     }
 }
@@ -84,12 +84,12 @@ pub(crate) async fn store_events(mut sub: BusSubscription<EventMessage>) -> erro
         let events_cache = cache.deref_mut();
         events_cache
             .data_mut()
-            .inc_counter(message.category, message.action);
+            .inc_counter(message.category(), message.action());
     }
     Ok(())
 }
 
 /// Trait for updating the counters.
 pub(crate) trait StatsCounter {
-    fn update_counter(&mut self, action: Action);
+    fn update_counter(&mut self, action: EventAction);
 }
