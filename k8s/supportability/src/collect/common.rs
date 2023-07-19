@@ -1,5 +1,8 @@
-use crate::collect::{error::Error, resources::traits::Topologer, rest_wrapper::RestClient};
+use crate::collect::{error::Error, rest_wrapper::RestClient};
 use chrono::Local;
+
+#[cfg(debug_assertions)]
+use crate::collect::resources::traits::Topologer;
 
 /// DumpConfig helps to create new instance of Dumper
 #[derive(Debug)]
@@ -20,7 +23,8 @@ pub(crate) struct DumpConfig {
     pub(crate) kube_config_path: Option<std::path::PathBuf>,
     /// Specifies the timeout value to interact with other systems
     pub(crate) timeout: humantime::Duration,
-    /// Topologer implements functionality to build topological infotmation of system
+    #[cfg(debug_assertions)]
+    /// Topologer implements functionality to build topological information of system
     pub(crate) topologer: Option<Box<dyn Topologer>>,
     pub(crate) output_format: OutputFormat,
 }

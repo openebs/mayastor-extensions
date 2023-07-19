@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate prettytable;
-
 pub mod collect;
 pub mod operations;
 
@@ -8,13 +5,13 @@ use collect::{
     common::DumpConfig,
     error::Error,
     resource_dump::ResourceDumper,
-    resources::{
-        node::NodeClientWrapper, pool::PoolClientWrapper, traits::Topologer,
-        volume::VolumeClientWrapper, Resourcer,
-    },
+    resources::{node::NodeClientWrapper, Resourcer},
     rest_wrapper,
 };
 use operations::{Operations, Resource};
+
+#[cfg(debug_assertions)]
+use collect::resources::{pool::PoolClientWrapper, traits::Topologer, volume::VolumeClientWrapper};
 
 use crate::collect::{common::OutputFormat, utils::log};
 use std::path::PathBuf;
@@ -103,6 +100,7 @@ impl SupportArgs {
         resource: Resource,
     ) -> Result<(), Error> {
         let cli_args = self;
+        #[cfg(debug_assertions)]
         let topologer: Box<dyn Topologer>;
         let mut config = DumpConfig {
             rest_client: rest_client.clone(),
@@ -113,6 +111,7 @@ impl SupportArgs {
             since: cli_args.since,
             kube_config_path,
             timeout: cli_args.timeout,
+            #[cfg(debug_assertions)]
             topologer: None,
             output_format: OutputFormat::Tar,
         };
@@ -120,7 +119,8 @@ impl SupportArgs {
         match resource {
             Resource::Loki => {
                 let mut system_dumper =
-                    collect::system_dump::SystemDumper::get_or_panic_system_dumper(config).await;
+                    collect::system_dump::SystemDumper::get_or_panic_system_dumper(config, true)
+                        .await;
                 let node_topologer = NodeClientWrapper::new(system_dumper.rest_client())
                     .get_topologer(None)
                     .await
@@ -135,9 +135,13 @@ impl SupportArgs {
                     errors.push(e);
                 }
             }
-            Resource::System => {
+            Resource::System(args) => {
                 let mut system_dumper =
-                    collect::system_dump::SystemDumper::get_or_panic_system_dumper(config).await;
+                    collect::system_dump::SystemDumper::get_or_panic_system_dumper(
+                        config,
+                        args.disable_log_collection,
+                    )
+                    .await;
                 if let Err(e) = system_dumper.dump_system().await {
                     // NOTE: We also need to log error content into Supportability log file
                     log(format!("Failed to dump system state, error: {e:?}"));
@@ -148,6 +152,7 @@ impl SupportArgs {
                     errors.push(e);
                 }
             }
+            #[cfg(debug_assertions)]
             Resource::Volumes => {
                 let volume_client = VolumeClientWrapper::new(rest_client);
                 topologer = volume_client.get_topologer(None).await?;
@@ -162,6 +167,7 @@ impl SupportArgs {
                     errors.push(e);
                 }
             }
+            #[cfg(debug_assertions)]
             Resource::Volume { id } => {
                 let volume_client = VolumeClientWrapper::new(rest_client);
                 topologer = volume_client.get_topologer(Some(id)).await?;
@@ -178,6 +184,7 @@ impl SupportArgs {
                     errors.push(e);
                 }
             }
+            #[cfg(debug_assertions)]
             Resource::Pools => {
                 let pool_client = PoolClientWrapper::new(rest_client);
                 topologer = pool_client.get_topologer(None).await?;
@@ -192,6 +199,7 @@ impl SupportArgs {
                     errors.push(e);
                 }
             }
+            #[cfg(debug_assertions)]
             Resource::Pool { id } => {
                 let pool_client = PoolClientWrapper::new(rest_client);
                 topologer = pool_client.get_topologer(Some(id.to_string())).await?;
@@ -208,6 +216,7 @@ impl SupportArgs {
                     errors.push(e);
                 }
             }
+            #[cfg(debug_assertions)]
             Resource::Nodes => {
                 let node_client = NodeClientWrapper { rest_client };
                 topologer = node_client.get_topologer(None).await?;
@@ -222,6 +231,7 @@ impl SupportArgs {
                     errors.push(e);
                 }
             }
+            #[cfg(debug_assertions)]
             Resource::Node { id } => {
                 let node_client = NodeClientWrapper { rest_client };
                 topologer = node_client.get_topologer(Some(id.to_string())).await?;

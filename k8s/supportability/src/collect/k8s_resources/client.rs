@@ -1,12 +1,23 @@
 use crate::collect::k8s_resources::common::KUBERNETES_HOST_LABEL_KEY;
+use k8s_operators::diskpool::crd::DiskPool;
+
 use k8s_openapi::api::{
     apps::v1::{DaemonSet, Deployment, StatefulSet},
     core::v1::{Event, Node, Pod},
 };
-use k8s_operators::diskpool::crd::DiskPool;
-use kube::{api::ListParams, Api, Client, Resource};
-
+use kube::{
+    api::{DynamicObject, ListParams},
+    discovery::{verbs, Scope},
+    Api, Client, Discovery, Resource,
+};
 use std::{collections::HashMap, convert::TryFrom};
+
+const SNAPSHOT_GROUP: &str = "snapshot.storage.k8s.io";
+const SNAPSHOT_VERSION: &str = "v1";
+const VOLUME_SNAPSHOT_CLASS: &str = "VolumeSnapshotClass";
+const VOLUME_SNAPSHOT_CONTENT: &str = "VolumeSnapshotContent";
+const DRIVER: &str = "driver";
+const SPEC: &str = "spec";
 
 /// K8sResourceError holds errors that can obtain while fetching
 /// information of Kubernetes Objects
@@ -87,6 +98,43 @@ impl ClientSet {
         self.client.clone()
     }
 
+    /// Get a new api for a `dynamic_object` for the provided GVK.
+    pub(crate) async fn dynamic_object_api(
+        &self,
+        namespace: Option<&str>,
+        group_name: &str,
+        version: &str,
+        kind: &str,
+    ) -> Result<Api<DynamicObject>, K8sResourceError> {
+        let discovery = Discovery::new(self.kube_client()).run().await?;
+        for group in discovery.groups() {
+            if group.name() == group_name {
+                for (ar, caps) in group.recommended_resources() {
+                    if !caps.supports_operation(verbs::LIST) {
+                        continue;
+                    }
+                    if ar.version == version && ar.kind == kind {
+                        let result = match namespace {
+                            None if caps.scope == Scope::Cluster => {
+                                Ok(Api::all_with(self.kube_client(), &ar))
+                            }
+                            Some(ns) if caps.scope == Scope::Namespaced => {
+                                Ok(Api::namespaced_with(self.kube_client(), ns, &ar))
+                            }
+                            _ => Err(K8sResourceError::CustomError(format!(
+                                "DynamicObject Api not available for {kind} of {group_name}/{version}"
+                            ))),
+                        };
+                        return result;
+                    }
+                }
+            }
+        }
+        Err(K8sResourceError::CustomError(format!(
+            "DynamicObject Api not available for {kind} of {group_name}/{version}"
+        )))
+    }
+
     /// Fetch node objects from API-server then form and return map of node name to node object
     pub(crate) async fn get_nodes_map(&self) -> Result<HashMap<String, Node>, K8sResourceError> {
         let node_api: Api<Node> = Api::all(self.client.clone());
@@ -164,6 +212,115 @@ impl ClientSet {
         Ok(pools.items)
     }
 
+    /// Fetch list of volume snapshot classes based on the driver if provided.
+    pub(crate) async fn list_volumesnapshot_classes(
+        &self,
+        driver_selector: Option<&str>,
+        label_selector: Option<&str>,
+        field_selector: Option<&str>,
+    ) -> Result<Vec<DynamicObject>, K8sResourceError> {
+        let list_params = ListParams::default()
+            .labels(label_selector.unwrap_or_default())
+            .fields(field_selector.unwrap_or_default());
+        let vsc_api: Api<DynamicObject> = self
+            .dynamic_object_api(
+                None,
+                SNAPSHOT_GROUP,
+                SNAPSHOT_VERSION,
+                VOLUME_SNAPSHOT_CLASS,
+            )
+            .await?;
+        let vscs = match vsc_api.list(&list_params).await {
+            Ok(val) => val,
+            Err(kube_error) => match kube_error {
+                kube::Error::Api(e) => {
+                    if e.code == 404 {
+                        return Ok(vec![]);
+                    }
+                    return Err(K8sResourceError::ClientError(kube::Error::Api(e)));
+                }
+                _ => return Err(K8sResourceError::ClientError(kube_error)),
+            },
+        };
+        Ok(vscs
+            .items
+            .into_iter()
+            .filter(|item| match driver_selector {
+                None => true,
+                Some(driver_selector) => match item.data.get(DRIVER) {
+                    None => false,
+                    Some(value) => match value.as_str() {
+                        None => false,
+                        Some(driver) => driver == driver_selector,
+                    },
+                },
+            })
+            .collect())
+    }
+
+    /// Fetch list of volume snapshot contents based on the driver if provided.
+    pub(crate) async fn list_volumesnapshotcontents(
+        &self,
+        driver_selector: Option<&str>,
+        label_selector: Option<&str>,
+        field_selector: Option<&str>,
+    ) -> Result<Vec<DynamicObject>, K8sResourceError> {
+        let mut list_params = ListParams::default()
+            .labels(label_selector.unwrap_or_default())
+            .fields(field_selector.unwrap_or_default())
+            .limit(2);
+        let vsc_api: Api<DynamicObject> = self
+            .dynamic_object_api(
+                None,
+                SNAPSHOT_GROUP,
+                SNAPSHOT_VERSION,
+                VOLUME_SNAPSHOT_CONTENT,
+            )
+            .await?;
+
+        let mut vscs_filtered: Vec<DynamicObject> = vec![];
+        loop {
+            let vscs = match vsc_api.list(&list_params).await {
+                Ok(val) => val,
+                Err(kube_error) => match kube_error {
+                    kube::Error::Api(e) => {
+                        if e.code == 404 {
+                            return Ok(vec![]);
+                        }
+                        return Err(K8sResourceError::ClientError(kube::Error::Api(e)));
+                    }
+                    _ => return Err(K8sResourceError::ClientError(kube_error)),
+                },
+            };
+            vscs_filtered.append(
+                &mut vscs
+                    .items
+                    .into_iter()
+                    .filter(|item| match driver_selector {
+                        None => true,
+                        Some(driver_selector) => match item.data.get(SPEC) {
+                            None => false,
+                            Some(value) => match value.get(DRIVER) {
+                                None => false,
+                                Some(value) => match value.as_str() {
+                                    None => false,
+                                    Some(driver) => driver == driver_selector,
+                                },
+                            },
+                        },
+                    })
+                    .collect(),
+            );
+            match vscs.metadata.continue_ {
+                Some(token) if !token.is_empty() => {
+                    list_params = list_params.continue_token(token.as_str())
+                }
+                _ => break,
+            };
+        }
+        Ok(vscs_filtered)
+    }
+
     /// Fetch list of k8s events associated to given label_selector & field_selector
     pub(crate) async fn get_events(
         &self,
@@ -183,8 +340,10 @@ impl ClientSet {
             let mut result = events_api.list(&list_params).await?;
             events.append(&mut result.items);
             match result.metadata.continue_ {
-                None => break,
-                Some(token) => list_params = list_params.continue_token(token.as_str()),
+                Some(token) if !token.is_empty() => {
+                    list_params = list_params.continue_token(token.as_str())
+                }
+                _ => break,
             };
         }
 
