@@ -1,15 +1,11 @@
 use crate::{
     collect::{
-        logs::create_directory_if_not_exist,
-        resources,
-        resources::{traits, utils},
-        rest_wrapper::RestClient,
+        logs::create_directory_if_not_exist, resources, resources::traits, rest_wrapper::RestClient,
     },
     log,
 };
 use async_trait::async_trait;
 use openapi::models::{BlockDevice, Node, Pool};
-use prettytable::Row;
 use resources::ResourceError;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -122,32 +118,6 @@ impl Topologer for PoolTopology {
     }
 }
 
-// TablePrinter holds methods to display pool information in tabular manner
-impl traits::TablePrinter for Pool {
-    fn get_header_row(&self) -> Row {
-        utils::POOL_HEADERS.clone()
-    }
-
-    fn create_rows(&self) -> Vec<Row> {
-        let mut pool_node: String = String::new();
-        let mut disks: String = String::new();
-        // TODO: Is it Ok to assign pool status?
-        let mut pool_status = openapi::models::PoolStatus::Unknown;
-        if let Some(pool_spec) = &self.spec {
-            pool_node = pool_spec.node.clone();
-            disks = pool_spec.disks.join(",");
-        }
-        if let Some(pool_state) = &self.state {
-            pool_status = pool_state.status;
-        }
-        vec![row![self.id, disks, pool_node, pool_status]]
-    }
-
-    fn get_resource_id(&self, row_data: &Row) -> Result<String, ResourceError> {
-        Ok(row_data.get_cell(1).unwrap().get_content())
-    }
-}
-
 /// Wrapper around mayastor REST client which interns used to interact with REST client
 #[derive(Debug)]
 pub struct PoolClientWrapper {
@@ -228,16 +198,6 @@ fn is_it_pool_device(pool_spec: openapi::models::PoolSpec, device: &BlockDevice)
 #[async_trait(?Send)]
 impl Resourcer for PoolClientWrapper {
     type ID = String;
-
-    async fn read_resource_id(&self) -> Result<Self::ID, ResourceError> {
-        let pools = self.list_pools().await?;
-        if pools.is_empty() {
-            log("No Pool resources, Are Pools created?!!".to_string());
-            return Err(ResourceError::CustomError("No Pool resources".to_string()));
-        }
-        let pool_id = utils::print_table_and_get_id(pools)?;
-        Ok(pool_id)
-    }
 
     async fn get_topologer(
         &self,

@@ -2,7 +2,6 @@ use crate::collect::{constants::DATA_PLANE_CONTAINER_NAME, resources::error::Res
 use async_trait::async_trait;
 use downcast_rs::{impl_downcast, Downcast};
 use lazy_static::lazy_static;
-use prettytable::Row;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
@@ -72,13 +71,6 @@ impl ResourceInformation {
     }
 }
 
-/// Implements functionality for displaying information in tabular manner and reading inputs
-pub(crate) trait TablePrinter {
-    fn get_header_row(&self) -> Row;
-    fn create_rows(&self) -> Vec<Row>;
-    fn get_resource_id(&self, row_data: &Row) -> Result<String, ResourceError>;
-}
-
 /// Implements functionality to inspect topology information
 pub(crate) trait Topologer: Downcast + Debug {
     fn get_printable_topology(&self) -> Result<(String, String), ResourceError>;
@@ -93,9 +85,6 @@ impl_downcast!(Topologer);
 #[async_trait(?Send)]
 pub(crate) trait Resourcer {
     type ID;
-    async fn read_resource_id(&self) -> Result<Self::ID, ResourceError> {
-        panic!("read_resource_id is not yet implemented");
-    }
     async fn get_topologer(
         &self,
         _id: Option<Self::ID>,

@@ -1,15 +1,11 @@
 use crate::{
     collect::{
-        logs::create_directory_if_not_exist,
-        resources,
-        resources::{traits, utils},
-        rest_wrapper::RestClient,
+        logs::create_directory_if_not_exist, resources, resources::traits, rest_wrapper::RestClient,
     },
     log,
 };
 use async_trait::async_trait;
 use openapi::models::{BlockDevice, Node};
-use prettytable::Row;
 use resources::ResourceError;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -130,26 +126,6 @@ impl Topologer for NodeTopology {
     }
 }
 
-/// TablePrinter holds methods to display node information in Tabular Manner
-impl traits::TablePrinter for Node {
-    fn get_header_row(&self) -> Row {
-        utils::NODE_HEADERS.clone()
-    }
-
-    fn create_rows(&self) -> Vec<Row> {
-        let mut row = vec![row![self.id]];
-        let state = self.state.clone();
-        if let Some(node_state) = state {
-            row = vec![row![node_state.id, node_state.status]];
-        }
-        row
-    }
-
-    fn get_resource_id(&self, row_data: &Row) -> Result<String, ResourceError> {
-        Ok(row_data.get_cell(1).unwrap().get_content())
-    }
-}
-
 // Wrapper around mayastor REST client
 #[derive(Debug)]
 pub(crate) struct NodeClientWrapper {
@@ -204,16 +180,6 @@ impl NodeClientWrapper {
 #[async_trait(?Send)]
 impl Resourcer for NodeClientWrapper {
     type ID = String;
-
-    async fn read_resource_id(&self) -> Result<Self::ID, ResourceError> {
-        let nodes = self.list_nodes().await?;
-        if nodes.is_empty() {
-            println!("No Node resources, Are daemonset pods in Running State?!!");
-            return Err(ResourceError::CustomError("No Node resources".to_string()));
-        }
-        let node_id = utils::print_table_and_get_id(nodes)?;
-        Ok(node_id)
-    }
 
     async fn get_topologer(
         &self,

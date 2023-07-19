@@ -3390,7 +3390,6 @@ dependencies = [
  "once_cell",
  "openapi",
  "platform",
- "prettytable-rs",
  "pstor",
  "schemars",
  "serde",
