@@ -11,8 +11,7 @@ use crate::{
     log,
 };
 use async_trait::async_trait;
-use openapi::models::{Nexus, Volume};
-use prettytable::Row;
+use openapi::models::{Nexus, RebuildHistory, Volume};
 use resources::ResourceError;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -32,6 +31,7 @@ pub(crate) struct VolumeTopology {
     volume: Volume,
     target: Option<Nexus>,
     replicas_topology: Vec<ReplicaTopology>,
+    rebuild_history: Option<RebuildHistory>,
 }
 
 /// Implements functionality to inspect topological information of volume resource
@@ -93,22 +93,6 @@ impl Topologer for VolumeTopology {
     }
 }
 
-// TablePrinter implements functionality to list volume resources in tabular format
-impl traits::TablePrinter for openapi::models::Volume {
-    fn get_header_row(&self) -> Row {
-        utils::VOLUME_HEADERS.clone()
-    }
-
-    fn create_rows(&self) -> Vec<Row> {
-        let state = self.state.clone();
-        vec![row![state.uuid, state.status, state.size]]
-    }
-
-    fn get_resource_id(&self, row_data: &Row) -> Result<String, ResourceError> {
-        Ok(row_data.get_cell(1).unwrap().get_content())
-    }
-}
-
 // Wrapper around mayastor REST client
 #[derive(Debug)]
 pub(crate) struct VolumeClientWrapper {
@@ -162,24 +146,24 @@ impl VolumeClientWrapper {
         let topology = self.replica_client.get_replica_topology(id).await?;
         Ok(topology)
     }
+
+    async fn get_rebuild_history(
+        &self,
+        id: openapi::apis::Uuid,
+    ) -> Result<RebuildHistory, ResourceError> {
+        let rebuild_history = self
+            .rest_client
+            .volumes_api()
+            .get_rebuild_history(&id)
+            .await?
+            .into_body();
+        Ok(rebuild_history)
+    }
 }
 
 #[async_trait(?Send)]
 impl Resourcer for VolumeClientWrapper {
     type ID = openapi::apis::Uuid;
-
-    async fn read_resource_id(&self) -> Result<Self::ID, ResourceError> {
-        let volumes = self.list_volumes().await?;
-        if volumes.is_empty() {
-            log("No Volume resources, Are Volumes created?!!".to_string());
-            return Err(ResourceError::CustomError(
-                "Volume resources doesn't exist".to_string(),
-            ));
-        }
-        let uuid_str = utils::print_table_and_get_id(volumes)?;
-        let volume_uuid = openapi::apis::Uuid::parse_str(uuid_str.as_str())?;
-        Ok(volume_uuid)
-    }
 
     async fn get_topologer(
         &self,
@@ -206,11 +190,21 @@ impl Resourcer for VolumeClientWrapper {
                     replicas_topology.push(topology);
                 }
             }
+            let rebuild_history = match self.get_rebuild_history(volume_id).await {
+                Ok(rebuild_history) => Some(rebuild_history),
+                Err(error) => {
+                    log(format!(
+                        "Could not fetch rebuild history for {volume_id}, error: {error:?}"
+                    ));
+                    None
+                }
+            };
 
             return Ok(Box::new(VolumeTopology {
                 volume: volume.clone(),
                 target: volume.state.target,
                 replicas_topology,
+                rebuild_history,
             }));
         }
 
@@ -238,10 +232,21 @@ impl Resourcer for VolumeClientWrapper {
                     replicas_topology.push(topology);
                 }
             }
+            let rebuild_history = match self.get_rebuild_history(volume.spec.uuid).await {
+                Ok(rebuild_history) => Some(rebuild_history),
+                Err(error) => {
+                    log(format!(
+                        "Could not fetch rebuild history for {}, error: {error:?}",
+                        volume.spec.uuid
+                    ));
+                    None
+                }
+            };
             volumes_topology.push(VolumeTopology {
                 volume: volume.clone(),
                 target: volume.state.target.clone(),
                 replicas_topology,
+                rebuild_history,
             })
         }
         Ok(Box::new(volumes_topology))
