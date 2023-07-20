@@ -1,8 +1,11 @@
-use crate::plugin::{
-    constants::{get_image_version_tag, SINGLE_REPLICA_VOLUME, UPGRADE_TO_DEVELOP_BRANCH},
-    error,
-    upgrade::{get_pvc_from_uuid, get_source_version},
-    user_prompt,
+use crate::{
+    common::utils::is_child_degraded_or_faulted,
+    plugin::{
+        constants::{get_image_version_tag, SINGLE_REPLICA_VOLUME, UPGRADE_TO_DEVELOP_BRANCH},
+        error,
+        upgrade::{get_pvc_from_uuid, get_source_version},
+        user_prompt,
+    },
 };
 use openapi::{
     clients::tower::{self, Configuration},
@@ -154,7 +157,7 @@ pub(crate) async fn is_rebuild_in_progress(client: &RestClient) -> error::Result
                 if target
                     .children
                     .iter()
-                    .any(|child| child.rebuild_progress.is_some())
+                    .any(|child| is_child_degraded_or_faulted(child))
                 {
                     return Ok(true);
                 }

@@ -10,6 +10,7 @@ use kube::{api::ObjectList, ResourceExt};
 use semver::{Version, VersionReq};
 use snafu::ResultExt;
 use tracing::{info, warn};
+use upgrade::common::utils::is_child_degraded_or_faulted;
 
 /// Function to check for any volume rebuild in progress across the cluster
 pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
@@ -32,7 +33,7 @@ pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
                 if target
                     .children
                     .iter()
-                    .any(|child| child.rebuild_progress.is_some())
+                    .any(|child| is_child_degraded_or_faulted(child))
                 {
                     return Ok(true);
                 }
