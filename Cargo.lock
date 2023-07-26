@@ -1118,6 +1118,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "event-publisher"
+version = "0.1.0"
+dependencies = [
+ "events-api",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "events-api"
 version = "0.1.0"
 dependencies = [
@@ -4072,11 +4083,14 @@ checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
 name = "utils"
 version = "0.1.0"
 dependencies = [
+ "event-publisher",
  "git-version-macro",
  "opentelemetry",
  "opentelemetry-jaeger",
+ "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
+ "url",
  "version-info",
 ]
 
