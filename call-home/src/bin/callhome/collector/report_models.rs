@@ -17,8 +17,10 @@ pub(crate) struct Volumes {
     mean_size_in_bytes: u64,
     max_size_in_bytes: u64,
     capacity_percentiles_in_bytes: Percentiles,
-    created: u32,
-    deleted: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    created: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deleted: Option<u32>,
 }
 impl Volumes {
     /// Receives a openapi::models::Volumes object and returns a new report_models::volume object by
@@ -46,8 +48,10 @@ pub(crate) struct Pools {
     min_size_in_bytes: u64,
     mean_size_in_bytes: u64,
     capacity_percentiles_in_bytes: Percentiles,
-    created: u32,
-    deleted: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    created: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deleted: Option<u32>,
 }
 impl Pools {
     /// Receives a vector of openapi::models::Pool and returns a new report_models::Pools object by
@@ -344,8 +348,8 @@ macro_rules! make_counter {
 pub struct CounterValue(u32);
 impl CounterValue {
     /// Get the inner value.
-    pub(crate) fn value(&self) -> u32 {
-        self.0
+    pub(crate) fn value(&self) -> Option<u32> {
+        Some(self.0)
     }
 }
 
