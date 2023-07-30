@@ -17,10 +17,10 @@ pub(crate) struct Volumes {
     mean_size_in_bytes: u64,
     max_size_in_bytes: u64,
     capacity_percentiles_in_bytes: Percentiles,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    created: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    deleted: Option<u32>,
+    #[serde(skip_serializing_if = "is_zero")]
+    created: u32,
+    #[serde(skip_serializing_if = "is_zero")]
+    deleted: u32,
 }
 impl Volumes {
     /// Receives a openapi::models::Volumes object and returns a new report_models::volume object by
@@ -48,10 +48,10 @@ pub(crate) struct Pools {
     min_size_in_bytes: u64,
     mean_size_in_bytes: u64,
     capacity_percentiles_in_bytes: Percentiles,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    created: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    deleted: Option<u32>,
+    #[serde(skip_serializing_if = "is_zero")]
+    created: u32,
+    #[serde(skip_serializing_if = "is_zero")]
+    deleted: u32,
 }
 impl Pools {
     /// Receives a vector of openapi::models::Pool and returns a new report_models::Pools object by
@@ -348,8 +348,8 @@ macro_rules! make_counter {
 pub struct CounterValue(u32);
 impl CounterValue {
     /// Get the inner value.
-    pub(crate) fn value(&self) -> Option<u32> {
-        Some(self.0)
+    pub(crate) fn value(&self) -> u32 {
+        self.0
     }
 }
 
@@ -362,4 +362,9 @@ impl<'a, T: TryFrom<Record<'a>>> From<&'a EventsRecord> for Option<T> {
     fn from(src: &'a EventsRecord) -> Option<T> {
         src.record.iter().find_map(|s| T::try_from(Record(s)).ok())
     }
+}
+
+// Define the `is_zero` function to determine if the field should be serialized.
+fn is_zero(value: &u32) -> bool {
+    value == &0
 }
