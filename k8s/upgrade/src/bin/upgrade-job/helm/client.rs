@@ -68,7 +68,7 @@ impl HelmReleaseClientBuilder {
 /// releases.
 #[derive(Clone)]
 pub(crate) struct HelmReleaseClient {
-    namespace: String,
+    pub(crate) namespace: String,
 }
 
 impl HelmReleaseClient {

@@ -50,3 +50,7 @@ pub const UPGRADE_TO_UNSUPPORTED_VERSION: &str =
 /// Delete an incomplete job.
 pub const DELETE_INCOMPLETE_JOB: &str =
     "\n Cant delete an incomplete upgrade job. Please try with `--force` flag to forcefully remove upgrade resources and bypass graceful deletion.";
+
+/// Information about successful start of upgrade process.
+pub const HELM_UPGRADE_VALIDATION_ERROR: &str =
+    "\nThe validation for upgrade Failed, hence deleting the upgrade resources. Please re-run upgrade with valid values.";

@@ -1,6 +1,6 @@
 use crate::{
     common::{constants::PRODUCT, error::Result},
-    events::event_recorder::EventRecorder,
+    events::event_recorder::{EventAction, EventRecorder},
     helm::upgrade::HelmUpgrade,
     opts::CliArgs,
 };
@@ -22,6 +22,7 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
         .with_release_name(opts.release_name())
         .with_core_chart_dir(opts.core_chart_dir())
         .with_skip_upgrade_path_validation(opts.skip_upgrade_path_validation())
+        .with_values(opts.values())
         .build()
         .await?;
 
@@ -36,30 +37,46 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
         .build()
         .await?;
 
+    let helm_upgrade_dry_run = HelmUpgrade::builder()
+        .with_namespace(opts.namespace())
+        .with_release_name(opts.release_name())
+        .with_core_chart_dir(opts.core_chart_dir())
+        .with_skip_upgrade_path_validation(opts.skip_upgrade_path_validation())
+        .with_values(opts.values())
+        .build()
+        .await?;
+
+    if let Err(error) = helm_upgrade_dry_run.dry_run().await {
+        event.publish_unrecoverable(&error, true).await;
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        return Err(error);
+    }
+
     event
         .publish_normal(
             format!("Starting {PRODUCT} upgrade..."),
-            "Upgrading control-plane",
+            EventAction::UpgradingCP,
         )
         .await?;
 
     event
         .publish_normal(
             format!("Upgrading {PRODUCT} control-plane"),
-            "Upgrading control-plane",
+            EventAction::UpgradingCP,
         )
         .await?;
 
     // Control plane containers are updated in this step.
     if let Err(error) = helm_upgrade.run().await {
-        event.publish_unrecoverable(&error).await;
+        event.publish_unrecoverable(&error, false).await;
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         return Err(error);
     }
 
     event
         .publish_normal(
             format!("Upgraded {PRODUCT} control-plane"),
-            "Upgraded control-plane",
+            EventAction::UpgradedCP,
         )
         .await?;
 
@@ -68,27 +85,30 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
         event
             .publish_normal(
                 format!("Upgrading {PRODUCT} data-plane"),
-                "Upgrading data-plane",
+                EventAction::UpgradingDP,
             )
             .await?;
 
         if let Err(error) =
             upgrade_data_plane(opts.namespace(), opts.rest_endpoint(), to_version).await
         {
-            event.publish_unrecoverable(&error).await;
+            event.publish_unrecoverable(&error, false).await;
             return Err(error);
         }
 
         event
             .publish_normal(
                 format!("Upgraded {PRODUCT} data-plane"),
-                "Upgraded data-plane",
+                EventAction::UpgradedDP,
             )
             .await?;
     }
 
     event
-        .publish_normal(format!("Successfully upgraded {PRODUCT}"), "Successful")
+        .publish_normal(
+            format!("Successfully upgraded {PRODUCT}"),
+            EventAction::Successful,
+        )
         .await?;
 
     event.shutdown_worker().await;
