@@ -100,9 +100,9 @@ impl YqV4 {
 
     // TODO:
     // 1. Arrays are treated like unique values on their own, and high_priority is preferred over
-    //    low_priority. Arrays are not merged, if the object in the array member is identical to
-    //    an existing member in the other file, we cannot decide on the key-value-pairs to compare
-    //    to check for identical array objects.
+    //    low_priority. Arrays are not merged, if the object in the array member is identical to an
+    //    existing member in the other file, we cannot decide on the key-value-pairs to compare to
+    //    check for identical array objects.
     // 2. If the default value in the upgrade target has changed, and the user has also changed the
     //    default value (of the upgrade source), which one should be preferred?
     /// Run yq evaluate on two file together. The latter (in the yq command args) file's values are
