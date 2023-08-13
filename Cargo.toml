@@ -11,3 +11,4 @@ members = [
 ]
 
 exclude = [ "./dependencies/control-plane" ]
+resolver = "1"

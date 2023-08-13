@@ -63,7 +63,7 @@ impl StatsCollector {
         }
     }
 
-    fn volume_metrics(&self, events: &mut EventSet) -> Vec<prometheus::proto::MetricFamily> {
+    fn volume_metrics(&self, events: &EventSet) -> Vec<prometheus::proto::MetricFamily> {
         let mut metric_family = Vec::new();
         let volumes_created = match self.volumes.get_metric_with_label_values(&[CREATED]) {
             Ok(volumes) => volumes,
@@ -86,7 +86,7 @@ impl StatsCollector {
         metric_family
     }
 
-    fn pool_metrics(&self, events: &mut EventSet) -> Vec<prometheus::proto::MetricFamily> {
+    fn pool_metrics(&self, events: &EventSet) -> Vec<prometheus::proto::MetricFamily> {
         let mut metric_family = Vec::new();
         let pools_created = match self.pools.get_metric_with_label_values(&[CREATED]) {
             Ok(pools) => pools,

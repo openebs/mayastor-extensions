@@ -71,8 +71,8 @@ pub(crate) async fn version_from_rest_deployment_label(ns: &str) -> Result<Versi
     // of the components will be trying to claim the same         resources. So, in this case
     // the Storage cluster isn't broken because of upgrade-job. Upgrade should
     //         eventually fail for these cases, because the component containers keep erroring out.
-    // 2. Helm upgrade is stuck with the older REST API Pod in 'Terminating' state:
-    //         This scenario is more likely than the one above. This may result is more-than-one
+    // 2. Helm upgrade is stuck with the older REST API Pod in 'Terminating' state: This scenario is
+    //    more likely than the one above. This may result is more-than-one
     // REST API deployments.         If the helm upgrade has succeeded already, we'd want to hit
     // the 'already_upgraded' case in         crate::helm::upgrade. The upgraded version will be
     // on the latest-created REST API deployment.

@@ -183,10 +183,9 @@ impl LokiClient {
     }
 
     /// fetch_and_dump_logs will do the following steps:
-    /// 1. Creates poller to interact with Loki service based on provided arguments
-    ///     1.1. Use poller to fetch all available logs
-    ///     1.2. Write fetched logs into file
-    ///     Continue above steps till extraction all logs
+    /// 1. Creates poller to interact with Loki service based on provided arguments 1.1. Use poller
+    ///    to fetch all available logs 1.2. Write fetched logs into file Continue above steps till
+    ///    extraction all logs
     pub(crate) async fn fetch_and_dump_logs(
         &mut self,
         label_selector: String,

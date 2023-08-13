@@ -121,15 +121,13 @@ impl HelmUpgradeBuilder {
         //    1. The string must start with the literal contained in the literal CORE_CHART_NAME.
         //       e.g.: mayastor-2.2.0 starts with 'mayastor'
         //    2. A '-' followed by three sets of numbers (each with one or more) separated by '.',
-        //       must sit after the value of CORE_CHART_NAME.
-        //       e.g. mayastor-4.56.789 is a valid chart-name.
+        //       must sit after the value of CORE_CHART_NAME. e.g. mayastor-4.56.789 is a valid
+        //       chart-name.
         //    3. A '-' followed by one or many alphanumeric characters may optionally sit after a
-        //       chart-name like 'mayastor-1.2.3'.
-        //       e.g.: mayastor-1.2.3-testing, mayastor-1.2.3-testing-upgrade-23-35-25-05-2023,
-        //       mayastor-2.3.0-rc-3
-        //    4. The optional group of character(s) mentioned in (3) above, may optionally contain
-        //       a '.' followed by a set of numbers.
-        //       e.g.: mayastor-2.3.4-rc.1, mayastor-2.3.4-alpha.2
+        //       chart-name like 'mayastor-1.2.3'. e.g.: mayastor-1.2.3-testing,
+        //       mayastor-1.2.3-testing-upgrade-23-35-25-05-2023, mayastor-2.3.0-rc-3
+        //    4. The optional group of character(s) mentioned in (3) above, may optionally contain a
+        //       '.' followed by a set of numbers. e.g.: mayastor-2.3.4-rc.1, mayastor-2.3.4-alpha.2
         let core_chart_regex =
             format!(r"^({CORE_CHART_NAME}-[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[0-9]+)?)*)$");
 
