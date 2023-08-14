@@ -5,7 +5,7 @@ use openapi::tower::client::Url;
 use opentelemetry::global;
 use plugin::{
     operations::{
-        Cordoning, Drain, Get, GetBlockDevices, GetSnapshots, List, RebuildHistory,
+        Cordoning, Drain, Get, GetBlockDevices, GetSnapshots, List, ListExt, RebuildHistory,
         ReplicaTopology, Scale,
     },
     resources::{
@@ -15,8 +15,9 @@ use plugin::{
     rest_wrapper::RestClient,
 };
 use resources::Operations;
-use std::{env, path::PathBuf};
 use upgrade::plugin::{preflight_validations, upgrade::DeleteResources};
+
+use std::{env, path::PathBuf};
 
 mod resources;
 
@@ -90,10 +91,12 @@ async fn execute(cli_args: CliArgs) {
                         }
                         GetDrainArgs::Nodes => drain::NodeDrains::list(&cli_args.output).await,
                     },
-                    GetResources::Volumes => volume::Volumes::list(&cli_args.output).await,
+                    GetResources::Volumes(volume_args) => {
+                        volume::Volumes::list(&cli_args.output, &volume_args).await
+                    }
                     GetResources::Volume { id } => volume::Volume::get(&id, &cli_args.output).await,
-                    GetResources::VolumeReplicaTopologies => {
-                        volume::Volume::topologies(&cli_args.output).await
+                    GetResources::VolumeReplicaTopologies(volume_args) => {
+                        volume::Volume::topologies(&cli_args.output, &volume_args).await
                     }
                     GetResources::VolumeReplicaTopology { id } => {
                         volume::Volume::topology(&id, &cli_args.output).await

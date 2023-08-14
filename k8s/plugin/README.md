@@ -61,16 +61,19 @@ Options:
 1. Get Volumes
 ```
 ❯ kubectl mayastor get volumes
- ID                                    REPLICAS TARGET-NODE  ACCESSIBILITY STATUS  SIZE     THIN-PROVISIONED ALLOCATED
- 18e30e83-b106-4e0d-9fb6-2b04e761e18a  4        kworker1     nvmf          Online  1GiB     true             8MiB
- 0c08667c-8b59-4d11-9192-b54e27e0ce0f  4        kworker2     <none>        Online  381.6MiB false            384MiB
+ ID                                    REPLICAS  TARGET-NODE  ACCESSIBILITY  STATUS  SIZE   THIN-PROVISIONED  ALLOCATED  SNAPSHOTS  SOURCE
+ 18e30e83-b106-4e0d-9fb6-2b04e761e18a  4         kworker1     nvmf           Online  1GiB   true              8MiB       0          <none>
+ ec4e66fd-3b33-4439-b504-d49aba53da26  1         <none>       <none>         Online  10MiB  true (snapped)    12MiB      1          <none>
+ ec4e66fd-3b33-4439-b504-d49aba53da27  1         <none>       <none>         Online  10MiB  true              12MiB      0          Snapshot
+ ec4e66fd-3b33-4439-b504-d49aba53da28  1         <none>       <none>         Online  10MiB  true              12MiB      0          Snapshot
 
 ```
 2. Get Volume by ID
 ```
 ❯ kubectl mayastor get volume 18e30e83-b106-4e0d-9fb6-2b04e761e18a
- ID                                    REPLICAS TARGET-NODE  ACCESSIBILITY STATUS  SIZE     THIN-PROVISIONED ALLOCATED
- 18e30e83-b106-4e0d-9fb6-2b04e761e18a  4        kworker1     nvmf          Online  1GiB     true             8MiB
+ ID                                    REPLICAS  TARGET-NODE  ACCESSIBILITY  STATUS  SIZE   THIN-PROVISIONED  ALLOCATED  SNAPSHOTS  SOURCE
+ ec4e66fd-3b33-4439-b504-d49aba53da28  1         <none>       <none>         Online  10MiB  true              12MiB      0          Snapshot
+ 18e30e83-b106-4e0d-9fb6-2b04e761e18a  4         kworker1     nvmf           Online  1GiB   true              8MiB       0          <none>
 
 ```
 3. Get Pools
@@ -162,14 +165,22 @@ VOLUME-ID                              ID                                    NOD
 
 10. Volume Snapshots by volumeID
 ```
-❯ kubectl mayastor get volume-snapshots --volume dc4e66fd-3b33-4439-b504-d49aba53da26
- ID                                    TIMESTAMP             SOURCE-SIZE  ALLOCATED-SIZE  TOTAL-ALLOCATED-SIZE  SOURCE-VOL
- 25823425-41fa-434a-9efd-a356b70b5d7c  2023-07-07T13:20:17Z  10MiB        12MiB           12MiB                 ec4e66fd-3b33-4439-b504-d49aba53da26
-
+❯ kubectl mayastor get volume-snapshots --volume ec4e66fd-3b33-4439-b504-d49aba53da26
+ ID                                    TIMESTAMP             SOURCE-SIZE  ALLOCATED-SIZE  TOTAL-ALLOCATED-SIZE  SOURCE-VOL                            RESTORES
+ 25823425-41fa-434a-9efd-a356b70b5d7c  2023-08-14T07:02:00Z  10MiB        12MiB           12MiB                 ec4e66fd-3b33-4439-b504-d49aba53da26  2
 
 ```
 
-11. Volume Rebuild History by volumeID
+11. Get Volume Snapshots
+```
+❯ kubectl mayastor get volume-snapshots
+ ID                                    TIMESTAMP             SOURCE-SIZE  ALLOCATED-SIZE  TOTAL-ALLOCATED-SIZE  SOURCE-VOL                            RESTORES
+ 25823425-41fa-434a-9efd-a356b70b5d7c  2023-08-14T07:02:00Z  10MiB        12MiB           12MiB                 ec4e66fd-3b33-4439-b504-d49aba53da26  2
+ 5ee6e958-5917-41b5-abc8-c1f82ff102be  2023-08-14T07:12:39Z  10MiB        0 B             12MiB                 ec4e66fd-3b33-4439-b504-d49aba53da28  0
+
+```
+
+12. Volume Rebuild History by volumeID
 ```
 ❯ kubectl mayastor get rebuild-history e898106d-e735-4edf-aba2-932d42c3c58d
 DST                                   SRC                                   STATE      TOTAL  RECOVERED  TRANSFERRED  IS-PARTIAL  START-TIME            END-TIME
@@ -183,7 +194,7 @@ b5de71a6-055d-433a-a1c5-2b39ade05d86  0dafa450-7a19-4e21-a919-89c6f9bd2a97  Comp
 
 **NOTE: The above command lists volume snapshots for all volumes if `--volume` or `--snapshot` or a combination of both flags is not used.**
 
-12. Get BlockDevices by NodeID
+13. Get BlockDevices by NodeID
 ```
 ❯ kubectl mayastor get block-devices kworker1 --all
  DEVNAME          DEVTYPE    SIZE       AVAILABLE  MODEL                       DEVPATH                                                         FSTYPE  FSUUID  MOUNTPOINT  PARTTYPE                              MAJOR            MINOR                                     DEVLINKS
