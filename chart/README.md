@@ -48,6 +48,7 @@ $ helm install my-release openebs/mayastor
 | https://grafana.github.io/helm-charts | loki-stack | 2.6.4 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.25.0 |
 | https://nats-io.github.io/k8s/helm/charts/ | nats | 0.19.14 |
+| https://openebs.github.io/dynamic-localpv-provisioner | localpv-provisioner | 3.4.1 |
 
 ## Values
 
@@ -123,7 +124,7 @@ $ helm install my-release openebs/mayastor
 | etcd.&ZeroWidthSpace;persistence.&ZeroWidthSpace;enabled | If true, use a Persistent Volume Claim. If false, use emptyDir. | `true` |
 | etcd.&ZeroWidthSpace;persistence.&ZeroWidthSpace;reclaimPolicy | PVC's reclaimPolicy | `"Delete"` |
 | etcd.&ZeroWidthSpace;persistence.&ZeroWidthSpace;size | Volume size | `"2Gi"` |
-| etcd.&ZeroWidthSpace;persistence.&ZeroWidthSpace;storageClass | Will define which storageClass to use in etcd's StatefulSets a `manual` storageClass will provision a hostpath PV on the same node an empty storageClass will use the default StorageClass on the cluster | `""` |
+| etcd.&ZeroWidthSpace;persistence.&ZeroWidthSpace;storageClass | Will define which storageClass to use in etcd's StatefulSets. Options: <p> - `"openebs-localpv-hostpath"` - Will provision openebs local-pv hostpath volume. Needs `Values.localpv-provisioner.enabled = true`. <br> - `"manual"` - Will provision a hostpath PV on the same node. <br> - `""` (empty) - Will use the default StorageClass on the cluster. </p> | `"openebs-localpv-hostpath"` |
 | etcd.&ZeroWidthSpace;podAntiAffinityPreset | Pod anti-affinity preset Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity | `"hard"` |
 | etcd.&ZeroWidthSpace;removeMemberOnContainerTermination | Use a PreStop hook to remove the etcd members from the etcd cluster on container termination Ignored if lifecycleHooks is set or replicaCount=1 | `false` |
 | etcd.&ZeroWidthSpace;replicaCount | Number of replicas of etcd | `3` |
@@ -146,12 +147,15 @@ $ helm install my-release openebs/mayastor
 | io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;iface | NVMF target interface (ip, mac, name or subnet) | `""` |
 | io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;ptpl | Reservations Persist Through Power Loss State | `true` |
 | io_engine.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
+| localpv-provisioner.&ZeroWidthSpace;enabled | Enables the openebs dynamic-localpv provisioner. If disabled, modify etcd and loki-stack storage class accordingly. | `true` |
+| localpv-provisioner.&ZeroWidthSpace;hostpathClass.&ZeroWidthSpace;basePath | Path on the host where local volumes of this storage class are mounted under. | `"/var/local/{{ .Release.Name }}/localpv"` |
+| localpv-provisioner.&ZeroWidthSpace;hostpathClass.&ZeroWidthSpace;name | Name of the default hostpath StorageClass. If modified, also modify etcd and loki-stack default storage class accordingly. | `"openebs-localpv-hostpath"` |
 | loki-stack.&ZeroWidthSpace;enabled | Enable loki log collection for our components | `true` |
 | loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;enabled | Enable loki installation as part of loki-stack | `true` |
 | loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;persistence.&ZeroWidthSpace;enabled | Enable persistence storage for the logs | `true` |
 | loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;persistence.&ZeroWidthSpace;reclaimPolicy | PVC's ReclaimPolicy, can be Delete or Retain | `"Delete"` |
 | loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;persistence.&ZeroWidthSpace;size | Size of Loki's persistence storage | `"10Gi"` |
-| loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;persistence.&ZeroWidthSpace;storageClassName | StorageClass for Loki's centralised log storage empty storageClass implies cluster default storageClass & `manual` creates a static hostpath PV | `""` |
+| loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;persistence.&ZeroWidthSpace;storageClassName | StorageClass for Loki's centralised log storage. Options: <p> - `"openebs-localpv-hostpath"` - Will provision openebs local-pv hostpath volume. Needs `Values.localpv-provisioner.enabled = true`. <br> - `"manual"` - Will provision a hostpath PV on the same node. <br> - `""` (empty) - Will use the default StorageClass on the cluster. </p> | `"openebs-localpv-hostpath"` |
 | loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;rbac.&ZeroWidthSpace;create | Create rbac roles for loki | `true` |
 | loki-stack.&ZeroWidthSpace;promtail.&ZeroWidthSpace;config.&ZeroWidthSpace;lokiAddress | The Loki address to post logs to | `"http://{{ .Release.Name }}-loki:3100/loki/api/v1/push"` |
 | loki-stack.&ZeroWidthSpace;promtail.&ZeroWidthSpace;enabled | Enables promtail for scraping logs from nodes | `true` |

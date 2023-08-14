@@ -394,10 +394,11 @@ etcd:
   persistence:
     # -- If true, use a Persistent Volume Claim. If false, use emptyDir.
     enabled: true
-    # -- Will define which storageClass to use in etcd's StatefulSets
-    # a `manual` storageClass will provision a hostpath PV on the same node
-    # an empty storageClass will use the default StorageClass on the cluster
-    storageClass: ""
+    # -- Will define which storageClass to use in etcd's StatefulSets. Options:
+    # <p> - `"openebs-localpv-hostpath"` - Will provision openebs local-pv hostpath volume. Needs `Values.localpv-provisioner.enabled = true`. <br>
+    # - `"manual"` - Will provision a hostpath PV on the same node. <br>
+    # - `""` (empty) - Will use the default StorageClass on the cluster. </p>
+    storageClass: "openebs-localpv-hostpath"
     # -- Volume size
     size: 2Gi
     # -- PVC's reclaimPolicy
@@ -475,9 +476,11 @@ loki-stack:
     persistence:
       # -- Enable persistence storage for the logs
       enabled: true
-      # -- StorageClass for Loki's centralised log storage
-      # empty storageClass implies cluster default storageClass & `manual` creates a static hostpath PV
-      storageClassName: ""
+      # -- StorageClass for Loki's centralised log storage. Options:
+      # <p> - `"openebs-localpv-hostpath"` - Will provision openebs local-pv hostpath volume. Needs `Values.localpv-provisioner.enabled = true`. <br>
+      # - `"manual"` - Will provision a hostpath PV on the same node. <br>
+      # - `""` (empty) - Will use the default StorageClass on the cluster. </p>
+      storageClassName: "openebs-localpv-hostpath"
       # -- PVC's ReclaimPolicy, can be Delete or Retain
       reclaimPolicy: "Delete"
       # -- Size of Loki's persistence storage
@@ -667,3 +670,18 @@ obs:
         http: 90011
         # NodePort associated with https port
         https: 90010
+
+localpv-provisioner:
+  # -- Enables the openebs dynamic-localpv provisioner. If disabled, modify etcd and loki-stack storage class accordingly.
+  enabled: true
+  # Enable/disable the openebs NDM sub-chart. It's recommended to keep this disabled.
+  openebsNDM:
+    enabled: false
+  # Enable/disable the creation of the openebs-device StorageClass. It's recommended to keep this disabled.
+  deviceClass:
+    enabled: false
+  hostpathClass:
+    # -- Name of the default hostpath StorageClass. If modified, also modify etcd and loki-stack default storage class accordingly.
+    name: "openebs-localpv-hostpath"
+    # -- Path on the host where local volumes of this storage class are mounted under.
+    basePath: "/var/local/{{ .Release.Name }}/localpv"
