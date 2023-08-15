@@ -24,14 +24,6 @@ use std::time::Duration;
 use tracing::info;
 use utils::{API_REST_LABEL, ETCD_LABEL};
 
-// The stages after which rebuild validation will start.
-enum RebuildValidationStage {
-    // Rebuild validation after the node is drained.
-    NodeIsDrained,
-    // Rebuild validation after the node is uncordoned.
-    NodeIsUncordoned,
-}
-
 /// Upgrade data plane by controlled restart of io-engine pods
 pub(crate) async fn upgrade_data_plane(
     namespace: String,
@@ -73,9 +65,6 @@ pub(crate) async fn upgrade_data_plane(
 
     info!("Starting data-plane upgrade...");
 
-    // Validate the control plane pod is up and running before we start.
-    verify_control_plane_is_running(namespace.clone(), &k8s_client, &upgrade_to_version).await?;
-
     info!(
         "Trying to remove upgrade {PRODUCT} Node Drain label from {PRODUCT} Nodes, \
         if any left over from previous upgrade attempts..."
@@ -107,6 +96,10 @@ pub(crate) async fn upgrade_data_plane(
         }
 
         for pod in initial_io_engine_pod_list.iter() {
+            // Validate the control plane pod is up and running before we start.
+            verify_control_plane_is_running(namespace.clone(), &k8s_client, &upgrade_to_version)
+                .await?;
+
             // Fetch the node name on which the io-engine pod is running
             let node_name = pod
                 .spec
@@ -135,16 +128,11 @@ pub(crate) async fn upgrade_data_plane(
                 "Starting upgrade for the data-plane pod"
             );
 
+            // Wait for any rebuild to complete
+            wait_for_rebuild(node_name, &rest_client).await?;
+
             // Issue node drain command
             drain_storage_node(node_name, &rest_client).await?;
-
-            // Wait for any rebuild to complete
-            wait_for_rebuild(
-                RebuildValidationStage::NodeIsDrained,
-                node_name,
-                &rest_client,
-            )
-            .await?;
 
             // restart the data plane pod
             delete_data_plane_pod(node_name, pod, &k8s_client).await?;
@@ -160,18 +148,6 @@ pub(crate) async fn upgrade_data_plane(
 
             // Uncordon the drained node
             uncordon_node(node_name, &rest_client).await?;
-
-            // Wait for any rebuild to complete
-            wait_for_rebuild(
-                RebuildValidationStage::NodeIsUncordoned,
-                node_name,
-                &rest_client,
-            )
-            .await?;
-
-            // Validate the control plane pod is up and running
-            verify_control_plane_is_running(namespace.clone(), &k8s_client, &upgrade_to_version)
-                .await?;
         }
 
         info!("Checking to see if new {PRODUCT} Nodes have been added to the cluster, which require upgrade");
@@ -273,24 +249,14 @@ async fn verify_data_plane_pod_is_running(
 }
 
 /// Wait for the rebuild to complete if any.
-async fn wait_for_rebuild(
-    rebuild_stage: RebuildValidationStage,
-    node_name: &str,
-    rest_client: &RestClientSet,
-) -> Result<()> {
+async fn wait_for_rebuild(node_name: &str, rest_client: &RestClientSet) -> Result<()> {
     // Wait for 60 seconds for any rebuilds to kick in.
     tokio::time::sleep(Duration::from_secs(60_u64)).await;
     while is_rebuilding(rest_client).await? {
-        match rebuild_stage {
-            RebuildValidationStage::NodeIsDrained => {
-                info!(node.name = %node_name, "Waiting for volume rebuild to complete after node is drained")
-            }
-            RebuildValidationStage::NodeIsUncordoned => {
-                info!(node.name = %node_name, "Waiting for volume rebuild to complete after node is uncordoned ")
-            }
-        }
+        info!(node.name = %node_name, "Waiting for volume rebuilds to complete");
         tokio::time::sleep(Duration::from_secs(10_u64)).await;
     }
+    info!(node.name = %node_name, "No volume rebuilds in progress");
     Ok(())
 }
 
