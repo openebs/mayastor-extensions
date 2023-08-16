@@ -29,11 +29,20 @@ pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
         starting_token = volumes.next_token;
         for volume in volumes.entries {
             if let Some(target) = &volume.state.target {
-                if target
-                    .children
-                    .iter()
-                    .any(|child| child.rebuild_progress.is_some())
-                {
+                let mut rebuild_count = 0;
+
+                for child in target.children.iter() {
+                    if child.rebuild_progress.is_some() {
+                        rebuild_count += 1;
+                    }
+                }
+                if rebuild_count > 0 {
+                    info!(
+                        "Rebuilding {} of {} replicas for volume {}",
+                        rebuild_count,
+                        target.children.len(),
+                        volume.spec.uuid
+                    );
                     return Ok(true);
                 }
             }
