@@ -7,12 +7,67 @@ use crate::common::{
 };
 use k8s_openapi::api::core::v1::Pod;
 use kube::{api::ObjectList, ResourceExt};
+use openapi::models::{Volume, VolumeStatus};
 use semver::{Version, VersionReq};
 use snafu::ResultExt;
+use std::time::Duration;
 use tracing::{info, warn};
 
-/// Function to check for any volume rebuild in progress across the cluster
-pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
+/// Contains the Rebuild Results.
+#[derive(Default)]
+pub(crate) struct RebuildResult {
+    pub(crate) rebuilding: bool,
+    pub(crate) discarded_volumes: Vec<Volume>,
+}
+
+/// Function to check for any volume rebuild in progress across the cluster.
+pub(crate) async fn rebuild_result(
+    rest_client: &RestClientSet,
+    stale_volumes: &mut Vec<Volume>,
+) -> Result<RebuildResult> {
+    loop {
+        let unhealthy_volumes = list_unhealthy_volumes(rest_client, stale_volumes).await?;
+        if unhealthy_volumes.is_empty() {
+            break;
+        }
+
+        for volume in unhealthy_volumes.iter() {
+            match replica_rebuild_count(volume.clone()).await {
+                0 => {
+                    for _i in 0 .. 11 {
+                        // wait for a minute for any rebuild to start
+                        tokio::time::sleep(Duration::from_secs(60_u64)).await;
+                        let count = replica_rebuild_count(volume.clone()).await;
+                        if count > 0 {
+                            return Ok(RebuildResult {
+                                rebuilding: true,
+                                discarded_volumes: stale_volumes.clone(),
+                            });
+                        }
+                    }
+                    stale_volumes.push(volume.clone());
+                }
+                _ => {
+                    return Ok(RebuildResult {
+                        rebuilding: true,
+                        discarded_volumes: stale_volumes.clone(),
+                    })
+                }
+            }
+        }
+    }
+    Ok(RebuildResult {
+        rebuilding: false,
+        discarded_volumes: stale_volumes.clone(),
+    })
+}
+
+/// Return the list of unhealthy volumes.
+pub(crate) async fn list_unhealthy_volumes(
+    rest_client: &RestClientSet,
+    discarded_volumes: &[Volume],
+) -> Result<Vec<Volume>> {
+    let mut unhealthy_volumes: Vec<Volume> = Vec::new();
     // The number of volumes to get per request.
     let max_entries = 200;
     let mut starting_token = Some(0_isize);
@@ -28,27 +83,37 @@ pub(crate) async fn is_rebuilding(rest_client: &RestClientSet) -> Result<bool> {
         let volumes = vols.into_body();
         starting_token = volumes.next_token;
         for volume in volumes.entries {
-            if let Some(target) = &volume.state.target {
-                let mut rebuild_count = 0;
-
-                for child in target.children.iter() {
-                    if child.rebuild_progress.is_some() {
-                        rebuild_count += 1;
-                    }
+            match volume.state.status {
+                VolumeStatus::Faulted | VolumeStatus::Degraded => {
+                    unhealthy_volumes.push(volume);
                 }
-                if rebuild_count > 0 {
-                    info!(
-                        "Rebuilding {} of {} replicas for volume {}",
-                        rebuild_count,
-                        target.children.len(),
-                        volume.spec.uuid
-                    );
-                    return Ok(true);
-                }
+                _ => continue,
             }
         }
     }
-    Ok(false)
+    unhealthy_volumes.retain(|v| !discarded_volumes.contains(v));
+    Ok(unhealthy_volumes)
+}
+
+/// Count of number of replica rebuilding.
+pub(crate) async fn replica_rebuild_count(volume: Volume) -> i32 {
+    let mut rebuild_count = 0;
+    if let Some(target) = &volume.state.target {
+        for child in target.children.iter() {
+            if child.rebuild_progress.is_some() {
+                rebuild_count += 1;
+            }
+        }
+        if rebuild_count > 0 {
+            info!(
+                "Rebuilding {} of {} replicas for volume {}",
+                rebuild_count,
+                target.children.len(),
+                volume.spec.uuid
+            );
+        }
+    }
+    rebuild_count
 }
 
 /// This function returns 'true' only if all of the containers in the Pods contained in the

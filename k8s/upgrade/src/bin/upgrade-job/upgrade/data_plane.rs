@@ -11,7 +11,7 @@ use crate::{
         kube_client::KubeClientSet,
         rest_client::RestClientSet,
     },
-    upgrade::utils::{all_pods_are_ready, data_plane_is_upgraded, is_rebuilding},
+    upgrade::utils::{all_pods_are_ready, data_plane_is_upgraded, rebuild_result, RebuildResult},
 };
 use k8s_openapi::api::core::v1::Pod;
 use kube::{
@@ -252,9 +252,17 @@ async fn verify_data_plane_pod_is_running(
 async fn wait_for_rebuild(node_name: &str, rest_client: &RestClientSet) -> Result<()> {
     // Wait for 60 seconds for any rebuilds to kick in.
     tokio::time::sleep(Duration::from_secs(60_u64)).await;
-    while is_rebuilding(rest_client).await? {
-        info!(node.name = %node_name, "Waiting for volume rebuilds to complete");
-        tokio::time::sleep(Duration::from_secs(10_u64)).await;
+
+    let mut result = RebuildResult::default();
+    loop {
+        let rebuild = rebuild_result(rest_client, &mut result.discarded_volumes).await?;
+
+        if rebuild.rebuilding {
+            info!(node.name = %node_name, "Waiting for volume rebuilds to complete");
+            tokio::time::sleep(Duration::from_secs(10_u64)).await;
+        } else {
+            break;
+        }
     }
     info!(node.name = %node_name, "No volume rebuilds in progress");
     Ok(())
