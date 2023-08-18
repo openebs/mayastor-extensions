@@ -374,6 +374,16 @@ io_engine:
   priorityClassName: ""
 
 etcd:
+  # Configuration for etcd's localpv hostpath storage class.
+  localpvScConfig:
+    # Name of etcd's localpv hostpath storage class.
+    name: "mayastor-etcd-localpv"
+    # -- Host path where local etcd data is stored in.
+    basePath: "/var/local/localpv-hostpath/{{ .Release.Name }}/etcd"
+    # -- ReclaimPolicy of etcd's localpv hostpath storage class.
+    reclaimPolicy: Delete
+    # -- VolumeBindingMode of etcd's localpv hostpath storage class.
+    volumeBindingMode: WaitForFirstConsumer
   # Pod labels; okay to remove the openebs logging label if required
   podLabels:
     app: etcd
@@ -395,10 +405,9 @@ etcd:
     # -- If true, use a Persistent Volume Claim. If false, use emptyDir.
     enabled: true
     # -- Will define which storageClass to use in etcd's StatefulSets. Options:
-    # <p> - `"openebs-localpv-hostpath"` - Will provision openebs local-pv hostpath volume. Needs `Values.localpv-provisioner.enabled = true`. <br>
-    # - `"manual"` - Will provision a hostpath PV on the same node. <br>
+    # <p> - `"manual"` - Will provision a hostpath PV on the same node. <br>
     # - `""` (empty) - Will use the default StorageClass on the cluster. </p>
-    storageClass: "openebs-localpv-hostpath"
+    storageClass: "mayastor-etcd-localpv"
     # -- Volume size
     size: 2Gi
     # -- PVC's reclaimPolicy
@@ -465,6 +474,16 @@ etcd:
 loki-stack:
   # -- Enable loki log collection for our components
   enabled: true
+  # Configuration for loki's localpv hostpath storage class.
+  localpvScConfig:
+    # Name of loki's localpv hostpath storage class.
+    name: "mayastor-loki-localpv"
+    # -- Host path where local etcd data is stored in.
+    basePath: "/var/local/localpv-hostpath/{{ .Release.Name }}/loki"
+    # -- ReclaimPolicy of loki's localpv hostpath storage class.
+    reclaimPolicy: Delete
+    # -- VolumeBindingMode of loki's localpv hostpath storage class.
+    volumeBindingMode: WaitForFirstConsumer
   loki:
     rbac:
       # -- Create rbac roles for loki
@@ -477,10 +496,9 @@ loki-stack:
       # -- Enable persistence storage for the logs
       enabled: true
       # -- StorageClass for Loki's centralised log storage. Options:
-      # <p> - `"openebs-localpv-hostpath"` - Will provision openebs local-pv hostpath volume. Needs `Values.localpv-provisioner.enabled = true`. <br>
-      # - `"manual"` - Will provision a hostpath PV on the same node. <br>
+      # <p> - `"manual"` - Will provision a hostpath PV on the same node. <br>
       # - `""` (empty) - Will use the default StorageClass on the cluster. </p>
-      storageClassName: "openebs-localpv-hostpath"
+      storageClassName: "mayastor-loki-localpv"
       # -- PVC's ReclaimPolicy, can be Delete or Retain
       reclaimPolicy: "Delete"
       # -- Size of Loki's persistence storage
@@ -681,7 +699,4 @@ localpv-provisioner:
   deviceClass:
     enabled: false
   hostpathClass:
-    # -- Name of the default hostpath StorageClass. If modified, also modify etcd and loki-stack default storage class accordingly.
-    name: "openebs-localpv-hostpath"
-    # -- Path on the host where local volumes of this storage class are mounted under.
-    basePath: "/var/local/{{ .Release.Name }}/localpv"
+    enabled: false

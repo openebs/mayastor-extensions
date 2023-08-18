@@ -43,4 +43,4 @@ dependencies:
   - name: localpv-provisioner
     version: 3.4.1
     repository: https://openebs.github.io/dynamic-localpv-provisioner
-    condition: openebs-localpv-provisioner.enabled
+    condition: localpv-provisioner.enabled
