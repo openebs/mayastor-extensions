@@ -346,6 +346,10 @@ pub(crate) enum Error {
         std_err: String,
     },
 
+    /// Error for when a Helm upgrade command execution succeeds, but with an error.
+    #[snafu(display("`helm upgrade --dry-run` command return an error, error: {}", std_err,))]
+    HelmUpgradeDryRunCommand { std_err: String },
+
     /// Error for when a Helm get values command execution succeeds, but with an error.
     #[snafu(display(
         "`helm get values` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",

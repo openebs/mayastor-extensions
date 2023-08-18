@@ -4,6 +4,7 @@ use crate::{
         UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX, UPGRADE_JOB_CONTAINER_NAME, UPGRADE_JOB_NAME_SUFFIX,
         UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
+    upgrade::UpgradeArgs,
     upgrade_labels,
 };
 
@@ -251,20 +252,21 @@ pub(crate) fn upgrade_job(
     namespace: &str,
     upgrade_image: String,
     release_name: String,
-    skip_data_plane_restart: bool,
-    skip_upgrade_path_validation: bool,
+    args: &UpgradeArgs,
     image_pull_secrets: Option<Vec<k8s_openapi::api::core::v1::LocalObjectReference>>,
     image_pull_policy: Option<String>,
 ) -> Job {
+    let values = args.set_args.join(",");
     let mut job_args: Vec<String> = vec![
         format!("--rest-endpoint=http://{release_name}-api-rest:8081"),
         format!("--namespace={namespace}"),
         format!("--release-name={release_name}"),
+        format!("--values={values}"),
     ];
-    if skip_data_plane_restart {
+    if args.skip_data_plane_restart {
         job_args.push("--skip-data-plane-restart".to_string());
     }
-    if skip_upgrade_path_validation {
+    if args.skip_upgrade_path_validation_for_unsupported_version {
         job_args.push("--skip-upgrade-path-validation".to_string());
     }
 

@@ -3,15 +3,16 @@ use crate::plugin::{
         get_image_version_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
         AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_IMAGE_REGISTRY,
         DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, HELM_RELEASE_VERSION_LABEL,
-        IO_ENGINE_POD_LABEL, UPGRADE_EVENT_REASON, UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
-        UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX, UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO,
-        UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+        IO_ENGINE_POD_LABEL, MAX_RETRY_ATTEMPTS, UPGRADE_EVENT_REASON,
+        UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
+        UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX,
+        UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     error, objects,
     user_prompt::{
         upgrade_dry_run_summary, CONTROL_PLANE_PODS_LIST, DATA_PLANE_PODS_LIST,
-        DATA_PLANE_PODS_LIST_SKIP_RESTART, DELETE_INCOMPLETE_JOB, UPGRADE_DRY_RUN_SUMMARY,
-        UPGRADE_JOB_STARTED,
+        DATA_PLANE_PODS_LIST_SKIP_RESTART, DELETE_INCOMPLETE_JOB, HELM_UPGRADE_VALIDATION_ERROR,
+        UPGRADE_DRY_RUN_SUMMARY, UPGRADE_JOB_STARTED,
     },
 };
 use k8s_openapi::api::{
@@ -27,7 +28,7 @@ use kube::{
 };
 use serde::Deserialize;
 use snafu::ResultExt;
-use std::collections::HashSet;
+use std::{collections::HashSet, time::Duration};
 
 /// Arguments to be passed for upgrade.
 #[derive(clap::Subcommand, Debug)]
@@ -103,25 +104,85 @@ pub struct UpgradeArgs {
     /// Upgrade to an unsupported version.
     #[clap(global = true, hide = true, long, default_value_t = false)]
     pub skip_upgrade_path_validation_for_unsupported_version: bool,
+
+    /// The set values specified by the user for upgrade.
+    /// (can specify multiple or separate values with commas: key1=val1,key2=val2).
+    #[clap(global = true, long)]
+    pub set_args: Vec<String>,
+}
+
+impl Default for UpgradeArgs {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl UpgradeArgs {
+    /// Initialise with default values.
+    pub fn new() -> Self {
+        Self {
+            dry_run: false,
+            skip_data_plane_restart: false,
+            skip_single_replica_volume_validation: false,
+            skip_replica_rebuild: false,
+            skip_cordoned_node_validation: false,
+            skip_upgrade_path_validation_for_unsupported_version: false,
+            set_args: Default::default(),
+        }
+    }
     ///  Upgrade the resources.
-    pub async fn apply(&self, namespace: &str) {
+    pub async fn apply(&self, namespace: &str) -> error::Result<()> {
+        let upgrade_event_client = UpgradeEventClient::new(namespace).await?;
+        let release_name = get_release_name(namespace).await?;
+
+        // Delete any previous upgrade events
+        upgrade_event_client
+            .delete_upgrade_events(release_name.clone())
+            .await?;
         // Create resources for upgrade
-        _ = UpgradeResources::create_upgrade_resources(
-            namespace,
-            self.skip_data_plane_restart,
-            self.skip_upgrade_path_validation_for_unsupported_version,
-        )
-        .await
-        .map_err(|error| {
-            std::process::exit(error.into());
-        });
-        console_logger::info(UPGRADE_JOB_STARTED, "");
+        UpgradeResources::create_upgrade_resources(namespace, self).await?;
+
+        for _i in 0 .. MAX_RETRY_ATTEMPTS {
+            // wait for 10 seconds for the upgrade event to be published
+            tokio::time::sleep(Duration::from_secs(10)).await;
+            match upgrade_event_client
+                .get_latest_upgrade_event(release_name.clone())
+                .await
+            {
+                Ok(latest_event) => self.handle_upgrade_event(latest_event, namespace).await?,
+                Err(_) => continue,
+            }
+            break;
+        }
+
+        Ok(())
     }
 
-    ///  Dummy upgrade the resources.
+    /// Handle the event and errors out for invalid helm command.
+    async fn handle_upgrade_event(
+        &self,
+        latest_event: Event,
+        namespace: &str,
+    ) -> error::Result<()> {
+        if let Some(action) = latest_event.action {
+            if action == "Validation Failed" {
+                if let Some(data) = latest_event.message {
+                    let ev: UpgradeEvent = serde_json::from_str(data.as_str())
+                        .context(error::EventSerdeDeserialization { event: data })?;
+                    console_logger::error(HELM_UPGRADE_VALIDATION_ERROR, ev.message.as_str());
+
+                    UpgradeResources::delete_upgrade_resources(namespace).await?;
+                } else {
+                    return error::MessageInEventNotPresent.fail();
+                }
+            } else {
+                console_logger::info(UPGRADE_JOB_STARTED, "");
+            }
+        }
+        Ok(())
+    }
+
+    /// Dummy upgrade the resources.
     pub async fn dummy_apply(&self, namespace: &str) -> error::Result<()> {
         let mut pods_names: Vec<String> = Vec::new();
         list_pods(AGENT_CORE_POD_LABEL, namespace, &mut pods_names).await?;
@@ -220,8 +281,22 @@ impl UpgradeEventClient {
         self.upgrade_event.clone()
     }
 
-    /// Fetch upgrade events and print.
-    pub async fn get_and_log(&self, release_name: String) -> error::Result<()> {
+    /// Delete upgrade events.
+    pub async fn delete_upgrade_events(&self, release_name: String) -> error::Result<()> {
+        let selector = upgrade_event_selector(release_name.as_str(), UPGRADE_JOB_NAME_SUFFIX);
+        let event_lp = ListParams {
+            field_selector: Some(selector.clone()),
+            ..Default::default()
+        };
+        self.api_client()
+            .delete_collection(&DeleteParams::default(), &event_lp)
+            .await
+            .context(error::DeleteEventsWithFieldSelector { field: selector })?;
+        Ok(())
+    }
+
+    /// Fetch latest upgrade event.
+    pub async fn get_latest_upgrade_event(&self, release_name: String) -> error::Result<Event> {
         let selector = upgrade_event_selector(release_name.as_str(), UPGRADE_JOB_NAME_SUFFIX);
         let event_lp = ListParams {
             field_selector: Some(selector.clone()),
@@ -238,29 +313,38 @@ impl UpgradeEventClient {
             .collect::<Vec<_>>();
 
         event_list.sort_by(|a, b| b.event_time.cmp(&a.event_time));
-        match event_list.get(0) {
-            Some(event) => match event.message.clone() {
-                Some(data) => {
-                    let e: UpgradeEvent = serde_json::from_str(data.as_str())
-                        .context(error::EventSerdeDeserialization { event: data })?;
-                    println!("Upgrade From: {}", e.from_version);
-                    println!("Upgrade To: {}", e.to_version);
-                    println!("Upgrade Status: {}", e.message);
-                    Ok(())
-                }
-                None => error::MessageInEventNotPresent.fail(),
-            },
-            None => error::UpgradeEventNotPresent.fail(),
-        }
+        let latest_event = event_list
+            .get(0)
+            .ok_or(error::UpgradeEventNotPresent.build())?;
+        Ok(latest_event.to_owned())
     }
 
     /// Create resources for fetching upgrade events.
     pub async fn create_get_upgrade_resource(ns: &str) -> error::Result<()> {
         let release_name = get_release_name(ns).await?;
-        let gur = UpgradeEventClient::new(ns).await?;
-        gur.get_and_log(release_name).await?;
+        let upgrade_event_client = UpgradeEventClient::new(ns).await?;
+        let latest_event = upgrade_event_client
+            .get_latest_upgrade_event(release_name)
+            .await?;
+        log_upgrade_result(&latest_event).await?;
         Ok(())
     }
+}
+
+/// Print the upgrade iutput to console.
+pub async fn log_upgrade_result(event: &Event) -> error::Result<()> {
+    _ = match event.message.clone() {
+        Some(data) => {
+            let e: UpgradeEvent = serde_json::from_str(data.as_str())
+                .context(error::EventSerdeDeserialization { event: data })?;
+            println!("Upgrade From: {}", e.from_version);
+            println!("Upgrade To: {}", e.to_version);
+            println!("Upgrade Status: {}", e.message);
+            Ok(())
+        }
+        None => error::MessageInEventNotPresent.fail(),
+    };
+    Ok(())
 }
 
 /// K8s resources needed for upgrade operator.
@@ -293,7 +377,6 @@ impl UpgradeResources {
     pub async fn service_account_actions(&self, ns: &str, action: Actions) -> error::Result<()> {
         let service_account_name =
             upgrade_name_concat(&self.release_name, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX);
-
         if let Some(sa) = self
             .service_account
             .get_opt(&service_account_name)
@@ -485,8 +568,7 @@ impl UpgradeResources {
         &self,
         ns: &str,
         action: Actions,
-        skip_data_plane_restart: bool,
-        skip_upgrade_path_validation: bool,
+        args: &UpgradeArgs,
     ) -> error::Result<()> {
         let job_name = upgrade_name_concat(&self.release_name, UPGRADE_JOB_NAME_SUFFIX);
         if let Some(job) = self
@@ -531,8 +613,7 @@ impl UpgradeResources {
                             upgrade_job_image_tag.as_str(),
                         ),
                         self.release_name.clone(),
-                        skip_data_plane_restart,
-                        skip_upgrade_path_validation,
+                        args,
                         img.pull_secrets(),
                         img.pull_policy(),
                     );
@@ -556,11 +637,7 @@ impl UpgradeResources {
     }
 
     /// Create the resources for upgrade
-    pub async fn create_upgrade_resources(
-        ns: &str,
-        skip_data_plane_restart: bool,
-        skip_upgrade_path_validation: bool,
-    ) -> error::Result<()> {
+    pub async fn create_upgrade_resources(ns: &str, args: &UpgradeArgs) -> error::Result<()> {
         let uo = UpgradeResources::new(ns).await?;
 
         // Create Service Account
@@ -573,13 +650,7 @@ impl UpgradeResources {
         uo.cluster_role_binding_actions(ns, Actions::Create).await?;
 
         // Create Service Account
-        uo.job_actions(
-            ns,
-            Actions::Create,
-            skip_data_plane_restart,
-            skip_upgrade_path_validation,
-        )
-        .await?;
+        uo.job_actions(ns, Actions::Create, args).await?;
 
         Ok(())
     }
@@ -587,9 +658,10 @@ impl UpgradeResources {
     /// Delete the upgrade resources
     pub async fn delete_upgrade_resources(ns: &str) -> error::Result<()> {
         let uo = UpgradeResources::new(ns).await?;
+        let args = &UpgradeArgs::default();
 
         // Delete the job
-        uo.job_actions(ns, Actions::Delete, false, false).await?;
+        uo.job_actions(ns, Actions::Delete, args).await?;
 
         // Delete cluster role binding
         uo.cluster_role_binding_actions(ns, Actions::Delete).await?;

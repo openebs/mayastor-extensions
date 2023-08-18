@@ -120,3 +120,6 @@ pub(crate) const HELM_RELEASE_VERSION_LABEL: &str = "openebs.io/version";
 
 /// Upgrade to develop.
 pub(crate) const UPGRADE_TO_DEVELOP_BRANCH: &str = "develop";
+
+/// Number of retries for fetching the events.
+pub(crate) const MAX_RETRY_ATTEMPTS: u8 = 6;
