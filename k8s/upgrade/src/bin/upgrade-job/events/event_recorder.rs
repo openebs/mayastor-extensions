@@ -251,12 +251,17 @@ impl EventRecorder {
     }
 
     /// This method is intended for use when upgrade fails.
-    pub(crate) async fn publish_unrecoverable<Error>(&self, err: &Error)
+    pub(crate) async fn publish_unrecoverable<Error>(&self, err: &Error, validation_error: bool)
     where
         Error: Display,
     {
+        let action = if validation_error {
+            EventAction::ValidationFailed
+        } else {
+            EventAction::Failed
+        };
         let _ = self
-            .publish_warning(format!("Failed to upgrade: {err}"), "Failed")
+            .publish_warning(format!("Failed to upgrade: {err}"), action)
             .await
             .map_err(|error| error!(%error, "Failed to upgrade {PRODUCT}"));
     }
@@ -266,5 +271,38 @@ impl EventRecorder {
         let _ = self.event_sender.take();
 
         let _ = self.event_loop_handle.await;
+    }
+}
+
+/// current volume status
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
+pub enum EventAction {
+    #[serde(rename = "Failed")]
+    Failed,
+    #[serde(rename = "Validation Failed")]
+    ValidationFailed,
+    #[serde(rename = "Upgrading control-plane")]
+    UpgradingCP,
+    #[serde(rename = "Upgraded control-plane")]
+    UpgradedCP,
+    #[serde(rename = "Upgrading data-plane")]
+    UpgradingDP,
+    #[serde(rename = "Upgraded data-plane")]
+    UpgradedDP,
+    #[serde(rename = "Successful")]
+    Successful,
+}
+
+impl ToString for EventAction {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Failed => String::from("Failed"),
+            Self::ValidationFailed => String::from("Validation Failed"),
+            Self::UpgradingCP => String::from("Upgrading control-plane"),
+            Self::UpgradedCP => String::from("Upgraded control-plane"),
+            Self::UpgradingDP => String::from("Upgrading data-plane"),
+            Self::UpgradedDP => String::from("Upgraded data-plane"),
+            Self::Successful => String::from("Successful"),
+        }
     }
 }

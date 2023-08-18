@@ -2,9 +2,10 @@ use crate::{
     common::{
         constants::{CORE_CHART_NAME, TO_UMBRELLA_SEMVER, UMBRELLA_CHART_NAME},
         error::{
-            CoreChartUpgradeNoneChartDir, HelmUpgradeOptionsAbsent, InvalidHelmUpgrade,
-            InvalidUpgradePath, NoInputHelmChartDir, NotAKnownHelmChart, RegexCompile, Result,
-            RollbackForbidden, UmbrellaChartNotUpgraded,
+            CoreChartUpgradeNoneChartDir, HelmCommand, HelmUpgradeDryRunCommand,
+            HelmUpgradeOptionsAbsent, InvalidHelmUpgrade, InvalidUpgradePath, NoInputHelmChartDir,
+            NotAKnownHelmChart, RegexCompile, Result, RollbackForbidden, U8VectorToString,
+            UmbrellaChartNotUpgraded,
         },
     },
     helm::{client::HelmReleaseClient, values::generate_values_yaml_file},
@@ -12,15 +13,14 @@ use crate::{
 };
 use regex::Regex;
 use semver::Version;
-
 use snafu::{ensure, ResultExt};
-use std::path::PathBuf;
+use std::{path::PathBuf, process::Command, str};
 use tempfile::NamedTempFile as TempFile;
-use tracing::info;
+use tracing::{debug, info};
 
 /// This is the helm chart variant of the helm chart installed in the cluster.
 /// The PRODUCT may be installed using either of these options, but never both.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub(crate) enum HelmChart {
     #[default]
     Umbrella,
@@ -34,6 +34,7 @@ pub(crate) struct HelmUpgradeBuilder {
     namespace: Option<String>,
     core_chart_dir: Option<PathBuf>,
     skip_upgrade_path_validation: bool,
+    values: Option<String>,
 }
 
 impl HelmUpgradeBuilder {
@@ -74,6 +75,16 @@ impl HelmUpgradeBuilder {
         self
     }
 
+    /// This is a builder option to add set flags set during upgrade.
+    #[must_use]
+    pub(crate) fn with_values<J>(mut self, values: J) -> Self
+    where
+        J: ToString,
+    {
+        self.values = Some(values.to_string());
+        self
+    }
+
     /// This builds the HelmUpgrade object.
     pub(crate) async fn build(self) -> Result<HelmUpgrade> {
         ensure!(
@@ -82,6 +93,7 @@ impl HelmUpgradeBuilder {
         );
         let release_name = self.release_name.clone().unwrap();
         let namespace = self.namespace.clone().unwrap();
+        let values = self.values.clone().unwrap_or_default();
 
         // Generate HelmReleaseClient.
         let client = HelmReleaseClient::builder()
@@ -183,6 +195,8 @@ impl HelmUpgradeBuilder {
             core_chart_extra_args = Some(vec_to_strings![
                 "-f",
                 _upgrade_values_file.path().to_string_lossy(),
+                "--set",
+                values,
                 "--atomic"
             ]);
             upgrade_values_file = Some(_upgrade_values_file)
@@ -224,6 +238,69 @@ impl HelmUpgrade {
         HelmUpgradeBuilder::default()
     }
 
+    /// Use the HelmReleaseClient's upgrade dry runcommand to validate the upgrade command.
+    pub(crate) async fn dry_run(self) -> Result<()> {
+        let mut args_with_dry_run = self.core_chart_extra_args.clone();
+
+        if let Some(mut args) = args_with_dry_run {
+            args.push("--dry-run".to_string());
+            args_with_dry_run = Some(args);
+        } else {
+            args_with_dry_run = Some(vec!["--dry-run".to_string()]);
+        }
+
+        if self.chart_variant == HelmChart::Core && !self.already_upgraded {
+            // It should be impossible to hit this error.
+            let chart_dir = self
+                .core_chart_dir
+                .ok_or(CoreChartUpgradeNoneChartDir.build())?;
+
+            info!("Validating helm upgrade...");
+
+            let command: &str = "helm";
+            let mut args: Vec<String> = vec_to_strings![
+                "upgrade",
+                self.release_name,
+                chart_dir.to_string_lossy(),
+                "-n",
+                self.client.namespace,
+                "--timeout",
+                "15m"
+            ];
+
+            // Extra args
+            args.extend(
+                args_with_dry_run
+                    .unwrap_or_default()
+                    .iter()
+                    .map(ToString::to_string),
+            );
+
+            debug!(%command, ?args, "Helm upgrade dry-run command");
+            let output =
+                Command::new(command)
+                    .args(args.clone())
+                    .output()
+                    .context(HelmCommand {
+                        command: command.to_string(),
+                        args: args.clone(),
+                    })?;
+
+            let stdout_str = str::from_utf8(output.stdout.as_slice()).context(U8VectorToString)?;
+            let stderr_str = str::from_utf8(output.stderr.as_slice()).context(U8VectorToString)?;
+            debug!(stdout=%stdout_str, stderr=%stderr_str, "Helm upgrade dry-run command standard output and error");
+            ensure!(
+                output.stderr.is_empty(),
+                HelmUpgradeDryRunCommand {
+                    std_err: str::from_utf8(output.stderr.as_slice())
+                        .context(U8VectorToString)?
+                        .to_string()
+                }
+            );
+        }
+        Ok(())
+    }
+
     /// Use the HelmReleaseClient's upgrade method to upgrade the installed helm release.
     pub(crate) async fn run(mut self) -> Result<()> {
         match self.chart_variant {
@@ -253,7 +330,6 @@ impl HelmUpgrade {
                 self.client
                     .upgrade(self.release_name, chart_dir, self.core_chart_extra_args)
                     .await?;
-
                 // This file is no longer required after the upgrade command has been executed.
                 self.upgrade_values_file = None;
 

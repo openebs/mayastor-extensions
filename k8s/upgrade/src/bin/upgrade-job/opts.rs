@@ -38,6 +38,11 @@ pub(crate) struct CliArgs {
     /// The name of the Kubernetes Job Pod. The Job object will be used to post upgrade event.
     #[arg(env = "POD_NAME")]
     pod_name: String,
+
+    /// The set values specified by the user for upgrade
+    /// (can specify multiple or separate values with commas: key1=val1,key2=val2).
+    #[arg(short, long)]
+    values: String,
 }
 
 impl CliArgs {
@@ -75,5 +80,10 @@ impl CliArgs {
     /// This returns the name of the Kubernetes Pod where this binary will be running.
     pub(crate) fn pod_name(&self) -> String {
         self.pod_name.clone()
+    }
+
+    /// This returns the set values passed during upgrade.
+    pub(crate) fn values(&self) -> String {
+        self.values.clone()
     }
 }

@@ -172,10 +172,7 @@ async fn execute(cli_args: CliArgs) {
                     &cli_args.namespace,
                     cli_args.kube_config_path.clone(),
                     cli_args.timeout,
-                    resources.skip_single_replica_volume_validation,
-                    resources.skip_replica_rebuild,
-                    resources.skip_cordoned_node_validation,
-                    resources.skip_upgrade_path_validation_for_unsupported_version,
+                    &resources,
                 )
                 .await
                 .map_err(|error| {
@@ -186,7 +183,10 @@ async fn execute(cli_args: CliArgs) {
                 if resources.dry_run {
                     _ = resources.dummy_apply(&cli_args.namespace).await;
                 } else {
-                    resources.apply(&cli_args.namespace).await;
+                    _ = resources.apply(&cli_args.namespace).await.map_err(|error| {
+                        eprintln!("{error}");
+                        std::process::exit(error.into());
+                    });
                 }
             }
 

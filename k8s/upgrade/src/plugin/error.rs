@@ -144,6 +144,11 @@ pub enum Error {
     #[snafu(display("Failed to list Events with field selector {}: {}", field, source))]
     ListEventsWithFieldSelector { source: kube::Error, field: String },
 
+    /// Error for when a Kubernetes API request for Deleting a list of events filtered by
+    /// filed selector fails.
+    #[snafu(display("Failed to delete Events with field selector {}: {}", field, source))]
+    DeleteEventsWithFieldSelector { source: kube::Error, field: String },
+
     /// Error listing the pvc list.
     #[snafu(display("Failed to list pvc : {}", source))]
     ListPVC { source: kube::Error },
@@ -280,6 +285,7 @@ impl From<Error> for i32 {
             Error::SourceTargetVersionSame { .. } => 443,
             Error::NotAValidSourceForUpgrade { .. } => 444,
             Error::InvalidUpgradePath { .. } => 445,
+            Error::DeleteEventsWithFieldSelector { .. } => 446,
         }
     }
 }

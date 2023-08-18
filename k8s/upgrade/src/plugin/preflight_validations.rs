@@ -1,8 +1,11 @@
-use crate::plugin::{
-    constants::{get_image_version_tag, SINGLE_REPLICA_VOLUME, UPGRADE_TO_DEVELOP_BRANCH},
-    error,
-    upgrade::{get_pvc_from_uuid, get_source_version},
-    user_prompt,
+use crate::{
+    plugin::{
+        constants::{get_image_version_tag, SINGLE_REPLICA_VOLUME, UPGRADE_TO_DEVELOP_BRANCH},
+        error,
+        upgrade::{get_pvc_from_uuid, get_source_version},
+        user_prompt,
+    },
+    upgrade::UpgradeArgs,
 };
 use openapi::{
     clients::tower::{self, Configuration},
@@ -19,10 +22,7 @@ pub async fn preflight_check(
     namespace: &str,
     kube_config_path: Option<PathBuf>,
     timeout: humantime::Duration,
-    skip_single_replica_volume_validation: bool,
-    skip_replica_rebuild: bool,
-    skip_cordoned_node_validation: bool,
-    skip_upgrade_path_validation: bool,
+    resources: &UpgradeArgs,
 ) -> error::Result<()> {
     console_logger::info(user_prompt::UPGRADE_WARNING, "");
     // Initialise the REST client.
@@ -35,19 +35,19 @@ pub async fn preflight_check(
         .context(error::OpenapiClientConfiguration)?;
     let rest_client = RestClient::new_with_config(config);
 
-    if !skip_upgrade_path_validation {
+    if !resources.skip_upgrade_path_validation_for_unsupported_version {
         upgrade_path_validation(namespace).await?;
     }
 
-    if !skip_replica_rebuild {
+    if !resources.skip_replica_rebuild {
         rebuild_in_progress_validation(&rest_client).await?;
     }
 
-    if !skip_cordoned_node_validation {
+    if !resources.skip_cordoned_node_validation {
         already_cordoned_nodes_validation(&rest_client).await?;
     }
 
-    if !skip_single_replica_volume_validation {
+    if !resources.skip_single_replica_volume_validation {
         single_volume_replica_validation(&rest_client).await?;
     }
     Ok(())
