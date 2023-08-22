@@ -8,11 +8,6 @@ If you have any questions, our ecosystem can be connected with over [Slack][maya
 
 Our interactions here are governed by the [CNCF Code of Conduct](CODE-OF_CONDUCT.md).
 
-## Development Environment
-
-Consult the [`doc/build.md`](doc/build.md) for a complete guide to getting started contributing
-to Mayastor.
-
 ## Issues & Pull Requests
 
 ### Reporting Bugs
@@ -55,7 +50,7 @@ Once review is given, Maintainers and SIG members may indicate merge readiness w
 **Please do not hit the 'Update Branch' button.** The commit message is not conventional,
 [bors][bors] will yell at you. Let [bors][bors] handle it, or rebase it yourself.
 
-### Development
+### Development Environment
 
 This repo, much like most of the mayastor-specific repos makes use of nix.
 
@@ -107,7 +102,9 @@ If you're only modifying the helm chart we recomment you enter nix-shell from th
 >
 > That's totally fine, just make sure you have `helm-docs` installed and run the docs script
 > ```bash
-> [@dev:~/git/mayastor/extensions]$ ./scripts/helm/> generate-readme.sh
+> [@dev:~/git/mayastor/extensions]$ ./scripts/helm/generate-readme.sh
+> INFO[2023-08-22T08:55:06+01:00] Found Chart directories [chart]
+> INFO[2023-08-22T08:55:06+01:00] Generating README Documentation for chart chart
 > ```
 
 [mayastor-slack]: https://kubernetes.slack.com/messages/openebs
