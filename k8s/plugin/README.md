@@ -344,27 +344,29 @@ kubectl mayastor dump system -d <output_directory> -n <mayastor_namespace>
 
   Options:
   -d, --dry-run
-        Display all the validations output but will not execute upgrade
+          Display all the validations output but will not execute upgrade
   -r, --rest <REST>
-        The rest endpoint to connect to
-  -D, --skip-data-plane-restart
-        If set then upgrade will skip the io-engine pods restart
+          The rest endpoint to connect to
   -k, --kube-config-path <KUBE_CONFIG_PATH>
-        Path to kubeconfig file
-  -S, --skip-single-replica-volume-validation
-        If set then it will continue with upgrade without validating singla replica volume
-  -R, --skip-replica-rebuild
-        If set then upgrade will skip the repilca rebuild in progress validation
-  -C, --skip-cordoned-node-validation
-        If set then upgrade will skip the cordoned node validation
+          Path to kubeconfig file
+      --skip-data-plane-restart
+          If set then upgrade will skip the io-engine pods restart
+      --skip-single-replica-volume-validation
+          If set then it will continue with upgrade without validating singla replica volume
+      --skip-replica-rebuild
+          If set then upgrade will skip the repilca rebuild in progress validation
+      --skip-cordoned-node-validation
+          If set then upgrade will skip the cordoned node validation
+      --set-args <SET_ARGS>
+          The set values on the command line. (can specify multiple or separate values with commas: key1=val1,key2=val2)
   -o, --output <OUTPUT>
-        The Output, viz yaml, json [default: none]
+          The Output, viz yaml, json [default: none]
   -j, --jaeger <JAEGER>
-        Trace rest requests to the Jaeger endpoint agent
+          Trace rest requests to the Jaeger endpoint agent
   -n, --namespace <NAMESPACE>
-        Kubernetes namespace of mayastor service [default: mayastor]
+          Kubernetes namespace of mayastor service [default: mayastor]
   -h, --help
-        Print help
+          Print help
 ```
 
 2. Get the upgrade status

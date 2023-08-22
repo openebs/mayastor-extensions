@@ -86,26 +86,26 @@ pub struct UpgradeArgs {
     pub dry_run: bool,
 
     /// If set then upgrade will skip the io-engine pods restart.
-    #[clap(global = true, long, short = 'D', default_value_t = false)]
+    #[clap(global = true, long, default_value_t = false)]
     pub skip_data_plane_restart: bool,
 
     /// If set then it will continue with upgrade without validating singla replica volume.
-    #[clap(global = true, long, short = 'S')]
+    #[clap(global = true, long)]
     pub skip_single_replica_volume_validation: bool,
 
     /// If set then upgrade will skip the repilca rebuild in progress validation.
-    #[clap(global = true, long, short = 'R')]
+    #[clap(global = true, long)]
     pub skip_replica_rebuild: bool,
 
     /// If set then upgrade will skip the cordoned node validation.
-    #[clap(global = true, long, short = 'C')]
+    #[clap(global = true, long)]
     pub skip_cordoned_node_validation: bool,
 
     /// Upgrade to an unsupported version.
     #[clap(global = true, hide = true, long, default_value_t = false)]
     pub skip_upgrade_path_validation_for_unsupported_version: bool,
 
-    /// The set values specified by the user for upgrade.
+    /// The set values on the command line.
     /// (can specify multiple or separate values with commas: key1=val1,key2=val2).
     #[clap(global = true, long)]
     pub set_args: Vec<String>,
