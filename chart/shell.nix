@@ -1,0 +1,1 @@
+../scripts/helm/shell.nix
