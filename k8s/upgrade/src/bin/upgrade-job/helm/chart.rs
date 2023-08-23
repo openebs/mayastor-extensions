@@ -30,6 +30,10 @@ pub(crate) struct CoreValues {
     image: Image,
     /// This is the yaml object which contains the configuration for the io-engine DaemonSet.
     io_engine: IoEngine,
+    /// This toggles installation of eventing components.
+    eventing: Eventing,
+    /// This contains Kubernetes CSI sidecar container image details.
+    csi: Csi,
 }
 
 impl CoreValues {
@@ -41,6 +45,36 @@ impl CoreValues {
     /// This is a getter for the io-engine DaemonSet Pods' logLevel.
     pub(crate) fn io_engine_log_level(&self) -> &str {
         self.io_engine.log_level()
+    }
+
+    /// This is a getter for the eventing installation enable/disable state.
+    pub(crate) fn eventing_enabled(&self) -> bool {
+        self.eventing.enabled()
+    }
+
+    /// This is a getter or the sig-storage/csi-provisioner image tag.
+    pub(crate) fn csi_provisioner_image_tag(&self) -> &str {
+        self.csi.provisioner_image_tag()
+    }
+
+    /// This is a getter or the sig-storage/csi-attacher image tag.
+    pub(crate) fn csi_attacher_image_tag(&self) -> &str {
+        self.csi.attacher_image_tag()
+    }
+
+    /// This is a getter or the sig-storage/csi-snapshotter image tag.
+    pub(crate) fn csi_snapshotter_image_tag(&self) -> &str {
+        self.csi.snapshotter_image_tag()
+    }
+
+    /// This is a getter or the sig-storage/snapshot-controller image tag.
+    pub(crate) fn csi_snapshot_controller_image_tag(&self) -> &str {
+        self.csi.snapshot_controller_image_tag()
+    }
+
+    /// This is a getter or the sig-storage/csi-node-driver-registrar image tag.
+    pub(crate) fn csi_node_driver_registrar_image_tag(&self) -> &str {
+        self.csi.node_driver_registrar_image_tag()
     }
 }
 
@@ -72,5 +106,89 @@ impl IoEngine {
     /// This is a getter for the io-engine DaemonSet Pod's tracing logLevel.
     pub(crate) fn log_level(&self) -> &str {
         self.log_level.as_str()
+    }
+}
+
+/// This is used to deserialize the yaml object 'eventing', v2.3.0 has it disabled by default,
+/// the default thereafter has it enabled.
+#[derive(Deserialize)]
+pub(crate) struct Eventing {
+    enabled: bool,
+}
+
+impl Eventing {
+    /// This is a predicate for the installation setting for eventing.
+    pub(crate) fn enabled(&self) -> bool {
+        self.enabled
+    }
+}
+
+/// This is used to deserialize the yaml object 'csi'.
+#[derive(Deserialize)]
+pub(crate) struct Csi {
+    image: CsiImage,
+}
+
+impl Csi {
+    /// This is a getter for the sig-storage/csi-provisioner image tag.
+    pub(crate) fn provisioner_image_tag(&self) -> &str {
+        self.image.provisioner_tag()
+    }
+
+    /// This is a getter for the sig-storage/csi-attacher image tag.
+    pub(crate) fn attacher_image_tag(&self) -> &str {
+        self.image.attacher_tag()
+    }
+
+    /// This is a getter for the sig-storage/csi-snapshotter image tag.
+    pub(crate) fn snapshotter_image_tag(&self) -> &str {
+        self.image.snapshotter_tag()
+    }
+
+    /// This is a getter for the sig-storage/snapshot-controller image tag.
+    pub(crate) fn snapshot_controller_image_tag(&self) -> &str {
+        self.image.snapshot_controller_tag()
+    }
+
+    /// This is a getter for the sig-storage/csi-node-driver-registrar image tag.
+    pub(crate) fn node_driver_registrar_image_tag(&self) -> &str {
+        self.image.node_driver_registrar_tag()
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub(crate) struct CsiImage {
+    provisioner_tag: String,
+    attacher_tag: String,
+    snapshotter_tag: String,
+    snapshot_controller_tag: String,
+    registrar_tag: String,
+}
+
+impl CsiImage {
+    /// This is a getter for provisionerTag.
+    pub(crate) fn provisioner_tag(&self) -> &str {
+        self.provisioner_tag.as_str()
+    }
+
+    /// This is a getter for attacherTag.
+    pub(crate) fn attacher_tag(&self) -> &str {
+        self.attacher_tag.as_str()
+    }
+
+    /// This is a getter for snapshotterTag.
+    pub(crate) fn snapshotter_tag(&self) -> &str {
+        self.snapshotter_tag.as_str()
+    }
+
+    /// This is a getter for snapshotControllerTag.
+    pub(crate) fn snapshot_controller_tag(&self) -> &str {
+        self.snapshot_controller_tag.as_str()
+    }
+
+    /// This is a getter for registrarTag.
+    pub(crate) fn node_driver_registrar_tag(&self) -> &str {
+        self.registrar_tag.as_str()
     }
 }
