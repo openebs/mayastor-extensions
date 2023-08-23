@@ -1,6 +1,6 @@
 use crate::{
     common::{
-        constants::TWO_DOT_O,
+        constants::{TWO_DOT_O, TWO_DOT_THREE},
         error::{
             ReadingFile, Result, SemverParse, TempFileCreation, U8VectorToString, WriteToTempFile,
             YamlParseFromFile, YamlParseFromSlice,
@@ -81,6 +81,27 @@ pub(crate) fn generate_values_yaml_file(
         }
     }
 
+    // Specific special-case values for version 2.3.x.
+    let version_two_dot_three = VersionReq::parse(TWO_DOT_THREE).context(SemverParse {
+        version_string: TWO_DOT_THREE.to_string(),
+    })?;
+    if version_two_dot_three.matches(from_version)
+        && from_values
+            .eventing_enabled()
+            .ne(&to_values.eventing_enabled())
+    {
+        let value_as_str = match to_values.eventing_enabled() {
+            true => "true",
+            false => "false",
+        };
+
+        yq.set_string_value(
+            YamlKey::try_from(".eventing.enabled")?,
+            value_as_str,
+            upgrade_values_file.path(),
+        )?;
+    }
+
     // Default options.
     // Image tag is set because the high_priority file is the user's source options file.
     // The target's image tag needs to be set for PRODUCT upgrade.
@@ -106,6 +127,33 @@ pub(crate) fn generate_values_yaml_file(
     yq.set_string_value(
         YamlKey::try_from(".image.repoTags.extensions")?,
         "",
+        upgrade_values_file.path(),
+    )?;
+
+    // The CSI sidecar images need to always be the versions set on the chart by default.
+    yq.set_string_value(
+        YamlKey::try_from(".csi.image.provisionerTag")?,
+        to_values.csi_provisioner_image_tag(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_string_value(
+        YamlKey::try_from(".csi.image.attacherTag")?,
+        to_values.csi_attacher_image_tag(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_string_value(
+        YamlKey::try_from(".csi.image.snapshotterTag")?,
+        to_values.csi_snapshotter_image_tag(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_string_value(
+        YamlKey::try_from(".csi.image.snapshotControllerTag")?,
+        to_values.csi_snapshot_controller_image_tag(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_string_value(
+        YamlKey::try_from(".csi.image.registrarTag")?,
+        to_values.csi_node_driver_registrar_image_tag(),
         upgrade_values_file.path(),
     )?;
 
