@@ -120,7 +120,7 @@ impl HelmReleaseClient {
             })?;
 
         ensure!(
-            output.stderr.is_empty(),
+            output.status.success(),
             HelmGetValuesCommand {
                 command: command.to_string(),
                 args,
@@ -170,7 +170,7 @@ impl HelmReleaseClient {
         let stdout_str = str::from_utf8(output.stdout.as_slice()).context(U8VectorToString)?;
         debug!(stdout=%stdout_str, "Helm list command standard output");
         ensure!(
-            output.stderr.is_empty(),
+            output.status.success(),
             HelmListCommand {
                 command: command.to_string(),
                 args,
@@ -235,7 +235,7 @@ impl HelmReleaseClient {
         let stdout_str = str::from_utf8(output.stdout.as_slice()).context(U8VectorToString)?;
         debug!(stdout=%stdout_str, "Helm upgrade command standard output");
         ensure!(
-            output.stderr.is_empty(),
+            output.status.success(),
             HelmUpgradeCommand {
                 command: command.to_string(),
                 args,
