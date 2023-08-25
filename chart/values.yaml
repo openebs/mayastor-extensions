@@ -337,6 +337,11 @@ io_engine:
       iface: ""
       # -- Reservations Persist Through Power Loss State
       ptpl: true
+      # NVMF target Command Retry Delay for volume target initiators
+      hostCmdRetryDelay:
+        # A command retry delay in seconds. A value of 0 means no delay, host may retry immediately
+        crdt1: 30
+
   # -- Pass additional arguments to the Environment Abstraction Layer.
   # Example: --set {product}.envcontext=iova-mode=pa
   envcontext: ""
