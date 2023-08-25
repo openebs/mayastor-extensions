@@ -290,7 +290,7 @@ impl HelmUpgrade {
             let stderr_str = str::from_utf8(output.stderr.as_slice()).context(U8VectorToString)?;
             debug!(stdout=%stdout_str, stderr=%stderr_str, "Helm upgrade dry-run command standard output and error");
             ensure!(
-                output.stderr.is_empty(),
+                output.status.success(),
                 HelmUpgradeDryRunCommand {
                     std_err: str::from_utf8(output.stderr.as_slice())
                         .context(U8VectorToString)?

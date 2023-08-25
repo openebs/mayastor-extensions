@@ -21,7 +21,7 @@ pub(crate) const CHART_VERSION_LABEL_KEY: &str = "openebs.io/version";
 pub(crate) const DRAIN_FOR_UPGRADE: &str = "mayastor-upgrade";
 
 /// This is the allowed upgrade to-version/to-version-range for the Umbrella chart.
-pub(crate) const TO_UMBRELLA_SEMVER: &str = "3.8.0";
+pub(crate) const TO_UMBRELLA_SEMVER: &str = "3.9.0";
 
 /// This is the user docs URL for the Umbrella chart.
 pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str =
@@ -29,3 +29,6 @@ pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str =
 
 /// This defines the range of helm chart versions for the 2.0 release of the Core helm chart.
 pub(crate) const TWO_DOT_O: &str = ">=2.0.0-rc.0, <2.1.0";
+
+/// This defines the range of helm chart versions for the 2.3 release of the Core helm chart.
+pub(crate) const TWO_DOT_THREE: &str = ">=2.3.0-rc.0, <2.4.0";
