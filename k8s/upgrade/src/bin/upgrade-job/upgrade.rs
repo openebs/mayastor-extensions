@@ -1,7 +1,7 @@
 use crate::{
     common::{constants::PRODUCT, error::Result},
     events::event_recorder::{EventAction, EventRecorder},
-    helm::upgrade::HelmUpgrade,
+    helm::upgrade::{HelmUpgrade, HelmUpgradeRunner},
     opts::CliArgs,
 };
 use data_plane::upgrade_data_plane;
@@ -37,20 +37,15 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
         .build()
         .await?;
 
-    let helm_upgrade_dry_run = HelmUpgrade::builder()
-        .with_namespace(opts.namespace())
-        .with_release_name(opts.release_name())
-        .with_core_chart_dir(opts.core_chart_dir())
-        .with_skip_upgrade_path_validation(opts.skip_upgrade_path_validation())
-        .with_values(opts.values())
-        .build()
-        .await?;
-
-    if let Err(error) = helm_upgrade_dry_run.dry_run().await {
-        event.publish_unrecoverable(&error, true).await;
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-        return Err(error);
-    }
+    // Dry-run helm upgrade.
+    let dry_run_result: Result<HelmUpgradeRunner> = helm_upgrade.dry_run().await;
+    let run_helm_upgrade = match dry_run_result {
+        Err(error) => {
+            event.publish_unrecoverable(&error, true).await;
+            Err(error)
+        }
+        Ok(run_helm_upgrade) => Ok(run_helm_upgrade),
+    }?;
 
     event
         .publish_normal(
@@ -67,9 +62,8 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
         .await?;
 
     // Control plane containers are updated in this step.
-    if let Err(error) = helm_upgrade.run().await {
+    if let Err(error) = run_helm_upgrade.await {
         event.publish_unrecoverable(&error, false).await;
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         return Err(error);
     }
 
