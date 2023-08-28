@@ -359,6 +359,8 @@ kubectl mayastor dump system -d <output_directory> -n <mayastor_namespace>
           If set then upgrade will skip the cordoned node validation
       --set-args <SET_ARGS>
           The set values on the command line. (can specify multiple or separate values with commas: key1=val1,key2=val2)
+      --set-file <SET_FILE>
+          The set values from respective files specified via the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)
   -o, --output <OUTPUT>
           The Output, viz yaml, json [default: none]
   -j, --jaeger <JAEGER>

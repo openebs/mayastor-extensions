@@ -253,10 +253,10 @@ pub(crate) fn upgrade_job(
     upgrade_image: String,
     release_name: String,
     args: &UpgradeArgs,
+    values: String,
     image_pull_secrets: Option<Vec<k8s_openapi::api::core::v1::LocalObjectReference>>,
     image_pull_policy: Option<String>,
 ) -> Job {
-    let values = args.set_args.join(",");
     let mut job_args: Vec<String> = vec![
         format!("--rest-endpoint=http://{release_name}-api-rest:8081"),
         format!("--namespace={namespace}"),

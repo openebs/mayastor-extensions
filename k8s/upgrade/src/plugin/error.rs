@@ -210,6 +210,13 @@ pub enum Error {
         filepath: PathBuf,
     },
 
+    /// Error when reading the entire contents of a file into a string.
+    #[snafu(display("Failed to read file at {}: {}", filepath.display(), source))]
+    ReadFromFile {
+        source: std::io::Error,
+        filepath: PathBuf,
+    },
+
     /// Error for when yaml could not be parsed from bytes.
     #[snafu(display("Failed to parse unsupported versions yaml: {}", source))]
     YamlParseBufferForUnsupportedVersion { source: serde_yaml::Error },
@@ -286,6 +293,7 @@ impl From<Error> for i32 {
             Error::NotAValidSourceForUpgrade { .. } => 444,
             Error::InvalidUpgradePath { .. } => 445,
             Error::DeleteEventsWithFieldSelector { .. } => 446,
+            Error::ReadFromFile { .. } => 447,
         }
     }
 }

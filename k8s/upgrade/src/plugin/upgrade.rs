@@ -28,7 +28,7 @@ use kube::{
 };
 use serde::Deserialize;
 use snafu::ResultExt;
-use std::{collections::HashSet, time::Duration};
+use std::{collections::HashSet, fs, time::Duration};
 
 /// Arguments to be passed for upgrade.
 #[derive(clap::Subcommand, Debug)]
@@ -109,6 +109,11 @@ pub struct UpgradeArgs {
     /// (can specify multiple or separate values with commas: key1=val1,key2=val2).
     #[clap(global = true, long)]
     pub set_args: Vec<String>,
+
+    /// The set values from respective files specified via the command line
+    /// (can specify multiple or separate values with commas: key1=val1,key2=val2).
+    #[clap(global = true, long)]
+    pub set_file: Vec<String>,
 }
 
 impl Default for UpgradeArgs {
@@ -128,6 +133,7 @@ impl UpgradeArgs {
             skip_cordoned_node_validation: false,
             skip_upgrade_path_validation_for_unsupported_version: false,
             set_args: Default::default(),
+            set_file: Default::default(),
         }
     }
     ///  Upgrade the resources.
@@ -604,6 +610,7 @@ impl UpgradeResources {
                     let upgrade_job_image_tag = get_image_version_tag();
                     let rest_deployment = get_deployment_for_rest(ns).await?;
                     let img = ImageProperties::try_from(rest_deployment)?;
+                    let values = parse_file_values(args).await?;
                     let upgrade_deploy = objects::upgrade_job(
                         ns,
                         upgrade_image_concat(
@@ -614,6 +621,7 @@ impl UpgradeResources {
                         ),
                         self.release_name.clone(),
                         args,
+                        values.join(","),
                         img.pull_secrets(),
                         img.pull_policy(),
                     );
@@ -832,4 +840,22 @@ pub(crate) async fn get_source_version(ns: &str) -> error::Result<String> {
         .ok_or(error::NoDeploymentPresent.build())?
         .to_string();
     Ok(value.to_string())
+}
+
+/// Parse set-file and append set-args
+pub(crate) async fn parse_file_values(upgrade_args: &UpgradeArgs) -> error::Result<Vec<String>> {
+    let mut args: Vec<String> = Vec::new();
+    for file in &upgrade_args.set_file {
+        let data: Vec<_> = file.split('=').collect();
+        let filepath = data[1];
+        let string_values =
+            fs::read_to_string(filepath).context(error::ReadFromFile { filepath })?;
+        let d = format!("{}={}", data[0], string_values);
+        args.push(d);
+    }
+    // add set-args to args
+    for arguments in &upgrade_args.set_args {
+        args.push(arguments.to_string());
+    }
+    Ok(args)
 }
