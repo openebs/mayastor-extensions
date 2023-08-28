@@ -70,7 +70,7 @@ impl YqV4 {
             })?;
 
         ensure!(
-            yq_version_output.stderr.is_empty(),
+            yq_version_output.status.success(),
             YqVersionCommand {
                 command: yq_v4.command_as_str().to_string(),
                 arg: yq_version_arg,
@@ -151,7 +151,7 @@ impl YqV4 {
             })?;
 
         ensure!(
-            yq_merge_output.stderr.is_empty(),
+            yq_merge_output.status.success(),
             YqMergeCommand {
                 command: self.command_as_str().to_string(),
                 args: yq_merge_args,
@@ -186,7 +186,7 @@ impl YqV4 {
                 })?;
 
         ensure!(
-            yq_set_output.stderr.is_empty(),
+            yq_set_output.status.success(),
             YqSetCommand {
                 command: self.command_as_str().to_string(),
                 args: yq_set_args,

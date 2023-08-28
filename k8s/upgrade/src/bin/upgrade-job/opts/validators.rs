@@ -39,7 +39,7 @@ pub(crate) fn validate_helm_release(name: String, namespace: String) -> Result<(
     let stdout_str = str::from_utf8(output.stdout.as_slice()).context(U8VectorToString)?;
     debug!(stdout=%stdout_str, "Helm list command standard output");
     ensure!(
-        output.stderr.is_empty(),
+        output.status.success(),
         HelmListCommand {
             command: command.to_string(),
             args,
@@ -80,7 +80,7 @@ pub(crate) fn validate_helmv3_in_path() -> Result<()> {
     let stdout_str = str::from_utf8(output.stdout.as_slice()).context(U8VectorToString)?;
     debug!(stdout=%stdout_str, "Helm version command standard output");
     ensure!(
-        output.stderr.is_empty(),
+        output.status.success(),
         HelmVersionCommand {
             command: command.to_string(),
             args,

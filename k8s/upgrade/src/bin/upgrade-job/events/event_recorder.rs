@@ -268,8 +268,10 @@ impl EventRecorder {
 
     /// Shuts down the event channel which makes the event loop worker exit its loop and return.
     pub(crate) async fn shutdown_worker(mut self) {
+        // Dropping the sender, to signify no more channel messages.
         let _ = self.event_sender.take();
 
+        // Wait for event loop to publish its last events and exit.
         let _ = self.event_loop_handle.await;
     }
 }

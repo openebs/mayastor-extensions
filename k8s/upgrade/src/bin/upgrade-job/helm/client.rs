@@ -17,7 +17,12 @@ use kube::ResourceExt;
 use kube_client::{api::PostParams, Api};
 use serde::Deserialize;
 use snafu::{ensure, IntoError, ResultExt};
-use std::{fs, path::PathBuf, process::Command, str};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+    str,
+};
 use tracing::{debug, info};
 
 /// This struct is used to deserialize the output of `helm list -n <namespace> --deployed -o yaml`.
@@ -120,7 +125,7 @@ impl HelmReleaseClient {
             })?;
 
         ensure!(
-            output.stderr.is_empty(),
+            output.status.success(),
             HelmGetValuesCommand {
                 command: command.to_string(),
                 args,
@@ -170,7 +175,7 @@ impl HelmReleaseClient {
         let stdout_str = str::from_utf8(output.stdout.as_slice()).context(U8VectorToString)?;
         debug!(stdout=%stdout_str, "Helm list command standard output");
         ensure!(
-            output.stderr.is_empty(),
+            output.status.success(),
             HelmListCommand {
                 command: command.to_string(),
                 args,
@@ -189,8 +194,9 @@ impl HelmReleaseClient {
     pub(crate) async fn upgrade<A, B>(
         &self,
         release_name: A,
-        chart_dir: PathBuf,
+        chart_dir: &Path,
         maybe_extra_args: Option<Vec<B>>,
+        install_crds: bool,
     ) -> Result<()>
     where
         A: ToString,
@@ -201,8 +207,11 @@ impl HelmReleaseClient {
             .with_namespace(self.namespace.as_str())
             .build()
             .await?;
-        // Ref: https://helm.sh/docs/chart_best_practices/custom_resource_definitions
-        install_missing_crds(k8s_client.crd_api(), chart_dir.join("crds")).await?;
+
+        if install_crds {
+            // Ref: https://helm.sh/docs/chart_best_practices/custom_resource_definitions
+            install_missing_crds(k8s_client.crd_api(), chart_dir.join("crds")).await?;
+        }
 
         let command: &str = "helm";
         let mut args: Vec<String> = vec_to_strings![
@@ -235,7 +244,7 @@ impl HelmReleaseClient {
         let stdout_str = str::from_utf8(output.stdout.as_slice()).context(U8VectorToString)?;
         debug!(stdout=%stdout_str, "Helm upgrade command standard output");
         ensure!(
-            output.stderr.is_empty(),
+            output.status.success(),
             HelmUpgradeCommand {
                 command: command.to_string(),
                 args,
