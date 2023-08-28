@@ -2,10 +2,9 @@ use crate::{
     common::{
         constants::{CORE_CHART_NAME, TO_UMBRELLA_SEMVER, UMBRELLA_CHART_NAME},
         error::{
-            CoreChartUpgradeNoneChartDir, HelmCommand, HelmUpgradeDryRunCommand,
-            HelmUpgradeOptionsAbsent, InvalidHelmUpgrade, InvalidUpgradePath, NoInputHelmChartDir,
-            NotAKnownHelmChart, RegexCompile, Result, RollbackForbidden, U8VectorToString,
-            UmbrellaChartNotUpgraded,
+            CoreChartUpgradeNoneChartDir, HelmUpgradeOptionsAbsent, InvalidHelmUpgrade,
+            InvalidUpgradePath, NoInputHelmChartDir, NotAKnownHelmChart, RegexCompile, Result,
+            RollbackForbidden, UmbrellaChartNotUpgraded,
         },
     },
     helm::{client::HelmReleaseClient, values::generate_values_yaml_file},
@@ -14,9 +13,9 @@ use crate::{
 use regex::Regex;
 use semver::Version;
 use snafu::{ensure, ResultExt};
-use std::{path::PathBuf, process::Command, str};
+use std::{future::Future, path::PathBuf, pin::Pin};
 use tempfile::NamedTempFile as TempFile;
-use tracing::{debug, info};
+use tracing::info;
 
 /// This is the helm chart variant of the helm chart installed in the cluster.
 /// The PRODUCT may be installed using either of these options, but never both.
@@ -229,6 +228,7 @@ pub(crate) struct HelmUpgrade {
     core_chart_extra_args: Option<Vec<String>>,
     from_version: Version,
     to_version: Version,
+    #[allow(dead_code)]
     upgrade_values_file: Option<TempFile>,
 }
 
@@ -238,87 +238,37 @@ impl HelmUpgrade {
         HelmUpgradeBuilder::default()
     }
 
-    /// Use the HelmReleaseClient's upgrade dry runcommand to validate the upgrade command.
-    pub(crate) async fn dry_run(self) -> Result<()> {
-        let mut args_with_dry_run = self.core_chart_extra_args.clone();
-
-        if let Some(mut args) = args_with_dry_run {
-            args.push("--dry-run".to_string());
-            args_with_dry_run = Some(args);
-        } else {
-            args_with_dry_run = Some(vec!["--dry-run".to_string()]);
-        }
-
-        if self.chart_variant == HelmChart::Core && !self.already_upgraded {
-            // It should be impossible to hit this error.
-            let chart_dir = self
-                .core_chart_dir
-                .ok_or(CoreChartUpgradeNoneChartDir.build())?;
-
-            info!("Validating helm upgrade...");
-
-            let command: &str = "helm";
-            let mut args: Vec<String> = vec_to_strings![
-                "upgrade",
-                self.release_name,
-                chart_dir.to_string_lossy(),
-                "-n",
-                self.client.namespace,
-                "--timeout",
-                "15m"
-            ];
-
-            // Extra args
-            args.extend(
-                args_with_dry_run
-                    .unwrap_or_default()
-                    .iter()
-                    .map(ToString::to_string),
-            );
-
-            debug!(%command, ?args, "Helm upgrade dry-run command");
-            let output =
-                Command::new(command)
-                    .args(args.clone())
-                    .output()
-                    .context(HelmCommand {
-                        command: command.to_string(),
-                        args: args.clone(),
-                    })?;
-
-            let stdout_str = str::from_utf8(output.stdout.as_slice()).context(U8VectorToString)?;
-            let stderr_str = str::from_utf8(output.stderr.as_slice()).context(U8VectorToString)?;
-            debug!(stdout=%stdout_str, stderr=%stderr_str, "Helm upgrade dry-run command standard output and error");
-            ensure!(
-                output.status.success(),
-                HelmUpgradeDryRunCommand {
-                    std_err: str::from_utf8(output.stderr.as_slice())
-                        .context(U8VectorToString)?
-                        .to_string()
-                }
-            );
-        }
-        Ok(())
-    }
-
-    /// Use the HelmReleaseClient's upgrade method to upgrade the installed helm release.
-    pub(crate) async fn run(mut self) -> Result<()> {
+    /// This validates helm upgrade and runs the 'helm upgrade --dry-run' command. Successful exits
+    /// from this method returns a HelmUpgradeRunner which is a Future which runs 'helm upgrade'
+    /// when awaited on.
+    pub(crate) async fn dry_run(self) -> Result<HelmUpgradeRunner> {
         match self.chart_variant {
             HelmChart::Umbrella if self.already_upgraded => {
-                info!(
-                    "Verified that {UMBRELLA_CHART_NAME} helm chart release '{}' has version {TO_UMBRELLA_SEMVER}",
-                    self.release_name.as_str()
-                );
+                // Returned HelmUpgradeRunner logs and exits.
+                Ok(Box::pin(async move {
+                    info!(
+                        "Verified that {UMBRELLA_CHART_NAME} helm chart release '{}' \
+                        has version {TO_UMBRELLA_SEMVER}",
+                        self.release_name.as_str()
+                    );
+
+                    Ok(())
+                }))
             }
             HelmChart::Umbrella if !self.already_upgraded => {
                 // It should be impossible to hit this error.
-                return UmbrellaChartNotUpgraded.fail();
+                UmbrellaChartNotUpgraded.fail()
             }
             HelmChart::Core if self.already_upgraded => {
-                info!(
-                    "Skipping helm upgrade, as the version of the installed helm chart is the same \
-                    as that of this upgrade-job's helm chart"
-                );
+                // Returned HelmUpgradeRunner logs and exits.
+                Ok(Box::pin(async move {
+                    info!(
+                        "Skipping helm upgrade, as the version of the installed helm chart \
+                        is the same as that of this upgrade-job's helm chart"
+                    );
+
+                    Ok(())
+                }))
             }
             HelmChart::Core if !self.already_upgraded => {
                 // It should be impossible to hit this error.
@@ -326,21 +276,45 @@ impl HelmUpgrade {
                     .core_chart_dir
                     .ok_or(CoreChartUpgradeNoneChartDir.build())?;
 
-                info!("Starting helm upgrade...");
+                // Running 'helm upgrade --dry-run'.
+                let mut dry_run_extra_args: Vec<String> =
+                    self.core_chart_extra_args.clone().unwrap_or_default();
+                dry_run_extra_args.push("--dry-run".to_string());
+                info!("Running helm upgrade dry-run...");
                 self.client
-                    .upgrade(self.release_name, chart_dir, self.core_chart_extra_args)
+                    .upgrade(
+                        self.release_name.as_str(),
+                        chart_dir.as_path(),
+                        Some(dry_run_extra_args),
+                        false,
+                    )
                     .await?;
-                // This file is no longer required after the upgrade command has been executed.
-                self.upgrade_values_file = None;
+                info!("Helm upgrade dry-run succeeded!");
 
-                info!("Helm upgrade successful!");
+                // Returning HelmUpgradeRunner.
+                Ok(Box::pin(async move {
+                    // Pinning the helm values file handle to this closure so that it is not
+                    // dropped. This file handle needs to exist in memory for
+                    // the helm upgrade's "-f <values_file>" argument to work.
+                    // This handle is dropped when this closure returns, after helm upgrade.
+                    let _values_file = self.upgrade_values_file;
+
+                    info!("Starting helm upgrade...");
+                    self.client
+                        .upgrade(
+                            self.release_name,
+                            chart_dir.as_path(),
+                            self.core_chart_extra_args,
+                            true,
+                        )
+                        .await?;
+                    info!("Helm upgrade successful!");
+
+                    Ok(())
+                }))
             }
-            _ => {
-                return InvalidHelmUpgrade.fail();
-            }
+            _ => InvalidHelmUpgrade.fail(),
         }
-
-        Ok(())
     }
 
     pub(crate) fn upgrade_from_version(&self) -> String {
@@ -351,3 +325,7 @@ impl HelmUpgrade {
         self.to_version.to_string()
     }
 }
+
+/// HelmUpgradeRunner is returned after an upgrade is validated and dry-run-ed. Running
+/// it carries out helm upgrade.
+pub(crate) type HelmUpgradeRunner = Pin<Box<dyn Future<Output = Result<()>>>>;
