@@ -71,35 +71,25 @@ impl EventRecorderBuilder {
         self
     }
 
-    /// This is a builder option add the from-version in upgrade.
-    #[must_use]
-    pub(crate) fn with_from_version(mut self, from: String) -> Self {
-        self.from_version = Some(from);
-        self
-    }
-
-    /// This is a builder option add the to-version in upgrade.
-    #[must_use]
-    pub(crate) fn with_to_version(mut self, to: String) -> Self {
-        self.to_version = Some(to);
-        self
-    }
-
     // TODO: Make the builder option validations error out at compile-time, using std::compile_error
     // or something similar.
     /// This builds the EventRecorder. This fails if Kubernetes API requests fail.
     pub(crate) async fn build(&self) -> Result<EventRecorder> {
         ensure!(
-            self.pod_name.is_some()
-                && self.namespace.is_some()
-                && self.from_version.is_some()
-                && self.to_version.is_some(),
+            self.pod_name.is_some() && self.namespace.is_some(),
             EventRecorderOptionsAbsent
         );
         let pod_name = self.pod_name.clone().unwrap();
         let namespace = self.namespace.clone().unwrap();
-        let from_version = self.from_version.clone().unwrap();
-        let to_version = self.to_version.clone().unwrap();
+
+        // Initialize version to '--'. These can be updated later with set_from_version()
+        // and set_to_version() EventRecorder methods.
+        let vers_placeholder = "--".to_string();
+        let from_version = self
+            .from_version
+            .clone()
+            .unwrap_or(vers_placeholder.clone());
+        let to_version = self.to_version.clone().unwrap_or(vers_placeholder);
 
         let k8s_client = KubeClientSet::builder()
             .with_namespace(namespace.as_str())
@@ -273,6 +263,16 @@ impl EventRecorder {
 
         // Wait for event loop to publish its last events and exit.
         let _ = self.event_loop_handle.await;
+    }
+
+    /// Updates the EventRecorder's from_version memeber with a new value.
+    pub(crate) fn set_from_version(&mut self, version: String) {
+        self.from_version = version
+    }
+
+    /// Updates the EventRecorder's to_version memeber with a new value.
+    pub(crate) fn set_to_version(&mut self, version: String) {
+        self.to_version = version
     }
 }
 
