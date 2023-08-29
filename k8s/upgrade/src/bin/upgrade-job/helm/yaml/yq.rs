@@ -7,7 +7,7 @@ use crate::{
 };
 use regex::Regex;
 use snafu::{ensure, ResultExt};
-use std::{ops::Deref, path::Path, process::Command, str};
+use std::{fmt::Display, ops::Deref, path::Path, process::Command, str};
 
 /// This is a container for the String of an input yaml key.
 pub(crate) struct YamlKey(String);
@@ -120,14 +120,14 @@ impl YqV4 {
     ///           - "beta"                                    - "delta" friend: "ferris"
     ///
     ///
-    ///        result:
-    ///        =======
-    ///        foo:
-    ///          bar: "foobar"
-    ///          baz:
-    ///            - "alpha"
-    ///            - "beta"
-    ///          friend: "ferris"
+    ///       result:
+    ///       =======
+    ///       foo:
+    ///         bar: "foobar"
+    ///         baz:
+    ///           - "alpha"
+    ///           - "beta"
+    ///         friend: "ferris"
     ///
     /// Special case: When the default value has changed, and the user has not customised that
     /// option, special upgrade values yaml updates have to be added to single out specific cases
@@ -164,16 +164,34 @@ impl YqV4 {
         Ok(yq_merge_output.stdout)
     }
 
-    /// This sets in-place yaml string values in yaml files.
-    pub(crate) fn set_string_value(
-        &self,
-        key: YamlKey,
-        value: &str,
-        filepath: &Path,
-    ) -> Result<()> {
+    /// This sets in-place yaml values in yaml files.
+    pub(crate) fn set_value<V>(&self, key: YamlKey, value: V, filepath: &Path) -> Result<()>
+    where
+        V: Display + Sized,
+    {
+        // Assigning value based on if it needs quotes around it or not.
+        // Strings require quotes.
+        let value = match format!("{value}").as_str() {
+            // Boolean yaml values do not need quotes.
+            "true" => "true".to_string(),
+            "false" => "false".to_string(),
+            // Null doesn't need quotes as well.
+            "null" => "null".to_string(),
+            // What remains is integers and strings
+            something_else => 'other: {
+                // If it's an integer, then no quotes.
+                if something_else.parse::<i64>().is_ok() {
+                    break 'other something_else.to_string();
+                }
+
+                // Quotes for a string.
+                format!(r#""{something_else}""#)
+            }
+        };
+
         let yq_set_args = vec_to_strings![
             "-i",
-            format!(r#"{} = "{value}""#, key.as_str()),
+            format!(r#"{} = {value}"#, key.as_str()),
             filepath.to_string_lossy()
         ];
         let yq_set_output =
