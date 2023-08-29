@@ -13,9 +13,6 @@ pub const HELM_RELEASE_NAME_LABEL: &str = "openebs.io/release";
 /// Defines the default helm chart release name.
 pub const DEFAULT_RELEASE_NAME: &str = "mayastor";
 
-/// Defines the default url for stats aggregator.
-pub const DEFAULT_STATS_AGGREGATOR_URL: &str = "http://mayastor-obs-callhome-stats:9090/stats";
-
 /// Defines the Label select for mayastor REST API.
 pub const API_REST_LABEL_SELECTOR: &str = "app=api-rest";
 
