@@ -38,8 +38,8 @@ struct CliArgs {
     send_report: bool,
 
     /// The endpoint to fetch events stats.
-    #[clap(long, short, default_value = DEFAULT_STATS_AGGREGATOR_URL)]
-    aggregator_url: Url,
+    #[clap(long, short)]
+    aggregator_url: Option<Url>,
 }
 impl CliArgs {
     fn args() -> Self {
@@ -135,7 +135,7 @@ async fn generate_report(
     k8s_cluster_id: String,
     deploy_namespace: String,
     product_version: String,
-    aggregator_url: Url,
+    aggregator_url: Option<Url>,
 ) -> Report {
     let mut report = Report {
         product_name: PRODUCT.to_string(),
@@ -146,17 +146,22 @@ async fn generate_report(
     };
 
     let mut event_data = EventData::default();
-    match event_stats(aggregator_url.clone()).await {
-        Ok(data) => {
-            event_data.volume_created = Option::<VolumeCreated>::from(&data).unwrap_or_default();
-            event_data.volume_deleted = Option::<VolumeDeleted>::from(&data).unwrap_or_default();
-            event_data.pool_created = Option::<PoolCreated>::from(&data).unwrap_or_default();
-            event_data.pool_deleted = Option::<PoolDeleted>::from(&data).unwrap_or_default();
-        }
-        Err(err) => {
-            error!("{:?}", err);
-        }
-    };
+
+    if let Some(url) = aggregator_url {
+        match event_stats(url).await {
+            Ok(data) => {
+                event_data.volume_created =
+                    Option::<VolumeCreated>::from(&data).unwrap_or_default();
+                event_data.volume_deleted =
+                    Option::<VolumeDeleted>::from(&data).unwrap_or_default();
+                event_data.pool_created = Option::<PoolCreated>::from(&data).unwrap_or_default();
+                event_data.pool_deleted = Option::<PoolDeleted>::from(&data).unwrap_or_default();
+            }
+            Err(err) => {
+                error!("{:?}", err);
+            }
+        };
+    }
 
     let k8s_node_count = k8s_client.get_node_len().await;
     match k8s_node_count {
