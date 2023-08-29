@@ -73,7 +73,7 @@ pub(crate) fn generate_values_yaml_file(
         if from_values.io_engine_log_level().eq(log_level_to_replace)
             && to_values.io_engine_log_level().ne(log_level_to_replace)
         {
-            yq.set_string_value(
+            yq.set_value(
                 YamlKey::try_from(".io_engine.logLevel")?,
                 to_values.io_engine_log_level(),
                 upgrade_values_file.path(),
@@ -90,14 +90,9 @@ pub(crate) fn generate_values_yaml_file(
             .eventing_enabled()
             .ne(&to_values.eventing_enabled())
     {
-        let value_as_str = match to_values.eventing_enabled() {
-            true => "true",
-            false => "false",
-        };
-
-        yq.set_string_value(
+        yq.set_value(
             YamlKey::try_from(".eventing.enabled")?,
-            value_as_str,
+            to_values.eventing_enabled(),
             upgrade_values_file.path(),
         )?;
     }
@@ -105,7 +100,7 @@ pub(crate) fn generate_values_yaml_file(
     // Default options.
     // Image tag is set because the high_priority file is the user's source options file.
     // The target's image tag needs to be set for PRODUCT upgrade.
-    yq.set_string_value(
+    yq.set_value(
         YamlKey::try_from(".image.tag")?,
         to_values.image_tag(),
         upgrade_values_file.path(),
@@ -114,44 +109,44 @@ pub(crate) fn generate_values_yaml_file(
     // RepoTags fields will be set to empty strings. This is required because we are trying
     // to get to the target container images, without setting versions for repo-specific
     // components.
-    yq.set_string_value(
+    yq.set_value(
         YamlKey::try_from(".image.repoTags.controlPlane")?,
         "",
         upgrade_values_file.path(),
     )?;
-    yq.set_string_value(
+    yq.set_value(
         YamlKey::try_from(".image.repoTags.dataPlane")?,
         "",
         upgrade_values_file.path(),
     )?;
-    yq.set_string_value(
+    yq.set_value(
         YamlKey::try_from(".image.repoTags.extensions")?,
         "",
         upgrade_values_file.path(),
     )?;
 
     // The CSI sidecar images need to always be the versions set on the chart by default.
-    yq.set_string_value(
+    yq.set_value(
         YamlKey::try_from(".csi.image.provisionerTag")?,
         to_values.csi_provisioner_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_string_value(
+    yq.set_value(
         YamlKey::try_from(".csi.image.attacherTag")?,
         to_values.csi_attacher_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_string_value(
+    yq.set_value(
         YamlKey::try_from(".csi.image.snapshotterTag")?,
         to_values.csi_snapshotter_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_string_value(
+    yq.set_value(
         YamlKey::try_from(".csi.image.snapshotControllerTag")?,
         to_values.csi_snapshot_controller_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_string_value(
+    yq.set_value(
         YamlKey::try_from(".csi.image.registrarTag")?,
         to_values.csi_node_driver_registrar_image_tag(),
         upgrade_values_file.path(),
