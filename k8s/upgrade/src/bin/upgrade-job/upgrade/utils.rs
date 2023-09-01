@@ -10,7 +10,7 @@ use kube::{api::ObjectList, ResourceExt};
 use openapi::models::{Volume, VolumeStatus};
 use semver::{Version, VersionReq};
 use snafu::ResultExt;
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration};
 use tracing::{info, warn};
 
 /// Contains the Rebuild Results.
@@ -24,6 +24,7 @@ pub(crate) struct RebuildResult {
 pub(crate) async fn rebuild_result(
     rest_client: &RestClientSet,
     stale_volumes: &mut Vec<Volume>,
+    node_name: &str,
 ) -> Result<RebuildResult> {
     loop {
         let unhealthy_volumes = list_unhealthy_volumes(rest_client, stale_volumes).await?;
@@ -32,33 +33,50 @@ pub(crate) async fn rebuild_result(
         }
 
         for volume in unhealthy_volumes.iter() {
-            match replica_rebuild_count(volume.clone()).await {
-                0 => {
-                    for _i in 0 .. 11 {
-                        // wait for a minute for any rebuild to start
-                        tokio::time::sleep(Duration::from_secs(60_u64)).await;
-                        let count = replica_rebuild_count(volume.clone()).await;
-                        if count > 0 {
-                            return Ok(RebuildResult {
-                                rebuilding: true,
-                                discarded_volumes: stale_volumes.clone(),
-                            });
-                        }
-                    }
-                    stale_volumes.push(volume.clone());
+            let target = if let Some(target) = volume.state.target.as_ref() {
+                target
+            } else {
+                continue;
+            };
+
+            let mut volume_over_nodes = HashSet::new();
+            volume_over_nodes.insert(target.node.as_str());
+
+            for (_, topology) in volume.state.replica_topology.iter() {
+                if let Some(node) = topology.node.as_ref() {
+                    volume_over_nodes.insert(node);
                 }
-                _ => {
-                    return Ok(RebuildResult {
-                        rebuilding: true,
-                        discarded_volumes: stale_volumes.clone(),
-                    })
+            }
+
+            if volume_over_nodes.contains(node_name) {
+                match replica_rebuild_count(volume) {
+                    0 => {
+                        for _i in 0 .. 11 {
+                            // wait for a minute for any rebuild to start
+                            tokio::time::sleep(Duration::from_secs(60_u64)).await;
+                            let count = replica_rebuild_count(volume);
+                            if count > 0 {
+                                return Ok(RebuildResult {
+                                    rebuilding: true,
+                                    discarded_volumes: stale_volumes.clone(),
+                                });
+                            }
+                        }
+                        stale_volumes.push(volume.clone());
+                    }
+                    _ => {
+                        return Ok(RebuildResult {
+                            rebuilding: true,
+                            discarded_volumes: stale_volumes.to_vec(),
+                        })
+                    }
                 }
             }
         }
     }
     Ok(RebuildResult {
         rebuilding: false,
-        discarded_volumes: stale_volumes.clone(),
+        discarded_volumes: stale_volumes.to_vec(),
     })
 }
 
@@ -96,7 +114,7 @@ pub(crate) async fn list_unhealthy_volumes(
 }
 
 /// Count of number of replica rebuilding.
-pub(crate) async fn replica_rebuild_count(volume: Volume) -> i32 {
+pub(crate) fn replica_rebuild_count(volume: &Volume) -> i32 {
     let mut rebuild_count = 0;
     if let Some(target) = &volume.state.target {
         for child in target.children.iter() {
