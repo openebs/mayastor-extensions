@@ -40,7 +40,8 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
         .with_release_name(opts.release_name())
         .with_core_chart_dir(opts.core_chart_dir())
         .with_skip_upgrade_path_validation(opts.skip_upgrade_path_validation())
-        .with_values(opts.values())
+        .with_helm_args_set(opts.helm_args_set())
+        .with_helm_args_set_file(opts.helm_args_set_file())
         .build()
         .await?;
 

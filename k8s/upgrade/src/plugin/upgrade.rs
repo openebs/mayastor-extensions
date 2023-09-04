@@ -3,7 +3,8 @@ use crate::plugin::{
         get_image_version_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
         AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_IMAGE_REGISTRY,
         DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, HELM_RELEASE_VERSION_LABEL,
-        IO_ENGINE_POD_LABEL, MAX_RETRY_ATTEMPTS, UPGRADE_EVENT_REASON,
+        IO_ENGINE_POD_LABEL, MAX_RETRY_ATTEMPTS, UPGRADE_CONFIG_MAP_MOUNT_PATH,
+        UPGRADE_CONFIG_MAP_NAME_SUFFIX, UPGRADE_EVENT_REASON,
         UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
         UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX,
         UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
@@ -18,7 +19,7 @@ use crate::plugin::{
 use k8s_openapi::api::{
     apps::v1::Deployment,
     batch::v1::Job,
-    core::v1::{Event, PersistentVolumeClaim, Pod, ServiceAccount},
+    core::v1::{ConfigMap, Event, PersistentVolumeClaim, Pod, ServiceAccount},
     rbac::v1::{ClusterRole, ClusterRoleBinding},
 };
 use kube::{
@@ -28,7 +29,11 @@ use kube::{
 };
 use serde::Deserialize;
 use snafu::ResultExt;
-use std::{collections::HashSet, fs, time::Duration};
+use std::{
+    collections::{BTreeMap, HashMap, HashSet},
+    fs,
+    time::Duration,
+};
 
 /// Arguments to be passed for upgrade.
 #[derive(clap::Subcommand, Debug)]
@@ -108,10 +113,10 @@ pub struct UpgradeArgs {
     /// The set values on the command line.
     /// (can specify multiple or separate values with commas: key1=val1,key2=val2).
     #[clap(global = true, long)]
-    pub set_args: Vec<String>,
+    pub set: Vec<String>,
 
     /// The set values from respective files specified via the command line
-    /// (can specify multiple or separate values with commas: key1=val1,key2=val2).
+    /// (can specify multiple or separate values with commas: key1=path1,key2=path2).
     #[clap(global = true, long)]
     pub set_file: Vec<String>,
 }
@@ -132,7 +137,7 @@ impl UpgradeArgs {
             skip_replica_rebuild: false,
             skip_cordoned_node_validation: false,
             skip_upgrade_path_validation_for_unsupported_version: false,
-            set_args: Default::default(),
+            set: Default::default(),
             set_file: Default::default(),
         }
     }
@@ -359,6 +364,7 @@ struct UpgradeResources {
     pub(crate) cluster_role: Api<ClusterRole>,
     pub(crate) cluster_role_binding: Api<ClusterRoleBinding>,
     pub(crate) job: Api<Job>,
+    pub(crate) config_map: Api<ConfigMap>,
     pub(crate) release_name: String,
 }
 
@@ -374,6 +380,7 @@ impl UpgradeResources {
             service_account: Api::<ServiceAccount>::namespaced(client.clone(), ns),
             cluster_role: Api::<ClusterRole>::all(client.clone()),
             cluster_role_binding: Api::<ClusterRoleBinding>::all(client.clone()),
+            config_map: Api::<ConfigMap>::namespaced(client.clone(), ns),
             job: Api::<Job>::namespaced(client, ns),
             release_name,
         })
@@ -569,12 +576,89 @@ impl UpgradeResources {
         Ok(())
     }
 
+    /// Create/Delete the upgrade config map used to store files specified by the set_file argument.
+    pub async fn config_map_actions(
+        &self,
+        ns: &str,
+        action: Actions,
+        args: &UpgradeArgs,
+    ) -> error::Result<HashMap<String, String>> {
+        let cm_name = upgrade_name_concat(&self.release_name, UPGRADE_CONFIG_MAP_NAME_SUFFIX);
+        let data = create_config_map_data(args).await?;
+        let cm = self
+            .config_map
+            .get_opt(&cm_name)
+            .await
+            .context(error::GetUpgradeConfigMap {
+                name: cm_name.clone(),
+            })?;
+        if cm.is_some() {
+            match action {
+                Actions::Create => {
+                    // delete and recreate every time
+                    _ = self
+                        .config_map
+                        .delete(&cm_name, &DeleteParams::default())
+                        .await
+                        .context(error::UpgradeConfigMapDelete {
+                            name: cm_name.clone(),
+                        })?;
+                    let cm: ConfigMap =
+                        objects::upgrade_configmap(data.0.clone(), ns, self.release_name.clone());
+                    let pp = PostParams::default();
+                    self.config_map
+                        .create(&pp, &cm)
+                        .await
+                        .context(error::UpgradeConfigMapCreate { name: cm_name })?;
+                    println!(
+                        "ConfigMap: {} in namespace {} created",
+                        cm.metadata.name.unwrap(),
+                        ns
+                    );
+                }
+                Actions::Delete => {
+                    _ = self
+                        .config_map
+                        .delete(&cm_name, &DeleteParams::default())
+                        .await
+                        .context(error::UpgradeConfigMapDelete {
+                            name: cm_name.clone(),
+                        })?;
+                    println!("ConfigMap {cm_name} in namespace {ns} deleted");
+                }
+            }
+        } else {
+            match action {
+                Actions::Create => {
+                    let data = create_config_map_data(args).await?;
+                    let cm: ConfigMap =
+                        objects::upgrade_configmap(data.0.clone(), ns, self.release_name.clone());
+                    let pp = PostParams::default();
+                    self.config_map
+                        .create(&pp, &cm)
+                        .await
+                        .context(error::UpgradeConfigMapCreate { name: cm_name })?;
+                    println!(
+                        "ConfigMap: {} in namespace {} created",
+                        cm.metadata.name.unwrap(),
+                        ns
+                    );
+                }
+                Actions::Delete => {
+                    println!("ConfigMap {cm_name} in namespace {ns} does not exist");
+                }
+            }
+        }
+        Ok(data.1.clone())
+    }
+
     /// Create/Delete upgrade job
     pub async fn job_actions(
         &self,
         ns: &str,
         action: Actions,
         args: &UpgradeArgs,
+        set_file_map: Option<HashMap<String, String>>,
     ) -> error::Result<()> {
         let job_name = upgrade_name_concat(&self.release_name, UPGRADE_JOB_NAME_SUFFIX);
         if let Some(job) = self
@@ -610,7 +694,7 @@ impl UpgradeResources {
                     let upgrade_job_image_tag = get_image_version_tag();
                     let rest_deployment = get_deployment_for_rest(ns).await?;
                     let img = ImageProperties::try_from(rest_deployment)?;
-                    let values = parse_file_values(args).await?;
+                    let set_file = create_helm_set_file_args(args, set_file_map).await?;
                     let upgrade_deploy = objects::upgrade_job(
                         ns,
                         upgrade_image_concat(
@@ -621,7 +705,7 @@ impl UpgradeResources {
                         ),
                         self.release_name.clone(),
                         args,
-                        values.join(","),
+                        set_file.unwrap_or_default(),
                         img.pull_secrets(),
                         img.pull_policy(),
                     );
@@ -657,8 +741,12 @@ impl UpgradeResources {
         // Create Cluster role binding
         uo.cluster_role_binding_actions(ns, Actions::Create).await?;
 
+        // Create config map
+        let set_file_map = uo.config_map_actions(ns, Actions::Create, args).await?;
+
         // Create Service Account
-        uo.job_actions(ns, Actions::Create, args).await?;
+        uo.job_actions(ns, Actions::Create, args, Some(set_file_map))
+            .await?;
 
         Ok(())
     }
@@ -669,7 +757,10 @@ impl UpgradeResources {
         let args = &UpgradeArgs::default();
 
         // Delete the job
-        uo.job_actions(ns, Actions::Delete, args).await?;
+        uo.job_actions(ns, Actions::Delete, args, None).await?;
+
+        // Delete config map
+        uo.config_map_actions(ns, Actions::Delete, args).await?;
 
         // Delete cluster role binding
         uo.cluster_role_binding_actions(ns, Actions::Delete).await?;
@@ -842,20 +933,62 @@ pub(crate) async fn get_source_version(ns: &str) -> error::Result<String> {
     Ok(value.to_string())
 }
 
-/// Parse set-file and append set-args
-pub(crate) async fn parse_file_values(upgrade_args: &UpgradeArgs) -> error::Result<Vec<String>> {
-    let mut args: Vec<String> = Vec::new();
+/// Parse set-file and create config map data.
+pub(crate) async fn create_config_map_data(
+    upgrade_args: &UpgradeArgs,
+) -> error::Result<(BTreeMap<String, String>, HashMap<String, String>)> {
+    let mut data_map = BTreeMap::new();
+    let mut upgrade_map = HashMap::new();
+    let mut index = 1;
     for file in &upgrade_args.set_file {
         let data: Vec<_> = file.split('=').collect();
-        let filepath = data[1];
-        let string_values =
-            fs::read_to_string(filepath).context(error::ReadFromFile { filepath })?;
-        let d = format!("{}={}", data[0], string_values);
-        args.push(d);
+        let [_key, filepath] = data[..] else {
+            return error::InvalidSetFileArguments {
+                arguments: file.to_string(),
+            }
+            .fail();
+        };
+        let cm_values = fs::read_to_string(filepath).context(error::ReadFromFile { filepath })?;
+        // create config map key with key of set-file
+        // Example : -- set-file jaeger-operator.tolerations=/root/tolerations.yaml
+        // Key:value = index:content of file
+        data_map.insert(index.to_string(), cm_values);
+        // upgrade_map keeps a track of index to file name mapping.
+        // This is used to create set fiel arguments.
+        // Key:value = file absolute path:index ( example: /root/tolerations.yaml:1 )
+        upgrade_map.insert(filepath.to_string(), index.to_string());
+        index += 1;
     }
-    // add set-args to args
-    for arguments in &upgrade_args.set_args {
-        args.push(arguments.to_string());
+    Ok((data_map, upgrade_map))
+}
+
+/// Creat helm set file args.
+pub(crate) async fn create_helm_set_file_args(
+    upgrade_args: &UpgradeArgs,
+    set_file_map: Option<HashMap<String, String>>,
+) -> error::Result<Option<String>> {
+    if !&upgrade_args.set_file.is_empty() {
+        let mut helm_args_set_file = Vec::new();
+        for file in &upgrade_args.set_file {
+            // Example : -- set-file jaeger-operator.tolerations=/root/tolerations.yaml
+            // gets converted to jaeger-operator.tolerations=/upgrade-config-map/1
+            let data: Vec<_> = file.split('=').collect();
+            if let [key, filepath] = data[..] {
+                let mapped_file = set_file_map
+                    .as_ref()
+                    .and_then(|map| map.get(filepath))
+                    .ok_or(error::SpecifiedKeyNotPresent.build())?;
+                helm_args_set_file.push(format!(
+                    "{key}={UPGRADE_CONFIG_MAP_MOUNT_PATH}/{mapped_file}"
+                ));
+            } else {
+                return error::InvalidSetFileArguments {
+                    arguments: file.to_string(),
+                }
+                .fail();
+            }
+        }
+        return Ok(Some(helm_args_set_file.join(",")));
     }
-    Ok(args)
+    Ok(None)
 }

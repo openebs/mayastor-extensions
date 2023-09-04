@@ -1,7 +1,9 @@
 use crate::{
     plugin::constants::{
-        upgrade_name_concat, UPGRADE_BINARY_NAME, UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
-        UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX, UPGRADE_JOB_CONTAINER_NAME, UPGRADE_JOB_NAME_SUFFIX,
+        upgrade_name_concat, UPGRADE_BINARY_NAME, UPGRADE_CONFIG_MAP,
+        UPGRADE_CONFIG_MAP_MOUNT_PATH, UPGRADE_CONFIG_MAP_NAME_SUFFIX,
+        UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
+        UPGRADE_JOB_CONTAINER_NAME, UPGRADE_JOB_NAME_SUFFIX,
         UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     upgrade::UpgradeArgs,
@@ -11,11 +13,12 @@ use crate::{
 use k8s_openapi::api::{
     batch::v1::{Job, JobSpec},
     core::v1::{
-        Container, EnvVar, EnvVarSource, ExecAction, ObjectFieldSelector, PodSpec, PodTemplateSpec,
-        Probe, ServiceAccount,
+        ConfigMap, ConfigMapVolumeSource, Container, EnvVar, EnvVarSource, ExecAction,
+        ObjectFieldSelector, PodSpec, PodTemplateSpec, Probe, ServiceAccount, Volume, VolumeMount,
     },
     rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject},
 };
+use std::collections::BTreeMap;
 
 use kube::core::ObjectMeta;
 use maplit::btreemap;
@@ -248,20 +251,43 @@ pub(crate) fn upgrade_job_cluster_role_binding(
     }
 }
 
+pub(crate) fn upgrade_configmap(
+    data: BTreeMap<String, String>,
+    namespace: &str,
+    release_name: String,
+) -> ConfigMap {
+    ConfigMap {
+        metadata: ObjectMeta {
+            labels: Some(upgrade_labels!()),
+            name: Some(upgrade_name_concat(
+                &release_name,
+                UPGRADE_CONFIG_MAP_NAME_SUFFIX,
+            )),
+            namespace: Some(namespace.to_string()),
+            ..Default::default()
+        },
+        data: Some(data),
+        immutable: Some(true),
+        ..Default::default()
+    }
+}
+
 pub(crate) fn upgrade_job(
     namespace: &str,
     upgrade_image: String,
     release_name: String,
     args: &UpgradeArgs,
-    values: String,
+    set_file: String,
     image_pull_secrets: Option<Vec<k8s_openapi::api::core::v1::LocalObjectReference>>,
     image_pull_policy: Option<String>,
 ) -> Job {
+    let helm_args_set = args.set.join(",");
     let mut job_args: Vec<String> = vec![
         format!("--rest-endpoint=http://{release_name}-api-rest:8081"),
         format!("--namespace={namespace}"),
         format!("--release-name={release_name}"),
-        format!("--values={values}"),
+        format!("--helm-args-set={helm_args_set}"),
+        format!("--helm-args-set-file={set_file}"),
     ];
     if args.skip_data_plane_restart {
         job_args.push("--skip-data-plane-restart".to_string());
@@ -325,12 +351,29 @@ pub(crate) fn upgrade_job(
                             period_seconds: Some(60),
                             ..Default::default()
                         }),
+                        volume_mounts: Some(vec![VolumeMount {
+                            read_only: Some(true),
+                            mount_path: UPGRADE_CONFIG_MAP_MOUNT_PATH.to_string(),
+                            name: UPGRADE_CONFIG_MAP.to_string(),
+                            ..Default::default()
+                        }]),
                         ..Default::default()
                     }],
                     service_account_name: Some(upgrade_name_concat(
                         &release_name,
                         UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
                     )),
+                    volumes: Some(vec![Volume {
+                        name: UPGRADE_CONFIG_MAP.to_string(),
+                        config_map: Some(ConfigMapVolumeSource {
+                            name: Some(upgrade_name_concat(
+                                &release_name,
+                                UPGRADE_CONFIG_MAP_NAME_SUFFIX,
+                            )),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }]),
                     ..Default::default()
                 }),
             },
