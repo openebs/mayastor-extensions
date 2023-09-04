@@ -31,6 +31,7 @@ pub(crate) struct CoreValues {
     /// This is the yaml object which contains the configuration for the io-engine DaemonSet.
     io_engine: IoEngine,
     /// This toggles installation of eventing components.
+    #[serde(default)]
     eventing: Eventing,
     /// This contains Kubernetes CSI sidecar container image details.
     csi: Csi,
@@ -111,8 +112,15 @@ impl IoEngine {
 
 /// This is used to deserialize the yaml object 'eventing', v2.3.0 has it disabled by default,
 /// the default thereafter has it enabled.
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub(crate) struct Eventing {
+    // This value is defaulted to 'false' when 'Eventing' is absent in the yaml.
+    // This works fine because we don't use the serde deserialized values during
+    // the values.yaml merge. The merge is done with 'yq'. These are assumed values,
+    // in case the value is absent (usually due to added features). This is used
+    // to compare against new values (those bundled with the chart in the upgrade-job's
+    // local filesystem) and decide if a yq 'set' is required. This default is not a
+    // fallback value that is set in case the user's value's yaml is missing the value.
     enabled: bool,
 }
 
@@ -161,7 +169,9 @@ impl Csi {
 pub(crate) struct CsiImage {
     provisioner_tag: String,
     attacher_tag: String,
+    #[serde(default)]
     snapshotter_tag: String,
+    #[serde(default)]
     snapshot_controller_tag: String,
     registrar_tag: String,
 }
