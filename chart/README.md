@@ -94,6 +94,7 @@ $ helm install my-release openebs/mayastor
 | base.&ZeroWidthSpace;logSilenceLevel | Silence specific module components | `nil` |
 | base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;enabled | Enable the metrics exporter | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;logLevel | Log level for the csi controller | `"info"` |
+| csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;preventVolumeModeConversion | Prevent modifying the volume mode when creating a PVC from an existing VolumeSnapshot | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for csi controller | `"32m"` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for csi controller | `"128Mi"` |
