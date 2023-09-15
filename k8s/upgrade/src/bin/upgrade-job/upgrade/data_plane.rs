@@ -255,7 +255,7 @@ async fn wait_for_rebuild(node_name: &str, rest_client: &RestClientSet) -> Resul
 
     let mut result = RebuildResult::default();
     loop {
-        let rebuild = rebuild_result(rest_client, &mut result.discarded_volumes).await?;
+        let rebuild = rebuild_result(rest_client, &mut result.discarded_volumes, node_name).await?;
 
         if rebuild.rebuilding {
             info!(node.name = %node_name, "Waiting for volume rebuilds to complete");
