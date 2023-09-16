@@ -293,6 +293,8 @@ csi:
     tolerations: []
     # -- Set PriorityClass, overrides global
     priorityClassName: ""
+    # -- Prevent modifying the volume mode when creating a PVC from an existing VolumeSnapshot
+    preventVolumeModeConversion: true
   node:
     logLevel: info
     topology:
