@@ -8,12 +8,12 @@ let
   helm_chart = whitelistSource ../../.. [ "chart" "scripts/helm" ] "mayastor-extensions";
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
   tag = if img_tag != "" then img_tag else extensions.version;
-  build-extensions-image = { pname, buildType, package, extraCommands ? '''', contents ? [ ], config ? { } }:
+  build-extensions-image = { pname, buildType, package, extraCommands ? '''', copyToRoot ? [ ], config ? { } }:
     dockerTools.buildImage {
       inherit extraCommands tag;
       created = "now";
       name = "openebs/mayastor-${pname}${image_suffix.${buildType}}";
-      contents = [ package ] ++ contents;
+      copyToRoot = [ package ] ++ copyToRoot;
       config = {
         Entrypoint = [ package.binary ];
       } // config;
@@ -55,7 +55,7 @@ let
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.upgrade.${name};
-      contents = [ kubernetes-helm-wrapped busybox tagged_helm_chart yq-go ];
+      copyToRoot = [ kubernetes-helm-wrapped busybox tagged_helm_chart yq-go ];
       pname = package.pname;
       config = {
         Env = [ "CORE_CHART_DIR=/chart" ];
@@ -65,7 +65,7 @@ let
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.obs.callhome;
-      contents = [ ./../../../call-home/assets busybox gnupg ];
+      copyToRoot = [ ./../../../call-home/assets busybox gnupg ];
       extraCommands = ''
         mkdir -p encryption_dir
       '';
