@@ -586,6 +586,15 @@ loki-stack:
           - job_name: {{ .Release.Name }}-pods-name
             pipeline_stages:
               - docker: {}
+              - replace:
+                  expression: '(\n)'
+                  replace: ""
+              - multiline:
+                  firstline: '^  \x1b\[2m(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}).(\d{6})Z'
+                  max_wait_time: 3s
+              - multiline:
+                  firstline: '^  (\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}).(\d{6})Z'
+                  max_wait_time: 3s
             kubernetes_sd_configs:
             - role: pod
             relabel_configs:
