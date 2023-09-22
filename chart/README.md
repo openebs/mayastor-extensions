@@ -2,7 +2,7 @@
 
 Mayastor Helm chart for Kubernetes
 
-![Version: 0.0.0](https://img.shields.io/badge/Version-0.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.0.0](https://img.shields.io/badge/AppVersion-0.0.0-informational?style=flat-square)
+![Version: 2.5.0-alpha.main](https://img.shields.io/badge/Version-2.5.0--alpha.main-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2.5.0-alpha.main](https://img.shields.io/badge/AppVersion-2.5.0--alpha.main-informational?style=flat-square)
 
 ## Installation Guide
 
