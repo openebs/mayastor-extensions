@@ -386,7 +386,7 @@ etcd:
     # Name of etcd's localpv hostpath storage class.
     name: "mayastor-etcd-localpv"
     # -- Host path where local etcd data is stored in.
-    basePath: "/var/local/localpv-hostpath/{{ .Release.Name }}/etcd"
+    basePath: "/var/local/{{ .Release.Name }}/localpv-hostpath/etcd"
     # -- ReclaimPolicy of etcd's localpv hostpath storage class.
     reclaimPolicy: Delete
     # -- VolumeBindingMode of etcd's localpv hostpath storage class.
@@ -486,7 +486,7 @@ loki-stack:
     # Name of loki's localpv hostpath storage class.
     name: "mayastor-loki-localpv"
     # -- Host path where local etcd data is stored in.
-    basePath: "/var/local/localpv-hostpath/{{ .Release.Name }}/loki"
+    basePath: "/var/local/{{ .Release.Name }}/localpv-hostpath/loki"
     # -- ReclaimPolicy of loki's localpv hostpath storage class.
     reclaimPolicy: Delete
     # -- VolumeBindingMode of loki's localpv hostpath storage class.
