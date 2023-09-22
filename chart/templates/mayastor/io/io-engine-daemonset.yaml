@@ -98,7 +98,8 @@ spec:
         - "-T={{ .Values.io_engine.target.nvmf.iface }}"{{ end }}{{ if .Values.io_engine.envcontext }}
         - "--env-context=--{{ .Values.io_engine.envcontext }}"{{ end }}{{ if .Values.io_engine.reactorFreezeDetection.enabled }}
         - "--reactor-freeze-detection"{{ end }}
-        - "--tgt-crdt={{ .Values.io_engine.target.nvmf.hostCmdRetryDelay.crdt1 }}"
+        - "--tgt-crdt={{ .Values.io_engine.target.nvmf.hostCmdRetryDelay.crdt1 }}"{{ if .Values.eventing.enabled }}
+        - "--events-url=nats://{{ .Release.Name }}-nats:4222"{{ end }}
         command:
         - io-engine
         securityContext:
