@@ -18,3 +18,8 @@ __pycache__
 /rust-toolchain.toml
 /.rust-toolchain
 /kubectl-plugin
+
+# Minikube assets
+tests/bdd/minikube/.cleanup_config.yaml
+tests/bdd/minikube/.cleanup_config.yaml.lock
+tests/bdd/minikube/bin
