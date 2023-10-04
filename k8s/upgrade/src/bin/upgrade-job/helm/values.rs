@@ -1,6 +1,6 @@
 use crate::{
     common::{
-        constants::{TWO_DOT_O, TWO_DOT_THREE},
+        constants::{TWO_DOT_O, TWO_DOT_ONE_AND_UP, TWO_DOT_THREE},
         error::{
             ReadingFile, Result, SemverParse, TempFileCreation, U8VectorToString, WriteToTempFile,
             YamlParseFromFile, YamlParseFromSlice,
@@ -20,6 +20,7 @@ use tempfile::NamedTempFile as TempFile;
 /// This compiles all of the helm values options to be passed during the helm chart upgrade.
 pub(crate) fn generate_values_yaml_file(
     from_version: &Version,
+    to_version: &Version,
     chart_dir: &Path,
     client: &HelmReleaseClient,
     release_name: String,
@@ -81,6 +82,32 @@ pub(crate) fn generate_values_yaml_file(
         }
     }
 
+    // Specific special-case values for to-version >=2.1.x.
+    let version_two_dot_one_and_up =
+        VersionReq::parse(TWO_DOT_ONE_AND_UP).context(SemverParse {
+            version_string: TWO_DOT_ONE_AND_UP.to_string(),
+        })?;
+    if version_two_dot_one_and_up.matches(to_version) {
+        // RepoTags fields will also be set to the values found in the target helm values file
+        // (low_priority file). This is so integration tests which use specific repo commits can
+        // upgrade to a custom helm chart.
+        yq.set_value(
+            YamlKey::try_from(".image.repoTags.controlPlane")?,
+            to_values.control_plane_repotag(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_value(
+            YamlKey::try_from(".image.repoTags.dataPlane")?,
+            to_values.data_plane_repotag(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_value(
+            YamlKey::try_from(".image.repoTags.extensions")?,
+            to_values.extensions_repotag(),
+            upgrade_values_file.path(),
+        )?;
+    }
+
     // Specific special-case values for version 2.3.x.
     let version_two_dot_three = VersionReq::parse(TWO_DOT_THREE).context(SemverParse {
         version_string: TWO_DOT_THREE.to_string(),
@@ -103,25 +130,6 @@ pub(crate) fn generate_values_yaml_file(
     yq.set_value(
         YamlKey::try_from(".image.tag")?,
         to_values.image_tag(),
-        upgrade_values_file.path(),
-    )?;
-
-    // RepoTags fields will be set to empty strings. This is required because we are trying
-    // to get to the target container images, without setting versions for repo-specific
-    // components.
-    yq.set_value(
-        YamlKey::try_from(".image.repoTags.controlPlane")?,
-        "",
-        upgrade_values_file.path(),
-    )?;
-    yq.set_value(
-        YamlKey::try_from(".image.repoTags.dataPlane")?,
-        "",
-        upgrade_values_file.path(),
-    )?;
-    yq.set_value(
-        YamlKey::try_from(".image.repoTags.extensions")?,
-        "",
         upgrade_values_file.path(),
     )?;
 
