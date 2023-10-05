@@ -14,7 +14,7 @@ image:
     #       If not specified, 'tag' option provided above will be picked.
     controlPlane: ea01f80ea121
     dataPlane: c1f6b0aaa01c
-    extensions: fc90391247f5
+    extensions: f2363a39c084
   # -- ImagePullPolicy for our images
   pullPolicy: Always
 
