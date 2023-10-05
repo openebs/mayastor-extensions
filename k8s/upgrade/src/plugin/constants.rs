@@ -79,6 +79,12 @@ pub(crate) const UPGRADE_JOB_IMAGE_NAME: &str = "mayastor-upgrade-job";
 /// Upgrade job name suffix.
 pub(crate) const UPGRADE_JOB_NAME_SUFFIX: &str = "upgrade";
 
+/// ConfigMap name for upgrade.
+pub(crate) const UPGRADE_CONFIG_MAP: &str = "upgrade-config-map";
+
+/// ConfigMap mount path for upgrade.
+pub(crate) const UPGRADE_CONFIG_MAP_MOUNT_PATH: &str = "/upgrade-config-map";
+
 /// ServiceAccount name suffix for upgrade job.
 pub(crate) const UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX: &str = "upgrade-service-account";
 
@@ -87,6 +93,9 @@ pub(crate) const UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX: &str = "upgrade-role";
 
 /// ClusterRoleBinding for upgrade job.
 pub(crate) const UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX: &str = "upgrade-role-binding";
+
+/// ConfigMap for upgrade job.
+pub(crate) const UPGRADE_CONFIG_MAP_NAME_SUFFIX: &str = "upgrade-config-map";
 
 /// Upgrade job binary name.
 pub(crate) const UPGRADE_BINARY_NAME: &str = "upgrade-job";

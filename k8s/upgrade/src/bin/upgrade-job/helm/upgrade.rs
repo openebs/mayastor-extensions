@@ -33,7 +33,8 @@ pub(crate) struct HelmUpgradeBuilder {
     namespace: Option<String>,
     core_chart_dir: Option<PathBuf>,
     skip_upgrade_path_validation: bool,
-    values: Option<String>,
+    helm_args_set: Option<String>,
+    helm_args_set_file: Option<String>,
 }
 
 impl HelmUpgradeBuilder {
@@ -76,11 +77,21 @@ impl HelmUpgradeBuilder {
 
     /// This is a builder option to add set flags set during upgrade.
     #[must_use]
-    pub(crate) fn with_values<J>(mut self, values: J) -> Self
+    pub(crate) fn with_helm_args_set<J>(mut self, helm_args_set: J) -> Self
     where
         J: ToString,
     {
-        self.values = Some(values.to_string());
+        self.helm_args_set = Some(helm_args_set.to_string());
+        self
+    }
+
+    /// This is a builder option to add set file set during upgrade.
+    #[must_use]
+    pub(crate) fn with_helm_args_set_file<J>(mut self, helm_args_set_file: J) -> Self
+    where
+        J: ToString,
+    {
+        self.helm_args_set_file = Some(helm_args_set_file.to_string());
         self
     }
 
@@ -92,7 +103,8 @@ impl HelmUpgradeBuilder {
         );
         let release_name = self.release_name.clone().unwrap();
         let namespace = self.namespace.clone().unwrap();
-        let values = self.values.clone().unwrap_or_default();
+        let helm_args_set = self.helm_args_set.clone().unwrap_or_default();
+        let helm_args_set_file = self.helm_args_set_file.clone().unwrap_or_default();
 
         // Generate HelmReleaseClient.
         let client = HelmReleaseClient::builder()
@@ -196,7 +208,9 @@ impl HelmUpgradeBuilder {
                 "-f",
                 _upgrade_values_file.path().to_string_lossy(),
                 "--set",
-                values,
+                helm_args_set,
+                "--set-file",
+                helm_args_set_file,
                 "--atomic"
             ]);
             upgrade_values_file = Some(_upgrade_values_file)
