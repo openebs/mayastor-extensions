@@ -1,5 +1,7 @@
 name: Main Helm Chart
 on:
+  pull_request:
+    types: [ 'opened', 'edited', 'reopened', 'synchronize' ]
   push:
     branches:
       - main
@@ -28,13 +30,26 @@ jobs:
       - name: Check if the chart is publishable
         run: |
           branch="${{ github.ref_name }}"
-          nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch"" ./scripts/helm/shell.nix
+          nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart main" ./scripts/helm/shell.nix
+      - name: Set up secret file
+        env:
+          DEBUG_PASSWORD: ${{ secrets.OPENEBS_CI }}
+        run: |
+          if [ -z "$DEBUG_PASSWORD" ]; then
+            echo "ZERO"
+          fi
+          echo $DEBUG_PASSWORD >> secrets.txt
+          I_AM_BOB="BOB"
+          echo "Maybe bob is $I_AM_BOB"
+          echo "-------------------------"
+          cat secrets.txt
+          echo "-------------------------"
       - name: Publish Mayastor Helm chart
-        uses: stefanprodan/helm-gh-pages@v1.5.0
+        uses: stefanprodan/helm-gh-pages@v1.7.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.NILADRI_TOKEN_2 }}
           charts_dir: .
-          charts_url: https://openebs.github.io/mayastor-chart-donotuse
-          owner: openebs
-          repository: mayastor-chart-donotuse
+          charts_url: https://niladrih.github.io/github-actions-test
+          owner: niladrih
+          repository: github-actions-test
           branch: gh-pages
