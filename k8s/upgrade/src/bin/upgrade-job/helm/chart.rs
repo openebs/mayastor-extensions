@@ -43,6 +43,21 @@ impl CoreValues {
         self.image.tag()
     }
 
+    /// This is a getter for the control-plane repoTag image tag set on a helm chart.
+    pub(crate) fn control_plane_repotag(&self) -> &str {
+        self.image.control_plane_repotag()
+    }
+
+    /// This is a getter for the data-plane repoTag image tag set on a helm chart.
+    pub(crate) fn data_plane_repotag(&self) -> &str {
+        self.image.data_plane_repotag()
+    }
+
+    /// This is a getter for the extensions repoTag image tag set on a helm chart.
+    pub(crate) fn extensions_repotag(&self) -> &str {
+        self.image.extensions_repotag()
+    }
+
     /// This is a getter for the io-engine DaemonSet Pods' logLevel.
     pub(crate) fn io_engine_log_level(&self) -> &str {
         self.io_engine.log_level()
@@ -82,15 +97,66 @@ impl CoreValues {
 /// This is used to deserialize the yaml object "image", which contains details required for pulling
 /// container images.
 #[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
 pub(crate) struct Image {
     /// The container image tag.
     tag: String,
+    /// This contains image tags set based on which PRODUCT repository the microservice originates
+    /// from.
+    #[serde(default)]
+    repo_tags: RepoTags,
 }
 
 impl Image {
     /// This is a getter for the container image tag used across the helm chart release.
     pub(crate) fn tag(&self) -> &str {
         self.tag.as_str()
+    }
+
+    /// This is a getter for the control-plane repoTag set on a helm chart.
+    pub(crate) fn control_plane_repotag(&self) -> &str {
+        self.repo_tags.control_plane()
+    }
+
+    /// This is a getter for the data-plane repoTag set on a helm chart.
+    pub(crate) fn data_plane_repotag(&self) -> &str {
+        self.repo_tags.data_plane()
+    }
+
+    /// This is a getter for the extensions repoTag set on a helm chart.
+    pub(crate) fn extensions_repotag(&self) -> &str {
+        self.repo_tags.extensions()
+    }
+}
+
+/// This contains image tags for PRODUCT components based on the repository for the specific
+/// component.
+#[derive(Deserialize, Default)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub(crate) struct RepoTags {
+    /// This member of repoTags is used to set image tags for components from the control-plane
+    /// repo.
+    control_plane: String,
+    /// This member of repoTags is used to set image tags for components from the data-plane repo.
+    data_plane: String,
+    /// This member of repoTags is used to set image tags for components from the extensions repo.
+    extensions: String,
+}
+
+impl RepoTags {
+    /// This is a getter for the control-plane image tag set on a helm chart.
+    pub(crate) fn control_plane(&self) -> &str {
+        self.control_plane.as_str()
+    }
+
+    /// This is a getter for the data-plane image tag set on a helm chart.
+    pub(crate) fn data_plane(&self) -> &str {
+        self.data_plane.as_str()
+    }
+
+    /// This is a getter for the extensions image tag set on a helm chart.
+    pub(crate) fn extensions(&self) -> &str {
+        self.extensions.as_str()
     }
 }
 
@@ -121,6 +187,7 @@ pub(crate) struct Eventing {
     // to compare against new values (those bundled with the chart in the upgrade-job's
     // local filesystem) and decide if a yq 'set' is required. This default is not a
     // fallback value that is set in case the user's value's yaml is missing the value.
+    /// This enables eventing and components when enabled.
     enabled: bool,
 }
 
@@ -134,6 +201,7 @@ impl Eventing {
 /// This is used to deserialize the yaml object 'csi'.
 #[derive(Deserialize)]
 pub(crate) struct Csi {
+    /// This contains the image tags for the kubernetes-csi sidecar containers.
     image: CsiImage,
 }
 
@@ -164,15 +232,21 @@ impl Csi {
     }
 }
 
+/// This contains the image tags for the CSI sidecar containers.
 #[derive(Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub(crate) struct CsiImage {
+    /// This is the image tag for the csi-provisioner container.
     provisioner_tag: String,
+    /// This is the image tag for the csi-attacher container.
     attacher_tag: String,
+    /// This is the image tag for the csi-snapshotter container.
     #[serde(default)]
     snapshotter_tag: String,
+    /// This is the image tag for the snapshot-controller container.
     #[serde(default)]
     snapshot_controller_tag: String,
+    /// This is the image tag for the csi-node-driver-registrar container.
     registrar_tag: String,
 }
 

@@ -10,14 +10,90 @@
 # are changed to the appTag.
 # If the appTag is a stable release then both version and appVersions are changed to the appTag.
 
+# Write output to error output stream.
+echo_stderr() {
+  echo -e "${1}" >&2
+}
+
 die()
 {
   local _return="${2:-1}"
-  echo "$1" >&2
+  echo_stderr "$1"
   exit "${_return}"
 }
 
 set -euo pipefail
+
+# This uses the existing remote refs for the openebs/mayastor-extensions repo to find the latest 'release/x.y' branch.
+# Requires a 'git fetch origin' (origin being the remote entry for openebs/mayastor-extensions) or equivalent, if not
+# done already.
+latest_release_branch() {
+  cd "$ROOTDIR"
+
+  local remote_url=""
+  local openebs_remote=""
+  for remote in $(git remote show); do
+    remote_url=$(git ls-remote --get-url $remote)
+    if [[ "$remote_url" =~ ([\/:]openebs\/mayastor-extensions)$ ]]; then
+      openebs_remote=$remote
+      break
+    fi
+  done
+  if [ -z "$openebs_remote" ]; then
+    die "failed to find git remote pointing to 'openebs/mayastor-extensions'"
+  fi
+  # The latest release branch name is required for generating the helm chart version/appVersion
+  # for the 'main' branch only.
+  # The 'git branch' command in the below lines checks remote refs for release/x.y branch entries.
+  # Because the 'main' branch is not a significant branch for a user/contributor, this approach towards
+  # finding the latest release branch assumes that this script is used when the 'openebs/mayastor-extensions'
+  # repo is present amongst git remote refs. This happens automatically when the 'openebs/mayastor-extensions'
+  # repo is cloned, and not a user/contributor's fork.
+  local latest_release_branch=$(git branch \
+    --all \
+    --list "*${openebs_remote}/release/*.*" \
+    --format '%(refname:short)' \
+    --sort 'refname' \
+    | tail -n 1)
+
+  cd - >/dev/null
+
+  echo "${latest_release_branch#*$openebs_remote/}"
+}
+
+main_branch_version_from_release_branch() {
+  local release_branch=$1
+
+  # Validate release branch name.
+  if ! [[ "$release_branch" =~ ^(release\/[0-9]+\.[0-9]+)$ ]]; then
+    die "'$release_branch' is not a valid release branch"
+  fi
+
+  # It is possible that this version isn't released, and may never see an actual release.
+  # However, it is the latest possible release, and no newer version of a higher semver
+  # values likely exists on that repo.
+  # Adds a '.0' at the end to make the version semver compliant.
+  local latest_version="${release_branch#*release/}".0
+
+  local bumped_latest=""
+  # Bump minor by default.
+  if [ -n "$BUMP_MAJOR_FOR_MAIN" ]; then
+    bumped_latest=$(semver bump major "$latest_version")
+  else
+    bumped_latest=$(semver bump minor "$latest_version")
+  fi
+
+  # Date-time appended to main tag, if present. Else, defaulting to 'main'.
+  local penultimate_member=""
+  if [ -n "$DATE_TIME" ]; then
+    penultimate_member=$DATE_TIME
+  else
+    penultimate_member="main"
+    echo_stderr "WARNING: No input timestamp for main branch helm chart, using 'main' instead"
+  fi
+
+  semver bump prerel 0-main-unstable-"$penultimate_member"-0 "$bumped_latest"
+}
 
 # Checks if version is semver and removes "v" from the beginning
 version()
@@ -49,12 +125,14 @@ branch_chart_version()
     # Develop has no meaningful version
     echo "0.0.0"
   elif [ "$CHECK_BRANCH" == "main" ]; then
-    # Main has no meaningful version, other than the date-time
-    if [ -n "$DATE_TIME" ]; then
-      echo "0.0.0-$DATE_TIME"
-    else
-      echo "0.0.0-main"
+    if [ -z "$LATEST_RELEASE_BRANCH" ]; then
+      LATEST_RELEASE_BRANCH=$(latest_release_branch)
     fi
+    # The main branch helm chart appVersion should follow this format: <bumped-latest>-0-develop-unstable-<timestamp>-0
+    # If there is no timestamp, then the version defaults to <bumped-latest>-0-develop-unstable-main-0
+    # Here 'bumped-latest' is the version obtained when the latest release branch version is bumped
+    # as per semver convention. It is by-default a minor version bump, but it could be a major one as well.
+    main_branch_version_from_release_branch "$LATEST_RELEASE_BRANCH"
   elif [ "$RELEASE_V" != "${CHECK_BRANCH}" ]; then
     if [ "$(semver validate "$RELEASE_V")" == "valid" ]; then
       echo "$RELEASE_V"
@@ -109,15 +187,20 @@ help() {
 Usage: $(basename "$0") [OPTIONS]
 
 Options:
-  -d, --dry-run                                   Output actions that would be taken, but don't run them.
-  -h, --help                                      Display this text.
-  --check-chart          <branch>                 Check if the chart version/app version is correct for the branch.
-    --develop-to-release                            Also upgrade the chart to the release version matching the branch.
-  --app-tag              <tag>                    The appVersion tag.
-  --override-index       <latest_version>         Override the latest chart version from the published chart's index.
-  --index-file           <index_yaml>             Use the provided index.yaml instead of fetching from the git branch.
-  --override-chart       <version> <app_version>  Override the Chart.yaml version and app version.
-  --date-time            <date-time>              The date-time in the format +"$DATE_TIME_FMT".
+  -d, --dry-run                                    Output actions that would be taken, but don't run them.
+  -h, --help                                       Display this text.
+  --check-chart           <branch>                 Check if the chart version/app version is correct for the branch.
+  --develop-to-release                             Also upgrade the chart to the release version matching the branch.
+  --develop-to-main                                Also upgrade the chart to the appropriate main branch chart version.
+  --app-tag               <tag>                    The appVersion tag.
+  --override-index        <latest_version>         Override the latest chart version from the published chart's index.
+  --index-file            <index_yaml>             Use the provided index.yaml instead of fetching from the git branch.
+  --override-chart        <version> <app_version>  Override the Chart.yaml version and app version.
+  --date-time             <date-time>              The date-time in the format +"$DATE_TIME_FMT".
+  --latest-release-branch <branch_name>            Set the name of the latest branch when working with the chart from
+                                                   the main branch.
+  --bump-major-for-main                            Bump latest released GitHub version tag major version for 'main'
+                                                   branch, instead of the minor version.
 
 Examples:
   $(basename "$0") --app-tag v2.0.0-alpha.0
@@ -146,9 +229,12 @@ INDEX_BRANCH_FILE="index.yaml"
 INDEX_FILE=
 DRY_RUN=
 DEVELOP_TO_REL=
+DEVELOP_TO_MAIN=
 DATE_TIME_FMT="%Y-%m-%d-%H-%M-%S"
 DATE_TIME=
 IGNORE_INDEX_CHECK=
+LATEST_RELEASE_BRANCH=
+BUMP_MAJOR_FOR_MAIN=
 
 # Check if all needed tools are installed
 semver --version >/dev/null
@@ -172,6 +258,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --develop-to-release)
       DEVELOP_TO_REL=1
+      shift
+      ;;
+    --develop-to-main)
+      DEVELOP_TO_MAIN=1
       shift
       ;;
     --app-tag)
@@ -204,6 +294,15 @@ while [ "$#" -gt 0 ]; do
       DATE_TIME=$1
       shift
       ;;
+    --latest-release-branch)
+      shift
+      LATEST_RELEASE_BRANCH=$1
+      shift
+      ;;
+    --bump-major-for-main)
+      BUMP_MAJOR_FOR_MAIN=1
+      shift
+      ;;
     *)
       help
       die "Unknown option: $1"
@@ -226,6 +325,10 @@ CHART_VERSION=$(version "$CHART_VERSION")
 CHART_APP_VERSION=$(version "$CHART_APP_VERSION")
 
 if [ -n "$CHECK_BRANCH" ]; then
+  # It's ok to leave out the timestamp for a --check-chart, but not for a --develop-to-main.
+  if [ -n "$DEVELOP_TO_MAIN" ] && [ -z "$DATE_TIME" ]; then
+    die "ERROR: No date-time input for main branch helm chart version"
+  fi
   APP_TAG=$(branch_chart_version "$CHECK_BRANCH")
 else
   if [ -z "$APP_TAG" ]; then
@@ -238,8 +341,13 @@ echo "APP_TAG: $APP_TAG"
 echo "CHART_VERSION: $CHART_VERSION"
 echo "CHART_APP_VERSION: $CHART_APP_VERSION"
 
-# Allow only for a semver difference of at most patch
-allowed_diff=("" "patch" "prerelease")
+if [ "$CHECK_BRANCH" = "main" ]; then
+  allowed_diff=("" "major" "minor" "patch" "prerelease")
+else
+  # Allow only for a semver difference of at most patch
+  allowed_diff=("" "patch" "prerelease")
+fi
+
 
 diff="$(semver diff "$CHART_VERSION" "$CHART_APP_VERSION")"
 if ! [[ " ${allowed_diff[*]} " =~ " $diff " ]]; then
@@ -252,7 +360,28 @@ if [ -n "$CHECK_BRANCH" ]; then
         die "Script expects Branch Name($APP_TAG) to point to a stable release"
     fi
   fi
-  if [ -n "$DEVELOP_TO_REL" ]; then
+  if [ -n "$DEVELOP_TO_MAIN" ]; then
+    # Verify if develop.
+    if [ "$CHART_VERSION" = "0.0.0" ]; then
+      newChartVersion="$APP_TAG"
+      newChartAppVersion="$APP_TAG"
+      echo "NEW_CHART_VERSION: $newChartVersion"
+      echo "NEW_CHART_APP_VERSION: $newChartAppVersion"
+
+      if [ -z "$DRY_RUN" ]; then
+        sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
+        sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
+        # Set image tag to empty because main branch uses repoTags.
+        yq_ibl '.image.tag |= ""' "$CHART_VALUES"
+        # always pull since image changes with commits to the branch
+        yq_ibl ".image.pullPolicy |= \"IfNotPresent\"" "$CHART_VALUES"
+        yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
+      fi
+    else
+      die "ERROR: source chart is not from develop branch"
+    fi
+    exit 0
+  elif [ -n "$DEVELOP_TO_REL" ]; then
     if [ "$CHART_VERSION" == "0.0.0" ]; then
       newChartVersion="$APP_TAG"
       newChartAppVersion="$APP_TAG"
@@ -268,6 +397,8 @@ if [ -n "$CHECK_BRANCH" ]; then
         yq_ibl ".image.pullPolicy |= \"Always\"" "$CHART_VALUES"
         yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
       fi
+    else
+      die "ERROR: source chart is not from develop branch"
     fi
     exit 0
   fi
