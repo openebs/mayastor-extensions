@@ -34,7 +34,7 @@ latest_release_branch() {
   local openebs_remote=""
   for remote in $(git remote show); do
     remote_url=$(git ls-remote --get-url $remote)
-    if [[ "$remote_url" =~ ([\/:]openebs\/mayastor-extensions)$ ]]; then
+    if [[ "$remote_url" =~ ([\/:]openebs\/mayastor-extensions(.git)?)$ ]]; then
       openebs_remote=$remote
       break
     fi
