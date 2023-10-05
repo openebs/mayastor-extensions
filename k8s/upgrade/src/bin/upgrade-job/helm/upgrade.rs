@@ -183,6 +183,7 @@ impl HelmUpgradeBuilder {
             // Generate values yaml file for upgrade
             let _upgrade_values_file = generate_values_yaml_file(
                 &from_version,
+                &to_version,
                 chart_dir.as_path(),
                 &client,
                 release_name.clone(),
