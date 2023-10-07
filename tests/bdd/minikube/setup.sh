@@ -11,8 +11,8 @@ source "$UTILS_DIR/advisory_lock.sh"
 # -o errexit: abort script if one command fails
 # -o errtrace: the ERR trap is inherited by shell functions
 # -o pipefail: entire command fails if pipe fails
-# -o history: record shell history
-set -o errexit -o errtrace -o pipefail -o history
+set -o errexit -o errtrace -o pipefail
+
 # ERR trap
 trap 'log_fatal "failed minikube setup"' ERR
 trap 'cleanup_and_exit "$?"' EXIT
