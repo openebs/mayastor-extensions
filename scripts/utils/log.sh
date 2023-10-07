@@ -26,3 +26,5 @@ log_fatal() {
   log_error "$1"
   exit "${_return}"
 }
+
+set +o errexit +o errtrace +o pipefail +o history +o allexport

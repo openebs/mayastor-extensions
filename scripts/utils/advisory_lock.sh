@@ -36,3 +36,5 @@ advisory_lock_remove() {
     echo "Removed the lock on the file $filepath."
   fi
 }
+
+set +o errexit +o errtrace +o pipefail +o history +o allexport
