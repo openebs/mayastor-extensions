@@ -22,7 +22,7 @@ jobs:
           branch="${{ github.ref_name }}"
           nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch"" ./scripts/helm/shell.nix
       - name: Publish Mayastor Helm chart
-        uses: stefanprodan/helm-gh-pages@v1.5.0
+        uses: stefanprodan/helm-gh-pages@v1.7.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           charts_dir: .
