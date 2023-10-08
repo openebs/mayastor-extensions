@@ -36,6 +36,7 @@ cleanup_workspace() {
 # Unlocks the cleanup config by removing the lock file.
 unlock_cleanup_config_file() {
   if [ -n "$cleanup_config_initialized" ]; then
+    yq -i '.status="Ready"' "$CLEANUP_CONFIG_FILE"
     advisory_lock_remove "$CLEANUP_CONFIG_FILE" "$CLEANUP_CONFIG_FILE_LOCK" "setup"
     cleanup_config_initialized=
   fi
@@ -54,6 +55,7 @@ by the setup.sh, and not assets which were pre-existing in the system.\"" \
 "$CLEANUP_CONFIG_FILE"
 
   yq -i ".cleanupAble=[]" "$CLEANUP_CONFIG_FILE"
+  yq -i '.status="Initializing"' "$CLEANUP_CONFIG_FILE"
 }
 
 # This is the actual API for the cleanup config, and only this function should be used. This
