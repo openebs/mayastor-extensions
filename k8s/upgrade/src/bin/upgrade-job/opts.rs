@@ -41,12 +41,12 @@ pub(crate) struct CliArgs {
 
     /// The set values specified by the user for upgrade
     /// (can specify multiple or separate values with commas: key1=val1,key2=val2).
-    #[arg(short, long)]
+    #[arg(long)]
     helm_args_set: String,
 
     /// The set file values specified by the user for upgrade
     /// (can specify multiple or separate values with commas: key1=path1,key2=path2).
-    #[arg(short, long)]
+    #[arg(long)]
     helm_args_set_file: String,
 }
 
