@@ -1109,28 +1109,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "exporter"
-version = "0.1.0"
-dependencies = [
- "actix-service",
- "actix-web",
- "clap",
- "humantime",
- "mime",
- "once_cell",
- "prometheus",
- "rpc",
- "serde",
- "serde_json",
- "strum",
- "strum_macros",
- "tokio",
- "tonic 0.9.2",
- "tracing",
- "utils",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1971,6 +1949,28 @@ name = "memchr"
 version = "2.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f665ee40bc4a3c5590afb1e9677db74a508659dfd71e126420da8274909a0167"
+
+[[package]]
+name = "metrics-exporter"
+version = "0.1.0"
+dependencies = [
+ "actix-service",
+ "actix-web",
+ "clap",
+ "humantime",
+ "mime",
+ "once_cell",
+ "prometheus",
+ "rpc",
+ "serde",
+ "serde_json",
+ "strum",
+ "strum_macros",
+ "tokio",
+ "tonic 0.9.2",
+ "tracing",
+ "utils",
+]
 
 [[package]]
 name = "mime"

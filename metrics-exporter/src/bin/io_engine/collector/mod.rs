@@ -1,2 +1,2 @@
 /// Module for pools collector.
-pub mod pools_collector;
+pub mod pool;

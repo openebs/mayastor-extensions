@@ -21,18 +21,18 @@ let
     };
 
   components = { buildType, builder }: rec {
-    exporters = {
-      metrics = rec {
+    metrics = {
+      exporter = rec {
         recurseForDerivations = true;
-        metrics_builder = { buildType, builder, cargoBuildFlags ? [ "-p exporter" ] }: builder.build { inherit buildType cargoBuildFlags; };
+        metrics_builder = { buildType, builder, cargoBuildFlags ? [ "-p metrics-exporter" ] }: builder.build { inherit buildType cargoBuildFlags; };
         metrics_installer = { pname, src }: installer { inherit pname src; };
-        pool = metrics_installer {
+        io-engine = metrics_installer {
           src =
             if allInOne then
               metrics_builder { inherit buildType builder; }
             else
-              metrics_builder { inherit buildType builder; cargoBuildFlags = [ "--bin metrics-exporter-pool" ]; };
-          pname = "metrics-exporter-pool";
+              metrics_builder { inherit buildType builder; cargoBuildFlags = [ "--bin metrics-exporter-io-engine" ]; };
+          pname = "metrics-exporter-io-engine";
         };
       };
     };
@@ -64,7 +64,7 @@ let
       stats = obs_installer {
         src =
           if allInOne then
-            obs_builder { inherit buildType builder; cargoBuildFlags = [ "-p call-home-stats" ];  }
+            obs_builder { inherit buildType builder; cargoBuildFlags = [ "-p call-home-stats" ]; }
           else
             obs_builder { inherit buildType builder; cargoBuildFlags = [ "--bin call-home-stats" ]; };
         pname = "obs-callhome-stats";
