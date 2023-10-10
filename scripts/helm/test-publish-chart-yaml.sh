@@ -26,7 +26,7 @@ DATE_TIME=
 # Upgrade from develop to release/x.y*
 DEVELOP_TO_REL=
 # Upgrade from develop to main
-DEVELOP_TO_MAIN=
+TO_MAIN=
 # Tag that has been pushed
 APP_TAG=
 # Version from the Chart.yaml
@@ -46,7 +46,7 @@ FAILED=
 build_output()
 {
   if [ -n "$CHECK_BRANCH" ]; then
-    if [ -n "$DEVELOP_TO_MAIN" ]; then
+    if [ -n "$TO_MAIN" ]; then
       cat <<EOF
 APP_TAG: $APP_TAG
 CHART_VERSION: $CHART_VERSION
@@ -102,8 +102,8 @@ call_script()
     if [ -n "$DEVELOP_TO_REL" ]; then
       ARGS="--develop-to-release $ARGS"
     fi
-    if [ -n "$DEVELOP_TO_MAIN" ]; then
-      ARGS="--develop-to-main $ARGS"
+    if [ -n "$TO_MAIN" ]; then
+      ARGS="--to-main $ARGS"
     fi
     if [ -n "$LATEST_RELEASE_BRANCH" ]; then
       ARGS="--latest-release-branch $LATEST_RELEASE_BRANCH $ARGS"
@@ -161,7 +161,7 @@ test_one()
   CHECK_BRANCH=
   DATE_TIME=
   DEVELOP_TO_REL=
-  DEVELOP_TO_MAIN=
+  TO_MAIN=
   APP_TAG=
   CHART_VERSION=
   CHART_APP_VERSION=
@@ -198,25 +198,25 @@ CHART_APP_VERSION=0.0.0
 test_one "Main is special"
 
 CHECK_BRANCH=main
-DEVELOP_TO_MAIN=1
+TO_MAIN=1
 DATE_TIME=$(date +"$DATE_TIME_FMT")
 LATEST_RELEASE_BRANCH="release/123.456"
 BUMP_MAJOR_FOR_MAIN="false"
 APP_TAG=123.457.0-0-main-unstable-$DATE_TIME-0
-CHART_VERSION=0.0.0
-CHART_APP_VERSION=0.0.0
+CHART_VERSION=13.14.15
+CHART_APP_VERSION=13.14.15
 NEW_CHART_VERSION=123.457.0-0-main-unstable-$DATE_TIME-0
 NEW_CHART_APP_VERSION=123.457.0-0-main-unstable-$DATE_TIME-0
 test_one "Main is special"
 
 CHECK_BRANCH=main
-DEVELOP_TO_MAIN=1
+TO_MAIN=1
 DATE_TIME=$(date +"$DATE_TIME_FMT")
 LATEST_RELEASE_BRANCH="release/123.456"
 BUMP_MAJOR_FOR_MAIN="true"
 APP_TAG=124.0.0-0-main-unstable-$DATE_TIME-0
-CHART_VERSION=0.0.0
-CHART_APP_VERSION=0.0.0
+CHART_VERSION=13.14.15
+CHART_APP_VERSION=13.14.15
 NEW_CHART_VERSION=124.0.0-0-main-unstable-$DATE_TIME-0
 NEW_CHART_APP_VERSION=124.0.0-0-main-unstable-$DATE_TIME-0
 test_one "Main is special"
@@ -225,37 +225,37 @@ CHECK_BRANCH=main
 LATEST_RELEASE_BRANCH="release/123.456"
 BUMP_MAJOR_FOR_MAIN="false"
 APP_TAG=123.457.0-0-main-unstable-main-0
-CHART_VERSION=0.0.0
-CHART_APP_VERSION=0.0.0
+CHART_VERSION=13.14.15
+CHART_APP_VERSION=13.14.15
 test_one "Main is special"
 
 CHECK_BRANCH=main
 LATEST_RELEASE_BRANCH="release/123.456"
 BUMP_MAJOR_FOR_MAIN="true"
 APP_TAG=124.0.0-0-main-unstable-main-0
-CHART_VERSION=0.0.0
-CHART_APP_VERSION=0.0.0
+CHART_VERSION=13.14.15
+CHART_APP_VERSION=13.14.15
 test_one "Main is special"
 
 CHECK_BRANCH=main
-DEVELOP_TO_MAIN=1
+TO_MAIN=1
 LATEST_RELEASE_BRANCH="release/123.456"
 BUMP_MAJOR_FOR_MAIN="false"
 APP_TAG=123.457.0-0-main-unstable-main-0
-CHART_VERSION=0.0.0
-CHART_APP_VERSION=0.0.0
+CHART_VERSION=13.14.15
+CHART_APP_VERSION=13.14.15
 NEW_CHART_VERSION=123.457.0-0-main-unstable-main-0
 NEW_CHART_APP_VERSION=123.457.0-0-main-unstable-main-0
 EXPECT_FAIL=1
 test_one "Main is special"
 
 CHECK_BRANCH=main
-DEVELOP_TO_MAIN=1
+TO_MAIN=1
 LATEST_RELEASE_BRANCH="release/123.456"
 BUMP_MAJOR_FOR_MAIN="true"
 APP_TAG=124.0.0-0-main-unstable-main-0
-CHART_VERSION=0.0.0
-CHART_APP_VERSION=0.0.0
+CHART_VERSION=13.14.15
+CHART_APP_VERSION=13.14.15
 NEW_CHART_VERSION=124.0.0-0-main-unstable-main-0
 NEW_CHART_APP_VERSION=124.0.0-0-main-unstable-main-0
 EXPECT_FAIL=1

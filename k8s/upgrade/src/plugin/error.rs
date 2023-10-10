@@ -67,6 +67,10 @@ pub enum Error {
     #[snafu(display("Cluster role binding: {} creation failed Error: {}", name, source))]
     ClusterRoleBindingCreate { name: String, source: kube::Error },
 
+    /// Failed in creating config map.
+    #[snafu(display("Config Map: {} creation failed Error: {}", name, source))]
+    UpgradeConfigMapCreate { name: String, source: kube::Error },
+
     /// Failed in creating upgrade job.
     #[snafu(display("Upgrade Job: {} creation failed Error: {}", name, source))]
     UpgradeJobCreate { name: String, source: kube::Error },
@@ -74,6 +78,10 @@ pub enum Error {
     /// Failed in deleting upgrade job.
     #[snafu(display("Upgrade Job: {} deletion failed Error: {}", name, source))]
     UpgradeJobDelete { name: String, source: kube::Error },
+
+    /// Failed in deleting upgrade config map.
+    #[snafu(display("Upgrade Config Map: {} deletion failed Error: {}", name, source))]
+    UpgradeConfigMapDelete { name: String, source: kube::Error },
 
     /// Error for when the image format is invalid.
     #[snafu(display("Failed to find a valid image in Deployment."))]
@@ -163,6 +171,10 @@ pub enum Error {
     #[snafu(display("Failed to get Upgrade Job {}: {}", name, source))]
     GetUpgradeJob { source: kube::Error, name: String },
 
+    /// Error when a Get Upgrade config map fails.
+    #[snafu(display("Failed to get Upgrade Config Map {}: {}", name, source))]
+    GetUpgradeConfigMap { source: kube::Error, name: String },
+
     /// Error when a Get ServiceAccount fails.
     #[snafu(display("Failed to get service account {}: {}", name, source))]
     GetServiceAccount { source: kube::Error, name: String },
@@ -210,6 +222,13 @@ pub enum Error {
         filepath: PathBuf,
     },
 
+    /// Error when reading the entire contents of a file into a string.
+    #[snafu(display("Failed to read file at {}: {}", filepath.display(), source))]
+    ReadFromFile {
+        source: std::io::Error,
+        filepath: PathBuf,
+    },
+
     /// Error for when yaml could not be parsed from bytes.
     #[snafu(display("Failed to parse unsupported versions yaml: {}", source))]
     YamlParseBufferForUnsupportedVersion { source: serde_yaml::Error },
@@ -232,6 +251,14 @@ pub enum Error {
     /// Error for when the detected upgrade path for PRODUCT is not supported.
     #[snafu(display("The upgrade path is invalid"))]
     InvalidUpgradePath,
+
+    /// Error when set-file arguments are not in proper format.
+    #[snafu(display("Error parsing set-file argument: {} ", arguments))]
+    InvalidSetFileArguments { arguments: String },
+
+    /// Error for key not present in Map.
+    #[snafu(display("Specified key not present."))]
+    SpecifiedKeyNotPresent,
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.
@@ -286,6 +313,12 @@ impl From<Error> for i32 {
             Error::NotAValidSourceForUpgrade { .. } => 444,
             Error::InvalidUpgradePath { .. } => 445,
             Error::DeleteEventsWithFieldSelector { .. } => 446,
+            Error::ReadFromFile { .. } => 447,
+            Error::GetUpgradeConfigMap { .. } => 448,
+            Error::UpgradeConfigMapCreate { .. } => 449,
+            Error::UpgradeConfigMapDelete { .. } => 450,
+            Error::InvalidSetFileArguments { .. } => 451,
+            Error::SpecifiedKeyNotPresent { .. } => 452,
         }
     }
 }

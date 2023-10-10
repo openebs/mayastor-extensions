@@ -34,7 +34,7 @@ latest_release_branch() {
   local openebs_remote=""
   for remote in $(git remote show); do
     remote_url=$(git ls-remote --get-url $remote)
-    if [[ "$remote_url" =~ ([\/:]openebs\/mayastor-extensions)$ ]]; then
+    if [[ "$remote_url" =~ ([\/:]openebs\/mayastor-extensions(.git)?)$ ]]; then
       openebs_remote=$remote
       break
     fi
@@ -128,8 +128,8 @@ branch_chart_version()
     if [ -z "$LATEST_RELEASE_BRANCH" ]; then
       LATEST_RELEASE_BRANCH=$(latest_release_branch)
     fi
-    # The main branch helm chart appVersion should follow this format: <bumped-latest>-0-develop-unstable-<timestamp>-0
-    # If there is no timestamp, then the version defaults to <bumped-latest>-0-develop-unstable-main-0
+    # The main branch helm chart appVersion should follow this format: <bumped-latest>-0-main-unstable-<timestamp>-0
+    # If there is no timestamp, then the version defaults to <bumped-latest>-0-main-unstable-main-0
     # Here 'bumped-latest' is the version obtained when the latest release branch version is bumped
     # as per semver convention. It is by-default a minor version bump, but it could be a major one as well.
     main_branch_version_from_release_branch "$LATEST_RELEASE_BRANCH"
@@ -191,7 +191,7 @@ Options:
   -h, --help                                       Display this text.
   --check-chart           <branch>                 Check if the chart version/app version is correct for the branch.
   --develop-to-release                             Also upgrade the chart to the release version matching the branch.
-  --develop-to-main                                Also upgrade the chart to the appropriate main branch chart version.
+  --to-main                                        Also upgrade the chart to the appropriate main branch chart version.
   --app-tag               <tag>                    The appVersion tag.
   --override-index        <latest_version>         Override the latest chart version from the published chart's index.
   --index-file            <index_yaml>             Use the provided index.yaml instead of fetching from the git branch.
@@ -229,7 +229,7 @@ INDEX_BRANCH_FILE="index.yaml"
 INDEX_FILE=
 DRY_RUN=
 DEVELOP_TO_REL=
-DEVELOP_TO_MAIN=
+TO_MAIN=
 DATE_TIME_FMT="%Y-%m-%d-%H-%M-%S"
 DATE_TIME=
 IGNORE_INDEX_CHECK=
@@ -260,8 +260,8 @@ while [ "$#" -gt 0 ]; do
       DEVELOP_TO_REL=1
       shift
       ;;
-    --develop-to-main)
-      DEVELOP_TO_MAIN=1
+    --to-main)
+      TO_MAIN=1
       shift
       ;;
     --app-tag)
@@ -325,8 +325,8 @@ CHART_VERSION=$(version "$CHART_VERSION")
 CHART_APP_VERSION=$(version "$CHART_APP_VERSION")
 
 if [ -n "$CHECK_BRANCH" ]; then
-  # It's ok to leave out the timestamp for a --check-chart, but not for a --develop-to-main.
-  if [ -n "$DEVELOP_TO_MAIN" ] && [ -z "$DATE_TIME" ]; then
+  # It's ok to leave out the timestamp for a --check-chart, but not for a --to-main.
+  if [ -n "$TO_MAIN" ] && [ -z "$DATE_TIME" ]; then
     die "ERROR: No date-time input for main branch helm chart version"
   fi
   APP_TAG=$(branch_chart_version "$CHECK_BRANCH")
@@ -360,25 +360,20 @@ if [ -n "$CHECK_BRANCH" ]; then
         die "Script expects Branch Name($APP_TAG) to point to a stable release"
     fi
   fi
-  if [ -n "$DEVELOP_TO_MAIN" ]; then
-    # Verify if develop.
-    if [ "$CHART_VERSION" = "0.0.0" ]; then
-      newChartVersion="$APP_TAG"
-      newChartAppVersion="$APP_TAG"
-      echo "NEW_CHART_VERSION: $newChartVersion"
-      echo "NEW_CHART_APP_VERSION: $newChartAppVersion"
+  if [ -n "$TO_MAIN" ]; then
+    newChartVersion="$APP_TAG"
+    newChartAppVersion="$APP_TAG"
+    echo "NEW_CHART_VERSION: $newChartVersion"
+    echo "NEW_CHART_APP_VERSION: $newChartAppVersion"
 
-      if [ -z "$DRY_RUN" ]; then
-        sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
-        sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
-        # Set image tag to empty because main branch uses repoTags.
-        yq_ibl '.image.tag |= ""' "$CHART_VALUES"
-        # always pull since image changes with commits to the branch
-        yq_ibl ".image.pullPolicy |= \"IfNotPresent\"" "$CHART_VALUES"
-        yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
-      fi
-    else
-      die "ERROR: source chart is not from develop branch"
+    if [ -z "$DRY_RUN" ]; then
+      sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
+      sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
+      # Set image tag to empty because main branch uses repoTags.
+      yq_ibl '.image.tag |= ""' "$CHART_VALUES"
+      # always pull since image changes with commits to the branch
+      yq_ibl ".image.pullPolicy |= \"IfNotPresent\"" "$CHART_VALUES"
+      yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
     fi
     exit 0
   elif [ -n "$DEVELOP_TO_REL" ]; then
