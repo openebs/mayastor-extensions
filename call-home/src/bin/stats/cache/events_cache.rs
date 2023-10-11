@@ -1,4 +1,4 @@
-use crate::cache::{pools, volume};
+use crate::cache::{nexus, pools, volume};
 use events_api::{
     event::{EventAction, EventCategory, EventMessage},
     mbus_nats::BusSubscription,
@@ -17,6 +17,7 @@ static CACHE: OnceCell<Mutex<Cache>> = OnceCell::new();
 pub struct EventSet {
     pub(crate) pool: pools::Pool,
     pub(crate) volume: volume::Volume,
+    pub(crate) nexus: nexus::Nexus,
 }
 
 impl EventSet {
@@ -40,6 +41,7 @@ impl EventSet {
         match category {
             EventCategory::Pool => self.pool.update_counter(action),
             EventCategory::Volume => self.volume.update_counter(action),
+            EventCategory::Nexus => self.nexus.update_counter(action),
             EventCategory::UnknownCategory => {}
         }
     }
@@ -50,6 +52,7 @@ impl From<&mut EventSet> for EventSet {
         EventSet {
             pool: event_set.pool.clone(),
             volume: event_set.volume.clone(),
+            nexus: event_set.nexus.clone(),
         }
     }
 }

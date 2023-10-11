@@ -6,3 +6,6 @@ pub(crate) mod pools;
 
 /// Modules for volumes.
 pub(crate) mod volume;
+
+/// Modules for nexus.
+pub(crate) mod nexus;
