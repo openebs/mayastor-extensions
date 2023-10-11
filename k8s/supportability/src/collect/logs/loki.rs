@@ -272,7 +272,11 @@ impl LokiClient {
 }
 
 fn get_epoch_unix_time(since: humantime::Duration) -> SinceTime {
-    Utc::now().timestamp_nanos() as SinceTime - since.as_nanos()
+    // should be ok for ~584 years since epoch
+    let timestamp = Utc::now()
+        .timestamp_nanos_opt()
+        .expect("value can not be represented in a timestamp with nanosecond precision.");
+    timestamp as SinceTime - since.as_nanos()
 }
 
 struct LokiPoll<'a> {

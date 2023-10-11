@@ -14,7 +14,7 @@ tls = [ "openapi/tower-client-tls" ]
 [dependencies]
 openapi = { path = "../../dependencies/control-plane/openapi", default-features = false, features = [ "tower-trace" ] }
 utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
-kube = { version = "0.78.0", features = [ "derive" ] }
-anyhow = "1.0.72"
+kube = { version = "0.85.0", features = [ "derive" ] }
+anyhow = "1.0.75"
 kube-forward = { path = "../../dependencies/control-plane/k8s/forward" }
 tower = { version = "0.4.13", features = [ "timeout", "util" ] }

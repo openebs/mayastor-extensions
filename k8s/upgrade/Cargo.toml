@@ -16,25 +16,25 @@ openapi = { path = "../../dependencies/control-plane/openapi", default-features 
 utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
 kube-proxy = { path = "../proxy" }
 console-logger = { path = "../../console-logger" }
-kube = { version = "0.78.0",  default-features = true, features = [ "derive", "runtime" ] }
-anyhow = "1.0.72"
-clap = { version = "4.3.21", features = ["derive", "env", "string", "color"] }
+kube = { version = "0.85.0",  default-features = true, features = [ "derive", "runtime" ] }
+anyhow = "1.0.75"
+clap = { version = "4.4.6", features = ["derive", "env", "string", "color"] }
 humantime = "2.1.0"
 maplit = "1.0.2"
-k8s-openapi = { version = "0.17.0", features = ["v1_20"] }
+k8s-openapi = { version = "0.19.0", features = ["v1_20"] }
 tower = { version = "0.4.13", features = [ "timeout", "util" ] }
 hyper = { version = "0.14.27", features = [ "client", "http1", "http2", "tcp", "stream" ] }
 http = "0.2.9"
-async-trait = "0.1.72"
-serde = "1.0.183"
-serde_json = "1.0.104"
+async-trait = "0.1.73"
+serde = "1.0.188"
+serde_json = "1.0.107"
 snafu = "0.7.5"
 serde_yaml = "0.9.25"
-semver = { version="1.0.18", features = ["serde"] }
-url = "2.4.0"
-regex = "1.9.3"
-tokio = { version = "1.30.0", features = ["full"] }
-kube-client = "0.78.0"
-tempfile = "3.7.1"
+semver = { version="1.0.20", features = ["serde"] }
+url = "2.4.1"
+regex = "1.10.0"
+tokio = { version = "1.33.0", features = ["full"] }
+kube-client = "0.85.0"
+tempfile = "3.8.0"
 # Tracing
 tracing = "0.1.37"

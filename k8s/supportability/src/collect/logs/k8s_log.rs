@@ -8,7 +8,7 @@ use crate::{
     },
     log,
 };
-use futures::StreamExt;
+use futures::{AsyncBufReadExt, StreamExt};
 use k8s_openapi::api::core::v1::Pod;
 use kube::{api::LogParams, Error, Resource};
 use std::{collections::HashMap, fs::File, io::Write, path::PathBuf};
@@ -214,7 +214,7 @@ impl K8sLoggerClient {
             .write_logs_stream(
                 pod_name.clone().as_str(),
                 container_name.clone().as_str(),
-                log_file.try_clone().unwrap(),
+                log_file,
                 pod_restarted,
             )
             .await?;
@@ -240,12 +240,16 @@ impl K8sLoggerClient {
             .get_pod_api()
             .await
             .log_stream(pod_name, &log_params)
-            .await?;
+            .await?
+            .lines();
 
         let mut max_retries = 0;
+        let new_line = '\n'.to_string();
         while let Some(result_data) = log_stream.next().await {
             match result_data {
-                Ok(data) => writer.write_all(&data)?,
+                Ok(data) => writer
+                    .write_all(data.as_bytes())
+                    .and(writer.write_all(new_line.as_bytes()))?,
                 Err(err) => {
                     if max_retries > MAX_POLLING_RETRIES {
                         writer.flush()?;
