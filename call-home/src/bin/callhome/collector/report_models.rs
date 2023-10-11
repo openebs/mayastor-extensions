@@ -91,6 +91,31 @@ impl Replicas {
     }
 }
 
+/// Nexus contains nexus created, deleted counts, and rebuild started and rebuild ended counts.
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct Nexus {
+    #[serde(skip_serializing_if = "is_zero")]
+    created: u32,
+    #[serde(skip_serializing_if = "is_zero")]
+    deleted: u32,
+    #[serde(skip_serializing_if = "is_zero")]
+    rebuild_started: u32,
+    #[serde(skip_serializing_if = "is_zero")]
+    rebuild_ended: u32,
+}
+impl Nexus {
+    /// Returns nexus object using the event_data.
+    pub(crate) fn new(event_data: EventData) -> Self {
+        Self {
+            created: event_data.nexus_created.value(),
+            deleted: event_data.nexus_deleted.value(),
+            rebuild_started: event_data.rebuild_started.value(),
+            rebuild_ended: event_data.rebuild_ended.value(),
+        }
+    }
+}
+
 /// Versions will contain versions of different mayastor components.
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
@@ -133,6 +158,7 @@ pub(crate) struct Report {
     pub(crate) pools: Pools,
     pub(crate) volumes: Volumes,
     pub(crate) replicas: Replicas,
+    pub(crate) nexus: Nexus,
     pub(crate) versions: Versions,
 }
 
@@ -211,6 +237,10 @@ pub(crate) struct EventData {
     pub(crate) volume_deleted: VolumeDeleted,
     pub(crate) pool_created: PoolCreated,
     pub(crate) pool_deleted: PoolDeleted,
+    pub(crate) nexus_created: NexusCreated,
+    pub(crate) nexus_deleted: NexusDeleted,
+    pub(crate) rebuild_started: RebuildStarted,
+    pub(crate) rebuild_ended: RebuildEnded,
 }
 
 /// Record of events populated from prometheus.
@@ -294,6 +324,7 @@ pub(crate) enum Resource {
     Unknown,
     Pool,
     Volume,
+    Nexus,
 }
 /// Metrics action.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
@@ -302,6 +333,8 @@ pub(crate) enum Action {
     Unknown,
     Created,
     Deleted,
+    RebuildStarted,
+    RebuildEnded,
 }
 
 impl From<&str> for Resource {
@@ -318,6 +351,8 @@ impl From<&str> for Action {
         match s {
             "created" => Action::Created,
             "deleted" => Action::Deleted,
+            "rebuild_started" => Action::RebuildStarted,
+            "rebuild_ended" => Action::RebuildEnded,
             _ => Action::Unknown,
         }
     }
@@ -357,6 +392,10 @@ make_counter!(VolumeCreated, Resource::Volume, Action::Created);
 make_counter!(VolumeDeleted, Resource::Volume, Action::Deleted);
 make_counter!(PoolCreated, Resource::Pool, Action::Created);
 make_counter!(PoolDeleted, Resource::Pool, Action::Deleted);
+make_counter!(NexusCreated, Resource::Nexus, Action::Created);
+make_counter!(NexusDeleted, Resource::Nexus, Action::Deleted);
+make_counter!(RebuildStarted, Resource::Nexus, Action::RebuildStarted);
+make_counter!(RebuildEnded, Resource::Nexus, Action::RebuildEnded);
 
 impl<'a, T: TryFrom<Record<'a>>> From<&'a EventsRecord> for Option<T> {
     fn from(src: &'a EventsRecord) -> Option<T> {

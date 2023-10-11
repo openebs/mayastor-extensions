@@ -31,6 +31,9 @@ pub const VOLUME_STATS: &str = "Volume stats";
 /// Defines the help argument for pool stats need for promethueus library.
 pub const POOL_STATS: &str = "Pool stats";
 
+/// Defines the help argument for nexus stats need for promethueus library.
+pub const NEXUS_STATS: &str = "Nexus stats";
+
 /// Variable label for promethueus library.
 pub const ACTION: &str = "action";
 
@@ -40,11 +43,20 @@ pub const CREATED: &str = "created";
 /// Delete actions for events.
 pub const DELETED: &str = "deleted";
 
+/// Rebuild started action for events.
+pub const REBUILD_STARTED: &str = "rebuild_started";
+
+/// rebuild ended action for events.
+pub const REBUILD_ENDED: &str = "rebuild_ended";
+
 /// Label for Volume.
 pub const VOLUME: &str = "volume";
 
 /// Label for Pool.
 pub const POOL: &str = "pool";
+
+/// Label for Nexus.
+pub const NEXUS: &str = "nexus";
 
 /// Field manager for Patch param, required for [`Patch::Apply`].
 pub const PATCH_PARAM_FILED_MANAGER: &str = "events_store_configmap";

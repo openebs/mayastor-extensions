@@ -18,7 +18,7 @@ impl StatsCounter for Pool {
             EventAction::Delete => {
                 self.pool_deleted += 1;
             }
-            EventAction::UnknownAction => {}
+            _ => {}
         }
     }
 }

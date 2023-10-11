@@ -18,7 +18,7 @@ impl StatsCounter for Volume {
             EventAction::Delete => {
                 self.volume_deleted += 1;
             }
-            EventAction::UnknownAction => {}
+            _ => {}
         }
     }
 }

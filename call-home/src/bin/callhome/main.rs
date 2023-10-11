@@ -5,13 +5,14 @@ use crate::{
     collector::{
         k8s_client::K8sClient,
         report_models::{
-            event_stats, EventData, PoolCreated, PoolDeleted, Pools, Replicas, Report,
-            VolumeCreated, VolumeDeleted, Volumes,
+            event_stats, EventData, NexusCreated, NexusDeleted, PoolCreated, PoolDeleted, Pools,
+            RebuildEnded, RebuildStarted, Replicas, Report, VolumeCreated, VolumeDeleted, Volumes,
         },
     },
     transmitter::*,
 };
 use clap::Parser;
+use collector::report_models::Nexus;
 use obs::common::constants::*;
 use openapi::tower::client::{ApiClient, Configuration};
 use sha256::digest;
@@ -156,6 +157,11 @@ async fn generate_report(
                     Option::<VolumeDeleted>::from(&data).unwrap_or_default();
                 event_data.pool_created = Option::<PoolCreated>::from(&data).unwrap_or_default();
                 event_data.pool_deleted = Option::<PoolDeleted>::from(&data).unwrap_or_default();
+                event_data.nexus_created = Option::<NexusCreated>::from(&data).unwrap_or_default();
+                event_data.nexus_deleted = Option::<NexusDeleted>::from(&data).unwrap_or_default();
+                event_data.rebuild_started =
+                    Option::<RebuildStarted>::from(&data).unwrap_or_default();
+                event_data.rebuild_ended = Option::<RebuildEnded>::from(&data).unwrap_or_default();
             }
             Err(err) => {
                 error!("{:?}", err);
@@ -197,7 +203,7 @@ async fn generate_report(
     };
 
     if let Some(volumes) = &volumes {
-        report.volumes = Volumes::new(volumes.clone(), event_data);
+        report.volumes = Volumes::new(volumes.clone(), event_data.clone());
     }
 
     let replicas = http_client.replicas_api().get_replicas().await;
@@ -207,5 +213,7 @@ async fn generate_report(
             error!("{:?}", err);
         }
     };
+
+    report.nexus = Nexus::new(event_data);
     report
 }
