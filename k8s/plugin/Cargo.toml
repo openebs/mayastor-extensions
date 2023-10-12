@@ -24,10 +24,10 @@ console-logger = { path = "../../console-logger" }
 supportability = { path = "../supportability" }
 upgrade = { path = "../upgrade" }
 kube-proxy = { path = "../proxy" }
-tokio = { version = "1.30.0" }
-anyhow = "1.0.72"
-clap = { version = "4.3.21", features = ["color", "derive"] }
+tokio = { version = "1.33.0" }
+anyhow = "1.0.75"
+clap = { version = "4.4.6", features = ["color", "derive"] }
 humantime = "2.1.0"
 # Tracing
-opentelemetry = { version = "0.18.0", features = ["rt-tokio-current-thread"] }
+opentelemetry = { version = "0.20.0", features = ["rt-tokio-current-thread"] }
 shutdown = { path = "../../dependencies/control-plane/utils/shutdown" }
