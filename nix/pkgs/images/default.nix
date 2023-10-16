@@ -19,9 +19,9 @@ let
       } // config;
     };
   build-exporter-image = { buildType }: {
-    pool = build-extensions-image rec{
+    io-engine = build-extensions-image rec{
       inherit buildType;
-      package = extensions.${buildType}.exporters.metrics.pool;
+      package = extensions.${buildType}.metrics.exporter.io-engine;
       pname = package.pname;
       config = {
         ExposedPorts = {
@@ -93,7 +93,7 @@ let
 in
 let
   build-exporter-images = { buildType }: {
-    metrics = build-exporter-image {
+    exporter = build-exporter-image {
       inherit buildType;
     };
   };
@@ -116,7 +116,7 @@ let
 in
 let
   build-images = { buildType }: {
-    exporters = build-exporter-images { inherit buildType; } // {
+    metrics = build-exporter-images { inherit buildType; } // {
       recurseForDerivations = true;
     };
     upgrade = build-upgrade-images { inherit buildType; } // {

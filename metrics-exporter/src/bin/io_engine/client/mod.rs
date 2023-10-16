@@ -1,6 +1,6 @@
 /// Grpc client module.
 pub mod grpc_client;
-/// Pool module.
+/// PoolInfo module.
 pub mod pool;
 
 #[derive(

@@ -14,7 +14,7 @@ pub struct ExporterConfig {
 }
 
 impl ExporterConfig {
-    /// Initialize exporter configs.
+    /// Initialize metrics-exporter configs.
     pub fn initialize(addr: SocketAddr, polling_time: Duration) {
         CONFIG.get_or_init(|| Self {
             metrics_endpoint: addr,
@@ -22,7 +22,7 @@ impl ExporterConfig {
         });
     }
 
-    /// Get exporter config.
+    /// Get metrics-exporter config.
     pub fn get_config() -> &'static ExporterConfig {
         CONFIG.get().expect("Exporter config is not initialized")
     }

@@ -57,7 +57,7 @@ let
   src_list = [
     "Cargo.lock"
     "Cargo.toml"
-    "exporter"
+    "metrics-exporter"
     "rpc"
     "console-logger"
     "call-home"
@@ -119,7 +119,7 @@ in
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if allInOne then
-      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p exporter" "-p call-home" "-p upgrade" ]; }
+      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p metrics-exporter" "-p call-home" "-p upgrade" ]; }
     else
       builder { inherit buildType cargoBuildFlags; };
 }
