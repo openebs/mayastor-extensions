@@ -142,8 +142,6 @@ Usage:
     {{- print $product.domain -}}
 {{- end -}}
 
-<<<<<<< HEAD
-
 {{/*
 Creates the tolerations based on the global and component wise tolerations, with early eviction
 Usage:
