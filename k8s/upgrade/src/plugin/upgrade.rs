@@ -86,6 +86,11 @@ pub enum Actions {
 /// Arguments to be passed for upgrade.
 #[derive(Debug, Clone, clap::Args)]
 pub struct UpgradeArgs {
+    /// Allow upgrade from stable versions to unstable versions. This is implied when the
+    /// '--skip-upgrade-path-validation-for-unsupported-version' option is used.
+    #[clap(global = true, long, hide = true)]
+    pub allow_unstable: bool,
+
     /// Display all the validations output but will not execute upgrade.
     #[clap(global = true, long, short)]
     pub dry_run: bool,
@@ -131,6 +136,7 @@ impl UpgradeArgs {
     /// Initialise with default values.
     pub fn new() -> Self {
         Self {
+            allow_unstable: false,
             dry_run: false,
             skip_data_plane_restart: false,
             skip_single_replica_volume_validation: false,

@@ -16,6 +16,7 @@ use serde::Deserialize;
 use serde_yaml;
 use snafu::ResultExt;
 use std::{collections::HashSet, ops::Deref, path::PathBuf};
+use utils::version_info;
 
 /// Validation to be done before applying upgrade.
 pub async fn preflight_check(
@@ -36,7 +37,7 @@ pub async fn preflight_check(
     let rest_client = RestClient::new_with_config(config);
 
     if !resources.skip_upgrade_path_validation_for_unsupported_version {
-        upgrade_path_validation(namespace).await?;
+        upgrade_path_validation(namespace, resources.allow_unstable).await?;
     }
 
     if !resources.skip_replica_rebuild {
@@ -185,7 +186,10 @@ impl TryFrom<&[u8]> for UnsupportedVersions {
     }
 }
 
-pub(crate) async fn upgrade_path_validation(namespace: &str) -> error::Result<()> {
+pub(crate) async fn upgrade_path_validation(
+    namespace: &str,
+    allow_unstable: bool,
+) -> error::Result<()> {
     let unsupported_version_buf =
         &std::include_bytes!("../../config/unsupported_versions.yaml")[..];
     let unsupported_versions = UnsupportedVersions::try_from(unsupported_version_buf)
@@ -214,6 +218,32 @@ pub(crate) async fn upgrade_path_validation(namespace: &str) -> error::Result<()
         console_logger::error("", user_prompt::UPGRADE_TO_UNSUPPORTED_VERSION);
         return error::InvalidUpgradePath.fail();
     }
+
+    // Self version
+    let self_version_info = version_info!();
+    let mut self_version: Option<Version> = None;
+    if let Some(tag) = self_version_info.version_tag {
+        if !tag.is_empty() {
+            if let Ok(sv) = Version::parse(tag.as_str()) {
+                self_version = Some(sv);
+            }
+        }
+    }
+
+    // Stable to unstable check.
+    if !allow_unstable {
+        let mut self_is_stable: bool = false;
+        if let Some(version) = self_version {
+            if !version.pre.is_empty() {
+                self_is_stable = true;
+            }
+        }
+        if source.pre.is_empty() && !self_is_stable {
+            console_logger::error("", user_prompt::STABLE_TO_UNSTABLE_UPGRADE);
+            return error::InvalidUpgradePath.fail();
+        }
+    }
+
     Ok(())
 }
 
