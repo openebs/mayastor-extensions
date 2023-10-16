@@ -58,3 +58,8 @@ pub const HELM_UPGRADE_VALIDATION_ERROR: &str =
 /// Failure notice for when upgrading from a stable version to an unstable version.
 pub const STABLE_TO_UNSTABLE_UPGRADE: &str =
     "Cannot upgrade from a stable version to an unstable version";
+
+/// Failure notice for when upgrading from a higher version to a lower one.
+pub const HIGHER_TO_LOWER_SEMVER_UPGRADE: &str =
+    "Cannot upgrade from a higher version to a lower version. \
+If this is intentional, try again with '--skip-upgrade-path-validation-for-unsupported-version'";

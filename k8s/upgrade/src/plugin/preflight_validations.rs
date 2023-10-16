@@ -233,13 +233,21 @@ pub(crate) async fn upgrade_path_validation(
     // Stable to unstable check.
     if !allow_unstable {
         let mut self_is_stable: bool = false;
-        if let Some(version) = self_version {
+        if let Some(ref version) = self_version {
             if !version.pre.is_empty() {
                 self_is_stable = true;
             }
         }
         if source.pre.is_empty() && !self_is_stable {
             console_logger::error("", user_prompt::STABLE_TO_UNSTABLE_UPGRADE);
+            return error::InvalidUpgradePath.fail();
+        }
+    }
+
+    // Upgrade not allowed to lower semver versions check.
+    if let Some(ref version) = self_version {
+        if version.lt(&source) {
+            console_logger::error("", user_prompt::HIGHER_TO_LOWER_SEMVER_UPGRADE);
             return error::InvalidUpgradePath.fail();
         }
     }
