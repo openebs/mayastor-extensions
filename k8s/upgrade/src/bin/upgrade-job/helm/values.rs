@@ -1,6 +1,6 @@
 use crate::{
     common::{
-        constants::{TWO_DOT_O, TWO_DOT_ONE_AND_UP, TWO_DOT_THREE},
+        constants::{TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE, TWO_DOT_THREE},
         error::{
             ReadingFile, Result, SemverParse, TempFileCreation, U8VectorToString, WriteToTempFile,
             YamlParseFromFile, YamlParseFromSlice,
@@ -12,7 +12,7 @@ use crate::{
         yaml::yq::{YamlKey, YqV4},
     },
 };
-use semver::{Version, VersionReq};
+use semver::Version;
 use snafu::ResultExt;
 use std::{fs, io::Write, path::Path, str};
 use tempfile::NamedTempFile as TempFile;
@@ -64,11 +64,18 @@ pub(crate) fn generate_values_yaml_file(
             filepath: upgrade_values_file.path().to_path_buf(),
         })?;
 
+    // Not using semver::VersionReq because expressions like '>=2.1.0' don't include
+    // 2.3.0-rc.0. 2.3.0, 2.4.0, etc. are supported. So, not using VersionReq in the
+    // below comparisons because of this.
+
     // Specific special-case values for version 2.0.x.
-    let version_two_dot_o = VersionReq::parse(TWO_DOT_O).context(SemverParse {
-        version_string: TWO_DOT_O.to_string(),
+    let two_dot_o_rc_zero = Version::parse(TWO_DOT_O_RC_ONE).context(SemverParse {
+        version_string: TWO_DOT_O_RC_ONE.to_string(),
     })?;
-    if version_two_dot_o.matches(from_version) {
+    let two_dot_one = Version::parse(TWO_DOT_ONE).context(SemverParse {
+        version_string: TWO_DOT_ONE.to_string(),
+    })?;
+    if from_version.ge(&two_dot_o_rc_zero) && from_version.lt(&two_dot_one) {
         let log_level_to_replace = "info,io_engine=info";
 
         if from_values.io_engine_log_level().eq(log_level_to_replace)
@@ -83,11 +90,7 @@ pub(crate) fn generate_values_yaml_file(
     }
 
     // Specific special-case values for to-version >=2.1.x.
-    let version_two_dot_one_and_up =
-        VersionReq::parse(TWO_DOT_ONE_AND_UP).context(SemverParse {
-            version_string: TWO_DOT_ONE_AND_UP.to_string(),
-        })?;
-    if version_two_dot_one_and_up.matches(to_version) {
+    if to_version.ge(&two_dot_one) {
         // RepoTags fields will also be set to the values found in the target helm values file
         // (low_priority file). This is so integration tests which use specific repo commits can
         // upgrade to a custom helm chart.
@@ -109,10 +112,14 @@ pub(crate) fn generate_values_yaml_file(
     }
 
     // Specific special-case values for version 2.3.x.
-    let version_two_dot_three = VersionReq::parse(TWO_DOT_THREE).context(SemverParse {
+    let two_dot_three = Version::parse(TWO_DOT_THREE).context(SemverParse {
         version_string: TWO_DOT_THREE.to_string(),
     })?;
-    if version_two_dot_three.matches(from_version)
+    let two_dot_four = Version::parse(TWO_DOT_FOUR).context(SemverParse {
+        version_string: TWO_DOT_FOUR.to_string(),
+    })?;
+    if from_version.ge(&two_dot_three)
+        && from_version.lt(&two_dot_four)
         && from_values
             .eventing_enabled()
             .ne(&to_values.eventing_enabled())
