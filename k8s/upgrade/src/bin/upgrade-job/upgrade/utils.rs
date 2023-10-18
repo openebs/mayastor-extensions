@@ -8,7 +8,7 @@ use crate::common::{
 use k8s_openapi::api::core::v1::Pod;
 use kube::{api::ObjectList, ResourceExt};
 use openapi::models::{Volume, VolumeStatus};
-use semver::{Version, VersionReq};
+use semver::Version;
 use snafu::ResultExt;
 use std::{collections::HashSet, time::Duration};
 use tracing::{info, warn};
@@ -179,10 +179,9 @@ pub(crate) async fn data_plane_is_upgraded(
     to_version: &str,
     io_engine_pod_list: &ObjectList<Pod>,
 ) -> Result<bool> {
-    let to_version_requirement: VersionReq =
-        VersionReq::parse(to_version).context(SemverParse {
-            version_string: to_version.to_string(),
-        })?;
+    let to_version_requirement: Version = Version::parse(to_version).context(SemverParse {
+        version_string: to_version.to_string(),
+    })?;
 
     for pod in io_engine_pod_list {
         let version_str = pod.labels().get(CHART_VERSION_LABEL_KEY).ok_or(
@@ -202,7 +201,7 @@ pub(crate) async fn data_plane_is_upgraded(
         let version = Version::parse(version_str).context(SemverParse {
             version_string: version_str.clone(),
         })?;
-        if !to_version_requirement.matches(&version) {
+        if !to_version_requirement.eq(&version) {
             return Ok(false);
         }
     }
