@@ -269,11 +269,11 @@ csi:
     # -- csi-attacher image release tag
     attacherTag: v4.3.0
     # -- csi-snapshotter image release tag
-    snapshotterTag: v6.2.1
+    snapshotterTag: v6.3.1
     # -- csi-snapshot-controller image release tag
-    snapshotControllerTag: v6.2.1
+    snapshotControllerTag: v6.3.1
     # -- csi-node-driver-registrar image release tag
-    registrarTag: v2.8.0
+    registrarTag: v2.9.0
 
   controller:
     # -- Log level for the csi controller
