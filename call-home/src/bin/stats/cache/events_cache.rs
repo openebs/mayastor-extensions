@@ -14,6 +14,7 @@ static CACHE: OnceCell<Mutex<Cache>> = OnceCell::new();
 
 /// EventSet captures the type of events.
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(default)]
 pub struct EventSet {
     pub(crate) pool: pools::Pool,
     pub(crate) volume: volume::Volume,
