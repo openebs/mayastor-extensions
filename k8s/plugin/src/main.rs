@@ -161,8 +161,8 @@ async fn execute(cli_args: CliArgs) {
                 let _ignore = resources
                     .dump(cli_args.kube_config_path)
                     .await
-                    .map_err(|_e| {
-                        println!("Partially collected dump information !!");
+                    .map_err(|e| {
+                        println!("Partially collected dump information: {e:?}");
                         std::process::exit(1);
                     });
                 println!("Completed collection of dump !!");
