@@ -10,6 +10,7 @@ mkShell {
     jq
     kubernetes-helm-wrapped
     minikube
+    (python3.withPackages (ps: with ps; [ virtualenv black ]))
     which
     yq-go
   ];

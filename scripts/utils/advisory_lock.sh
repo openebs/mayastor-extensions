@@ -3,9 +3,7 @@
 # -o errexit: abort script if one command fails
 # -o errtrace: the ERR trap is inherited by shell functions
 # -o pipefail: entire command fails if pipe fails
-# -o history: record shell history
-# -o allexport: export all functions and variables to be available to subscripts
-set -o errexit -o errtrace -o pipefail -o history -o allexport
+set -o errexit -o errtrace -o pipefail
 
 # Takes a lock by way of a local file with the name <cleanup-config-file-name>.lock.
 advisory_lock_acquire() {
@@ -36,3 +34,5 @@ advisory_lock_remove() {
     echo "Removed the lock on the file $filepath."
   fi
 }
+
+set +o errexit +o errtrace +o pipefail

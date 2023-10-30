@@ -1,14 +1,5 @@
 #!/usr/bin/env bash
 
-# -o errexit: abort script if one command fails
-# -o errtrace: the ERR trap is inherited by shell functions
-# -o pipefail: entire command fails if pipe fails
-# -o history: record shell history
-set -o errexit -o errtrace -o pipefail -o history
-# ERR trap
-trap 'die "failed minikube setup"' ERR
-trap 'cleanup_and_exit "$?"' EXIT
-
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
 ROOT_DIR="$SCRIPT_DIR/../../.."
 UTILS_DIR="$ROOT_DIR/scripts/utils"
@@ -16,6 +7,15 @@ UTILS_DIR="$ROOT_DIR/scripts/utils"
 # Imports
 source "$UTILS_DIR/log.sh"
 source "$UTILS_DIR/advisory_lock.sh"
+
+# -o errexit: abort script if one command fails
+# -o errtrace: the ERR trap is inherited by shell functions
+# -o pipefail: entire command fails if pipe fails
+set -o errexit -o errtrace -o pipefail
+
+# ERR trap
+trap 'log_fatal "failed minikube setup"' ERR
+trap 'cleanup_and_exit "$?"' EXIT
 
 cleanup_and_exit() {
   local -r status=${1}
@@ -33,18 +33,10 @@ cleanup_workspace() {
   fi
 }
 
-# Exit with error status and print error.
-die() {
-  local -r msg=$1
-  local -r return=${2:-1}
-
-  test "${_PRINT_HELP:-no}" = yes && print_help >&2
-  log_fatal "$msg" "$return"
-}
-
 # Unlocks the cleanup config by removing the lock file.
 unlock_cleanup_config_file() {
   if [ -n "$cleanup_config_initialized" ]; then
+    yq -i '.status="Ready"' "$CLEANUP_CONFIG_FILE"
     advisory_lock_remove "$CLEANUP_CONFIG_FILE" "$CLEANUP_CONFIG_FILE_LOCK" "setup"
     cleanup_config_initialized=
   fi
@@ -63,6 +55,7 @@ by the setup.sh, and not assets which were pre-existing in the system.\"" \
 "$CLEANUP_CONFIG_FILE"
 
   yq -i ".cleanupAble=[]" "$CLEANUP_CONFIG_FILE"
+  yq -i '.status="Initializing"' "$CLEANUP_CONFIG_FILE"
 }
 
 # This is the actual API for the cleanup config, and only this function should be used. This
@@ -71,7 +64,7 @@ prepend_cleanup_script() {
   local -r script=${1}
 
   if ! [ -f "$CLEANUP_CONFIG_FILE" ] || [ -z "$cleanup_config_initialized"  ]; then
-    new_cleanup_config || die "failed to create file at $CLEANUP_CONFIG_FILE"
+    new_cleanup_config || log_fatal "failed to create file at $CLEANUP_CONFIG_FILE"
     cleanup_config_initialized=1
   fi
 
@@ -102,7 +95,7 @@ parse_args() {
     arg="$1"
     case "$arg" in
     --kubernetes-version)
-      test $# -lt 2 && die "missing value for the optional argument '$arg'."
+      test $# -lt 2 && log_fatal "missing value for the optional argument '$arg'."
       KUBERNETES_VERSION="${2}"
       shift
       ;;
@@ -123,7 +116,8 @@ parse_args() {
       exit 0
       ;;
     *)
-      _PRINT_HELP=yes die "unexpected argument '$arg'" 1
+      print_help
+      log_fatal "unexpected argument '$arg'" 1
       ;;
     esac
     shift
@@ -133,7 +127,7 @@ parse_args() {
 # Run command and expect success, or else exit with error.
 must_succeed_command() {
   local -r error="${2:-command \'${1}\' failed}"
-  ${1} || die "${error}"
+  ${1} || log_fatal "${error}"
 }
 
 # Check for command in PATH, else exit with error.
@@ -237,7 +231,7 @@ rm -f $PREREQUISITES_BIN_DIR/cri-dockerd"
         sed -i -e "s,/usr/bin/cri-dockerd,$PREREQUISITES_BIN_DIR/cri-dockerd," /etc/systemd/system/cri-docker.service
         systemctl daemon-reload
         systemctl enable --now --quiet cri-docker.socket
-        systemctl is-active --quiet cri-docker.socket || die "failed to set up cri-dockerd systemd service" 1
+        systemctl is-active --quiet cri-docker.socket || log_fatal "failed to set up cri-dockerd systemd service" 1
 
         # Cleanup entry for cri-docker.socket systemd service
         prepend_cleanup_script "# Disables and stops the systemd services
@@ -281,10 +275,10 @@ rm -rf /etc/systemd/system/cri-docker.{service,service.d,socket}"
       ;;
       # TODO: Needs implementation.
     "arm64" | "aarch64")
-      die "the 'install_prerequisites' option is not implemented for ${os}-${arch}" 1
+      log_fatal "the 'install_prerequisites' option is not implemented for ${os}-${arch}" 1
       ;;
     *)
-      die "the 'install_prerequisites' option does not support the arch ${arch} for OS ${os}" 1
+      log_fatal "the 'install_prerequisites' option does not support the arch ${arch} for OS ${os}" 1
       ;;
     esac
     ;;
@@ -292,19 +286,19 @@ rm -rf /etc/systemd/system/cri-docker.{service,service.d,socket}"
     case "$arch" in
     # TODO: Needs implementation.
     "x86_64")
-      die "the 'install_prerequisites' option is not implemented for ${os}-${arch}" 1
+      log_fatal "the 'install_prerequisites' option is not implemented for ${os}-${arch}" 1
       ;;
       # TODO: Needs implementation.
     "arm64")
-      die "the 'install_prerequisites' option is not implemented for ${os}-${arch}" 1
+      log_fatal "the 'install_prerequisites' option is not implemented for ${os}-${arch}" 1
       ;;
     *)
-      die "the 'install_prerequisites' option does not support the arch ${arch} for OS ${os}" 1
+      log_fatal "the 'install_prerequisites' option does not support the arch ${arch} for OS ${os}" 1
       ;;
     esac
     ;;
   *)
-    die "the 'install_prerequisites' option does not support the OS ${os}" 1
+    log_fatal "the 'install_prerequisites' option does not support the OS ${os}" 1
     ;;
   esac
 }
@@ -331,7 +325,7 @@ pull_and_install_kubectl_binary() {
     dl_link_os_path="darwin"
     ;;
   *)
-    die "the 'install_kubectl' option does not support the OS ${os}" 1
+    log_fatal "the 'install_kubectl' option does not support the OS ${os}" 1
     ;;
   esac
   case "$arch" in
@@ -342,7 +336,7 @@ pull_and_install_kubectl_binary() {
     dl_link_arch_path="arm64"
     ;;
   *)
-    die "the 'install_kubectl' option does not support the arch ${arch}" 1
+    log_fatal "the 'install_kubectl' option does not support the arch ${arch}" 1
     ;;
   esac
 
@@ -354,7 +348,7 @@ pull_and_install_kubectl_binary() {
   mkdir -p "$PREREQUISITES_BIN_DIR"
   install -o root -g root -m 0755 "${workspace}"/kubectl "${PREREQUISITES_BIN_DIR}"
 
-  [[ "$(kubectl_version)" == "$kubernetes_version" ]] || die "failed to install kubectl $kubernetes_version"
+  [[ "$(kubectl_version)" == "$kubernetes_version" ]] || log_fatal "failed to install kubectl $kubernetes_version"
   echo "Installed kubectl $kubernetes_version."
 
   # Cleanup entry kubectl.
@@ -426,7 +420,7 @@ minikube start \
   --driver=none \
   --install-addons=false \
   --keep-context=true \
-  --force >/dev/null || die "failed to start minikube cluster" 1
+  --force >/dev/null || log_fatal "failed to start minikube cluster" 1
 echo "Started minikube cluster!"
 # Cleanup entry for minikube profile.
 prepend_cleanup_script "# Delete minikube assets
