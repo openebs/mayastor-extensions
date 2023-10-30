@@ -78,6 +78,7 @@ impl SupportArgs {
         let config = kube_proxy::ConfigBuilder::default_api_rest()
             .with_kube_config(kube_config_path.clone())
             .with_timeout(*self.timeout)
+            .with_target_mod(|t| t.with_namespace(&self.namespace))
             .build()
             .await?;
 
