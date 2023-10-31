@@ -7,7 +7,6 @@ members = [
     "k8s/proxy",
     "k8s/supportability",
     "k8s/upgrade",
-    "dependencies/control-plane/utils/dependencies/events-api",
 ]
 
 exclude = [ "./dependencies/control-plane" ]
