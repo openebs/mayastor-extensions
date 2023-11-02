@@ -43,7 +43,7 @@ impl EventSet {
             EventCategory::Pool => self.pool.update_counter(action),
             EventCategory::Volume => self.volume.update_counter(action),
             EventCategory::Nexus => self.nexus.update_counter(action),
-            EventCategory::UnknownCategory => {}
+            _ => {}
         }
     }
 }
