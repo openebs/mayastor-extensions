@@ -4,7 +4,7 @@ use crate::{
         common::DumpConfig,
         error::Error,
         persistent_store::{etcd::EtcdStore, EtcdError},
-        utils::init_tool_log_file,
+        utils::{init_no_log_file, init_tool_log_file},
     },
     log, OutputFormat,
 };
@@ -70,7 +70,10 @@ impl ResourceDumper {
 
                 (new_dir, Some(config.output_directory))
             }
-            OutputFormat::Stdout => ("".into(), None),
+            OutputFormat::Stdout => {
+                init_no_log_file();
+                ("".into(), None)
+            }
         };
 
         let archive = match archive::Archive::new(output_directory) {

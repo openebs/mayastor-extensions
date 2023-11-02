@@ -70,7 +70,7 @@ async fn main() {
 async fn execute(cli_args: CliArgs) {
     // Initialise the REST client.
     if let Err(e) = init_rest(&cli_args).await {
-        println!("Failed to initialise the REST client. Error {e}");
+        eprintln!("Failed to initialise the REST client. Error {e}");
         std::process::exit(1);
     }
 
@@ -161,8 +161,8 @@ async fn execute(cli_args: CliArgs) {
                 let _ignore = resources
                     .dump(cli_args.kube_config_path)
                     .await
-                    .map_err(|_e| {
-                        println!("Partially collected dump information !!");
+                    .map_err(|error| {
+                        eprintln!("Partially collected dump information: {error:?}");
                         std::process::exit(1);
                     });
                 println!("Completed collection of dump !!");
