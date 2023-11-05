@@ -47,7 +47,7 @@ jobs:
           nix-build -A utils.release.${{ matrix.target }}.kubectl-plugin --arg incremental false ${{ matrix.system }}
       - name: Archive executable
         run: |
-          tar -czvf kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.tar.gz -C result/bin kubectl-mayastor${{ matrix.suffix }}
+          tar -czvf kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.tar.gz LICENSE -C result/bin kubectl-mayastor${{ matrix.suffix }}
       - uses: actions/upload-artifact@v3
         with:
           name: kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}
