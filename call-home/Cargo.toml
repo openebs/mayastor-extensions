@@ -20,7 +20,7 @@ path = "src/bin/stats/main.rs"
 [dependencies]
 openapi = {path = "../dependencies/control-plane/openapi"}
 kube = { version = "0.85.0", features = ["runtime", "derive"] }
-k8s-openapi = { version = "0.19.0", features = ["v1_20"] }
+k8s-openapi = { version = "0.19.0", features = ["v1_25"] }
 futures = "0.3.28"
 tokio = { version = "1.33.0", features = ["full"] }
 clap = { version = "4.4.6", features = ["cargo", "derive", "string"] }
