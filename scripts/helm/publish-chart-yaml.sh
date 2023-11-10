@@ -120,11 +120,21 @@ version()
 # For 'release/2.0' the Chart should be 2.0.0
 branch_chart_version()
 {
-  RELEASE_V="${CHECK_BRANCH#release/}"
-  if [ "$CHECK_BRANCH" == "develop" ]; then
+  check_branch=$1
+  RELEASE_V="${check_branch#release/}"
+  if [ "$check_branch" == "develop" ]; then
     # Develop has no meaningful version
     echo "0.0.0"
-  elif [ "$CHECK_BRANCH" == "main" ]; then
+  elif [[ "$check_branch" =~  ^(helm-testing\/[0-9.]+)$  ]]; then
+    release_v="${check_branch#helm-testing/}"
+    if [ "$(semver validate "$release_v")" == "valid" ]; then
+      echo "$release_v"
+    elif [ "$(semver validate "$release_v.0")" == "valid" ]; then
+      echo "$release_v.0"
+    else
+      die "Cannot determine Chart version from branch: $check_branch"
+    fi
+  elif [ "$check_branch" == "main" ]; then
     if [ -z "$LATEST_RELEASE_BRANCH" ]; then
       LATEST_RELEASE_BRANCH=$(latest_release_branch)
     fi
@@ -133,16 +143,16 @@ branch_chart_version()
     # Here 'bumped-latest' is the version obtained when the latest release branch version is bumped
     # as per semver convention. It is by-default a minor version bump, but it could be a major one as well.
     main_branch_version_from_release_branch "$LATEST_RELEASE_BRANCH"
-  elif [ "$RELEASE_V" != "${CHECK_BRANCH}" ]; then
+  elif [ "$RELEASE_V" != "${check_branch}" ]; then
     if [ "$(semver validate "$RELEASE_V")" == "valid" ]; then
       echo "$RELEASE_V"
     elif [ "$(semver validate "$RELEASE_V.0")" == "valid" ]; then
       echo "$RELEASE_V.0"
     else
-      die "Cannot determine Chart version from branch: $CHECK_BRANCH"
+      die "Cannot determine Chart version from branch: $check_branch"
     fi
   else
-    die "Cannot determine Chart version from branch: $CHECK_BRANCH"
+    die "Cannot determine Chart version from branch: $check_branch"
   fi
 }
 
