@@ -1,4 +1,4 @@
-{ git, lib, stdenv, openapi-generator, pkgs, which, sources, llvmPackages, protobuf, extensions, incremental, channel }:
+{ lib, pkgs, sources, extensions, incremental, channel }:
 let
   src = extensions.project-builder.src;
   version = extensions.version;
@@ -35,27 +35,43 @@ let
       inherit name release src version singleStep GIT_VERSION_LONG GIT_VERSION rustBuildOpts;
     };
 
-  components = { release ? false }: {
-    windows-gnu = rec {
+  os-components = { release ? false, windows ? null, linux ? null, darwin ? null }: {
+    recurseForDerivations = true;
+    ${if windows != null then "windows-gnu" else null } = {
       kubectl-plugin = buildKubectlPlugin {
         inherit release;
-        target = "mingwW64";
+        target = windows;
         addBuildOptions = [ "--no-default-features" "--features" "tls" ];
       };
     };
-    linux-musl = rec {
+    ${if linux != null then "linux-musl" else null } = {
       kubectl-plugin = buildKubectlPlugin {
         inherit release;
-        target = "musl64";
+        target = linux;
       };
     };
-    apple-darwin = rec {
+    ${if darwin != null then "apple-darwin" else null } = {
       kubectl-plugin = buildKubectlPlugin {
         inherit release;
-        target = "x86_64-darwin";
+        target = darwin;
       };
     };
   };
+  os-targets = { release ? false }: {
+    aarch64 = os-components {
+      inherit release;
+      linux = "aarch64-multiplatform-musl";
+      darwin = "aarch64-darwin";
+    };
+    x86_64 = os-components {
+      inherit release;
+      windows = "mingwW64";
+      linux = "musl64";
+      darwin = "x86_64-darwin";
+    };
+  };
+
+  components = { release ? false }: os-targets { inherit release; } // (os-targets { inherit release; })."${pkgs.hostPlatform.qemuArch}";
 in
 {
   inherit version;
