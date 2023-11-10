@@ -48,11 +48,11 @@ rec {
     );
     check_assert =
       if (targetOs == "darwin") then
-        if hostPlatform != targetPlatform
+        if hostOs == "darwin" && hostPlatform != targetPlatform
         # maybe can be achieved used unstable-pkgs until the fixes drop on the stable channel/release.
         then lib.asserts.assertMsg (false) "Cross-compiling on darwin not supported yet"
-        else lib.asserts.assertMsg (pkgs.hostPlatform.isDarwin) "This may only be built on Darwin"
-      else lib.asserts.assertMsg (pkgs.hostPlatform.isLinux) "This may only be built on Linux";
+        else lib.asserts.assertMsg (pkgs.hostPlatform.isDarwin) "${targetOs} binaries can only be built on darwin (ie not ${hostOs})"
+      else lib.asserts.assertMsg (pkgs.hostPlatform.isLinux) "${targetOs} binaries can only be built on linux (ie not ${hostOs})";
   };
   rustBuilderOpts = { rustPlatformDeps }: rustPlatformDeps // {
     preBuild = lib.optionalString (rustPlatformDeps.pkgsTarget.hostPlatform.isWindows) ''
