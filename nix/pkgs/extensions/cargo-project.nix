@@ -4,6 +4,7 @@
 , pkg-config
 , protobuf
 , sources
+, channel
 , pkgs
 , clang
 , libxfs
@@ -26,7 +27,6 @@
 , incremental ? false
 }:
 let
-  channel = import ../../lib/rust.nix { inherit sources; };
   stable_channel = {
     rustc = channel.default.stable;
     cargo = channel.default.stable;
@@ -58,7 +58,6 @@ let
     "Cargo.lock"
     "Cargo.toml"
     "metrics-exporter"
-    "rpc"
     "console-logger"
     "call-home"
     "upgrade"
@@ -82,9 +81,8 @@ let
     GIT_VERSION_LONG = "${gitVersions.long}";
     GIT_VERSION = "${gitVersions.tag_or_long}";
 
-    inherit PROTOC PROTOC_INCLUDE;
-    nativeBuildInputs = [ clang pkg-config git openapi-generator which ];
-    buildInputs = [ llvmPackages.libclang protobuf openssl utillinux ];
+    nativeBuildInputs = [ clang pkg-config git openapi-generator which protobuf ];
+    buildInputs = [ llvmPackages.libclang openssl utillinux ];
     doCheck = false;
   };
   release_build = { "release" = true; "debug" = false; };

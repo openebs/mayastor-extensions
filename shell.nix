@@ -2,7 +2,7 @@
 let
   sources = import ./nix/sources.nix;
   pkgs = import sources.nixpkgs {
-    overlays = [ (_: _: { inherit sources; }) (import ./nix/overlay.nix { }) ];
+    overlays = [ (_: _: { inherit sources; }) (import ./nix/overlay.nix { }) (import sources.rust-overlay) ];
   };
 in
 with pkgs;
@@ -11,7 +11,7 @@ let
     "You have requested an environment without rust, you should provide it!";
   devrustup_moth =
     "You have requested an environment for rustup, you should provide it!";
-  channel = import ./nix/lib/rust.nix { inherit sources; };
+  channel = import ./nix/lib/rust.nix { inherit pkgs; };
   rust_chan = channel.default_src;
   rust = rust_chan.${rust-profile};
 in
