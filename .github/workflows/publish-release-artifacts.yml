@@ -1,0 +1,21 @@
+name: Publish Release Artifacts
+on:
+  release:
+    types: [published]
+jobs:
+  publish-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download Artifacts
+        run: |
+          echo "Release Tag: ${{ github.event.release.tag_name }}"
+          ./scripts/github/release-artifacts.sh --tag "${{ github.event.release.tag_name }}" --workflow "Release Artifacts" --repo-org "${{ github.repository_owner }}" download
+        env:
+          GITHUB_TOKEN: ${{ secrets.OPENEBS_RELEASES }}
+      - name: Upload Artifacts
+        run: |
+          repos="mayastor-extensions mayastor-control-plane mayastor"
+          ./scripts/github/release-artifacts.sh --tag "${{ github.event.release.tag_name }}" --repo-org "${{ github.repository_owner }}" --upload "$repos" upload
+        env:
+          GITHUB_TOKEN: ${{ secrets.OPENEBS_RELEASES }}
