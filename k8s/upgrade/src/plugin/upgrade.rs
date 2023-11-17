@@ -86,6 +86,10 @@ pub enum Actions {
 /// Arguments to be passed for upgrade.
 #[derive(Debug, Clone, clap::Args)]
 pub struct UpgradeArgs {
+    /// Specify the container registry for the upgrade-job image.
+    #[clap(global = true, long)]
+    registry: Option<String>,
+
     /// Allow upgrade from stable versions to unstable versions. This is implied when the
     /// '--skip-upgrade-path-validation-for-unsupported-version' option is used.
     #[clap(global = true, long, hide = true)]
@@ -103,7 +107,7 @@ pub struct UpgradeArgs {
     #[clap(global = true, long)]
     pub skip_single_replica_volume_validation: bool,
 
-    /// If set then upgrade will skip the repilca rebuild in progress validation.
+    /// If set then upgrade will skip the replica rebuild in progress validation.
     #[clap(global = true, long)]
     pub skip_replica_rebuild: bool,
 
@@ -136,6 +140,7 @@ impl UpgradeArgs {
     /// Initialise with default values.
     pub fn new() -> Self {
         Self {
+            registry: None,
             allow_unstable: false,
             dry_run: false,
             skip_data_plane_restart: false,
@@ -701,10 +706,17 @@ impl UpgradeResources {
                     let rest_deployment = get_deployment_for_rest(ns).await?;
                     let img = ImageProperties::try_from(rest_deployment)?;
                     let set_file = create_helm_set_file_args(args, set_file_map).await?;
+
+                    // Image registry override check.
+                    let registry: &str = match args.registry {
+                        Some(ref registry_override) => registry_override,
+                        None => img.registry(),
+                    };
+
                     let upgrade_deploy = objects::upgrade_job(
                         ns,
                         upgrade_image_concat(
-                            img.registry().as_str(),
+                            registry,
                             UPGRADE_JOB_IMAGE_REPO,
                             UPGRADE_JOB_IMAGE_NAME,
                             upgrade_job_image_tag.as_str(),
@@ -917,8 +929,8 @@ impl ImageProperties {
         self.pull_secrets.clone()
     }
 
-    fn registry(&self) -> String {
-        self.registry.clone()
+    fn registry(&self) -> &str {
+        self.registry.as_str()
     }
 
     fn pull_policy(&self) -> Option<String> {
