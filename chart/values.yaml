@@ -705,6 +705,13 @@ obs:
         # NodePort associated with https port
         https: 90010
 
+storageClass:
+  enabled: true
+  nameSuffix: single-replica
+  default: false
+  parameters:
+    repl: 1
+
 localpv-provisioner:
   # -- Enables the openebs dynamic-localpv provisioner. If disabled, modify etcd and loki-stack storage class accordingly.
   enabled: true
