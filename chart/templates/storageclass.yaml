@@ -10,6 +10,5 @@ metadata:
 parameters:
   repl: {{ .Values.storageClass.parameters.repl | toString | quote }}
   protocol: 'nvmf'
-  ioTimeout: '60'
 provisioner: io.openebs.csi-mayastor
 {{ end }}
