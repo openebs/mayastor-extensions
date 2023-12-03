@@ -25,8 +25,8 @@ pub(crate) struct EventNote {
 impl From<&EventRecorder> for EventNote {
     fn from(er: &EventRecorder) -> EventNote {
         EventNote {
-            from_version: er.from_version.clone(),
-            to_version: er.to_version.clone(),
+            from_version: er.source_version.clone(),
+            to_version: er.target_version.clone(),
             message: Default::default(),
         }
     }
@@ -44,8 +44,8 @@ impl EventNote {
 pub(crate) struct EventRecorderBuilder {
     pod_name: Option<String>,
     namespace: Option<String>,
-    from_version: Option<String>,
-    to_version: Option<String>,
+    source_version: Option<String>,
+    target_version: Option<String>,
 }
 
 impl EventRecorderBuilder {
@@ -82,14 +82,14 @@ impl EventRecorderBuilder {
         let pod_name = self.pod_name.clone().unwrap();
         let namespace = self.namespace.clone().unwrap();
 
-        // Initialize version to '--'. These can be updated later with set_from_version()
-        // and set_to_version() EventRecorder methods.
+        // Initialize version to '--'. These can be updated later with set_source_version()
+        // and set_target_version() EventRecorder methods.
         let vers_placeholder = "--".to_string();
-        let from_version = self
-            .from_version
+        let source_version = self
+            .source_version
             .clone()
             .unwrap_or(vers_placeholder.clone());
-        let to_version = self.to_version.clone().unwrap_or(vers_placeholder);
+        let target_version = self.target_version.clone().unwrap_or(vers_placeholder);
 
         let k8s_client = KubeClientSet::builder()
             .with_namespace(namespace.as_str())
@@ -173,8 +173,8 @@ impl EventRecorderBuilder {
         Ok(EventRecorder {
             event_sender: Some(tx),
             event_loop_handle,
-            from_version,
-            to_version,
+            source_version,
+            target_version,
         })
     }
 }
@@ -183,8 +183,8 @@ impl EventRecorderBuilder {
 pub(crate) struct EventRecorder {
     event_sender: Option<mpsc::UnboundedSender<Event>>,
     event_loop_handle: tokio::task::JoinHandle<()>,
-    from_version: String,
-    to_version: String,
+    source_version: String,
+    target_version: String,
 }
 
 impl EventRecorder {
@@ -265,14 +265,14 @@ impl EventRecorder {
         let _ = self.event_loop_handle.await;
     }
 
-    /// Updates the EventRecorder's from_version memeber with a new value.
-    pub(crate) fn set_from_version(&mut self, version: String) {
-        self.from_version = version
+    /// Updates the EventRecorder's source_version memeber with a new value.
+    pub(crate) fn set_source_version(&mut self, version: String) {
+        self.source_version = version
     }
 
-    /// Updates the EventRecorder's to_version memeber with a new value.
-    pub(crate) fn set_to_version(&mut self, version: String) {
-        self.to_version = version
+    /// Updates the EventRecorder's target_version memeber with a new value.
+    pub(crate) fn set_target_version(&mut self, version: String) {
+        self.target_version = version
     }
 }
 

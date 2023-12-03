@@ -2,20 +2,41 @@ use crate::{
     common::{
         constants::{CORE_CHART_NAME, TO_UMBRELLA_SEMVER, UMBRELLA_CHART_NAME},
         error::{
-            CoreChartUpgradeNoneChartDir, HelmUpgradeOptionsAbsent, InvalidHelmUpgrade,
-            InvalidUpgradePath, NoInputHelmChartDir, NotAKnownHelmChart, RegexCompile, Result,
-            RollbackForbidden, UmbrellaChartNotUpgraded,
+            HelmUpgradeOptionNamespaceAbsent, HelmUpgradeOptionReleaseNameAbsent,
+            InvalidUpgradePath, NoInputHelmChartDir, NotAKnownHelmChart, Result, RollbackForbidden,
+            UmbrellaChartNotUpgraded,
         },
+        regex::Regex,
     },
-    helm::{client::HelmReleaseClient, values::generate_values_yaml_file},
-    upgrade, vec_to_strings,
+    helm::{
+        chart::{CoreValues, HelmValuesCollection, UmbrellaValues},
+        client::HelmReleaseClient,
+        values::generate_values_yaml_file,
+    },
+    upgrade::path::{
+        upgrade_path_is_valid_for_core_chart, version_from_chart_yaml_file,
+        version_from_rest_deployment_label,
+    },
+    vec_to_strings,
 };
-use regex::Regex;
+use async_trait::async_trait;
 use semver::Version;
-use snafu::{ensure, ResultExt};
-use std::{future::Future, path::PathBuf, pin::Pin};
+use snafu::ensure;
+use std::{future::Future, path::PathBuf, pin::Pin, str};
 use tempfile::NamedTempFile as TempFile;
 use tracing::info;
+
+/// HelmUpgradeRunner is returned after an upgrade is validated and dry-run-ed. Running
+/// it carries out helm upgrade.
+pub(crate) type HelmUpgradeRunner = Pin<Box<dyn Future<Output = Result<()>>>>;
+
+#[async_trait]
+pub(crate) trait HelmUpgrader {
+    async fn dry_run(self: Box<Self>) -> Result<HelmUpgradeRunner>;
+    fn source_version(&self) -> String;
+    fn target_version(&self) -> String;
+    fn source_values(&self) -> &dyn HelmValuesCollection;
+}
 
 /// This is the helm chart variant of the helm chart installed in the cluster.
 /// The PRODUCT may be installed using either of these options, but never both.
@@ -28,7 +49,7 @@ pub(crate) enum HelmChart {
 
 /// This is a builder for the Helm chart upgrade.
 #[derive(Default)]
-pub(crate) struct HelmUpgradeBuilder {
+pub(crate) struct HelmUpgraderBuilder {
     release_name: Option<String>,
     namespace: Option<String>,
     core_chart_dir: Option<PathBuf>,
@@ -37,7 +58,7 @@ pub(crate) struct HelmUpgradeBuilder {
     helm_args_set_file: Option<String>,
 }
 
-impl HelmUpgradeBuilder {
+impl HelmUpgraderBuilder {
     /// This is a builder option to add the Namespace of the helm chart to be upgraded.
     #[must_use]
     pub(crate) fn with_namespace<J>(mut self, ns: J) -> Self
@@ -75,8 +96,7 @@ impl HelmUpgradeBuilder {
         self
     }
 
-    /// This is a builder option to add set flags set during upgrade.
-    #[must_use]
+    /// This is a builder option to add set flags during helm upgrade.
     pub(crate) fn with_helm_args_set<J>(mut self, helm_args_set: J) -> Self
     where
         J: ToString,
@@ -85,8 +105,7 @@ impl HelmUpgradeBuilder {
         self
     }
 
-    /// This is a builder option to add set file set during upgrade.
-    #[must_use]
+    /// This is a builder option to add set-file options during helm upgrade.
     pub(crate) fn with_helm_args_set_file<J>(mut self, helm_args_set_file: J) -> Self
     where
         J: ToString,
@@ -96,45 +115,50 @@ impl HelmUpgradeBuilder {
     }
 
     /// This builds the HelmUpgrade object.
-    pub(crate) async fn build(self) -> Result<HelmUpgrade> {
-        ensure!(
-            self.release_name.is_some() && self.namespace.is_some(),
-            HelmUpgradeOptionsAbsent
-        );
-        let release_name = self.release_name.clone().unwrap();
-        let namespace = self.namespace.clone().unwrap();
-        let helm_args_set = self.helm_args_set.clone().unwrap_or_default();
-        let helm_args_set_file = self.helm_args_set_file.clone().unwrap_or_default();
-
-        // Generate HelmReleaseClient.
-        let client = HelmReleaseClient::builder()
-            .with_namespace(namespace.clone())
-            .build()?;
-
-        // Get HelmReleaseElement object for the release specified in CLI options.
-        let chart = client.release_info(release_name.clone())?.chart();
-
-        // The version of the Core helm chart (installed as a the parent chart or as a dependent
-        // chart) which is installed in the cluster.
-        let from_version: Version =
-            upgrade::path::version_from_rest_deployment_label(namespace.as_str()).await?;
-
-        // The version of the Core chart which we are (maybe) going to.
-        let chart_dir: PathBuf = self.core_chart_dir.ok_or(
+    pub(crate) async fn build(self) -> Result<Box<dyn HelmUpgrader>> {
+        // Unwrapping builder inputs. Fails for mandatory inputs.
+        let release_name = self
+            .release_name
+            .ok_or(HelmUpgradeOptionReleaseNameAbsent.build())?;
+        let namespace = self
+            .namespace
+            .ok_or(HelmUpgradeOptionNamespaceAbsent.build())?;
+        let chart_dir = self.core_chart_dir.ok_or(
             NoInputHelmChartDir {
                 chart_name: CORE_CHART_NAME.to_string(),
             }
             .build(),
         )?;
-        let chart_yaml_path = chart_dir.join("Chart.yaml");
-        let to_version: Version = upgrade::path::version_from_chart_yaml_file(chart_yaml_path)?;
+        let helm_args_set = self.helm_args_set.unwrap_or_default();
+        let helm_args_set_file = self.helm_args_set_file.unwrap_or_default();
+
+        // Generate HelmReleaseClient.
+        let client = HelmReleaseClient::builder()
+            .with_namespace(namespace.as_str())
+            .build()?;
+
+        // Get the chart_name from the HelmReleaseElement object for the release specified in CLI
+        // options.
+        let helm_release = client.release_info(release_name.as_str())?;
+        let chart = helm_release.chart();
+
+        // The version of the Core helm chart (installed as the parent chart or as a dependent
+        // chart) which is installed in the cluster.
+        let source_version = version_from_rest_deployment_label(namespace.as_str()).await?;
+        // source_values from installed helm chart release.
+        let source_values_buf =
+            client.get_values_as_yaml::<&str, String>(release_name.as_str(), None)?;
+
+        // The version of the Core chart which we are (maybe) going to.
+        let chart_dot_yaml_path = chart_dir.join("Chart.yaml");
+        let target_version = version_from_chart_yaml_file(chart_dot_yaml_path)?;
 
         // Check if already upgraded.
-        let already_upgraded = to_version.eq(&from_version);
+        let already_upgraded = target_version.eq(&source_version);
 
         // Define regular expression to pick out the chart name from the
         // <chart-name>-<chart-version> string.
-        let umbrella_chart_regex = format!(r"^({UMBRELLA_CHART_NAME}-[0-9]+\.[0-9]+\.[0-9]+)$");
+        let umbrella_regex = format!(r"^({UMBRELLA_CHART_NAME}-[0-9]+\.[0-9]+\.[0-9]+)$");
         // Accepts pre-release and release, both.
         // Q: How do I read this regex?
         // A: This regular expressions is bounded by the '^' and '$' characters, which means
@@ -151,196 +175,214 @@ impl HelmUpgradeBuilder {
         //       mayastor-1.2.3-testing-upgrade-23-35-25-05-2023, mayastor-2.3.0-rc-3
         //    4. The optional group of character(s) mentioned in (3) above, may optionally contain a
         //       '.' followed by a set of numbers. e.g.: mayastor-2.3.4-rc.1, mayastor-2.3.4-alpha.2
-        let core_chart_regex =
+        let core_regex =
             format!(r"^({CORE_CHART_NAME}-[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[0-9]+)?)*)$");
 
-        // Validate if already upgraded for Umbrella chart, and prepare for upgrade for Core chart.
+        // Determine chart variant.
         let chart_variant: HelmChart;
-        let mut core_chart_dir: Option<PathBuf> = None;
-        let mut core_chart_extra_args: Option<Vec<String>> = None;
-        let mut upgrade_values_file: Option<TempFile> = None;
-
-        if Regex::new(umbrella_chart_regex.as_str()) // Case: HelmChart::Umbrella.
-            .context(RegexCompile {
-                expression: umbrella_chart_regex.clone(),
-            })?
-            .is_match(chart.as_str())
-        {
+        if Regex::new(umbrella_regex.as_str())?.is_match(chart.as_ref()) {
             chart_variant = HelmChart::Umbrella;
-            ensure!(already_upgraded, UmbrellaChartNotUpgraded);
-        } else if Regex::new(core_chart_regex.as_str()) // Case: HelmChart::Core.
-            .context(RegexCompile {
-                expression: core_chart_regex.clone(),
-            })?
-            .is_match(chart.as_str())
-        {
+        } else if Regex::new(core_regex.as_str())?.is_match(chart) {
             chart_variant = HelmChart::Core;
-
-            // Skip upgrade-path validation and allow all upgrades for the Core helm chart, if the
-            // flag is set.
-            if !self.skip_upgrade_path_validation {
-                // Rollbacks not supported.
-                ensure!(
-                    to_version.ge(&from_version),
-                    RollbackForbidden {
-                        from_version: from_version.to_string(),
-                        to_version: to_version.to_string()
-                    }
-                );
-
-                let upgrade_path_is_valid = upgrade::path::is_valid_for_core_chart(&from_version)?;
-                ensure!(upgrade_path_is_valid, InvalidUpgradePath);
-            }
-
-            // Generate values yaml file for upgrade
-            let _upgrade_values_file = generate_values_yaml_file(
-                &from_version,
-                &to_version,
-                chart_dir.as_path(),
-                &client,
-                release_name.clone(),
-            )?;
-
-            core_chart_dir = Some(chart_dir);
-
-            // helm upgrade .. -f <values-yaml> --atomic
-            core_chart_extra_args = Some(vec_to_strings![
-                "-f",
-                _upgrade_values_file.path().to_string_lossy(),
-                "--set",
-                helm_args_set,
-                "--set-file",
-                helm_args_set_file,
-                "--atomic"
-            ]);
-            upgrade_values_file = Some(_upgrade_values_file)
         } else {
             // Case: Helm chart release is not a known helm chart installation.
             return NotAKnownHelmChart { chart_name: chart }.fail();
         }
 
-        Ok(HelmUpgrade {
-            chart_variant,
-            already_upgraded,
-            core_chart_dir,
-            release_name,
-            client,
-            core_chart_extra_args,
-            from_version,
-            to_version,
-            upgrade_values_file,
-        })
+        match chart_variant {
+            HelmChart::Umbrella => {
+                // Fail if the Umbrella chart isn't already upgraded.
+                ensure!(already_upgraded, UmbrellaChartNotUpgraded);
+
+                // Deserialize umbrella chart values yaml.
+                let source_values = UmbrellaValues::try_from(source_values_buf.as_slice())?;
+
+                Ok(Box::new(UmbrellaHelmUpgrader {
+                    release_name,
+                    source_version,
+                    target_version,
+                    source_values,
+                }))
+            }
+            HelmChart::Core => {
+                // Skip upgrade-path validation and allow all upgrades for the Core helm chart, if
+                // the flag is set.
+                if !self.skip_upgrade_path_validation {
+                    // Rollbacks not supported.
+                    // TODO: Support same version upgrades. Distinguish data plane Pods by uid
+                    // instead of labels.
+                    ensure!(
+                        target_version.ge(&source_version),
+                        RollbackForbidden {
+                            source_version: source_version.to_string(),
+                            target_version: target_version.to_string()
+                        }
+                    );
+
+                    // Check if upgrade path is explicitly disallowed via config file.
+                    let upgrade_path_is_valid =
+                        upgrade_path_is_valid_for_core_chart(&source_version)?;
+                    ensure!(upgrade_path_is_valid, InvalidUpgradePath);
+                }
+
+                // target_values from values.yaml file.
+                let target_values_filepath = chart_dir.join("values.yaml");
+                let target_values = CoreValues::try_from(target_values_filepath.as_path())?;
+
+                // source_values from installed helm chart release.
+                let source_values = CoreValues::try_from(source_values_buf.as_slice())?;
+
+                // Generate values yaml file for upgrade by merging target_values and source_values
+                // yaml files.
+                let upgrade_values_file = generate_values_yaml_file(
+                    &source_version,
+                    &target_version,
+                    &source_values,
+                    &target_values,
+                    source_values_buf,
+                    target_values_filepath.as_path(),
+                    chart_dir.as_path(),
+                )?;
+
+                // helm upgrade .. -f <values-yaml> --set <a> --set-file <args> --atomic
+                let helm_upgrade_extra_args = vec_to_strings![
+                    "-f",
+                    upgrade_values_file.path().to_string_lossy(),
+                    "--set",
+                    helm_args_set,
+                    "--set-file",
+                    helm_args_set_file,
+                    "--atomic"
+                ];
+
+                Ok(Box::new(CoreHelmUpgrader {
+                    already_upgraded,
+                    chart_dir,
+                    release_name,
+                    client,
+                    helm_upgrade_extra_args,
+                    source_version,
+                    target_version,
+                    source_values,
+                    upgrade_values_file,
+                }))
+            }
+        }
     }
 }
 
-/// This type can generate and execute the `helm upgrade` command.
-pub(crate) struct HelmUpgrade {
-    chart_variant: HelmChart,
+pub(crate) struct CoreHelmUpgrader {
+    // TODO: remove this when same version upgrade is implemented.
     already_upgraded: bool,
-    core_chart_dir: Option<PathBuf>,
+    chart_dir: PathBuf,
     release_name: String,
     client: HelmReleaseClient,
-    core_chart_extra_args: Option<Vec<String>>,
-    from_version: Version,
-    to_version: Version,
+    helm_upgrade_extra_args: Vec<String>,
+    source_version: Version,
+    target_version: Version,
+    source_values: CoreValues,
     #[allow(dead_code)]
-    upgrade_values_file: Option<TempFile>,
+    upgrade_values_file: TempFile,
 }
 
-impl HelmUpgrade {
-    /// This creates a default instance of the HelmUpgradeBuilder.
-    pub(crate) fn builder() -> HelmUpgradeBuilder {
-        HelmUpgradeBuilder::default()
-    }
-
+#[async_trait]
+impl HelmUpgrader for CoreHelmUpgrader {
     /// This validates helm upgrade and runs the 'helm upgrade --dry-run' command. Successful exits
     /// from this method returns a HelmUpgradeRunner which is a Future which runs 'helm upgrade'
     /// when awaited on.
-    pub(crate) async fn dry_run(self) -> Result<HelmUpgradeRunner> {
-        match self.chart_variant {
-            HelmChart::Umbrella if self.already_upgraded => {
-                // Returned HelmUpgradeRunner logs and exits.
-                Ok(Box::pin(async move {
-                    info!(
-                        "Verified that {UMBRELLA_CHART_NAME} helm chart release '{}' \
-                        has version {TO_UMBRELLA_SEMVER}",
-                        self.release_name.as_str()
-                    );
+    async fn dry_run(self: Box<Self>) -> Result<HelmUpgradeRunner> {
+        // TODO: Remove this if block after same-version upgrade is implemented.
+        if self.already_upgraded {
+            // Returned HelmUpgradeRunner logs and exits.
+            return Ok(Box::pin(async move {
+                info!(
+                    "Skipping helm upgrade, as the version of the installed helm chart \
+                    is the same as that of this upgrade-job's helm chart"
+                );
 
-                    Ok(())
-                }))
-            }
-            HelmChart::Umbrella if !self.already_upgraded => {
-                // It should be impossible to hit this error.
-                UmbrellaChartNotUpgraded.fail()
-            }
-            HelmChart::Core if self.already_upgraded => {
-                // Returned HelmUpgradeRunner logs and exits.
-                Ok(Box::pin(async move {
-                    info!(
-                        "Skipping helm upgrade, as the version of the installed helm chart \
-                        is the same as that of this upgrade-job's helm chart"
-                    );
-
-                    Ok(())
-                }))
-            }
-            HelmChart::Core if !self.already_upgraded => {
-                // It should be impossible to hit this error.
-                let chart_dir = self
-                    .core_chart_dir
-                    .ok_or(CoreChartUpgradeNoneChartDir.build())?;
-
-                // Running 'helm upgrade --dry-run'.
-                let mut dry_run_extra_args: Vec<String> =
-                    self.core_chart_extra_args.clone().unwrap_or_default();
-                dry_run_extra_args.push("--dry-run".to_string());
-                info!("Running helm upgrade dry-run...");
-                self.client
-                    .upgrade(
-                        self.release_name.as_str(),
-                        chart_dir.as_path(),
-                        Some(dry_run_extra_args),
-                        false,
-                    )
-                    .await?;
-                info!("Helm upgrade dry-run succeeded!");
-
-                // Returning HelmUpgradeRunner.
-                Ok(Box::pin(async move {
-                    // Pinning the helm values file handle to this closure so that it is not
-                    // dropped. This file handle needs to exist in memory for
-                    // the helm upgrade's "-f <values_file>" argument to work.
-                    // This handle is dropped when this closure returns, after helm upgrade.
-                    let _values_file = self.upgrade_values_file;
-
-                    info!("Starting helm upgrade...");
-                    self.client
-                        .upgrade(
-                            self.release_name,
-                            chart_dir.as_path(),
-                            self.core_chart_extra_args,
-                            true,
-                        )
-                        .await?;
-                    info!("Helm upgrade successful!");
-
-                    Ok(())
-                }))
-            }
-            _ => InvalidHelmUpgrade.fail(),
+                Ok(())
+            }));
         }
+
+        // Running 'helm upgrade --dry-run'.
+        let mut dry_run_extra_args = self.helm_upgrade_extra_args.clone();
+        dry_run_extra_args.push("--dry-run".to_string());
+        info!("Running helm upgrade dry-run...");
+        self.client
+            .upgrade(
+                self.release_name.as_str(),
+                self.chart_dir.as_path(),
+                Some(dry_run_extra_args),
+                false,
+            )
+            .await?;
+        info!("Helm upgrade dry-run succeeded!");
+
+        // Returning HelmUpgradeRunner.
+        Ok(Box::pin(async move {
+            // Pinning the helm values file handle to this closure so that it is not
+            // dropped. This file handle needs to exist in memory for
+            // the helm upgrade's "-f <values_file>" argument to work.
+            // This handle is dropped when this closure returns, after helm upgrade.
+            let _values_file = self.upgrade_values_file;
+
+            info!("Starting helm upgrade...");
+            self.client
+                .upgrade(
+                    self.release_name,
+                    self.chart_dir,
+                    Some(self.helm_upgrade_extra_args),
+                    true,
+                )
+                .await?;
+            info!("Helm upgrade successful!");
+
+            Ok(())
+        }))
     }
 
-    pub(crate) fn upgrade_from_version(&self) -> String {
-        self.from_version.to_string()
+    fn source_version(&self) -> String {
+        self.source_version.to_string()
     }
 
-    pub(crate) fn upgrade_to_version(&self) -> String {
-        self.to_version.to_string()
+    fn target_version(&self) -> String {
+        self.target_version.to_string()
+    }
+
+    fn source_values(&self) -> &dyn HelmValuesCollection {
+        &self.source_values
     }
 }
 
-/// HelmUpgradeRunner is returned after an upgrade is validated and dry-run-ed. Running
-/// it carries out helm upgrade.
-pub(crate) type HelmUpgradeRunner = Pin<Box<dyn Future<Output = Result<()>>>>;
+pub(crate) struct UmbrellaHelmUpgrader {
+    release_name: String,
+    source_version: Version,
+    target_version: Version,
+    source_values: UmbrellaValues,
+}
+
+#[async_trait]
+impl HelmUpgrader for UmbrellaHelmUpgrader {
+    async fn dry_run(self: Box<Self>) -> Result<HelmUpgradeRunner> {
+        Ok(Box::pin(async move {
+            info!(
+                "Verified that {UMBRELLA_CHART_NAME} helm chart release '{}' has version {TO_UMBRELLA_SEMVER}",
+                self.release_name.as_str()
+            );
+
+            Ok(())
+        }))
+    }
+
+    fn source_version(&self) -> String {
+        self.source_version.to_string()
+    }
+
+    fn target_version(&self) -> String {
+        self.target_version.to_string()
+    }
+
+    fn source_values(&self) -> &dyn HelmValuesCollection {
+        &self.source_values
+    }
+}
