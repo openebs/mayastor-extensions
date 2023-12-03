@@ -176,12 +176,13 @@ pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> bool {
 /// Checks to see if all of io-engine Pods are already upgraded to the version of the local helm
 /// chart.
 pub(crate) async fn data_plane_is_upgraded(
-    to_version: &str,
+    target_version: &str,
     io_engine_pod_list: &ObjectList<Pod>,
 ) -> Result<bool> {
-    let to_version_requirement: Version = Version::parse(to_version).context(SemverParse {
-        version_string: to_version.to_string(),
-    })?;
+    let target_version_requirement: Version =
+        Version::parse(target_version).context(SemverParse {
+            version_string: target_version.to_string(),
+        })?;
 
     for pod in io_engine_pod_list {
         let version_str = pod.labels().get(CHART_VERSION_LABEL_KEY).ok_or(
@@ -201,7 +202,7 @@ pub(crate) async fn data_plane_is_upgraded(
         let version = Version::parse(version_str).context(SemverParse {
             version_string: version_str.clone(),
         })?;
-        if !to_version_requirement.eq(&version) {
+        if !target_version_requirement.eq(&version) {
             return Ok(false);
         }
     }

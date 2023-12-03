@@ -14,8 +14,7 @@ use crate::{
         values::generate_values_yaml_file,
     },
     upgrade::path::{
-        upgrade_path_is_valid_for_core_chart, version_from_chart_yaml_file,
-        version_from_rest_deployment_label,
+        is_valid_for_core_chart, version_from_chart_yaml_file, version_from_rest_deployment_label,
     },
     vec_to_strings,
 };
@@ -30,21 +29,22 @@ use tracing::info;
 /// it carries out helm upgrade.
 pub(crate) type HelmUpgradeRunner = Pin<Box<dyn Future<Output = Result<()>>>>;
 
+/// A trait object of type HelmUpgrader is either CoreHelmUpgrader or an UmbrellaHelmUpgrader.
+/// They either deal with upgrading the Core helm chart or the Umbrella helm chart respectively.
+/// The Umbrella helm chart is not upgraded using this binary, as it is out of scope.
 #[async_trait]
 pub(crate) trait HelmUpgrader {
+    /// Returns a closure which runs the real upgrade, post-dry-run.
     async fn dry_run(self: Box<Self>) -> Result<HelmUpgradeRunner>;
-    fn source_version(&self) -> String;
-    fn target_version(&self) -> String;
-    fn source_values(&self) -> &dyn HelmValuesCollection;
-}
 
-/// This is the helm chart variant of the helm chart installed in the cluster.
-/// The PRODUCT may be installed using either of these options, but never both.
-#[derive(Clone, Default, PartialEq, Eq)]
-pub(crate) enum HelmChart {
-    #[default]
-    Umbrella,
-    Core,
+    /// Return the source helm chart version as a String.
+    fn source_version(&self) -> String;
+
+    /// Return the target helm chart version as a String.
+    fn target_version(&self) -> String;
+
+    /// Returns a deserialized struct with tools to gather information about the source helm values.
+    fn source_values(&self) -> &dyn HelmValuesCollection;
 }
 
 /// This is a builder for the Helm chart upgrade.
@@ -179,98 +179,89 @@ impl HelmUpgraderBuilder {
             format!(r"^({CORE_CHART_NAME}-[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[0-9]+)?)*)$");
 
         // Determine chart variant.
-        let chart_variant: HelmChart;
         if Regex::new(umbrella_regex.as_str())?.is_match(chart.as_ref()) {
-            chart_variant = HelmChart::Umbrella;
+            // Fail if the Umbrella chart isn't already upgraded.
+            ensure!(already_upgraded, UmbrellaChartNotUpgraded);
+
+            // Deserialize umbrella chart values yaml.
+            let source_values = UmbrellaValues::try_from(source_values_buf.as_slice())?;
+
+            Ok(Box::new(UmbrellaHelmUpgrader {
+                release_name,
+                source_version,
+                target_version,
+                source_values,
+            }))
         } else if Regex::new(core_regex.as_str())?.is_match(chart) {
-            chart_variant = HelmChart::Core;
+            // Skip upgrade-path validation and allow all upgrades for the Core helm chart, if
+            // the flag is set.
+            if !self.skip_upgrade_path_validation {
+                // Rollbacks not supported.
+                // TODO: Support same version upgrades. Distinguish data plane Pods by uid
+                // instead of labels.
+                ensure!(
+                    target_version.ge(&source_version),
+                    RollbackForbidden {
+                        source_version: source_version.to_string(),
+                        target_version: target_version.to_string()
+                    }
+                );
+
+                // Check if upgrade path is explicitly disallowed via config file.
+                let upgrade_path_is_valid = is_valid_for_core_chart(&source_version)?;
+                ensure!(upgrade_path_is_valid, InvalidUpgradePath);
+            }
+
+            // target_values from values.yaml file.
+            let target_values_filepath = chart_dir.join("values.yaml");
+            let target_values = CoreValues::try_from(target_values_filepath.as_path())?;
+
+            // source_values from installed helm chart release.
+            let source_values = CoreValues::try_from(source_values_buf.as_slice())?;
+
+            // Generate values yaml file for upgrade by merging target_values and source_values
+            // yaml files.
+            let upgrade_values_file = generate_values_yaml_file(
+                &source_version,
+                &target_version,
+                &source_values,
+                &target_values,
+                source_values_buf,
+                target_values_filepath.as_path(),
+                chart_dir.as_path(),
+            )?;
+
+            // helm upgrade .. -f <values-yaml> --set <a> --set-file <args> --atomic
+            let helm_upgrade_extra_args = vec_to_strings![
+                "-f",
+                upgrade_values_file.path().to_string_lossy(),
+                "--set",
+                helm_args_set,
+                "--set-file",
+                helm_args_set_file,
+                "--atomic"
+            ];
+
+            Ok(Box::new(CoreHelmUpgrader {
+                already_upgraded,
+                chart_dir,
+                release_name,
+                client,
+                helm_upgrade_extra_args,
+                source_version,
+                target_version,
+                source_values,
+                upgrade_values_file,
+            }))
         } else {
             // Case: Helm chart release is not a known helm chart installation.
             return NotAKnownHelmChart { chart_name: chart }.fail();
         }
-
-        match chart_variant {
-            HelmChart::Umbrella => {
-                // Fail if the Umbrella chart isn't already upgraded.
-                ensure!(already_upgraded, UmbrellaChartNotUpgraded);
-
-                // Deserialize umbrella chart values yaml.
-                let source_values = UmbrellaValues::try_from(source_values_buf.as_slice())?;
-
-                Ok(Box::new(UmbrellaHelmUpgrader {
-                    release_name,
-                    source_version,
-                    target_version,
-                    source_values,
-                }))
-            }
-            HelmChart::Core => {
-                // Skip upgrade-path validation and allow all upgrades for the Core helm chart, if
-                // the flag is set.
-                if !self.skip_upgrade_path_validation {
-                    // Rollbacks not supported.
-                    // TODO: Support same version upgrades. Distinguish data plane Pods by uid
-                    // instead of labels.
-                    ensure!(
-                        target_version.ge(&source_version),
-                        RollbackForbidden {
-                            source_version: source_version.to_string(),
-                            target_version: target_version.to_string()
-                        }
-                    );
-
-                    // Check if upgrade path is explicitly disallowed via config file.
-                    let upgrade_path_is_valid =
-                        upgrade_path_is_valid_for_core_chart(&source_version)?;
-                    ensure!(upgrade_path_is_valid, InvalidUpgradePath);
-                }
-
-                // target_values from values.yaml file.
-                let target_values_filepath = chart_dir.join("values.yaml");
-                let target_values = CoreValues::try_from(target_values_filepath.as_path())?;
-
-                // source_values from installed helm chart release.
-                let source_values = CoreValues::try_from(source_values_buf.as_slice())?;
-
-                // Generate values yaml file for upgrade by merging target_values and source_values
-                // yaml files.
-                let upgrade_values_file = generate_values_yaml_file(
-                    &source_version,
-                    &target_version,
-                    &source_values,
-                    &target_values,
-                    source_values_buf,
-                    target_values_filepath.as_path(),
-                    chart_dir.as_path(),
-                )?;
-
-                // helm upgrade .. -f <values-yaml> --set <a> --set-file <args> --atomic
-                let helm_upgrade_extra_args = vec_to_strings![
-                    "-f",
-                    upgrade_values_file.path().to_string_lossy(),
-                    "--set",
-                    helm_args_set,
-                    "--set-file",
-                    helm_args_set_file,
-                    "--atomic"
-                ];
-
-                Ok(Box::new(CoreHelmUpgrader {
-                    already_upgraded,
-                    chart_dir,
-                    release_name,
-                    client,
-                    helm_upgrade_extra_args,
-                    source_version,
-                    target_version,
-                    source_values,
-                    upgrade_values_file,
-                }))
-            }
-        }
     }
 }
 
+/// This is a HelmUpgrader for the core helm chart. Unlike the UmbrellaHelmUpgrader,
+/// this actually can set up a helm upgrade.
 pub(crate) struct CoreHelmUpgrader {
     // TODO: remove this when same version upgrade is implemented.
     already_upgraded: bool,
@@ -297,7 +288,7 @@ impl HelmUpgrader for CoreHelmUpgrader {
             return Ok(Box::pin(async move {
                 info!(
                     "Skipping helm upgrade, as the version of the installed helm chart \
-                    is the same as that of this upgrade-job's helm chart"
+is the same as that of this upgrade-job's helm chart"
                 );
 
                 Ok(())
@@ -354,6 +345,8 @@ impl HelmUpgrader for CoreHelmUpgrader {
     }
 }
 
+/// This is a HelmUpgrader for the Umbrella chart. This gathers information, and doesn't
+/// set up a helm upgrade or a dry-run in any way.
 pub(crate) struct UmbrellaHelmUpgrader {
     release_name: String,
     source_version: Version,

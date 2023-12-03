@@ -1,5 +1,8 @@
+use crate::common::error::{ReadingFile, U8VectorToString, YamlParseFromFile, YamlParseFromSlice};
 use semver::Version;
 use serde::Deserialize;
+use snafu::ResultExt;
+use std::{fs::read, path::Path, str};
 
 /// This struct is used to deserialize helm charts' Chart.yaml file.
 #[derive(Deserialize)]
@@ -22,9 +25,43 @@ impl Chart {
     }
 }
 
+/// This is a set of tools for types whose instances are created
+/// by deserializing a helm chart's values.yaml files.
+pub(crate) trait HelmValuesCollection {
+    /// This is a getter for state of the 'ha' feature (enabled/disabled).
+    fn ha_is_enabled(&self) -> bool;
+}
+
+/// UmbrellaValues is used to deserialize the helm values.yaml for the Umbrella chart. The Core
+/// chart is a sub-chart for the Umbrella chart, so the Core chart values structure is embedded
+/// into the UmbrellaValues structure.
+#[derive(Deserialize)]
+pub(crate) struct UmbrellaValues {
+    #[serde(rename(deserialize = "mayastor"))]
+    core: CoreValues,
+}
+
+impl TryFrom<&[u8]> for UmbrellaValues {
+    type Error = crate::common::error::Error;
+
+    fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
+        serde_yaml::from_slice(buf).context(YamlParseFromSlice {
+            input_yaml: str::from_utf8(buf).context(U8VectorToString)?.to_string(),
+        })
+    }
+}
+
+impl HelmValuesCollection for UmbrellaValues {
+    fn ha_is_enabled(&self) -> bool {
+        self.core.ha_is_enabled()
+    }
+}
+
 /// This is used to deserialize the values.yaml of the Core chart.
 #[derive(Deserialize)]
 pub(crate) struct CoreValues {
+    /// This contains values for all of the agents.
+    agents: Agents,
     /// This is the yaml object which contains values for the container image registry, repository,
     /// tag, etc.
     image: Image,
@@ -37,7 +74,42 @@ pub(crate) struct CoreValues {
     csi: Csi,
 }
 
+impl TryFrom<&Path> for CoreValues {
+    type Error = crate::common::error::Error;
+
+    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+        let buf = read(path).context(ReadingFile {
+            filepath: path.to_path_buf(),
+        })?;
+
+        serde_yaml::from_slice(buf.as_slice()).context(YamlParseFromFile {
+            filepath: path.to_path_buf(),
+        })
+    }
+}
+
+impl TryFrom<&[u8]> for CoreValues {
+    type Error = crate::common::error::Error;
+
+    fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
+        serde_yaml::from_slice(buf).context(YamlParseFromSlice {
+            input_yaml: str::from_utf8(buf).context(U8VectorToString)?.to_string(),
+        })
+    }
+}
+
+impl HelmValuesCollection for CoreValues {
+    fn ha_is_enabled(&self) -> bool {
+        self.agents.ha_is_enabled()
+    }
+}
+
 impl CoreValues {
+    /// This is a getter for state of the 'ha' feature (enabled/disabled).
+    pub(crate) fn ha_is_enabled(&self) -> bool {
+        self.agents.ha_is_enabled()
+    }
+
     /// This is a getter for the container image tag of the Core chart.
     pub(crate) fn image_tag(&self) -> &str {
         self.image.tag()
@@ -91,6 +163,33 @@ impl CoreValues {
     /// This is a getter or the sig-storage/csi-node-driver-registrar image tag.
     pub(crate) fn csi_node_driver_registrar_image_tag(&self) -> &str {
         self.csi.node_driver_registrar_image_tag()
+    }
+}
+
+/// This is used to deserialize the yaml object agents.
+#[derive(Deserialize)]
+pub(crate) struct Agents {
+    ha: Ha,
+}
+
+impl Agents {
+    /// This is a getter for state of the 'ha' feature (enabled/disabled).
+    pub(crate) fn ha_is_enabled(&self) -> bool {
+        self.ha.enabled()
+    }
+}
+
+/// This is used to deserialize the yaml object 'agents.ha'.
+#[derive(Deserialize)]
+pub(crate) struct Ha {
+    enabled: bool,
+}
+
+impl Ha {
+    /// This returns the value of 'ha.enabled' from the values set. Defaults to 'true' is absent
+    /// from the yaml.
+    pub(crate) fn enabled(&self) -> bool {
+        self.enabled
     }
 }
 
