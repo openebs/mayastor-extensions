@@ -1,13 +1,14 @@
 use crate::common::{
-    constants::CHART_VERSION_LABEL_KEY,
+    constants::{CHART_VERSION_LABEL_KEY, PRODUCT},
     error::{
-        HelmChartVersionLabelHasNoValue, ListStorageVolumes, NoNamespaceInPod, Result, SemverParse,
+        CordonStorageNode, EmptyStorageNodeSpec, GetStorageNode, HelmChartVersionLabelHasNoValue,
+        ListStorageVolumes, NoNamespaceInPod, Result, SemverParse, StorageNodeUncordon,
     },
     rest_client::RestClientSet,
 };
 use k8s_openapi::api::core::v1::Pod;
 use kube::{api::ObjectList, ResourceExt};
-use openapi::models::{Volume, VolumeStatus};
+use openapi::models::{CordonDrainState, Volume, VolumeStatus};
 use semver::Version;
 use snafu::ResultExt;
 use std::{collections::HashSet, time::Duration};
@@ -208,4 +209,129 @@ pub(crate) async fn data_plane_is_upgraded(
     }
 
     Ok(true)
+}
+
+/// Cordon storage node.
+pub(crate) async fn cordon_storage_node(
+    node_id: &str,
+    cordon_label: &str,
+    rest_client: &RestClientSet,
+) -> Result<()> {
+    let cordon_label = cordon_label.to_string();
+
+    let storage_node = rest_client
+        .nodes_api()
+        .get_node(node_id)
+        .await
+        .context(GetStorageNode {
+            node_id: node_id.to_string(),
+        })?;
+
+    match storage_node
+        .into_body()
+        .spec
+        .ok_or(
+            EmptyStorageNodeSpec {
+                node_id: node_id.to_string(),
+            }
+            .build(),
+        )?
+        .cordondrainstate
+    {
+        Some(CordonDrainState::cordonedstate(cordon_state))
+            if cordon_state.cordonlabels.contains(&cordon_label) =>
+        {
+            info!(node.id = %node_id, "{PRODUCT} Node is already cordoned");
+        }
+        _ => {
+            rest_client
+                .nodes_api()
+                .put_node_cordon(node_id, cordon_label.as_str())
+                .await
+                .context(CordonStorageNode {
+                    node_id: node_id.to_string(),
+                })?;
+
+            info!(node.id = %node_id, "Put cordon label for {PRODUCT} Node");
+        }
+    }
+
+    Ok(())
+}
+
+/// Uncordon storage Node.
+pub(crate) async fn uncordon_storage_node(
+    node_id: &str,
+    cordon_label: &str,
+    rest_client: &RestClientSet,
+) -> Result<()> {
+    let cordon_label = cordon_label.to_string();
+    let storage_node = rest_client
+        .nodes_api()
+        .get_node(node_id)
+        .await
+        .context(GetStorageNode {
+            node_id: node_id.to_string(),
+        })?;
+
+    match storage_node
+        .into_body()
+        .spec
+        .ok_or(
+            EmptyStorageNodeSpec {
+                node_id: node_id.to_string(),
+            }
+            .build(),
+        )?
+        .cordondrainstate
+    {
+        Some(CordonDrainState::cordonedstate(cordon_state))
+            if cordon_state.cordonlabels.contains(&cordon_label) =>
+        {
+            rest_client
+                .nodes_api()
+                .delete_node_cordon(node_id, cordon_label.as_str())
+                .await
+                .context(StorageNodeUncordon {
+                    node_id: node_id.to_string(),
+                })?;
+
+            info!(
+                node.id = %node_id,
+                label = %cordon_label,
+                "Removed cordon label from {PRODUCT} Node"
+            );
+        }
+        _ => info!(
+                node.id = %node_id,
+                label = %cordon_label,
+                "Cordon label absent from {PRODUCT} Node"
+        ),
+    }
+
+    Ok(())
+}
+
+/// List all Storage volumes. Paginated responses from the Storage REST.
+pub(crate) async fn list_all_volumes(rest_client: &RestClientSet) -> Result<Vec<Volume>> {
+    let mut volumes: Vec<Volume> = Vec::new();
+    // The number of volumes to get per request.
+    let max_entries = 200;
+    let mut starting_token = Some(0_isize);
+
+    // The last paginated request will set the `starting_token` to `None`.
+    while starting_token.is_some() {
+        let vols = rest_client
+            .volumes_api()
+            .get_volumes(max_entries, None, starting_token)
+            .await
+            .context(ListStorageVolumes)?;
+
+        let vols = vols.into_body();
+        volumes.extend(vols.entries);
+
+        starting_token = vols.next_token;
+    }
+
+    Ok(volumes)
 }
