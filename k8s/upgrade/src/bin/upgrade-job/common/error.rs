@@ -214,6 +214,11 @@ pub(crate) enum Error {
         namespace: String,
     },
 
+    /// Error for when a Kubernetes API request for GET-ing a list of Nodes filtered by label(s)
+    /// fails.
+    #[snafu(display("Failed to list Nodes with label {}: {}", label, source))]
+    ListNodesWithLabel { source: kube::Error, label: String },
+
     /// Error for when a Kubernetes API request for GET-ing a list of Pods filtered by label(s)
     /// and field(s) fails.
     #[snafu(display(
@@ -291,6 +296,13 @@ pub(crate) enum Error {
     /// Error for when a storage node drain request fails.
     #[snafu(display("Failed to drain {} Node {}: {}", PRODUCT, node_id, source))]
     DrainStorageNode {
+        source: openapi::tower::client::Error<openapi::models::RestJsonError>,
+        node_id: String,
+    },
+
+    /// Error for when a storage node drain request fails.
+    #[snafu(display("Failed to cordon {} Node {}: {}", PRODUCT, node_id, source))]
+    CordonStorageNode {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
         node_id: String,
     },
@@ -386,9 +398,15 @@ pub(crate) enum Error {
     #[snafu(display("Setting namespace is mandatory for HelmClient"))]
     HelmClientNs,
 
-    /// Error for mandatory options for a HelmUpgrade are missing when building.
-    #[snafu(display("Mandatory options for EventRecorder were not given"))]
-    HelmUpgradeOptionsAbsent,
+    /// Error for when the helm release name is missing when building a HelmUpgrade.
+    #[snafu(display("A mandatory options for helm upgrade was not given: no release name"))]
+    HelmUpgradeOptionReleaseNameAbsent,
+
+    /// Error for when the kubernetes namesapce is missing when building a HelmUpgrade.
+    #[snafu(display(
+        "A mandatory options for helm upgrade was not given: no helm release namespace"
+    ))]
+    HelmUpgradeOptionNamespaceAbsent,
 
     /// Error for failures in generating semver::Value from a &str input.
     #[snafu(display("Failed to parse {} as a valid semver: {}", version_string, source))]
@@ -504,12 +522,12 @@ pub(crate) enum Error {
     /// Error for when the helm upgrade's target version is lower the source version.
     #[snafu(display(
         "Failed to upgrade from {} to {}: upgrade to an earlier-released version is forbidden",
-        from_version,
-        to_version
+        source_version,
+        target_version
     ))]
     RollbackForbidden {
-        from_version: String,
-        to_version: String,
+        source_version: String,
+        target_version: String,
     },
 
     /// Error for when yq command execution fails.

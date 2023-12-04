@@ -134,12 +134,16 @@ impl YqV4 {
     /// and migrate the older default to the newer one. E.g.: the .io_engine.logLevel is set to
     /// 'info' deliberately if the upgrade source file is seen to contain the value
     /// 'info,io_engine=info' and the target yaml is seen to not contain it.
-    pub(crate) fn merge_files(&self, high_priority: &Path, low_priority: &Path) -> Result<Vec<u8>> {
+    pub(crate) fn merge_files<P, Q>(&self, high_priority: P, low_priority: Q) -> Result<Vec<u8>>
+    where
+        P: AsRef<Path>,
+        Q: AsRef<Path>,
+    {
         let yq_merge_args: Vec<String> = vec_to_strings![
             "ea",
             r#". as $item ireduce ({}; . * $item )"#,
-            low_priority.to_string_lossy(),
-            high_priority.to_string_lossy()
+            low_priority.as_ref().to_string_lossy(),
+            high_priority.as_ref().to_string_lossy()
         ];
         let yq_merge_output = self
             .command()

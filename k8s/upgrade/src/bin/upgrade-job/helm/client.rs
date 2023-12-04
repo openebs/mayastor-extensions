@@ -34,13 +34,13 @@ pub(crate) struct HelmReleaseElement {
 
 impl HelmReleaseElement {
     /// This is a getter function for the name of the release.
-    pub(crate) fn name(&self) -> String {
-        self.name.clone()
+    pub(crate) fn name(&self) -> &str {
+        self.name.as_str()
     }
     /// This is a getter function for the chart_name of the release. This also containers the chart
     /// version.
-    pub(crate) fn chart(&self) -> String {
-        self.chart.clone()
+    pub(crate) fn chart(&self) -> &str {
+        self.chart.as_str()
     }
 }
 
@@ -103,12 +103,9 @@ impl HelmReleaseClient {
         ];
 
         // Extra args
-        args.extend(
-            maybe_extra_args
-                .unwrap_or_default()
-                .iter()
-                .map(ToString::to_string),
-        );
+        if let Some(extra_args) = maybe_extra_args {
+            args.extend(extra_args.iter().map(ToString::to_string));
+        }
 
         // Because this option has to be at the end for it to work.
         let output_format_args: Vec<String> = vec_to_strings!["-o", "yaml"];
@@ -151,12 +148,9 @@ impl HelmReleaseClient {
             vec_to_strings!["list", "-n", self.namespace.as_str(), "--deployed"];
 
         // Extra args
-        args.extend(
-            maybe_extra_args
-                .unwrap_or_default()
-                .iter()
-                .map(ToString::to_string),
-        );
+        if let Some(extra_args) = maybe_extra_args {
+            args.extend(extra_args.iter().map(ToString::to_string));
+        }
 
         // Because this option has to be at the end for it to work.
         let output_format_args: Vec<String> = vec_to_strings!["-o", "yaml"];
@@ -191,16 +185,17 @@ impl HelmReleaseClient {
     }
 
     /// Runs command `helm upgrade -n <namespace> <release_name> <chart_dir>`.
-    pub(crate) async fn upgrade<A, B>(
+    pub(crate) async fn upgrade<A, B, P>(
         &self,
         release_name: A,
-        chart_dir: &Path,
+        chart_dir: P,
         maybe_extra_args: Option<Vec<B>>,
         install_crds: bool,
     ) -> Result<()>
     where
         A: ToString,
         B: ToString,
+        P: AsRef<Path>,
     {
         // Install CRDs which may be missing from older release.
         let k8s_client = KubeClientSet::builder()
@@ -210,14 +205,14 @@ impl HelmReleaseClient {
 
         if install_crds {
             // Ref: https://helm.sh/docs/chart_best_practices/custom_resource_definitions
-            install_missing_crds(k8s_client.crd_api(), chart_dir.join("crds")).await?;
+            install_missing_crds(k8s_client.crd_api(), chart_dir.as_ref().join("crds")).await?;
         }
 
         let command: &str = "helm";
         let mut args: Vec<String> = vec_to_strings![
             "upgrade",
             release_name,
-            chart_dir.to_string_lossy(),
+            chart_dir.as_ref().to_string_lossy(),
             "-n",
             self.namespace.as_str(),
             "--timeout",
@@ -225,12 +220,9 @@ impl HelmReleaseClient {
         ];
 
         // Extra args
-        args.extend(
-            maybe_extra_args
-                .unwrap_or_default()
-                .iter()
-                .map(ToString::to_string),
-        );
+        if let Some(extra_args) = maybe_extra_args {
+            args.extend(extra_args.iter().map(ToString::to_string));
+        }
 
         debug!(%command, ?args, "Helm upgrade command");
         let output = Command::new(command)

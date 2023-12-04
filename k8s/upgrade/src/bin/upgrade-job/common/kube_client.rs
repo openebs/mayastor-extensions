@@ -2,7 +2,7 @@ use crate::common::error::{K8sClientGeneration, KubeClientSetBuilderNs, Result};
 use k8s_openapi::{
     api::{
         apps::v1::Deployment,
-        core::v1::{Namespace, Pod},
+        core::v1::{Namespace, Node, Pod},
     },
     apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition,
 };
@@ -36,6 +36,7 @@ impl KubeClientSetBuilder {
         let client = Client::try_default().await.context(K8sClientGeneration)?;
         return Ok(KubeClientSet {
             client: client.clone(),
+            nodes_api: Api::all(client.clone()),
             pods_api: Api::namespaced(client.clone(), namespace.as_str()),
             namespaces_api: Api::all(client.clone()),
             deployments_api: Api::namespaced(client.clone(), namespace.as_str()),
@@ -47,6 +48,7 @@ impl KubeClientSetBuilder {
 /// This is a wrapper around kube::Client with helper methods to generate Api<?> clients.
 pub(crate) struct KubeClientSet {
     client: Client,
+    nodes_api: Api<Node>,
     pods_api: Api<Pod>,
     namespaces_api: Api<Namespace>,
     deployments_api: Api<Deployment>,
@@ -56,6 +58,11 @@ pub(crate) struct KubeClientSet {
 impl KubeClientSet {
     pub(crate) fn builder() -> KubeClientSetBuilder {
         KubeClientSetBuilder::default()
+    }
+
+    /// Generate the Node api client.
+    pub(crate) fn nodes_api(&self) -> &Api<Node> {
+        &self.nodes_api
     }
 
     /// Generate the Pod api client.
