@@ -261,6 +261,12 @@ NEW_CHART_APP_VERSION=124.0.0-0-main-unstable-main-0
 EXPECT_FAIL=1
 test_one "Main is special"
 
+CHECK_BRANCH=helm-testing/2.4
+APP_TAG=2.4.0
+CHART_VERSION=2.4.0
+CHART_APP_VERSION=2.4.0
+test_one "helm-testing/<release> is special"
+
 CHECK_BRANCH=release/2.0
 APP_TAG=2.0.0
 CHART_VERSION=2.0.0
