@@ -1,7 +1,7 @@
 use crate::{
     common::{constants::PRODUCT, error::Result},
     events::event_recorder::{EventAction, EventRecorder},
-    helm::upgrade::{HelmUpgrade, HelmUpgradeRunner},
+    helm::upgrade::{HelmUpgradeRunner, HelmUpgraderBuilder},
     opts::CliArgs,
 };
 use data_plane::upgrade_data_plane;
@@ -35,7 +35,7 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
 /// This carries out the helm upgrade validation, actual helm upgrade, and the io-engine Pod
 /// restarts.
 async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()> {
-    let helm_upgrade = HelmUpgrade::builder()
+    let helm_upgrader = HelmUpgraderBuilder::default()
         .with_namespace(opts.namespace())
         .with_release_name(opts.release_name())
         .with_core_chart_dir(opts.core_chart_dir())
@@ -45,17 +45,20 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
         .build()
         .await?;
 
-    let from_version = helm_upgrade.upgrade_from_version();
-    let to_version = helm_upgrade.upgrade_to_version();
-
+    // Update EventRecorder.
+    let source_version = helm_upgrader.source_version();
+    let target_version = helm_upgrader.target_version();
     // Updating the EventRecorder with version values from the HelmUpgrade.
     // These two operations are thread-safe. The EventRecorder itself is not
     // shared with any other tokio task.
-    event.set_from_version(from_version.clone());
-    event.set_to_version(to_version.clone());
+    event.set_source_version(source_version.clone());
+    event.set_target_version(target_version.clone());
+
+    // Capture HA state before helm upgrade is consumed.
+    let ha_is_enabled = helm_upgrader.source_values().ha_is_enabled();
 
     // Dry-run helm upgrade.
-    let dry_run_result: Result<HelmUpgradeRunner> = helm_upgrade.dry_run().await;
+    let dry_run_result: Result<HelmUpgradeRunner> = helm_upgrader.dry_run().await;
     let run_helm_upgrade = match dry_run_result {
         Err(error) => {
             event.publish_unrecoverable(&error, true).await;
@@ -100,8 +103,13 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
             )
             .await?;
 
-        if let Err(error) =
-            upgrade_data_plane(opts.namespace(), opts.rest_endpoint(), to_version).await
+        if let Err(error) = upgrade_data_plane(
+            opts.namespace(),
+            opts.rest_endpoint(),
+            target_version,
+            ha_is_enabled,
+        )
+        .await
         {
             event.publish_unrecoverable(&error, false).await;
             return Err(error);

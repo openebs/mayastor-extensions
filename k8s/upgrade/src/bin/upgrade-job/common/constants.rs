@@ -21,7 +21,7 @@ pub(crate) const CHART_VERSION_LABEL_KEY: &str = "openebs.io/version";
 pub(crate) const DRAIN_FOR_UPGRADE: &str = "mayastor-upgrade";
 
 /// This is the allowed upgrade to-version/to-version-range for the Umbrella chart.
-pub(crate) const TO_UMBRELLA_SEMVER: &str = "3.9.0";
+pub(crate) const TO_UMBRELLA_SEMVER: &str = "3.10.0";
 
 /// This is the user docs URL for the Umbrella chart.
 pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str =
