@@ -1,6 +1,6 @@
 use crate::{
     common::{
-        constants::{TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE, TWO_DOT_THREE},
+        constants::{TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE, TWO_DOT_THREE},
         error::{Result, SemverParse},
         file::write_to_tempfile,
     },
@@ -124,6 +124,23 @@ where
         yq.set_value(
             YamlKey::try_from(".eventing.enabled")?,
             target_values.eventing_enabled(),
+            upgrade_values_file.path(),
+        )?;
+    }
+
+    // Special-case values for 2.5.x.
+    let two_dot_five = Version::parse(TWO_DOT_FIVE).context(SemverParse {
+        version_string: TWO_DOT_FIVE.to_string(),
+    })?;
+    if source_version.ge(&two_dot_o_rc_zero)
+        && source_version.lt(&two_dot_five)
+        && source_values
+            .promtail_scrape_configs()
+            .ne(target_values.promtail_scrape_configs())
+    {
+        yq.set_value(
+            YamlKey::try_from(".promtail.config.snippets.scrapeConfigs")?,
+            target_values.promtail_scrape_configs(),
             upgrade_values_file.path(),
         )?;
     }

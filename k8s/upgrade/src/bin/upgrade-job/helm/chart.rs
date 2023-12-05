@@ -72,6 +72,8 @@ pub(crate) struct CoreValues {
     eventing: Eventing,
     /// This contains Kubernetes CSI sidecar container image details.
     csi: Csi,
+    /// This contains promtail details.
+    promtail: Promtail,
 }
 
 impl TryFrom<&Path> for CoreValues {
@@ -140,29 +142,34 @@ impl CoreValues {
         self.eventing.enabled()
     }
 
-    /// This is a getter or the sig-storage/csi-provisioner image tag.
+    /// This is a getter for the sig-storage/csi-provisioner image tag.
     pub(crate) fn csi_provisioner_image_tag(&self) -> &str {
         self.csi.provisioner_image_tag()
     }
 
-    /// This is a getter or the sig-storage/csi-attacher image tag.
+    /// This is a getter for the sig-storage/csi-attacher image tag.
     pub(crate) fn csi_attacher_image_tag(&self) -> &str {
         self.csi.attacher_image_tag()
     }
 
-    /// This is a getter or the sig-storage/csi-snapshotter image tag.
+    /// This is a getter for the sig-storage/csi-snapshotter image tag.
     pub(crate) fn csi_snapshotter_image_tag(&self) -> &str {
         self.csi.snapshotter_image_tag()
     }
 
-    /// This is a getter or the sig-storage/snapshot-controller image tag.
+    /// This is a getter for the sig-storage/snapshot-controller image tag.
     pub(crate) fn csi_snapshot_controller_image_tag(&self) -> &str {
         self.csi.snapshot_controller_image_tag()
     }
 
-    /// This is a getter or the sig-storage/csi-node-driver-registrar image tag.
+    /// This is a getter for the sig-storage/csi-node-driver-registrar image tag.
     pub(crate) fn csi_node_driver_registrar_image_tag(&self) -> &str {
         self.csi.node_driver_registrar_image_tag()
+    }
+
+    /// This is a getter for the promtail scrapeConfigs.
+    pub(crate) fn promtail_scrape_configs(&self) -> &str {
+        self.promtail.scrape_configs()
     }
 }
 
@@ -373,5 +380,45 @@ impl CsiImage {
     /// This is a getter for registrarTag.
     pub(crate) fn node_driver_registrar_tag(&self) -> &str {
         self.registrar_tag.as_str()
+    }
+}
+
+/// This is used to deserialize the yaml object 'promtail'.
+#[derive(Deserialize)]
+pub(crate) struct Promtail {
+    config: PromtailConfig,
+}
+
+impl Promtail {
+    /// This returns the promtail.config.snippets.scrapeConfigs as an &str.
+    pub(crate) fn scrape_configs(&self) -> &str {
+        self.config.scrape_configs()
+    }
+}
+
+/// This is used to deserialize the promtail.config yaml object.
+#[derive(Deserialize)]
+pub(crate) struct PromtailConfig {
+    snippets: PromtailConfigSnippets,
+}
+
+impl PromtailConfig {
+    /// This returns the config.snippets.scrapeConfigs as an &str.
+    pub(crate) fn scrape_configs(&self) -> &str {
+        self.snippets.scrape_configs()
+    }
+}
+
+/// This is used to deserialize the config.snippets yaml object.
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub(crate) struct PromtailConfigSnippets {
+    scrape_configs: String,
+}
+
+impl PromtailConfigSnippets {
+    /// This returns the snippets.scrapeConfigs as an &str.
+    pub(crate) fn scrape_configs(&self) -> &str {
+        self.scrape_configs.as_str()
     }
 }
