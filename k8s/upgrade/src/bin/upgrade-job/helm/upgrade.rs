@@ -149,8 +149,8 @@ impl HelmUpgraderBuilder {
         let source_values_buf =
             client.get_values_as_yaml::<&str, String>(release_name.as_str(), None)?;
 
-        // The version of the Core chart which we are (maybe) going to.
         let chart_dot_yaml_path = chart_dir.join("Chart.yaml");
+        // The version of the Core chart which we are (maybe) upgrading to.
         let target_version = version_from_chart_yaml_file(chart_dot_yaml_path)?;
 
         // Check if already upgraded.

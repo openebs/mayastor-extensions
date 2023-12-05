@@ -1,17 +1,21 @@
 use crate::{
     common::{
         constants::{
-            AGENT_CORE_LABEL, CHART_VERSION_LABEL_KEY, DRAIN_FOR_UPGRADE, IO_ENGINE_LABEL, PRODUCT,
+            AGENT_CORE_LABEL, CHART_VERSION_LABEL_KEY, CORDON_FOR_ANA_CHECK, DRAIN_FOR_UPGRADE,
+            IO_ENGINE_LABEL, PRODUCT,
         },
         error::{
             DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
-            ListPodsWithLabel, ListPodsWithLabelAndField, ListStorageNodes, PodDelete, Result,
-            StorageNodeUncordon, TooManyIoEnginePods,
+            ListNodesWithLabel, ListPodsWithLabel, ListPodsWithLabelAndField, ListStorageNodes,
+            PodDelete, Result, StorageNodeUncordon, TooManyIoEnginePods,
         },
         kube_client::KubeClientSet,
         rest_client::RestClientSet,
     },
-    upgrade::utils::{all_pods_are_ready, data_plane_is_upgraded, rebuild_result, RebuildResult},
+    upgrade::utils::{
+        all_pods_are_ready, cordon_storage_node, data_plane_is_upgraded, list_all_volumes,
+        rebuild_result, uncordon_storage_node, RebuildResult,
+    },
 };
 use k8s_openapi::api::core::v1::{Node, Pod};
 use kube::{
@@ -23,7 +27,7 @@ use snafu::ResultExt;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::info;
-use utils::{API_REST_LABEL, ETCD_LABEL};
+use utils::{API_REST_LABEL, CSI_NODE_NVME_ANA, ETCD_LABEL};
 
 /// Upgrade data plane by controlled restart of io-engine pods
 pub(crate) async fn upgrade_data_plane(
@@ -431,17 +435,87 @@ async fn control_plane_is_running(
     Ok(core_is_ready && rest_is_ready && etcd_is_ready)
 }
 
+/// Decides if a specific node is drainable during data-plane upgrade, based on multiple factors:
+/// 1. Helm value state for HA feature
+/// 2. NVMe ANA is not enabled for frontend nodes of a volume target.
 async fn is_node_drainable(
     ha_is_enabled: bool,
-    _node_name: &str,
-    _k8s_nodes_api: &Api<Node>,
-    _rest_client: &RestClientSet,
+    node_name: &str,
+    k8s_nodes_api: &Api<Node>,
+    rest_client: &RestClientSet,
 ) -> Result<bool> {
     if !ha_is_enabled {
+        info!("HA is disabled, disabling drain for node {}", node_name);
         return Ok(false);
     }
 
-    // TODO: Check for node ANA status to decide if it should be drained.
+    let ana_disabled_label = format!("{CSI_NODE_NVME_ANA}=false");
+    let ana_disabled_filter = ListParams::default().labels(ana_disabled_label.as_str());
+    let ana_disabled_nodes =
+        k8s_nodes_api
+            .list(&ana_disabled_filter)
+            .await
+            .context(ListNodesWithLabel {
+                label: ana_disabled_label,
+            })?;
+
+    if ana_disabled_nodes.items.is_empty() {
+        info!(
+            "There are no ANA-incapable nodes in this cluster, it is safe to drain node {}",
+            node_name
+        );
+        // If there are no ANA-disabled nodes, it should be safe to drain.
+        return Ok(true);
+    }
+
+    cordon_storage_node(node_name, CORDON_FOR_ANA_CHECK, rest_client).await?;
+    let result = frontend_nodes_ana_check(node_name, ana_disabled_nodes, rest_client).await;
+    uncordon_storage_node(node_name, CORDON_FOR_ANA_CHECK, rest_client).await?;
+
+    result
+}
+
+/// Returns true if any of the frontend nodes of the target at node_name have the label for
+/// ANA-incapability.
+async fn frontend_nodes_ana_check(
+    node_name: &str,
+    ana_disabled_nodes: ObjectList<Node>,
+    rest_client: &RestClientSet,
+) -> Result<bool> {
+    let volumes = list_all_volumes(rest_client).await?;
+    let frontend_nodes = volumes.into_iter().fold(vec![], |mut acc, volume| {
+        if let Some(target) = volume.spec.target {
+            // Check to see if the target for the volume is on the node which
+            // we're trying to upgrade.
+            if target.node.eq(node_name) {
+                if let Some(frontend_nodes) = target.frontend_nodes {
+                    frontend_nodes.into_iter().for_each(|n| acc.push(n.name));
+                }
+            }
+        }
+        acc
+    });
+
+    if ana_disabled_nodes
+        .into_iter()
+        .any(|node| frontend_nodes.contains(&node.name_any()))
+    {
+        // There is a frontend_node which has a label saying ANA is absent for that
+        // node. Not safe to drain.
+        info!(
+            "At least one frontend_node for a volume-target at node {} \
+is ANA-incapable, disabling drain for node {}",
+            node_name, node_name
+        );
+        return Ok(false);
+    }
+
+    // All of the targets' volumes' frontend_nodes are not amongst the nodes with ANA
+    // disabled. Safe to drain this node.
+    info!(
+        "No frontend_nodes for node {} are ANA-incapable, it is safe to drain node {}",
+        node_name, node_name
+    );
 
     Ok(true)
 }
