@@ -300,7 +300,7 @@ pub(crate) enum Error {
         node_id: String,
     },
 
-    /// Error for when a storage node drain request fails.
+    /// Error for when a storage node cordon request fails.
     #[snafu(display("Failed to cordon {} Node {}: {}", PRODUCT, node_id, source))]
     CordonStorageNode {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,

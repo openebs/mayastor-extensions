@@ -20,6 +20,9 @@ pub(crate) const CHART_VERSION_LABEL_KEY: &str = "openebs.io/version";
 /// This is the label set on a storage API Node resource when a 'Node Drain' is issued.
 pub(crate) const DRAIN_FOR_UPGRADE: &str = "mayastor-upgrade";
 
+/// This is the label set on a storage API Node resource when a 'Node Drain' is issued.
+pub(crate) const CORDON_FOR_ANA_CHECK: &str = "mayastor-upgrade-nvme-ana-check";
+
 /// This is the allowed upgrade to-version/to-version-range for the Umbrella chart.
 pub(crate) const TO_UMBRELLA_SEMVER: &str = "3.10.0";
 
