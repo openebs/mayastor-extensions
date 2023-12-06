@@ -167,6 +167,11 @@ impl CoreValues {
         self.csi.node_driver_registrar_image_tag()
     }
 
+    /// This is a getter for the CSI node's NVMe io_timeout.
+    pub(crate) fn csi_node_nvme_io_timeout(&self) -> &str {
+        self.csi.node_nvme_io_timeout()
+    }
+
     /// This is a getter for the promtail scrapeConfigs.
     pub(crate) fn promtail_scrape_configs(&self) -> &str {
         self.promtail.scrape_configs()
@@ -309,6 +314,8 @@ impl Eventing {
 pub(crate) struct Csi {
     /// This contains the image tags for the kubernetes-csi sidecar containers.
     image: CsiImage,
+    /// This contains configuration for the CSI node.
+    node: CsiNode,
 }
 
 impl Csi {
@@ -335,6 +342,11 @@ impl Csi {
     /// This is a getter for the sig-storage/csi-node-driver-registrar image tag.
     pub(crate) fn node_driver_registrar_image_tag(&self) -> &str {
         self.image.node_driver_registrar_tag()
+    }
+
+    /// This is a getter for the CSI node NVMe io_timeout.
+    pub(crate) fn node_nvme_io_timeout(&self) -> &str {
+        self.node.nvme_io_timeout()
     }
 }
 
@@ -380,6 +392,32 @@ impl CsiImage {
     /// This is a getter for registrarTag.
     pub(crate) fn node_driver_registrar_tag(&self) -> &str {
         self.registrar_tag.as_str()
+    }
+}
+
+/// This is used to deserialize the yaml object 'csi.node'.
+#[derive(Deserialize)]
+pub(crate) struct CsiNode {
+    nvme: CsiNodeNvme,
+}
+
+impl CsiNode {
+    /// This is a getter for the NVMe IO timeout.
+    pub(crate) fn nvme_io_timeout(&self) -> &str {
+        self.nvme.io_timeout()
+    }
+}
+
+/// This is used to deserialize the yaml object 'csi.node.nvme'.
+#[derive(Deserialize)]
+pub(crate) struct CsiNodeNvme {
+    io_timeout: String,
+}
+
+impl CsiNodeNvme {
+    /// This is a getter for the IO timeout configuration.
+    pub(crate) fn io_timeout(&self) -> &str {
+        self.io_timeout.as_str()
     }
 }
 
