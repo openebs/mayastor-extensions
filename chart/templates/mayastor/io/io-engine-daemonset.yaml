@@ -64,10 +64,14 @@ spec:
         env:
         - name: RUST_LOG
           value: {{ .Values.io_engine.logLevel }}
-        - name: NVME_QPAIR_CONNECT_ASYNC
-          value: "true"
         - name: NVMF_TCP_MAX_QUEUE_DEPTH
-          value: "32"
+          value: "{{ .Values.io_engine.nvme.tcp.maxQueueDepth }}"
+        - name: NVME_TIMEOUT
+          value: "{{ .Values.io_engine.nvme.ioTimeout }}"
+        - name: NVME_TIMEOUT_ADMIN
+          value: "{{ .Values.io_engine.nvme.adminTimeout }}"
+        - name: NVME_KATO
+          value: "{{ .Values.io_engine.nvme.keepAliveTimeout }}"
         - name: MY_NODE_NAME
           valueFrom:
             fieldRef:

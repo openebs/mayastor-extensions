@@ -111,7 +111,6 @@ $ helm install my-release openebs/mayastor
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;snapshotterTag | csi-snapshotter image release tag | `"v6.3.1"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;kubeletDir | The kubeletDir directory for the csi-node plugin | `"/var/lib/kubelet"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nvme.&ZeroWidthSpace;ctrl_loss_tmo | The ctrl_loss_tmo (controller loss timeout) in seconds | `"1980"` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nvme.&ZeroWidthSpace;io_timeout | The nvme_core module io timeout in seconds | `"30"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for csi node plugin | `"100m"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for csi node plugin | `"128Mi"` |
@@ -141,6 +140,8 @@ $ helm install my-release openebs/mayastor
 | io_engine.&ZeroWidthSpace;envcontext | Pass additional arguments to the Environment Abstraction Layer. Example: --set {product}.envcontext=iova-mode=pa | `""` |
 | io_engine.&ZeroWidthSpace;logLevel | Log level for the io-engine service | `"info"` |
 | io_engine.&ZeroWidthSpace;nodeSelector | Node selectors to designate storage nodes for diskpool creation Note that if multi-arch images support 'kubernetes.io/arch: amd64' should be removed. | <pre>{<br>"kubernetes.io/arch":"amd64",<br>"openebs.io/engine":"mayastor"<br>}</pre> |
+| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;ioTimeout | Timeout for IOs The default here is exaggerated for local disks but we've observed that in shared virtual environments having a higher timeout value is beneficial. In certain cases, you may have to set this to an even higher value. For example, in Hetzner we've had better results setting it to 300s. Please adjust this according to your hardware and needs. | `"110s"` |
+| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;maxQueueDepth | You may need to increase this for a higher outstanding IOs per volume | `"32"` |
 | io_engine.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for the io-engine | `""` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;hugepages2Mi | Hugepage size available on the nodes | `"2Gi"` |
