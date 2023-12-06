@@ -314,8 +314,10 @@ csi:
         # -- Memory requests for csi node plugin
         memory: "64Mi"
     nvme:
-      # -- The nvme_core module io timeout in seconds
-      io_timeout: "30"
+      # The nvme_core module and nvme block io timeout in humantime
+      # By default it uses the "io_engine.nvme.ioTimeout" + 10s
+      # Do not modify this unless you're really sure about its effects
+      io_timeout: ""
       # -- The ctrl_loss_tmo (controller loss timeout) in seconds
       ctrl_loss_tmo: "1980"
       # Kato (keep alive timeout) in seconds
@@ -341,8 +343,24 @@ io_engine:
       ptpl: true
       # NVMF target Command Retry Delay for volume target initiators
       hostCmdRetryDelay:
-        # A command retry delay in seconds. A value of 0 means no delay, host may retry immediately
+        # A command retry delay in milliseconds. A value of 0 means no delay, host may retry immediately
         crdt1: 30
+  nvme:
+    # -- Timeout for IOs
+    # The default here is exaggerated for local disks but we've observed that in
+    # shared virtual environments having a higher timeout value is beneficial.
+    # In certain cases, you may have to set this to an even higher value. For example,
+    # in Hetzner we've had better results setting it to 300s.
+    # Please adjust this according to your hardware and needs.
+    ioTimeout: "110s"
+    # Timeout for admin commands
+    adminTimeout: "30s"
+    # Timeout for keep alives
+    keepAliveTimeout: "10s"
+    tcp:
+      # -- Max size setting (both initiator and target) for an NVMe queue
+      # -- You may need to increase this for a higher outstanding IOs per volume
+      maxQueueDepth: "32"
 
   # -- Pass additional arguments to the Environment Abstraction Layer.
   # Example: --set {product}.envcontext=iova-mode=pa
