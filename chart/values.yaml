@@ -588,7 +588,7 @@ loki-stack:
               - docker: {}
               - replace:
                   expression: '(\n)'
-                  replace: ""
+                  replace: ''
               - multiline:
                   firstline: '^  \x1b\[2m(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}).(\d{6})Z'
                   max_wait_time: 3s

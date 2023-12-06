@@ -41,3 +41,6 @@ pub(crate) const TWO_DOT_THREE: &str = "2.3.0";
 
 /// Version value for the earliest possible 2.4 release (there were no pre-releases).
 pub(crate) const TWO_DOT_FOUR: &str = "2.4.0";
+
+/// Version value for the earliest possible 2.5 release.
+pub(crate) const TWO_DOT_FIVE: &str = "2.5.0";
