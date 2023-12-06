@@ -132,17 +132,34 @@ where
     let two_dot_five = Version::parse(TWO_DOT_FIVE).context(SemverParse {
         version_string: TWO_DOT_FIVE.to_string(),
     })?;
-    if source_version.ge(&two_dot_o_rc_zero)
-        && source_version.lt(&two_dot_five)
-        && source_values
+    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_five) {
+        // promtail
+        if source_values
             .promtail_scrape_configs()
             .ne(target_values.promtail_scrape_configs())
-    {
-        yq.set_value(
-            YamlKey::try_from(".promtail.config.snippets.scrapeConfigs")?,
-            target_values.promtail_scrape_configs(),
-            upgrade_values_file.path(),
-        )?;
+        {
+            yq.set_value(
+                YamlKey::try_from(".promtail.config.snippets.scrapeConfigs")?,
+                target_values.promtail_scrape_configs(),
+                upgrade_values_file.path(),
+            )?;
+        }
+
+        // io_timeout
+        let io_timeout_to_replace = "30";
+        if source_values
+            .csi_node_nvme_io_timeout()
+            .eq(io_timeout_to_replace)
+            && target_values
+                .csi_node_nvme_io_timeout()
+                .ne(io_timeout_to_replace)
+        {
+            yq.set_value(
+                YamlKey::try_from(".csi.node.nvme.io_timeout")?,
+                target_values.csi_node_nvme_io_timeout(),
+                upgrade_values_file.path(),
+            )?;
+        }
     }
 
     // Default options.
