@@ -72,8 +72,9 @@ pub(crate) struct CoreValues {
     eventing: Eventing,
     /// This contains Kubernetes CSI sidecar container image details.
     csi: Csi,
-    /// This contains promtail details.
-    promtail: Promtail,
+    /// This contains loki-stack details.
+    #[serde(rename(deserialize = "loki-stack"))]
+    loki_stack: LokiStack,
 }
 
 impl TryFrom<&Path> for CoreValues {
@@ -173,8 +174,8 @@ impl CoreValues {
     }
 
     /// This is a getter for the promtail scrapeConfigs.
-    pub(crate) fn promtail_scrape_configs(&self) -> &str {
-        self.promtail.scrape_configs()
+    pub(crate) fn loki_promtail_scrape_configs(&self) -> &str {
+        self.loki_stack.promtail_scrape_configs()
     }
 }
 
@@ -418,6 +419,18 @@ impl CsiNodeNvme {
     /// This is a getter for the IO timeout configuration.
     pub(crate) fn io_timeout(&self) -> &str {
         self.io_timeout.as_str()
+    }
+}
+
+/// This is used to deserialize the yaml object 'loki-stack'.
+#[derive(Deserialize)]
+pub(crate) struct LokiStack {
+    promtail: Promtail,
+}
+
+impl LokiStack {
+    pub(crate) fn promtail_scrape_configs(&self) -> &str {
+        self.promtail.scrape_configs()
     }
 }
 
