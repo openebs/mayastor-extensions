@@ -135,12 +135,12 @@ where
     if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_five) {
         // promtail
         if source_values
-            .promtail_scrape_configs()
-            .ne(target_values.promtail_scrape_configs())
+            .loki_promtail_scrape_configs()
+            .ne(target_values.loki_promtail_scrape_configs())
         {
             yq.set_value(
-                YamlKey::try_from(".promtail.config.snippets.scrapeConfigs")?,
-                target_values.promtail_scrape_configs(),
+                YamlKey::try_from(".loki-stack.promtail.config.snippets.scrapeConfigs")?,
+                target_values.loki_promtail_scrape_configs(),
                 upgrade_values_file.path(),
             )?;
         }
