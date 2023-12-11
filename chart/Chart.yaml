@@ -41,6 +41,6 @@ dependencies:
     repository: https://nats-io.github.io/k8s/helm/charts/
     condition: eventing.enabled
   - name: localpv-provisioner
-    version: 3.4.1
+    version: 3.5.0
     repository: https://openebs.github.io/dynamic-localpv-provisioner
     condition: localpv-provisioner.enabled
