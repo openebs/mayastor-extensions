@@ -76,37 +76,59 @@ async fn execute(cli_args: CliArgs) {
 
     // Perform the operations based on the subcommand, with proper output format.
     let fut = async move {
-        match cli_args.operations {
+        let result: std::result::Result<(), Error> = match cli_args.operations {
             Operations::Get(resource) => match resource {
                 GetResourcesK8s::Rest(resource) => match resource {
                     GetResources::Cordon(get_cordon_resource) => match get_cordon_resource {
                         GetCordonArgs::Node { id: node_id } => {
-                            cordon::NodeCordon::get(&node_id, &cli_args.output).await
+                            cordon::NodeCordon::get(&node_id, &cli_args.output)
+                                .await
+                                .map_err(|e| e.into())
                         }
-                        GetCordonArgs::Nodes => cordon::NodeCordons::list(&cli_args.output).await,
+                        GetCordonArgs::Nodes => cordon::NodeCordons::list(&cli_args.output)
+                            .await
+                            .map_err(|e| e.into()),
                     },
                     GetResources::Drain(get_drain_resource) => match get_drain_resource {
                         GetDrainArgs::Node { id: node_id } => {
-                            drain::NodeDrain::get(&node_id, &cli_args.output).await
+                            drain::NodeDrain::get(&node_id, &cli_args.output)
+                                .await
+                                .map_err(|e| e.into())
                         }
-                        GetDrainArgs::Nodes => drain::NodeDrains::list(&cli_args.output).await,
+                        GetDrainArgs::Nodes => drain::NodeDrains::list(&cli_args.output)
+                            .await
+                            .map_err(|e| e.into()),
                     },
                     GetResources::Volumes(volume_args) => {
-                        volume::Volumes::list(&cli_args.output, &volume_args).await
+                        volume::Volumes::list(&cli_args.output, &volume_args)
+                            .await
+                            .map_err(|e| e.into())
                     }
-                    GetResources::Volume { id } => volume::Volume::get(&id, &cli_args.output).await,
+                    GetResources::Volume { id } => volume::Volume::get(&id, &cli_args.output)
+                        .await
+                        .map_err(|e| e.into()),
                     GetResources::VolumeReplicaTopologies(volume_args) => {
-                        volume::Volume::topologies(&cli_args.output, &volume_args).await
+                        volume::Volume::topologies(&cli_args.output, &volume_args)
+                            .await
+                            .map_err(|e| e.into())
                     }
                     GetResources::VolumeReplicaTopology { id } => {
-                        volume::Volume::topology(&id, &cli_args.output).await
+                        volume::Volume::topology(&id, &cli_args.output)
+                            .await
+                            .map_err(|e| e.into())
                     }
-                    GetResources::Pools => pool::Pools::list(&cli_args.output).await,
-                    GetResources::Pool { id } => pool::Pool::get(&id, &cli_args.output).await,
-                    GetResources::Nodes => node::Nodes::list(&cli_args.output).await,
-                    GetResources::Node(args) => {
-                        node::Node::get(&args.node_id(), &cli_args.output).await
-                    }
+                    GetResources::Pools => pool::Pools::list(&cli_args.output)
+                        .await
+                        .map_err(|e| e.into()),
+                    GetResources::Pool { id } => pool::Pool::get(&id, &cli_args.output)
+                        .await
+                        .map_err(|e| e.into()),
+                    GetResources::Nodes => node::Nodes::list(&cli_args.output)
+                        .await
+                        .map_err(|e| e.into()),
+                    GetResources::Node(args) => node::Node::get(&args.node_id(), &cli_args.output)
+                        .await
+                        .map_err(|e| e.into()),
                     GetResources::BlockDevices(bdargs) => {
                         blockdevice::BlockDevice::get_blockdevices(
                             &bdargs.node_id(),
@@ -114,6 +136,7 @@ async fn execute(cli_args: CliArgs) {
                             &cli_args.output,
                         )
                         .await
+                        .map_err(|e| e.into())
                     }
                     GetResources::VolumeSnapshots(snapargs) => {
                         snapshot::VolumeSnapshots::get_snapshots(
@@ -122,79 +145,103 @@ async fn execute(cli_args: CliArgs) {
                             &cli_args.output,
                         )
                         .await
+                        .map_err(|e| e.into())
                     }
                     GetResources::RebuildHistory { id } => {
-                        volume::Volume::rebuild_history(&id, &cli_args.output).await
+                        volume::Volume::rebuild_history(&id, &cli_args.output)
+                            .await
+                            .map_err(|e| e.into())
                     }
                 },
-                GetResourcesK8s::UpgradeStatus(resources) => {
-                    resources.get_upgrade(&cli_args.namespace).await;
-                }
+                GetResourcesK8s::UpgradeStatus(resources) => resources
+                    .get_upgrade(&cli_args.namespace)
+                    .await
+                    .map_err(|e| e.into()),
             },
             Operations::Drain(resource) => match resource {
-                DrainResources::Node(drain_node_args) => {
-                    node::Node::drain(
-                        &drain_node_args.node_id(),
-                        drain_node_args.label(),
-                        drain_node_args.drain_timeout(),
-                        &cli_args.output,
-                    )
-                    .await
-                }
+                DrainResources::Node(drain_node_args) => node::Node::drain(
+                    &drain_node_args.node_id(),
+                    drain_node_args.label(),
+                    drain_node_args.drain_timeout(),
+                    &cli_args.output,
+                )
+                .await
+                .map_err(|e| e.into()),
             },
             Operations::Scale(resource) => match resource {
                 ScaleResources::Volume { id, replica_count } => {
-                    volume::Volume::scale(&id, replica_count, &cli_args.output).await
+                    volume::Volume::scale(&id, replica_count, &cli_args.output)
+                        .await
+                        .map_err(|e| e.into())
                 }
             },
             Operations::Cordon(resource) => match resource {
                 CordonResources::Node { id, label } => {
-                    node::Node::cordon(&id, &label, &cli_args.output).await
+                    node::Node::cordon(&id, &label, &cli_args.output)
+                        .await
+                        .map_err(|e| e.into())
                 }
             },
             Operations::Uncordon(resource) => match resource {
                 CordonResources::Node { id, label } => {
-                    node::Node::uncordon(&id, &label, &cli_args.output).await
+                    node::Node::uncordon(&id, &label, &cli_args.output)
+                        .await
+                        .map_err(|e| e.into())
                 }
             },
             Operations::Dump(resources) => {
-                let _ignore = resources
+                resources
                     .dump(cli_args.kube_config_path)
                     .await
-                    .map_err(|error| {
-                        eprintln!("Partially collected dump information: {error:?}");
-                        std::process::exit(1);
-                    });
-                println!("Completed collection of dump !!");
+                    .map_err(|e| {
+                        println!("Partially collected dump information: ");
+                        e.into()
+                    })
             }
             Operations::Upgrade(resources) => {
-                let _ignore = preflight_validations::preflight_check(
+                match preflight_validations::preflight_check(
                     &cli_args.namespace,
                     cli_args.kube_config_path.clone(),
                     cli_args.timeout,
                     &resources,
                 )
                 .await
-                .map_err(|error| {
-                    eprintln!("{error}");
-                    std::process::exit(error.into());
-                });
-
-                if resources.dry_run {
-                    _ = resources.dummy_apply(&cli_args.namespace).await;
-                } else {
-                    _ = resources.apply(&cli_args.namespace).await.map_err(|error| {
-                        eprintln!("{error}");
-                        std::process::exit(error.into());
-                    });
+                {
+                    Ok(_) => {
+                        if resources.dry_run {
+                            resources
+                                .dummy_apply(&cli_args.namespace)
+                                .await
+                                .map_err(|e| e.into())
+                        } else {
+                            resources
+                                .apply(&cli_args.namespace)
+                                .await
+                                .map_err(|e| e.into())
+                        }
+                    }
+                    Err(e) => Err(e.into()),
                 }
             }
 
             Operations::Delete(resource) => match resource {
                 DeleteResources::Upgrade(res) => {
-                    res.delete(&cli_args.namespace).await;
+                    res.delete(&cli_args.namespace).await.map_err(|e| e.into())
                 }
             },
+        };
+
+        if let Err(error) = result {
+            let mut exit_code = 1;
+            match error {
+                Error::RestPlugin(err) => eprintln!("{err}"),
+                Error::Upgrade(err) => {
+                    eprintln!("{err}");
+                    exit_code = err.into();
+                }
+                Error::Generic(err) => eprintln!("{err}"),
+            }
+            std::process::exit(exit_code);
         };
     };
 
@@ -219,5 +266,29 @@ async fn init_rest(args: &CliArgs) -> Result<()> {
             RestClient::init_with_config(config)?;
             Ok(())
         }
+    }
+}
+
+enum Error {
+    Upgrade(upgrade::error::Error),
+    RestPlugin(plugin::resources::error::Error),
+    Generic(anyhow::Error),
+}
+
+impl From<upgrade::error::Error> for Error {
+    fn from(e: upgrade::error::Error) -> Self {
+        Error::Upgrade(e)
+    }
+}
+
+impl From<plugin::resources::error::Error> for Error {
+    fn from(e: plugin::resources::error::Error) -> Self {
+        Error::RestPlugin(e)
+    }
+}
+
+impl From<anyhow::Error> for Error {
+    fn from(e: anyhow::Error) -> Self {
+        Error::Generic(e)
     }
 }
