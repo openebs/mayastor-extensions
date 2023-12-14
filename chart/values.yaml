@@ -728,6 +728,7 @@ storageClass:
   nameSuffix: single-replica
   default: false
   parameters:
+    protocol: nvmf
     repl: 1
 
 localpv-provisioner:

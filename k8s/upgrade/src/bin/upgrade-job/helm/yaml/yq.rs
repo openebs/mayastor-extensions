@@ -173,6 +173,9 @@ impl YqV4 {
     where
         V: Display + Sized,
     {
+        // Command for use during yq file update
+        let mut command = self.command();
+
         // Assigning value based on if it needs quotes around it or not.
         // Strings require quotes.
         let value = match format!("{value}").as_str() {
@@ -188,8 +191,10 @@ impl YqV4 {
                     break 'other something_else.to_string();
                 }
 
-                // Quotes for a string.
-                format!(r#""{something_else}""#)
+                // Preserve special characters for a string.
+                // Ref: https://mikefarah.gitbook.io/yq/usage/tips-and-tricks#special-characters-in-strings
+                command.env("VAL", something_else);
+                "strenv(VAL)".to_string()
             }
         };
 
@@ -198,14 +203,13 @@ impl YqV4 {
             format!(r#"{} = {value}"#, key.as_str()),
             filepath.to_string_lossy()
         ];
-        let yq_set_output =
-            self.command()
-                .args(yq_set_args.clone())
-                .output()
-                .context(YqCommandExec {
-                    command: self.command_as_str().to_string(),
-                    args: yq_set_args.clone(),
-                })?;
+        let yq_set_output = command
+            .args(yq_set_args.clone())
+            .output()
+            .context(YqCommandExec {
+                command: self.command_as_str().to_string(),
+                args: yq_set_args.clone(),
+            })?;
 
         ensure!(
             yq_set_output.status.success(),
