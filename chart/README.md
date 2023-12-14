@@ -45,7 +45,7 @@ $ helm install my-release openebs/mayastor
 | Repository | Name | Version |
 |------------|------|---------|
 | https://charts.bitnami.com/bitnami | etcd | 8.6.0 |
-| https://grafana.github.io/helm-charts | loki-stack | 2.9.11 |
+| https://grafana.github.io/helm-charts | loki-stack | 2.6.4 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.25.0 |
 | https://nats-io.github.io/k8s/helm/charts/ | nats | 0.19.14 |
 | https://openebs.github.io/dynamic-localpv-provisioner | localpv-provisioner | 3.5.0 |
