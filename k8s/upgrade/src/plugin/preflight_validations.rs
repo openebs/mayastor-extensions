@@ -186,6 +186,12 @@ impl TryFrom<&[u8]> for UnsupportedVersions {
     }
 }
 
+/// Strips the prefix 'v' from a semver-like literal, e.g.: v1.2.3 -> 1.2.3.
+/// The Version crate doesn't work with the 'v' prefix.
+pub(crate) fn strip_v_prefix(version: &str) -> &str {
+    version.strip_prefix('v').unwrap_or(version)
+}
+
 pub(crate) async fn upgrade_path_validation(
     namespace: &str,
     allow_unstable: bool,
@@ -224,7 +230,8 @@ pub(crate) async fn upgrade_path_validation(
     let mut self_version: Option<Version> = None;
     if let Some(tag) = self_version_info.version_tag {
         if !tag.is_empty() {
-            if let Ok(sv) = Version::parse(tag.as_str()) {
+            let tag = strip_v_prefix(tag.as_str());
+            if let Ok(sv) = Version::parse(tag) {
                 self_version = Some(sv);
             }
         }
@@ -234,7 +241,7 @@ pub(crate) async fn upgrade_path_validation(
     if !allow_unstable {
         let mut self_is_stable: bool = false;
         if let Some(ref version) = self_version {
-            if !version.pre.is_empty() {
+            if version.pre.is_empty() {
                 self_is_stable = true;
             }
         }
