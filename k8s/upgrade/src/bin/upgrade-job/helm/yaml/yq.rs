@@ -177,9 +177,10 @@ impl YqV4 {
     }
 
     /// This sets in-place yaml values in yaml files.
-    pub(crate) fn set_value<V>(&self, key: YamlKey, value: V, filepath: &Path) -> Result<()>
+    pub(crate) fn set_value<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
     where
         V: Display + Sized,
+        P: AsRef<Path>,
     {
         // Command for use during yq file update
         let mut command = self.command();
@@ -209,7 +210,7 @@ impl YqV4 {
         let yq_set_args = vec_to_strings![
             "-i",
             format!(r#"{} = {value}"#, key.as_str()),
-            filepath.to_string_lossy()
+            filepath.as_ref().to_string_lossy()
         ];
         let yq_set_output = command
             .args(yq_set_args.clone())
@@ -234,16 +235,20 @@ impl YqV4 {
     }
 
     /// This sets yaml objects to a file from the same yaml object in another file.
-    pub(crate) fn set_obj(&self, key: YamlKey, obj_source: &Path, filepath: &Path) -> Result<()> {
+    pub(crate) fn set_obj<P, Q>(&self, key: YamlKey, obj_source: P, filepath: Q) -> Result<()>
+    where
+        P: AsRef<Path>,
+        Q: AsRef<Path>,
+    {
         let yq_set_obj_args = vec_to_strings![
             "-i",
             format!(
                 r#"{} = load("{}"){}"#,
                 key.as_str(),
-                obj_source.to_string_lossy(),
+                obj_source.as_ref().to_string_lossy(),
                 key.as_str()
             ),
-            filepath.to_string_lossy()
+            filepath.as_ref().to_string_lossy()
         ];
         let yq_set_obj_output = self
             .command()
