@@ -33,7 +33,7 @@ dependencies:
     repository: https://jaegertracing.github.io/helm-charts
     condition: base.jaeger.enabled
   - name: loki-stack
-    version: 2.6.4
+    version: 2.9.11
     repository: https://grafana.github.io/helm-charts
     condition: loki-stack.enabled
   - name: nats
