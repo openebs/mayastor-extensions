@@ -1,6 +1,8 @@
 use crate::{
     common::{
-        constants::{TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE, TWO_DOT_THREE},
+        constants::{
+            TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE, TWO_DOT_SIX, TWO_DOT_THREE,
+        },
         error::{Result, SemverParse},
         file::write_to_tempfile,
     },
@@ -57,7 +59,8 @@ where
     // Resultant values yaml for helm upgrade command.
     // Merge the source values with the target values.
     let yq = YqV4::new()?;
-    let upgrade_values_yaml = yq.merge_files(source_values_file.path(), target_values_filepath)?;
+    let upgrade_values_yaml =
+        yq.merge_files(source_values_file.path(), target_values_filepath.as_ref())?;
     let upgrade_values_file: TempFile =
         write_to_tempfile(Some(workdir), upgrade_values_yaml.as_slice())?;
 
@@ -160,6 +163,23 @@ where
                 upgrade_values_file.path(),
             )?;
         }
+    }
+
+    // Special-case values for 2.6.x.
+    let two_dot_six = Version::parse(TWO_DOT_SIX).context(SemverParse {
+        version_string: TWO_DOT_SIX.to_string(),
+    })?;
+    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_six) {
+        yq.set_obj(
+            YamlKey::try_from(".loki-stack.loki")?,
+            target_values_filepath.as_ref(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_obj(
+            YamlKey::try_from(".loki-stack.promtail")?,
+            target_values_filepath.as_ref(),
+            upgrade_values_file.path(),
+        )?;
     }
 
     // Default options.

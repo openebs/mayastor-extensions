@@ -601,6 +601,19 @@ pub(crate) enum Error {
         std_err: String,
     },
 
+    /// Error for when the yq command to update a yaml object returns an error.
+    #[snafu(display(
+        "`yq` set-object-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
+        command,
+        args,
+        std_err,
+    ))]
+    YqSetObjCommand {
+        command: String,
+        args: Vec<String>,
+        std_err: String,
+    },
+
     /// Error for when we fail to read the entries of a directory.
     #[snafu(display("Failed to read the contents of directory {}: {}", path.display(), source))]
     ReadingDirectoryContents {

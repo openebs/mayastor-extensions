@@ -1,7 +1,7 @@
 use crate::{
     common::error::{
         NotAValidYamlKeyForStringValue, NotYqV4, RegexCompile, Result, U8VectorToString,
-        YqCommandExec, YqMergeCommand, YqSetCommand, YqVersionCommand,
+        YqCommandExec, YqMergeCommand, YqSetCommand, YqSetObjCommand, YqVersionCommand,
     },
     vec_to_strings,
 };
@@ -109,16 +109,24 @@ impl YqV4 {
     /// preferred over those of the other file's. In case there are values absent in the latter one
     /// which exist in the other file, the values of the other file are taken. The 'latter' file in
     /// this function is the one called 'high_priority' and the other file is the 'low_priority'
-    /// one. The output of the command is stripped of the 'COMPUTED VALUES:' suffix.
+    /// one.
     /// E.g:
-    ///       high_priority file:                         low_priority file:
-    ///       ===================                         ==================
-    ///       foo:                                        foo:
-    ///         bar: "foobar"                               bar: "foobaz"
-    ///         baz:                                        baz:
-    ///           - "alpha"                                   - "gamma"
-    ///           - "beta"                                    - "delta" friend: "ferris"
+    ///       high_priority file:
+    ///       ===================
+    ///       foo:
+    ///         bar: "foobar"
+    ///         baz:
+    ///           - "alpha"
+    ///           - "beta"
     ///
+    ///       low_priority file:
+    ///       ==================
+    ///       foo:
+    ///         bar: "foobaz"
+    ///         baz:
+    ///           - "gamma"
+    ///           - "delta"
+    ///       friend: "ferris"
     ///
     ///       result:
     ///       =======
@@ -217,6 +225,41 @@ impl YqV4 {
                 command: self.command_as_str().to_string(),
                 args: yq_set_args,
                 std_err: str::from_utf8(yq_set_output.stderr.as_slice())
+                    .context(U8VectorToString)?
+                    .to_string()
+            }
+        );
+
+        Ok(())
+    }
+
+    /// This sets yaml objects to a file from the same yaml object in another file.
+    pub(crate) fn set_obj(&self, key: YamlKey, obj_source: &Path, filepath: &Path) -> Result<()> {
+        let yq_set_obj_args = vec_to_strings![
+            "-i",
+            format!(
+                r#"{} = load("{}"){}"#,
+                key.as_str(),
+                obj_source.to_string_lossy(),
+                key.as_str()
+            ),
+            filepath.to_string_lossy()
+        ];
+        let yq_set_obj_output = self
+            .command()
+            .args(yq_set_obj_args.clone())
+            .output()
+            .context(YqCommandExec {
+                command: self.command_as_str().to_string(),
+                args: yq_set_obj_args.clone(),
+            })?;
+
+        ensure!(
+            yq_set_obj_output.status.success(),
+            YqSetObjCommand {
+                command: self.command_as_str().to_string(),
+                args: yq_set_obj_args,
+                std_err: str::from_utf8(yq_set_obj_output.stderr.as_slice())
                     .context(U8VectorToString)?
                     .to_string()
             }
