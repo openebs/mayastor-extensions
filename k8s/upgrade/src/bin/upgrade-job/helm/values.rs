@@ -3,11 +3,14 @@ use crate::{
         constants::{
             TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE, TWO_DOT_SIX, TWO_DOT_THREE,
         },
-        error::{Result, SemverParse},
+        error::{
+            DeserializePromtailExtraConfig, Result, SemverParse,
+            SerializePromtailConfigClientToJson, SerializePromtailExtraConfigToJson,
+        },
         file::write_to_tempfile,
     },
     helm::{
-        chart::CoreValues,
+        chart::{CoreValues, PromtailConfigClient},
         yaml::yq::{YamlKey, YqV4},
     },
 };
@@ -81,7 +84,7 @@ where
         if source_values.io_engine_log_level().eq(log_level_to_replace)
             && target_values.io_engine_log_level().ne(log_level_to_replace)
         {
-            yq.set_value(
+            yq.set_literal_value(
                 YamlKey::try_from(".io_engine.logLevel")?,
                 target_values.io_engine_log_level(),
                 upgrade_values_file.path(),
@@ -94,17 +97,17 @@ where
         // RepoTags fields will also be set to the values found in the target helm values file
         // (low_priority file). This is so integration tests which use specific repo commits can
         // upgrade to a custom helm chart.
-        yq.set_value(
+        yq.set_literal_value(
             YamlKey::try_from(".image.repoTags.controlPlane")?,
             target_values.control_plane_repotag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_value(
+        yq.set_literal_value(
             YamlKey::try_from(".image.repoTags.dataPlane")?,
             target_values.data_plane_repotag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_value(
+        yq.set_literal_value(
             YamlKey::try_from(".image.repoTags.extensions")?,
             target_values.extensions_repotag(),
             upgrade_values_file.path(),
@@ -124,7 +127,7 @@ where
             .eventing_enabled()
             .ne(&target_values.eventing_enabled())
     {
-        yq.set_value(
+        yq.set_literal_value(
             YamlKey::try_from(".eventing.enabled")?,
             target_values.eventing_enabled(),
             upgrade_values_file.path(),
@@ -137,13 +140,14 @@ where
     })?;
     if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_five) {
         // promtail
+        // TODO: check to see if it is the wrong one first.
         if source_values
-            .loki_promtail_scrape_configs()
-            .ne(target_values.loki_promtail_scrape_configs())
+            .loki_stack_promtail_scrape_configs()
+            .ne(target_values.loki_stack_promtail_scrape_configs())
         {
-            yq.set_value(
+            yq.set_literal_value(
                 YamlKey::try_from(".loki-stack.promtail.config.snippets.scrapeConfigs")?,
-                target_values.loki_promtail_scrape_configs(),
+                target_values.loki_stack_promtail_scrape_configs(),
                 upgrade_values_file.path(),
             )?;
         }
@@ -157,7 +161,7 @@ where
                 .csi_node_nvme_io_timeout()
                 .ne(io_timeout_to_replace)
         {
-            yq.set_value(
+            yq.set_literal_value(
                 YamlKey::try_from(".csi.node.nvme.io_timeout")?,
                 target_values.csi_node_nvme_io_timeout(),
                 upgrade_values_file.path(),
@@ -170,14 +174,36 @@ where
         version_string: TWO_DOT_SIX.to_string(),
     })?;
     if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_six) {
-        yq.set_obj(
-            YamlKey::try_from(".loki-stack.loki")?,
-            target_values_filepath.as_ref(),
+        // Switch out image tag for the latest one.
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.loki.image.tag")?,
+            target_values.loki_stack_loki_image_tag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_obj(
-            YamlKey::try_from(".loki-stack.promtail")?,
-            target_values_filepath.as_ref(),
+        // Delete deprecated objects.
+        yq.delete_object(
+            YamlKey::try_from(".loki-stack.loki.config.ingester.lifecycler.ring.kvstore")?,
+            upgrade_values_file.path(),
+        )?;
+        yq.delete_object(
+            YamlKey::try_from(".loki-stack.promtail.config.snippets.extraClientConfigs")?,
+            upgrade_values_file.path(),
+        )?;
+        yq.delete_object(
+            YamlKey::try_from(".loki-stack.promtail.initContainer")?,
+            upgrade_values_file.path(),
+        )?;
+
+        loki_address_to_clients(target_values, upgrade_values_file.path(), &yq)?;
+
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.promtail.config.file")?,
+            target_values.loki_stack_promtail_config_file(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.promtail.readinessProbe.httpGet.path")?,
+            target_values.loki_stack_promtail_readiness_probe_path(),
             upgrade_values_file.path(),
         )?;
     }
@@ -185,34 +211,34 @@ where
     // Default options.
     // Image tag is set because the high_priority file is the user's source options file.
     // The target's image tag needs to be set for PRODUCT upgrade.
-    yq.set_value(
+    yq.set_literal_value(
         YamlKey::try_from(".image.tag")?,
         target_values.image_tag(),
         upgrade_values_file.path(),
     )?;
 
     // The CSI sidecar images need to always be the versions set on the chart by default.
-    yq.set_value(
+    yq.set_literal_value(
         YamlKey::try_from(".csi.image.provisionerTag")?,
         target_values.csi_provisioner_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_value(
+    yq.set_literal_value(
         YamlKey::try_from(".csi.image.attacherTag")?,
         target_values.csi_attacher_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_value(
+    yq.set_literal_value(
         YamlKey::try_from(".csi.image.snapshotterTag")?,
         target_values.csi_snapshotter_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_value(
+    yq.set_literal_value(
         YamlKey::try_from(".csi.image.snapshotControllerTag")?,
         target_values.csi_snapshot_controller_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_value(
+    yq.set_literal_value(
         YamlKey::try_from(".csi.image.registrarTag")?,
         target_values.csi_node_driver_registrar_image_tag(),
         upgrade_values_file.path(),
@@ -222,4 +248,71 @@ where
     // image.repoTags.dataPlane= --set image.repoTags.extensions=
 
     Ok(upgrade_values_file)
+}
+
+/// Converts config.lokiAddress and config.snippets.extraClientConfigs from the promtail helm chart
+/// v3.11.0 to config.clients[] which is compatible with promtail helm chart v6.13.1.
+fn loki_address_to_clients(
+    target_values: &CoreValues,
+    upgrade_values_filepath: &Path,
+    yq: &YqV4,
+) -> Result<()> {
+    let promtail_config_clients_yaml_key =
+        YamlKey::try_from(".loki-stack.promtail.config.clients")?;
+    // Delete existing array, if any. The merge_files() should have added it with the default value
+    // set.
+    yq.delete_object(
+        promtail_config_clients_yaml_key.clone(),
+        upgrade_values_filepath,
+    )?;
+    let loki_address = target_values.loki_stack_promtail_loki_address();
+    let promtail_config_client = PromtailConfigClient::with_url(loki_address);
+    let promtail_config_client = serde_json::to_string(&promtail_config_client).context(
+        SerializePromtailConfigClientToJson {
+            object: promtail_config_client,
+        },
+    )?;
+    yq.append_to_array(
+        promtail_config_clients_yaml_key,
+        promtail_config_client,
+        upgrade_values_filepath,
+    )?;
+    // Merge the extraClientConfigs from the promtail v3.11.0 chart to the v6.13.1 chart's
+    // config.clients block. Ref: https://github.com/grafana/helm-charts/issues/1214
+    // Ref: https://github.com/grafana/helm-charts/pull/1425
+    if !target_values.promtail_extra_client_configs().is_empty() {
+        // Converting the YAML to a JSON because the yq command goes like this...
+        // yq '.config.clients[0] += {"tenant_id": "1", "basic_auth": {"username": "loki",
+        // "password": "secret"}}' file
+        let promtail_extra_client_config: serde_json::Value = serde_yaml::from_str(
+            target_values.promtail_extra_client_configs(),
+        )
+        .context(DeserializePromtailExtraConfig {
+            config: target_values.promtail_extra_client_configs().to_string(),
+        })?;
+        let promtail_extra_client_config = serde_json::to_string(&promtail_extra_client_config)
+            .context(SerializePromtailExtraConfigToJson {
+                config: promtail_extra_client_config,
+            })?;
+
+        yq.append_to_object(
+            YamlKey::try_from(".loki-stack.promtail.config.clients[0]")?,
+            promtail_extra_client_config,
+            upgrade_values_filepath,
+        )?;
+    }
+
+    // Cleanup config.snippets.extraClientConfig from the promtail chart.
+    yq.delete_object(
+        YamlKey::try_from(".loki-stack.promtail.config.snippets.extraClientConfigs")?,
+        upgrade_values_filepath,
+    )?;
+
+    // Cleanup config.lokiAddress from the promtail chart.
+    yq.delete_object(
+        YamlKey::try_from(".loki-stack.promtail.config.lokiAddress")?,
+        upgrade_values_filepath,
+    )?;
+
+    Ok(())
 }
