@@ -208,8 +208,18 @@ where
                 upgrade_values_file.path(),
             )?;
         }
+    }
 
+    // Special-case values for 2.6.x.
+    let two_dot_six = Version::parse(TWO_DOT_SIX).context(SemverParse {
+        version_string: TWO_DOT_SIX.to_string(),
+    })?;
+    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_six) {
         // Update localpv-provisioner helm chart.
+        // This change is meant for versions from 2.0.0 to 2.4.0. However, this code wasn't checked
+        // into 2.5.0, and likely users of upgrade-job 2.5.0 are using the localpv image tag
+        // from 2.4.0 (i.e. 3.4.0) with the 3.5.0 localpv helm chart. So these options should
+        // also be set for source version 2.5.0.
         let localpv_version_to_replace = "3.4.0";
         if source_values
             .localpv_release_version()
