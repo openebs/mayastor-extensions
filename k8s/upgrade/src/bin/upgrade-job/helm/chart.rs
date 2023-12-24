@@ -76,6 +76,9 @@ pub(crate) struct CoreValues {
     /// This contains loki-stack details.
     #[serde(rename(deserialize = "loki-stack"))]
     loki_stack: LokiStack,
+    /// This contains the sub-chart values for the hostpath provisioner's helm chart.
+    #[serde(rename(deserialize = "localpv-provisioner"))]
+    localpv_provisioner: LocalpvProvisioner,
 }
 
 impl TryFrom<&Path> for CoreValues {
@@ -234,6 +237,21 @@ impl CoreValues {
     /// This returns the image tag for the kiwigrid/k8s-sidecar container.
     pub(crate) fn grafana_sidecar_image_tag(&self) -> &str {
         self.loki_stack.grafana_sidecar_image_tag()
+    }
+
+    /// This is a getter for the localpv-provisioner sub-chart's release version.
+    pub(crate) fn localpv_release_version(&self) -> &str {
+        self.localpv_provisioner.release_version()
+    }
+
+    /// This is a getter for the container image tag of the hostpath localpv provisioner.
+    pub(crate) fn localpv_provisioner_image_tag(&self) -> &str {
+        self.localpv_provisioner.provisioner_image_tag()
+    }
+
+    /// This is a getter for the image tag of the localpv helper container.
+    pub(crate) fn localpv_helper_image_tag(&self) -> &str {
+        self.localpv_provisioner.helper_image_tag()
     }
 }
 
@@ -803,5 +821,100 @@ impl PromtailConfigClient {
         Self {
             url: url.to_string(),
         }
+    }
+}
+
+/// This is used to deserialize the helm values of the localpv-provisioner helm chart.
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct LocalpvProvisioner {
+    release: LocalpvProvisionerRelease,
+    localpv: LocalpvProvisionerLocalpv,
+    helper_pod: LocalpvProvisionerHelperPod,
+}
+
+impl LocalpvProvisioner {
+    /// This is a getter for the localpv-provisioner helm chart's release version.
+    fn release_version(&self) -> &str {
+        self.release.version()
+    }
+
+    /// This is a getter for the container image tag of the provisioner-localpv container.
+    fn provisioner_image_tag(&self) -> &str {
+        self.localpv.image_tag()
+    }
+
+    /// This is a getter for the linux-utils helper container.
+    fn helper_image_tag(&self) -> &str {
+        self.helper_pod.image_tag()
+    }
+}
+
+/// This is used to deserialize the 'release.version' yaml object in the localpv-provisioner helm
+/// chart.
+#[derive(Deserialize)]
+struct LocalpvProvisionerRelease {
+    version: String,
+}
+
+impl LocalpvProvisionerRelease {
+    /// This is a getter for the release version for the localpv-provisioner helm chart.
+    /// This value is set as the value of the 'openebs.io/version' label.
+    fn version(&self) -> &str {
+        self.version.as_str()
+    }
+}
+
+/// This is used to deserialize the 'localpv' yaml object in the localpv-provisioner helm chart.
+#[derive(Deserialize)]
+struct LocalpvProvisionerLocalpv {
+    image: LocalpvProvisionerLocalpvImage,
+}
+
+impl LocalpvProvisionerLocalpv {
+    /// This is getter for the openebs/provisioner-localpv container's image tag.
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+}
+
+/// This is used to deserialize the 'localpv.image' yaml object in the localpv-provisioner helm
+/// chart.
+#[derive(Deserialize)]
+struct LocalpvProvisionerLocalpvImage {
+    tag: String,
+}
+
+impl LocalpvProvisionerLocalpvImage {
+    /// This is getter for the openebs/provisioner-localpv container's image tag.
+    fn tag(&self) -> &str {
+        self.tag.as_str()
+    }
+}
+
+/// This is used to deserialize the 'helperPod' yaml object in the localpv-provisioner helm chart.
+#[derive(Deserialize)]
+struct LocalpvProvisionerHelperPod {
+    image: LocalpvProvisionerHelperPodImage,
+}
+
+impl LocalpvProvisionerHelperPod {
+    /// This is getter for the openebs/linux-utils helper pod container's image tag.
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+}
+
+/// This is used to deserialize the 'helperPod.image' yaml object in the localpv-provisioner helm
+/// chart.
+#[derive(Deserialize)]
+struct LocalpvProvisionerHelperPodImage {
+    tag: String,
+}
+
+impl LocalpvProvisionerHelperPodImage {
+    /// This is getter for the openebs/linux-utils helper pod container's image tag.
+    fn tag(&self) -> &str {
+        self.tag.as_str()
     }
 }
