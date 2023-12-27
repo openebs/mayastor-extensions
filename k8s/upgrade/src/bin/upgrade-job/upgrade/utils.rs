@@ -33,14 +33,13 @@ pub(crate) async fn rebuild_result(
             break;
         }
 
+        let mut volume_over_nodes = HashSet::new();
         for volume in unhealthy_volumes.iter() {
-            let target = if let Some(target) = volume.state.target.as_ref() {
-                target
-            } else {
-                continue;
+            let target = match volume.state.target.as_ref() {
+                Some(t) => t,
+                None => continue,
             };
 
-            let mut volume_over_nodes = HashSet::new();
             volume_over_nodes.insert(target.node.as_str());
 
             for (_, topology) in volume.state.replica_topology.iter() {
@@ -73,6 +72,9 @@ pub(crate) async fn rebuild_result(
                     }
                 }
             }
+        }
+        if volume_over_nodes.is_empty() {
+            break;
         }
     }
     Ok(RebuildResult {
