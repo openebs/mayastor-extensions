@@ -34,8 +34,18 @@ get_artifacts_id() {
   local tag="$1"
   local workflow="$2"
   local repo="$BINARY_ORG_REPO"
-  local sha=$(gh api repos/$repo/git/refs/tags/$tag | jq '.object.sha')
-  job=$(gh run list --branch "$tag" --workflow "$workflow" --repo "$repo" --json conclusion,headSha,databaseId --jq ".[] | select(.headSha == $sha)")
+  local tag_ref=$(gh api repos/$repo/git/refs/tags/$tag)
+  local type=$(echo $tag_ref | jq -r '.object.type')
+  if [ "$type" = "tag" ]; then
+    # Git annotated tags are an object on their own, so we need
+    # another step to fetch the commit sha.
+    local sha=$(echo $tag_ref | jq -r '.object.sha')
+    tag_ref=$(gh api repos/$repo/git/tags/$sha)
+  elif [ "$type" != "commit" ]; then
+    die "Invalid tag type: $type"
+  fi
+  local sha=$(echo $tag_ref | jq '.object.sha')
+  job=$(gh run list --branch "$tag" --workflow "$workflow" --repo "$repo" --json conclusion,headSha,databaseId --jq ".[] | select(.headSha == "$sha")")
   if [ -z "$job" ]; then
     echo "Job not found" >&2
     return 1
@@ -127,6 +137,7 @@ BINARY_WORFLOW=
 COMMAND=
 REPO_ORG=
 BINARY_ORG_REPO=
+UPLOAD_TO=
 
 while [ "$#" -gt 0 ]; do
   case $1 in
@@ -161,7 +172,6 @@ while [ "$#" -gt 0 ]; do
     upload)
       shift
       COMMAND="upload"
-      shift
       ;;
     *)
       help

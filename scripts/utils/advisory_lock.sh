@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 
-# -o errexit: abort script if one command fails
-# -o errtrace: the ERR trap is inherited by shell functions
-# -o pipefail: entire command fails if pipe fails
-# -o history: record shell history
-# -o allexport: export all functions and variables to be available to subscripts
-set -o errexit -o errtrace -o pipefail -o history -o allexport
-
-# Takes a lock by way of a local file with the name <cleanup-config-file-name>.lock.
+# Takes a lock by way of a local file with the name <file-name>.lock.
 advisory_lock_acquire() {
   local -r filepath=$1
   local -r lock_filepath=$2

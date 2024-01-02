@@ -594,8 +594,9 @@ loki-stack:
     tolerations: []
     priorityClassName: ""
     config:
-      # -- The Loki address to post logs to
-      lokiAddress: http://{{ .Release.Name }}-loki:3100/loki/api/v1/push
+      clients:
+        # -- The Loki address to post logs to
+        - url: http://{{ .Release.Name }}-loki:3100/loki/api/v1/push
       snippets:
         # Promtail will export logs to loki only based on based on below
         # configuration, below scrape config will export only our services
@@ -647,6 +648,9 @@ loki-stack:
               - __meta_kubernetes_pod_uid
               - __meta_kubernetes_pod_container_name
               target_label: __path__
+        # Ignore readiness check if no logs are found on nodes without Mayastor components.
+        extraServerConfigs: |-
+          health_check_target: false
 
 # Eventing which enables or disables eventing-related components.
 eventing:
