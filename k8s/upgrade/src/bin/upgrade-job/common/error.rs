@@ -645,6 +645,19 @@ pub(crate) enum Error {
         std_err: String,
     },
 
+    /// Error for when the yq command to set an object from another YAML file, returns an error.
+    #[snafu(display(
+        "`yq` set-object-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
+        command,
+        args,
+        std_err,
+    ))]
+    YqSetObjectFromFileCommand {
+        command: String,
+        args: Vec<String>,
+        std_err: String,
+    },
+
     /// Error for when the yq command to delete an object path returns an error.
     #[snafu(display(
         "`yq` delete-object-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",

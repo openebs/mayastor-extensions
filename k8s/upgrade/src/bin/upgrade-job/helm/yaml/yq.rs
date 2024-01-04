@@ -2,7 +2,7 @@ use crate::{
     common::error::{
         NotAValidYamlKeyForStringValue, NotYqV4, RegexCompile, Result, U8VectorToString,
         YqAppendToArrayCommand, YqAppendToObjectCommand, YqCommandExec, YqDeleteObjectCommand,
-        YqMergeCommand, YqSetCommand, YqVersionCommand,
+        YqMergeCommand, YqSetCommand, YqSetObjectFromFileCommand, YqVersionCommand,
     },
     vec_to_strings,
 };
@@ -126,7 +126,7 @@ impl YqV4 {
         Ok(())
     }
 
-    /// Append objects to yaml arrays.
+    /// Append fields to yaml objects.
     pub(crate) fn append_to_object<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
     where
         V: Display + Sized,
@@ -153,14 +153,14 @@ impl YqV4 {
         Ok(())
     }
 
-    /// Use the yq 'delpaths' operator to delete objects from a yaml file.
+    /// Use the yq 'del' operator to delete objects from a yaml file.
     pub(crate) fn delete_object<P>(&self, key: YamlKey, filepath: P) -> Result<()>
     where
         P: AsRef<Path>,
     {
         let yq_delete_object_args = vec_to_strings![
             "-i",
-            format!(r#"delpaths([["{}"]])"#, key.as_str()),
+            format!(r#"del({})"#, key.as_str()),
             filepath.as_ref().to_string_lossy()
         ];
         let yq_delete_object_output = self.command_output(yq_delete_object_args.clone())?;
@@ -300,6 +300,47 @@ impl YqV4 {
                 command: self.command_as_str().to_string(),
                 args: yq_set_args,
                 std_err: str::from_utf8(yq_set_output.stderr.as_slice())
+                    .context(U8VectorToString)?
+                    .to_string()
+            }
+        );
+
+        Ok(())
+    }
+
+    /// This sets in-place yaml objects into a YAML file, from a field in another YAML file.
+    /// The 'source' args are the source of the object (where to take it from).
+    /// The 'target' args are the destination of the object (where to make the actual change).
+    pub(crate) fn set_object_from_file<P, Q>(
+        &self,
+        source_key: YamlKey,
+        source_filepath: P,
+        target_key: YamlKey,
+        target_filepath: Q,
+    ) -> Result<()>
+    where
+        P: AsRef<Path>,
+        Q: AsRef<Path>,
+    {
+        let yq_object_from_file_args = vec_to_strings![
+            "-i",
+            format!(
+                r#"{} = load("{}"){}"#,
+                target_key.as_str(),
+                source_filepath.as_ref().to_string_lossy(),
+                source_key.as_str()
+            ),
+            target_filepath.as_ref().to_string_lossy()
+        ];
+
+        let yq_object_from_file_output = self.command_output(yq_object_from_file_args.clone())?;
+
+        ensure!(
+            yq_object_from_file_output.status.success(),
+            YqSetObjectFromFileCommand {
+                command: self.command_as_str().to_string(),
+                args: yq_object_from_file_args,
+                std_err: str::from_utf8(yq_object_from_file_output.stderr.as_slice())
                     .context(U8VectorToString)?
                     .to_string()
             }

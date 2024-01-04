@@ -39,7 +39,7 @@ use tempfile::NamedTempFile as TempFile;
 /// used with the yq-go binary.
 ///     target_values_filepath --> This is simply the path to the values.yaml file for the target
 /// helm chart, which is available locally.
-///     workdir --> This is the path to a directory that yq-go may use to write its output file
+///     chart_dir --> This is the path to a directory that yq-go may use to write its output file
 /// into. The output file will be a merged values.yaml with special values set as per requirement
 /// (based on source_version and target_version).
 pub(crate) fn generate_values_yaml_file<P, Q>(
@@ -49,7 +49,7 @@ pub(crate) fn generate_values_yaml_file<P, Q>(
     target_values: &CoreValues,
     source_values_buf: Vec<u8>,
     target_values_filepath: P,
-    workdir: Q,
+    chart_dir: Q,
 ) -> Result<TempFile>
 where
     P: AsRef<Path>,
@@ -57,7 +57,7 @@ where
 {
     // Write the source_values buffer fetched from the installed helm release to a temporary file.
     let source_values_file: TempFile =
-        write_to_tempfile(Some(workdir.as_ref()), source_values_buf.as_slice())?;
+        write_to_tempfile(Some(chart_dir.as_ref()), source_values_buf.as_slice())?;
 
     // Resultant values yaml for helm upgrade command.
     // Merge the source values with the target values.
@@ -65,7 +65,7 @@ where
     let upgrade_values_yaml =
         yq.merge_files(source_values_file.path(), target_values_filepath.as_ref())?;
     let upgrade_values_file: TempFile =
-        write_to_tempfile(Some(workdir), upgrade_values_yaml.as_slice())?;
+        write_to_tempfile(Some(chart_dir.as_ref()), upgrade_values_yaml.as_slice())?;
 
     // Not using semver::VersionReq because expressions like '>=2.1.0' don't include
     // 2.3.0-rc.0. 2.3.0, 2.4.0, etc. are supported. So, not using VersionReq in the
@@ -175,9 +175,12 @@ where
     })?;
     if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_six) {
         // Switch out image tag for the latest one.
-        yq.set_literal_value(
+        yq.set_object_from_file(
+            YamlKey::try_from(".image.tag")?,
+            chart_dir
+                .as_ref()
+                .join("charts/loki-stack/charts/loki/values.yaml"),
             YamlKey::try_from(".loki-stack.loki.image.tag")?,
-            target_values.loki_stack_loki_image_tag(),
             upgrade_values_file.path(),
         )?;
         // Delete deprecated objects.
@@ -194,16 +197,27 @@ where
             upgrade_values_file.path(),
         )?;
 
-        loki_address_to_clients(target_values, upgrade_values_file.path(), &yq)?;
+        loki_address_to_clients(source_values, upgrade_values_file.path(), &yq)?;
 
-        yq.set_literal_value(
+        let promtail_values_file = chart_dir
+            .as_ref()
+            .join("charts/loki-stack/charts/promtail/values.yaml");
+        yq.set_object_from_file(
+            YamlKey::try_from(".config.file")?,
+            promtail_values_file.as_path(),
             YamlKey::try_from(".loki-stack.promtail.config.file")?,
-            target_values.loki_stack_promtail_config_file(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_object_from_file(
+            YamlKey::try_from(".initContainer")?,
+            promtail_values_file.as_path(),
+            YamlKey::try_from(".loki-stack.promtail.initContainer")?,
+            upgrade_values_file.path(),
+        )?;
+        yq.set_object_from_file(
+            YamlKey::try_from(".readinessProbe.httpGet.path")?,
+            promtail_values_file.as_path(),
             YamlKey::try_from(".loki-stack.promtail.readinessProbe.httpGet.path")?,
-            target_values.loki_stack_promtail_readiness_probe_path(),
             upgrade_values_file.path(),
         )?;
     }
@@ -253,7 +267,7 @@ where
 /// Converts config.lokiAddress and config.snippets.extraClientConfigs from the promtail helm chart
 /// v3.11.0 to config.clients[] which is compatible with promtail helm chart v6.13.1.
 fn loki_address_to_clients(
-    target_values: &CoreValues,
+    source_values: &CoreValues,
     upgrade_values_filepath: &Path,
     yq: &YqV4,
 ) -> Result<()> {
@@ -265,8 +279,9 @@ fn loki_address_to_clients(
         promtail_config_clients_yaml_key.clone(),
         upgrade_values_filepath,
     )?;
-    let loki_address = target_values.loki_stack_promtail_loki_address();
+    let loki_address = source_values.loki_stack_promtail_loki_address();
     let promtail_config_client = PromtailConfigClient::with_url(loki_address);
+    // Serializing to JSON, because the yq command requires the input in JSON.
     let promtail_config_client = serde_json::to_string(&promtail_config_client).context(
         SerializePromtailConfigClientToJson {
             object: promtail_config_client,
@@ -280,15 +295,13 @@ fn loki_address_to_clients(
     // Merge the extraClientConfigs from the promtail v3.11.0 chart to the v6.13.1 chart's
     // config.clients block. Ref: https://github.com/grafana/helm-charts/issues/1214
     // Ref: https://github.com/grafana/helm-charts/pull/1425
-    if !target_values.promtail_extra_client_configs().is_empty() {
-        // Converting the YAML to a JSON because the yq command goes like this...
-        // yq '.config.clients[0] += {"tenant_id": "1", "basic_auth": {"username": "loki",
-        // "password": "secret"}}' file
+    if !source_values.promtail_extra_client_configs().is_empty() {
+        // Converting the YAML to a JSON because the yq command requires the object input as a JSON.
         let promtail_extra_client_config: serde_json::Value = serde_yaml::from_str(
-            target_values.promtail_extra_client_configs(),
+            source_values.promtail_extra_client_configs(),
         )
         .context(DeserializePromtailExtraConfig {
-            config: target_values.promtail_extra_client_configs().to_string(),
+            config: source_values.promtail_extra_client_configs().to_string(),
         })?;
         let promtail_extra_client_config = serde_json::to_string(&promtail_extra_client_config)
             .context(SerializePromtailExtraConfigToJson {

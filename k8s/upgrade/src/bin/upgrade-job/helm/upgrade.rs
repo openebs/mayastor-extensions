@@ -129,6 +129,7 @@ impl HelmUpgraderBuilder {
             }
             .build(),
         )?;
+
         let helm_args_set = self.helm_args_set.unwrap_or_default();
         let helm_args_set_file = self.helm_args_set_file.unwrap_or_default();
 

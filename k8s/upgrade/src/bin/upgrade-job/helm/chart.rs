@@ -173,11 +173,6 @@ impl CoreValues {
         self.csi.node_nvme_io_timeout()
     }
 
-    /// This is a getter for the grafana/loki container's image tag from the loki helm chart.
-    pub(crate) fn loki_stack_loki_image_tag(&self) -> &str {
-        self.loki_stack.loki_image_tag()
-    }
-
     /// This is a getter for the promtail scrapeConfigs.
     pub(crate) fn loki_stack_promtail_scrape_configs(&self) -> &str {
         self.loki_stack.promtail_scrape_configs()
@@ -185,14 +180,6 @@ impl CoreValues {
 
     pub(crate) fn loki_stack_promtail_loki_address(&self) -> &str {
         self.loki_stack.deprecated_promtail_loki_address()
-    }
-
-    pub(crate) fn loki_stack_promtail_config_file(&self) -> &str {
-        self.loki_stack.promtail_config_file()
-    }
-
-    pub(crate) fn loki_stack_promtail_readiness_probe_path(&self) -> &str {
-        self.loki_stack.promtail_readiness_probe_path()
     }
 
     /// This returns the config.snippets.extraClientConfigs from the promtail helm chart v3.11.0.
@@ -447,7 +434,6 @@ impl CsiNodeNvme {
 /// This is used to deserialize the yaml object 'loki-stack'.
 #[derive(Deserialize)]
 struct LokiStack {
-    loki: Loki,
     promtail: Promtail,
 }
 
@@ -462,47 +448,8 @@ impl LokiStack {
         self.promtail.deprecated_extra_client_configs()
     }
 
-    /// This is a getter for the grafana/loki container's image tag.
-    fn loki_image_tag(&self) -> &str {
-        self.loki.image_tag()
-    }
-
     fn deprecated_promtail_loki_address(&self) -> &str {
         self.promtail.deprecated_loki_address()
-    }
-
-    fn promtail_config_file(&self) -> &str {
-        self.promtail.config_file()
-    }
-
-    fn promtail_readiness_probe_path(&self) -> &str {
-        self.promtail.readiness_probe_http_get_path()
-    }
-}
-
-/// This is used to deserialize the loki dependent helm chart's values set.
-#[derive(Deserialize)]
-struct Loki {
-    image: LokiImage,
-}
-
-impl Loki {
-    /// This is a getter for the container image tag.
-    fn image_tag(&self) -> &str {
-        self.image.tag()
-    }
-}
-
-/// This is used to deserialize the yaml object 'image' in the loki helm chart.
-#[derive(Deserialize)]
-struct LokiImage {
-    tag: String,
-}
-
-impl LokiImage {
-    /// This is a getter for the image's tag.
-    fn tag(&self) -> &str {
-        self.tag.as_str()
     }
 }
 
@@ -511,7 +458,6 @@ impl LokiImage {
 #[serde(rename_all(deserialize = "camelCase"))]
 struct Promtail {
     config: PromtailConfig,
-    readiness_probe: PromtailReadinessProbe,
 }
 
 impl Promtail {
@@ -528,14 +474,6 @@ impl Promtail {
     fn deprecated_loki_address(&self) -> &str {
         self.config.deprecated_loki_address()
     }
-
-    fn config_file(&self) -> &str {
-        self.config.file()
-    }
-
-    fn readiness_probe_http_get_path(&self) -> &str {
-        self.readiness_probe.http_get_path()
-    }
 }
 
 /// This is used to deserialize the promtail.config yaml object.
@@ -543,7 +481,6 @@ impl Promtail {
 struct PromtailConfig {
     #[serde(default, rename(deserialize = "lokiAddress"))]
     deprecated_loki_address: String,
-    file: String,
     snippets: PromtailConfigSnippets,
 }
 
@@ -561,10 +498,6 @@ impl PromtailConfig {
     /// This is a getter for the lokiAddress in the loki helm chart v2.6.4.
     fn deprecated_loki_address(&self) -> &str {
         self.deprecated_loki_address.as_str()
-    }
-
-    fn file(&self) -> &str {
-        self.file.as_str()
     }
 }
 
@@ -586,29 +519,6 @@ impl PromtailConfigSnippets {
     /// This returns the snippets.extraClientConfigs from the promtail helm chart v3.11.0.
     fn deprecated_extra_client_configs(&self) -> &str {
         self.deprecated_extra_client_configs.as_str()
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all(deserialize = "camelCase"))]
-struct PromtailReadinessProbe {
-    http_get: PromtailReadinessProbeHttpGet,
-}
-
-impl PromtailReadinessProbe {
-    fn http_get_path(&self) -> &str {
-        self.http_get.path()
-    }
-}
-
-#[derive(Deserialize)]
-struct PromtailReadinessProbeHttpGet {
-    path: String,
-}
-
-impl PromtailReadinessProbeHttpGet {
-    fn path(&self) -> &str {
-        self.path.as_str()
     }
 }
 
