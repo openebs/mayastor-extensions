@@ -242,8 +242,13 @@ for name in $IMAGES; do
         echo "Updating helm chart dependencies..."
         # Helm chart directory path -- /scripts --> /chart
         CHART_DIR="${SCRIPT_DIR}/../chart"
+        dep_chart_dir="${CHART_DIR}/charts"
 
         $NIX_SHELL --run "helm dependency update ${CHART_DIR}"
+        for dep_chart_tar in "${dep_chart_dir}"/*.tgz; do
+          tar -xf "${dep_chart_tar}" -C "${dep_chart_dir}"
+          rm -f "${dep_chart_tar}"
+        done
 
         # Set flag to true
         _helm_dependencies_updated=true
