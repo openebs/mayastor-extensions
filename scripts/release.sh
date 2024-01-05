@@ -8,7 +8,7 @@
 CI=${CI-}
 
 set -euo pipefail
-
+trap 'cleanup_and_exit "$?"' EXIT
 # Test if the image already exists in dockerhub
 dockerhub_tag_exists() {
   curl --silent -f -lSL https://hub.docker.com/v2/repositories/$1/tags/$2 1>/dev/null 2>&1
@@ -29,6 +29,17 @@ nix_experimental() {
   else
       echo -n " "
   fi
+}
+cleanup_and_exit() {
+  local -r status=${1}
+
+  # Remove helm subcharts, if `helm dependency update` was run.
+  if [ "$_helm_dependencies_updated" = "true" ]; then
+    echo "Cleaning up helm chart dependencies..."
+    rm -rf "$CHART_DIR"/charts
+  fi
+
+  exit "$status"
 }
 
 help() {
@@ -228,7 +239,7 @@ fi
 
 # This variable will be used to flag if the helm chart dependencies have been
 # been updated.
-_helm_dependencies_updated=false
+_helm_dependencies_updated="false"
 for name in $IMAGES; do
   image_basename=$($NIX_EVAL -f . images.$BUILD_TYPE.$name.imageName | xargs)
   image=$image_basename
@@ -236,22 +247,17 @@ for name in $IMAGES; do
     image="${REGISTRY}/${image}"
   fi
 
-  if [ "$_helm_dependencies_updated" = false ]; then
+  if [ "$_helm_dependencies_updated" = "false" ]; then
     for helm_chart_user in ${IMAGES_THAT_REQUIRE_HELM_CHART[@]}; do
       if [ "$name" = "$helm_chart_user" ]; then
         echo "Updating helm chart dependencies..."
         # Helm chart directory path -- /scripts --> /chart
         CHART_DIR="${SCRIPT_DIR}/../chart"
-        dep_chart_dir="${CHART_DIR}/charts"
 
         $NIX_SHELL --run "helm dependency update ${CHART_DIR}"
-        for dep_chart_tar in "${dep_chart_dir}"/*.tgz; do
-          tar -xf "${dep_chart_tar}" -C "${dep_chart_dir}"
-          rm -f "${dep_chart_tar}"
-        done
 
         # Set flag to true
-        _helm_dependencies_updated=true
+        _helm_dependencies_updated="true"
         break
       fi
     done
