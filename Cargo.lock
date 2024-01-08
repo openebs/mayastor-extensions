@@ -2805,6 +2805,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "snafu",
  "strum",
  "strum_macros",
  "tokio",

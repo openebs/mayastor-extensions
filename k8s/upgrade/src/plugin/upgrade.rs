@@ -52,24 +52,18 @@ pub struct DeleteUpgradeArgs {
 
 impl DeleteUpgradeArgs {
     /// Delete the upgrade resources
-    pub async fn delete(&self, ns: &str) {
+    pub async fn delete(&self, ns: &str) -> error::Result<()> {
         match is_upgrade_job_completed(ns).await {
             Ok(job_completed) => {
                 if !job_completed && !self.force {
                     console_logger::error("", DELETE_INCOMPLETE_JOB);
                 }
                 if job_completed || self.force {
-                    _ = UpgradeResources::delete_upgrade_resources(ns)
-                        .await
-                        .map_err(|error| {
-                            std::process::exit(error.into());
-                        });
+                    UpgradeResources::delete_upgrade_resources(ns).await?;
                 }
+                Ok(())
             }
-            Err(error) => {
-                eprintln!("error : {error}");
-                std::process::exit(error.into());
-            }
+            Err(error) => Err(error),
         }
     }
 }
@@ -263,13 +257,9 @@ pub struct GetUpgradeArgs {}
 
 impl GetUpgradeArgs {
     ///  Upgrade the resources.
-    pub async fn get_upgrade(&self, namespace: &str) {
+    pub async fn get_upgrade(&self, namespace: &str) -> error::Result<()> {
         // Create resources for getting upgrade status
-        _ = UpgradeEventClient::create_get_upgrade_resource(namespace)
-            .await
-            .map_err(|error| {
-                std::process::exit(error.into());
-            });
+        UpgradeEventClient::create_get_upgrade_resource(namespace).await
     }
 }
 
