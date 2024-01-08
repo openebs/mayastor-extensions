@@ -51,7 +51,6 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         args:
-        - "-p{{ .Values.base.metrics.pollingInterval }}"
         - "--api-versions={{ .Values.io_engine.api }}"
         ports:
           - containerPort: 9502

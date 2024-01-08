@@ -4,7 +4,7 @@ use crate::client::{
     pool::{PoolInfo, PoolOperations, Pools},
 };
 use std::ops::DerefMut;
-use tracing::{debug, error};
+use tracing::error;
 
 impl ResourceOps for Pools {
     type ResourceVec = Vec<PoolInfo>;
@@ -32,8 +32,7 @@ pub(crate) async fn store_pool_info_data(client: GrpcClient) -> Result<(), ()> {
     match pools {
         // set pools in the cache
         Ok(pools) => {
-            debug!("Updated pool cache with latest metrics");
-            pools_cache.pool_mut().set(pools.pools)
+            pools_cache.pool_mut().set(pools.pools);
         }
         // invalidate cache in case of error
         Err(error) => {

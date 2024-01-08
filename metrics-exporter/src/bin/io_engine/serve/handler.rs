@@ -1,10 +1,15 @@
-use crate::collector::pool::{PoolCapacityCollector, PoolStatusCollector};
+use crate::{
+    cache::store_resource_data,
+    collector::pool::{PoolCapacityCollector, PoolStatusCollector},
+    grpc_client,
+};
 use actix_web::{http::header, HttpResponse, Responder};
 use prometheus::{Encoder, Registry};
 use tracing::{error, warn};
 
 /// Handler for metrics. Initializes all collector and serves data over Http.
 pub(crate) async fn metrics_handler() -> impl Responder {
+    store_resource_data(grpc_client()).await;
     let pools_collector = PoolCapacityCollector::default();
     let pool_status_collector = PoolStatusCollector::default();
     // Create a new registry for prometheus

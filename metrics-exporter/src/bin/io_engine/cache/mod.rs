@@ -1,14 +1,10 @@
 mod pool;
 
-use crate::{
-    client::{grpc_client::GrpcClient, pool::Pools},
-    ExporterConfig,
-};
+use crate::client::{grpc_client::GrpcClient, pool::Pools};
 
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use tokio::time::sleep;
 static CACHE: OnceCell<Mutex<Cache>> = OnceCell::new();
 
 /// Trait to be implemented by all Resource structs stored in Cache.
@@ -62,17 +58,7 @@ impl Data {
     }
 }
 
-/// To store data in shared variable i.e cache.
-pub(crate) async fn store_data(client: GrpcClient) {
-    tokio::spawn(async move {
-        store_resource_data(client).await;
-    });
-}
-
-/// To store pools related data in cache.
-async fn store_resource_data(client: GrpcClient) {
-    loop {
-        let _ = pool::store_pool_info_data(client.clone()).await;
-        sleep(ExporterConfig::get_config().polling_time()).await;
-    }
+/// Populates Resource cache struct.
+pub(crate) async fn store_resource_data(client: &GrpcClient) {
+    let _ = pool::store_pool_info_data(client.clone()).await;
 }
