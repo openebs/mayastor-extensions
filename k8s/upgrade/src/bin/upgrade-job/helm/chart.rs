@@ -199,12 +199,41 @@ impl CoreValues {
         self.loki_stack.deprecated_promtail_extra_client_configs()
     }
 
+    /// This returns the initContainers array from the promtail chart v6.13.1.
     pub(crate) fn promtail_init_container(&self) -> Vec<Container> {
         self.loki_stack.promtail_init_container()
     }
 
+    /// This returns the readinessProbe HTTP Get path from the promtail chart v6.13.1.
     pub(crate) fn promtail_readiness_probe_http_get_path(&self) -> String {
         self.loki_stack.promtail_readiness_probe_http_get_path()
+    }
+
+    /// This returns the image tag from the filebeat helm chart. Filebeat is a part of the
+    /// loki-stack chart.
+    pub(crate) fn filebeat_image_tag(&self) -> &str {
+        self.loki_stack.filebeat_image_tag()
+    }
+
+    /// This returns the image tag from the logstash helm chart. Logstash is a part of the
+    /// loki-stack chart.
+    pub(crate) fn logstash_image_tag(&self) -> &str {
+        self.loki_stack.logstash_image_tag()
+    }
+
+    /// This returns the image tag for the curlimages/curl container.
+    pub(crate) fn grafana_download_dashboards_image_tag(&self) -> &str {
+        self.loki_stack.grafana_download_dashboards_image_tag()
+    }
+
+    /// This returns the image tag for the grafana/grafana container.
+    pub(crate) fn grafana_image_tag(&self) -> &str {
+        self.loki_stack.grafana_image_tag()
+    }
+
+    /// This returns the image tag for the kiwigrid/k8s-sidecar container.
+    pub(crate) fn grafana_sidecar_image_tag(&self) -> &str {
+        self.loki_stack.grafana_sidecar_image_tag()
     }
 }
 
@@ -454,6 +483,9 @@ impl CsiNodeNvme {
 /// This is used to deserialize the yaml object 'loki-stack'.
 #[derive(Deserialize)]
 struct LokiStack {
+    filebeat: Filebeat,
+    grafana: Grafana,
+    logstash: Logstash,
     loki: Loki,
     promtail: Promtail,
 }
@@ -464,6 +496,7 @@ impl LokiStack {
         self.promtail.scrape_configs()
     }
 
+    /// This is a getter for the value of 'promtail.config.file'.
     fn promtail_config_file(&self) -> &str {
         self.promtail.config_file()
     }
@@ -473,20 +506,155 @@ impl LokiStack {
         self.promtail.deprecated_extra_client_configs()
     }
 
+    /// This is a getter for the deprecated 'lokiAddress' field in the promtail helm chart v3.11.0.
     fn deprecated_promtail_loki_address(&self) -> &str {
         self.promtail.deprecated_loki_address()
     }
 
+    /// This is a getter for the loki/loki container's image tag.
     fn loki_image_tag(&self) -> &str {
         self.loki.image_tag()
     }
 
+    /// This is a getter for the initContainer array from promtail chart v6.13.1.
     fn promtail_init_container(&self) -> Vec<Container> {
         self.promtail.init_container()
     }
 
+    /// This is a getter for the readinessProbe HTTP GET path from promtail chart v6.13.1.
     fn promtail_readiness_probe_http_get_path(&self) -> String {
         self.promtail.readiness_probe_http_get_path()
+    }
+
+    /// This is a getter for the filebeat image tag from the loki-stack helm chart.
+    fn filebeat_image_tag(&self) -> &str {
+        self.filebeat.image_tag()
+    }
+
+    /// This is a getter for the logstash image tag from the loki-stack helm chart.
+    fn logstash_image_tag(&self) -> &str {
+        self.logstash.image_tag()
+    }
+
+    /// This is a getter for the curlimages/curl container's image tag from the grafana chart.
+    fn grafana_download_dashboards_image_tag(&self) -> &str {
+        self.grafana.download_dashboards_image_tag()
+    }
+
+    /// This is a getter for the grafana/grafana container's image tag from the grafana chart.
+    fn grafana_image_tag(&self) -> &str {
+        self.grafana.image_tag()
+    }
+
+    /// This is a getter for the kiwigrid/k8s-sidecar container's image tag from the grafana chart.
+    fn grafana_sidecar_image_tag(&self) -> &str {
+        self.grafana.sidecar_image_tag()
+    }
+}
+
+/// This is used to deserialize the YAML object 'loki-stack.filebeat'.
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct Filebeat {
+    image_tag: String,
+}
+
+impl Filebeat {
+    /// This is a getter for the Filebeat image tag.
+    fn image_tag(&self) -> &str {
+        self.image_tag.as_str()
+    }
+}
+
+/// This is used to deserialize the YAML object 'loki-stack.grafana'.
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct Grafana {
+    download_dashboards_image: GrafanaDownloadDashboardsImage,
+    image: GrafanaImage,
+    sidecar: GrafanaSidecar,
+}
+
+impl Grafana {
+    /// This is getter for the curlimages/curl container image tag.
+    fn download_dashboards_image_tag(&self) -> &str {
+        self.download_dashboards_image.tag()
+    }
+
+    /// This is getter for the grafana/grafana container image tag.
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+
+    /// This is a getter for the kiwigrid/k8s-sidecar sidecar container image tag.
+    fn sidecar_image_tag(&self) -> &str {
+        self.sidecar.image_tag()
+    }
+}
+
+/// This is used to deserialize the YAML object 'loki-stack.grafana.downloadDashboardsImage'.
+#[derive(Deserialize)]
+struct GrafanaDownloadDashboardsImage {
+    tag: String,
+}
+
+impl GrafanaDownloadDashboardsImage {
+    /// This is a getter for the curlimages/curl container image on the grafana chart.
+    fn tag(&self) -> &str {
+        self.tag.as_str()
+    }
+}
+
+/// This is used to deserialize the YAML object 'loki-stack.grafana.image'.
+#[derive(Deserialize)]
+struct GrafanaImage {
+    tag: String,
+}
+
+impl GrafanaImage {
+    /// This is a getter for the grafana/grafana container image on the grafana chart.
+    fn tag(&self) -> &str {
+        self.tag.as_str()
+    }
+}
+
+/// This is used to deserialize the YAML object 'loki-stack.grafana.sidecar'.
+#[derive(Deserialize)]
+struct GrafanaSidecar {
+    image: GrafanaSidecarImage,
+}
+
+impl GrafanaSidecar {
+    /// This is a getter for the kiwigrid/k8s-sidecar sidecar container image tag.
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+}
+
+/// This is used to deserialize the YAML object 'loki-stack.grafana.sidecar.image'.
+#[derive(Deserialize)]
+struct GrafanaSidecarImage {
+    tag: String,
+}
+
+impl GrafanaSidecarImage {
+    /// This is a getter for the kiwigrid/k8s-sidecar container image on the grafana chart.
+    fn tag(&self) -> &str {
+        self.tag.as_str()
+    }
+}
+
+/// This is used to deserialize the YAML object 'loki-stack.logstash'.
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct Logstash {
+    image_tag: String,
+}
+
+impl Logstash {
+    /// This is a getter for the Logstash image tag.
+    fn image_tag(&self) -> &str {
+        self.image_tag.as_str()
     }
 }
 

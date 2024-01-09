@@ -181,6 +181,31 @@ where
             target_values.loki_stack_loki_image_tag(),
             upgrade_values_file.path(),
         )?;
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.filebeat.imageTag")?,
+            target_values.filebeat_image_tag(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.logstash.imageTag")?,
+            target_values.logstash_image_tag(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.grafana.downloadDashboardsImage.tag")?,
+            target_values.grafana_download_dashboards_image_tag(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.grafana.image.tag")?,
+            target_values.grafana_image_tag(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.grafana.sidecar.image.tag")?,
+            target_values.grafana_sidecar_image_tag(),
+            upgrade_values_file.path(),
+        )?;
         // Delete deprecated objects.
         yq.delete_object(
             YamlKey::try_from(".loki-stack.loki.config.ingester.lifecycler.ring.kvstore")?,
