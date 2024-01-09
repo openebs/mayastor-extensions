@@ -1,15 +1,23 @@
 use crate::{
     common::error::{
         NotAValidYamlKeyForStringValue, NotYqV4, RegexCompile, Result, U8VectorToString,
-        YqCommandExec, YqMergeCommand, YqSetCommand, YqVersionCommand,
+        YqAppendToArrayCommand, YqAppendToObjectCommand, YqCommandExec, YqDeleteObjectCommand,
+        YqMergeCommand, YqSetCommand, YqVersionCommand,
     },
     vec_to_strings,
 };
 use regex::Regex;
 use snafu::{ensure, ResultExt};
-use std::{fmt::Display, ops::Deref, path::Path, process::Command, str};
+use std::{
+    fmt::Display,
+    ops::Deref,
+    path::Path,
+    process::{Command, Output},
+    str,
+};
 
 /// This is a container for the String of an input yaml key.
+#[derive(Clone)]
 pub(crate) struct YamlKey(String);
 
 impl TryFrom<&str> for YamlKey {
@@ -60,14 +68,7 @@ impl YqV4 {
 
         let yq_version_arg = "-V".to_string();
 
-        let yq_version_output = yq_v4
-            .command()
-            .arg(yq_version_arg.clone())
-            .output()
-            .context(YqCommandExec {
-                command: yq_v4.command_as_str().to_string(),
-                args: vec![yq_version_arg.clone()],
-            })?;
+        let yq_version_output = yq_v4.command_output(vec![yq_version_arg.clone()])?;
 
         ensure!(
             yq_version_output.status.success(),
@@ -98,6 +99,86 @@ impl YqV4 {
         Ok(yq_v4)
     }
 
+    /// Append objects to yaml arrays.
+    pub(crate) fn append_to_array<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
+    where
+        V: Display + Sized,
+        P: AsRef<Path>,
+    {
+        let yq_append_to_array_args = vec_to_strings![
+            "-i",
+            format!(r#"{} += [{value}]"#, key.as_str()),
+            filepath.as_ref().to_string_lossy()
+        ];
+        let yq_append_to_array_output = self.command_output(yq_append_to_array_args.clone())?;
+
+        ensure!(
+            yq_append_to_array_output.status.success(),
+            YqAppendToArrayCommand {
+                command: self.command_as_str().to_string(),
+                args: yq_append_to_array_args,
+                std_err: str::from_utf8(yq_append_to_array_output.stderr.as_slice())
+                    .context(U8VectorToString)?
+                    .to_string()
+            }
+        );
+
+        Ok(())
+    }
+
+    /// Append fields to yaml objects.
+    pub(crate) fn append_to_object<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
+    where
+        V: Display + Sized,
+        P: AsRef<Path>,
+    {
+        let yq_append_to_object_args = vec_to_strings![
+            "-i",
+            format!(r#"{} += {value}"#, key.as_str()),
+            filepath.as_ref().to_string_lossy()
+        ];
+        let yq_append_to_object_output = self.command_output(yq_append_to_object_args.clone())?;
+
+        ensure!(
+            yq_append_to_object_output.status.success(),
+            YqAppendToObjectCommand {
+                command: self.command_as_str().to_string(),
+                args: yq_append_to_object_args,
+                std_err: str::from_utf8(yq_append_to_object_output.stderr.as_slice())
+                    .context(U8VectorToString)?
+                    .to_string()
+            }
+        );
+
+        Ok(())
+    }
+
+    /// Use the yq 'del' operator to delete objects from a yaml file.
+    pub(crate) fn delete_object<P>(&self, key: YamlKey, filepath: P) -> Result<()>
+    where
+        P: AsRef<Path>,
+    {
+        let yq_delete_object_args = vec_to_strings![
+            "-i",
+            format!(r#"del({})"#, key.as_str()),
+            filepath.as_ref().to_string_lossy()
+        ];
+        let yq_delete_object_output = self.command_output(yq_delete_object_args.clone())?;
+
+        ensure!(
+            yq_delete_object_output.status.success(),
+            YqDeleteObjectCommand {
+                command: self.command_as_str().to_string(),
+                args: yq_delete_object_args,
+                std_err: str::from_utf8(yq_delete_object_output.stderr.as_slice())
+                    .context(U8VectorToString)?
+                    .to_string()
+            }
+        );
+
+        Ok(())
+    }
+
     // TODO:
     // 1. Arrays are treated like unique values on their own, and high_priority is preferred over
     //    low_priority. Arrays are not merged, if the object in the array member is identical to an
@@ -109,16 +190,24 @@ impl YqV4 {
     /// preferred over those of the other file's. In case there are values absent in the latter one
     /// which exist in the other file, the values of the other file are taken. The 'latter' file in
     /// this function is the one called 'high_priority' and the other file is the 'low_priority'
-    /// one. The output of the command is stripped of the 'COMPUTED VALUES:' suffix.
+    /// one.
     /// E.g:
-    ///       high_priority file:                         low_priority file:
-    ///       ===================                         ==================
-    ///       foo:                                        foo:
-    ///         bar: "foobar"                               bar: "foobaz"
-    ///         baz:                                        baz:
-    ///           - "alpha"                                   - "gamma"
-    ///           - "beta"                                    - "delta" friend: "ferris"
+    ///       high_priority file:
+    ///       ===================
+    ///       foo:
+    ///         bar: "foobar"
+    ///         baz:
+    ///           - "alpha"
+    ///           - "beta"
     ///
+    ///       low_priority file:
+    ///       ==================
+    ///       foo:
+    ///         bar: "foobaz"
+    ///         baz:
+    ///           - "gamma"
+    ///           - "delta"
+    ///       friend: "ferris"
     ///
     ///       result:
     ///       =======
@@ -145,14 +234,7 @@ impl YqV4 {
             low_priority.as_ref().to_string_lossy(),
             high_priority.as_ref().to_string_lossy()
         ];
-        let yq_merge_output = self
-            .command()
-            .args(yq_merge_args.clone())
-            .output()
-            .context(YqCommandExec {
-                command: self.command_as_str().to_string(),
-                args: yq_merge_args.clone(),
-            })?;
+        let yq_merge_output = self.command_output(yq_merge_args.clone())?;
 
         ensure!(
             yq_merge_output.status.success(),
@@ -169,9 +251,10 @@ impl YqV4 {
     }
 
     /// This sets in-place yaml values in yaml files.
-    pub(crate) fn set_value<V>(&self, key: YamlKey, value: V, filepath: &Path) -> Result<()>
+    pub(crate) fn set_literal_value<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
     where
         V: Display + Sized,
+        P: AsRef<Path>,
     {
         // Command for use during yq file update
         let mut command = self.command();
@@ -201,7 +284,7 @@ impl YqV4 {
         let yq_set_args = vec_to_strings![
             "-i",
             format!(r#"{} = {value}"#, key.as_str()),
-            filepath.to_string_lossy()
+            filepath.as_ref().to_string_lossy()
         ];
         let yq_set_output = command
             .args(yq_set_args.clone())
@@ -228,6 +311,17 @@ impl YqV4 {
     /// Returns an std::process::Command using the command_as_str member's value.
     fn command(&self) -> Command {
         Command::new(self.command_name.clone())
+    }
+
+    /// This executes a command and returns the output.
+    fn command_output(&self, args: Vec<String>) -> Result<Output> {
+        self.command()
+            .args(args.clone())
+            .output()
+            .context(YqCommandExec {
+                command: self.command_as_str().to_string(),
+                args,
+            })
     }
 
     /// The binary name of the `yq` command.

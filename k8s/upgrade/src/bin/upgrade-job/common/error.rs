@@ -4,7 +4,9 @@ use crate::{
         UMBRELLA_CHART_UPGRADE_DOCS_URL,
     },
     events::event_recorder::EventNote,
+    helm::chart::PromtailConfigClient,
 };
+use k8s_openapi::api::core::v1::Container;
 use snafu::Snafu;
 use std::path::PathBuf;
 use url::Url;
@@ -426,6 +428,60 @@ pub(crate) enum Error {
         note: EventNote,
     },
 
+    /// Error in serializing a helm::chart::PromtailConfigClient to a JSON string.
+    #[snafu(display(
+        "Failed to serialize .loki-stack.promtail.config.client {:?}: {}",
+        object,
+        source
+    ))]
+    SerializePromtailConfigClientToJson {
+        source: serde_json::Error,
+        object: PromtailConfigClient,
+    },
+
+    /// Error in serializing a k8s_openapi::api::core::v1::Container to a JSON string.
+    #[snafu(display(
+        "Failed to serialize .loki-stack.promtail.initContainer {:?}: {}",
+        object,
+        source
+    ))]
+    SerializePromtailInitContainerToJson {
+        source: serde_json::Error,
+        object: Container,
+    },
+
+    /// Error in deserializing a promtail helm chart's deprecated extraClientConfig to a
+    /// serde_json::Value.
+    #[snafu(display(
+        "Failed to deserialize .loki-stack.promtail.config.snippets.extraClientConfig to a serde_json::Value {}: {}",
+        config,
+        source
+    ))]
+    DeserializePromtailExtraConfig {
+        source: serde_yaml::Error,
+        config: String,
+    },
+
+    /// Error in serializing a promtail helm chart's deprecated extraClientConfig, in a
+    /// serde_json::Value, to JSON.
+    #[snafu(display("Failed to serialize to JSON {:?}: {}", config, source))]
+    SerializePromtailExtraConfigToJson {
+        source: serde_json::Error,
+        config: serde_json::Value,
+    },
+
+    /// Error in serializing the deprecated config.snippets.extraClientConfig from the promtail
+    /// helm chart v3.11.0.
+    #[snafu(display(
+        "Failed to serialize object to a serde_json::Value {}: {}",
+        object,
+        source
+    ))]
+    SerializePromtailExtraClientConfigToJson {
+        source: serde_json::Error,
+        object: String,
+    },
+
     /// Error for when there are too many io-engine Pods in one single node;
     #[snafu(display("Too many io-engine Pods in Node '{}'", node_name))]
     TooManyIoEnginePods { node_name: String },
@@ -596,6 +652,45 @@ pub(crate) enum Error {
         std_err,
     ))]
     YqSetCommand {
+        command: String,
+        args: Vec<String>,
+        std_err: String,
+    },
+
+    /// Error for when the yq command to delete an object path returns an error.
+    #[snafu(display(
+        "`yq` delete-object-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
+        command,
+        args,
+        std_err,
+    ))]
+    YqDeleteObjectCommand {
+        command: String,
+        args: Vec<String>,
+        std_err: String,
+    },
+
+    /// Error for when the yq command to append to an array returns an error.
+    #[snafu(display(
+        "`yq` append-to-array-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
+        command,
+        args,
+        std_err,
+    ))]
+    YqAppendToArrayCommand {
+        command: String,
+        args: Vec<String>,
+        std_err: String,
+    },
+
+    /// Error for when the yq command to append to an object returns an error.
+    #[snafu(display(
+        "`yq` append-to-object-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
+        command,
+        args,
+        std_err,
+    ))]
+    YqAppendToObjectCommand {
         command: String,
         args: Vec<String>,
         std_err: String,

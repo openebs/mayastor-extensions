@@ -5,7 +5,7 @@
 { dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, runCommand, img_tag ? "" }:
 let
   whitelistSource = extensions.project-builder.whitelistSource;
-  helm_chart = whitelistSource ../../.. [ "chart" "scripts/helm" ] "mayastor-extensions";
+  helm_chart = whitelistSource ../../.. [ "chart" "scripts/helm" "scripts/utils" ] "mayastor-extensions";
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
   tag = if img_tag != "" then img_tag else extensions.version;
   build-extensions-image = { pname, buildType, package, extraCommands ? '''', copyToRoot ? [ ], config ? { } }:
@@ -36,10 +36,12 @@ let
     } ''
     mkdir -p build && cp -drf ${helm_chart}/* build
 
-    chmod +w build/scripts/helm
-    chmod +w build/chart
-    chmod +w build/chart/*.yaml
+    chmod -R +w build/scripts/helm
+    chmod -R +w build/scripts/utils
+    chmod -R +w build/chart
     patchShebangs build/scripts/helm/publish-chart-yaml.sh
+    patchShebangs build/scripts/helm/generate-consolidated-values.sh
+    patchShebangs build/scripts/utils/log.sh
 
     # if tag is not semver just keep whatever is checked-in
     # todo: handle this properly?
@@ -49,6 +51,13 @@ let
       [[ ! ${tag} =~ ^(v?[0-9]+\.[0-9]+\.[0-9]+-0-main-unstable(-[0-9]+){6}-0)$ ]]; then
       CHART_FILE=build/chart/Chart.yaml build/scripts/helm/publish-chart-yaml.sh --app-tag ${tag} --override-index ""
     fi
+
+    # This modifies the build helm chart in-place with missing values of the
+    # dependent charts, i.e. the values from the dependent helm charts which
+    # are left out of the main helm chart, are set explicitly to their default
+    # values and are included into the main helm chart.
+    build/scripts/helm/generate-consolidated-values.sh -d build/chart
+
     chmod -w build/chart
     chmod -w build/chart/*.yaml
 
