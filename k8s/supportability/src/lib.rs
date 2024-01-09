@@ -265,6 +265,7 @@ impl SupportArgs {
         if !errors.is_empty() {
             return Err(Error::MultipleErrors(errors));
         }
+        println!("Completed collection of dump !!");
         Ok(())
     }
 }
