@@ -6,6 +6,7 @@ use crate::{
         error::{
             DeserializePromtailExtraConfig, Result, SemverParse,
             SerializePromtailConfigClientToJson, SerializePromtailExtraConfigToJson,
+            SerializePromtailInitContainerToJson,
         },
         file::write_to_tempfile,
     },
@@ -175,12 +176,9 @@ where
     })?;
     if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_six) {
         // Switch out image tag for the latest one.
-        yq.set_object_from_file(
-            YamlKey::try_from(".image.tag")?,
-            chart_dir
-                .as_ref()
-                .join("charts/loki-stack/charts/loki/values.yaml"),
+        yq.set_literal_value(
             YamlKey::try_from(".loki-stack.loki.image.tag")?,
+            target_values.loki_stack_loki_image_tag(),
             upgrade_values_file.path(),
         )?;
         // Delete deprecated objects.
@@ -199,25 +197,26 @@ where
 
         loki_address_to_clients(source_values, upgrade_values_file.path(), &yq)?;
 
-        let promtail_values_file = chart_dir
-            .as_ref()
-            .join("charts/loki-stack/charts/promtail/values.yaml");
-        yq.set_object_from_file(
-            YamlKey::try_from(".config.file")?,
-            promtail_values_file.as_path(),
+        yq.set_literal_value(
             YamlKey::try_from(".loki-stack.promtail.config.file")?,
+            target_values.loki_stack_promtail_config_file(),
             upgrade_values_file.path(),
         )?;
-        yq.set_object_from_file(
-            YamlKey::try_from(".initContainer")?,
-            promtail_values_file.as_path(),
-            YamlKey::try_from(".loki-stack.promtail.initContainer")?,
-            upgrade_values_file.path(),
-        )?;
-        yq.set_object_from_file(
-            YamlKey::try_from(".readinessProbe.httpGet.path")?,
-            promtail_values_file.as_path(),
+        for container in target_values.promtail_init_container() {
+            let init_container = serde_json::to_string(&container).context(
+                SerializePromtailInitContainerToJson {
+                    object: container.clone(),
+                },
+            )?;
+            yq.append_to_object(
+                YamlKey::try_from(".loki-stack.promtail.initContainer")?,
+                init_container,
+                upgrade_values_file.path(),
+            )?;
+        }
+        yq.set_literal_value(
             YamlKey::try_from(".loki-stack.promtail.readinessProbe.httpGet.path")?,
+            target_values.promtail_readiness_probe_http_get_path(),
             upgrade_values_file.path(),
         )?;
     }

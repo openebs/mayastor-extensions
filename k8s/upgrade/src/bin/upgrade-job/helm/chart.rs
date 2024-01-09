@@ -1,4 +1,5 @@
 use crate::common::error::{ReadingFile, U8VectorToString, YamlParseFromFile, YamlParseFromSlice};
+use k8s_openapi::api::core::v1::{Container, Probe};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
@@ -173,11 +174,22 @@ impl CoreValues {
         self.csi.node_nvme_io_timeout()
     }
 
+    /// This is a getter for the grafana/loki container image tag.
+    pub(crate) fn loki_stack_loki_image_tag(&self) -> &str {
+        self.loki_stack.loki_image_tag()
+    }
+
     /// This is a getter for the promtail scrapeConfigs.
     pub(crate) fn loki_stack_promtail_scrape_configs(&self) -> &str {
         self.loki_stack.promtail_scrape_configs()
     }
 
+    /// This returns the value of 'promtail.config.file'.
+    pub(crate) fn loki_stack_promtail_config_file(&self) -> &str {
+        self.loki_stack.promtail_config_file()
+    }
+
+    /// This returns the value of the deprecated promtail helm chart field 'config.lokiAddress'.
     pub(crate) fn loki_stack_promtail_loki_address(&self) -> &str {
         self.loki_stack.deprecated_promtail_loki_address()
     }
@@ -185,6 +197,14 @@ impl CoreValues {
     /// This returns the config.snippets.extraClientConfigs from the promtail helm chart v3.11.0.
     pub(crate) fn promtail_extra_client_configs(&self) -> &str {
         self.loki_stack.deprecated_promtail_extra_client_configs()
+    }
+
+    pub(crate) fn promtail_init_container(&self) -> Vec<Container> {
+        self.loki_stack.promtail_init_container()
+    }
+
+    pub(crate) fn promtail_readiness_probe_http_get_path(&self) -> String {
+        self.loki_stack.promtail_readiness_probe_http_get_path()
     }
 }
 
@@ -434,6 +454,7 @@ impl CsiNodeNvme {
 /// This is used to deserialize the yaml object 'loki-stack'.
 #[derive(Deserialize)]
 struct LokiStack {
+    loki: Loki,
     promtail: Promtail,
 }
 
@@ -441,6 +462,10 @@ impl LokiStack {
     /// This is a getter for the promtail scrapeConfigs value.
     fn promtail_scrape_configs(&self) -> &str {
         self.promtail.scrape_configs()
+    }
+
+    fn promtail_config_file(&self) -> &str {
+        self.promtail.config_file()
     }
 
     /// This returns the config.snippets.extraClientConfigs from the promtail helm chart v3.11.0.
@@ -451,6 +476,42 @@ impl LokiStack {
     fn deprecated_promtail_loki_address(&self) -> &str {
         self.promtail.deprecated_loki_address()
     }
+
+    fn loki_image_tag(&self) -> &str {
+        self.loki.image_tag()
+    }
+
+    fn promtail_init_container(&self) -> Vec<Container> {
+        self.promtail.init_container()
+    }
+
+    fn promtail_readiness_probe_http_get_path(&self) -> String {
+        self.promtail.readiness_probe_http_get_path()
+    }
+}
+
+/// This is used to deserialize the YAML object 'loki-stack.loki'.
+#[derive(Deserialize)]
+struct Loki {
+    image: LokiImage,
+}
+
+impl Loki {
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+}
+
+/// This is used to deserialize the YAML object 'loki-stack.loki.image'.
+#[derive(Deserialize)]
+struct LokiImage {
+    tag: String,
+}
+
+impl LokiImage {
+    fn tag(&self) -> &str {
+        self.tag.as_str()
+    }
 }
 
 /// This is used to deserialize the yaml object 'promtail'.
@@ -458,12 +519,19 @@ impl LokiStack {
 #[serde(rename_all(deserialize = "camelCase"))]
 struct Promtail {
     config: PromtailConfig,
+    init_container: PromtailInitContainer,
+    readiness_probe: Probe,
 }
 
 impl Promtail {
     /// This returns the promtail.config.snippets.scrapeConfigs as an &str.
     fn scrape_configs(&self) -> &str {
         self.config.scrape_configs()
+    }
+
+    /// This returns 'promtail.config.file'.
+    fn config_file(&self) -> &str {
+        self.config.file()
     }
 
     /// This returns the config.snippets.extraClientConfigs from the promtail helm chart v3.11.0.
@@ -474,6 +542,22 @@ impl Promtail {
     fn deprecated_loki_address(&self) -> &str {
         self.config.deprecated_loki_address()
     }
+
+    fn init_container(&self) -> Vec<Container> {
+        match &self.init_container {
+            PromtailInitContainer::DeprecatedInitContainer {} => Vec::<Container>::default(),
+            PromtailInitContainer::InitContainer(containers) => containers.clone(),
+        }
+    }
+
+    fn readiness_probe_http_get_path(&self) -> String {
+        self.readiness_probe
+            .http_get
+            .clone()
+            .unwrap_or_default()
+            .path
+            .unwrap_or_default()
+    }
 }
 
 /// This is used to deserialize the promtail.config yaml object.
@@ -481,6 +565,7 @@ impl Promtail {
 struct PromtailConfig {
     #[serde(default, rename(deserialize = "lokiAddress"))]
     deprecated_loki_address: String,
+    file: String,
     snippets: PromtailConfigSnippets,
 }
 
@@ -488,6 +573,11 @@ impl PromtailConfig {
     /// This returns the config.snippets.scrapeConfigs as an &str.
     fn scrape_configs(&self) -> &str {
         self.snippets.scrape_configs()
+    }
+
+    /// This returns the config.file multi-line literal.
+    fn file(&self) -> &str {
+        self.file.as_str()
     }
 
     /// This returns the snippets.extraClientConfigs from the promtail helm chart v3.11.0.
@@ -520,6 +610,13 @@ impl PromtailConfigSnippets {
     fn deprecated_extra_client_configs(&self) -> &str {
         self.deprecated_extra_client_configs.as_str()
     }
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum PromtailInitContainer {
+    DeprecatedInitContainer {},
+    InitContainer(Vec<Container>),
 }
 
 /// This is used to serialize the config.clients yaml object in promtail chart v6.13.1

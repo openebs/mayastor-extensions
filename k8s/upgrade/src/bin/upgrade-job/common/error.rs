@@ -6,6 +6,7 @@ use crate::{
     events::event_recorder::EventNote,
     helm::chart::PromtailConfigClient,
 };
+use k8s_openapi::api::core::v1::Container;
 use snafu::Snafu;
 use std::path::PathBuf;
 use url::Url;
@@ -438,6 +439,17 @@ pub(crate) enum Error {
         object: PromtailConfigClient,
     },
 
+    /// Error in serializing a k8s_openapi::api::core::v1::Container to a JSON string.
+    #[snafu(display(
+        "Failed to serialize .loki-stack.promtail.initContainer {:?}: {}",
+        object,
+        source
+    ))]
+    SerializePromtailInitContainerToJson {
+        source: serde_json::Error,
+        object: Container,
+    },
+
     /// Error in deserializing a promtail helm chart's deprecated extraClientConfig to a
     /// serde_json::Value.
     #[snafu(display(
@@ -640,19 +652,6 @@ pub(crate) enum Error {
         std_err,
     ))]
     YqSetCommand {
-        command: String,
-        args: Vec<String>,
-        std_err: String,
-    },
-
-    /// Error for when the yq command to set an object from another YAML file, returns an error.
-    #[snafu(display(
-        "`yq` set-object-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-        command,
-        args,
-        std_err,
-    ))]
-    YqSetObjectFromFileCommand {
         command: String,
         args: Vec<String>,
         std_err: String,
