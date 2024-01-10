@@ -141,10 +141,50 @@ where
     })?;
     if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_five) {
         // promtail
-        // TODO: check to see if it is the wrong one first.
+        let scrape_configs_to_replace = r"- job_name: {{ .Release.Name }}-pods-name
+  pipeline_stages:
+    - docker: {}
+  kubernetes_sd_configs:
+  - role: pod
+  relabel_configs:
+  - source_labels:
+    - __meta_kubernetes_pod_node_name
+    target_label: hostname
+    action: replace
+  - action: labelmap
+    regex: __meta_kubernetes_pod_label_(.+)
+  - action: keep
+    source_labels:
+    - __meta_kubernetes_pod_label_openebs_io_logging
+    regex: true
+    target_label: {{ .Release.Name }}_component
+  - action: replace
+    replacement: $1
+    separator: /
+    source_labels:
+    - __meta_kubernetes_namespace
+    target_label: job
+  - action: replace
+    source_labels:
+    - __meta_kubernetes_pod_name
+    target_label: pod
+  - action: replace
+    source_labels:
+    - __meta_kubernetes_pod_container_name
+    target_label: container
+  - replacement: /var/log/pods/*$1/*.log
+    separator: /
+    source_labels:
+    - __meta_kubernetes_pod_uid
+    - __meta_kubernetes_pod_container_name
+    target_label: __path__
+";
         if source_values
             .loki_stack_promtail_scrape_configs()
-            .ne(target_values.loki_stack_promtail_scrape_configs())
+            .eq(scrape_configs_to_replace)
+            && target_values
+                .loki_stack_promtail_scrape_configs()
+                .ne(scrape_configs_to_replace)
         {
             yq.set_literal_value(
                 YamlKey::try_from(".loki-stack.promtail.config.snippets.scrapeConfigs")?,
@@ -165,6 +205,62 @@ where
             yq.set_literal_value(
                 YamlKey::try_from(".csi.node.nvme.io_timeout")?,
                 target_values.csi_node_nvme_io_timeout(),
+                upgrade_values_file.path(),
+            )?;
+        }
+    }
+
+    // Special-case values for 2.6.x.
+    let two_dot_six = Version::parse(TWO_DOT_SIX).context(SemverParse {
+        version_string: TWO_DOT_SIX.to_string(),
+    })?;
+    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_six) {
+        // Update localpv-provisioner helm chart.
+        // This change is meant for versions from 2.0.0 to 2.4.0. However, this code wasn't checked
+        // into 2.5.0, and likely users of upgrade-job 2.5.0 are using the localpv image tag
+        // from 2.4.0 (i.e. 3.4.0) with the 3.5.0 localpv helm chart. So these options should
+        // also be set for source version 2.5.0.
+        let localpv_version_to_replace = "3.4.0";
+        if source_values
+            .localpv_release_version()
+            .eq(localpv_version_to_replace)
+            && target_values
+                .localpv_release_version()
+                .ne(localpv_version_to_replace)
+        {
+            yq.set_literal_value(
+                YamlKey::try_from(".localpv-provisioner.release.version")?,
+                target_values.localpv_release_version(),
+                upgrade_values_file.path(),
+            )?;
+            yq.set_literal_value(
+                YamlKey::try_from(".localpv-provisioner.localpv.image.tag")?,
+                target_values.localpv_provisioner_image_tag(),
+                upgrade_values_file.path(),
+            )?;
+            yq.set_literal_value(
+                YamlKey::try_from(".localpv-provisioner.helperPod.image.tag")?,
+                target_values.localpv_helper_image_tag(),
+                upgrade_values_file.path(),
+            )?;
+            yq.set_literal_value(
+                YamlKey::try_from(".localpv-provisioner.openebs-ndm.ndm.image.tag")?,
+                target_values.localpv_ndm_image_tag(),
+                upgrade_values_file.path(),
+            )?;
+            yq.set_literal_value(
+                YamlKey::try_from(".localpv-provisioner.openebs-ndm.helperPod.image.tag")?,
+                target_values.localpv_ndm_helper_tag(),
+                upgrade_values_file.path(),
+            )?;
+            yq.set_literal_value(
+                YamlKey::try_from(".localpv-provisioner.openebs-ndm.ndmExporter.image.tag")?,
+                target_values.localpv_ndm_exporter_image_tag(),
+                upgrade_values_file.path(),
+            )?;
+            yq.set_literal_value(
+                YamlKey::try_from(".localpv-provisioner.openebs-ndm.ndmOperator.image.tag")?,
+                target_values.localpv_ndm_operator_image_tag(),
                 upgrade_values_file.path(),
             )?;
         }
@@ -206,6 +302,27 @@ where
             target_values.grafana_sidecar_image_tag(),
             upgrade_values_file.path(),
         )?;
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.prometheus.alertmanager.image.tag")?,
+            target_values.prometheus_alertmanager_image_tag(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.prometheus.nodeExporter.image.tag")?,
+            target_values.prometheus_node_exporter_image_tag(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.prometheus.pushgateway.image.tag")?,
+            target_values.prometheus_pushgateway_image_tag(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_literal_value(
+            YamlKey::try_from(".loki-stack.prometheus.server.image.tag")?,
+            target_values.prometheus_server_image_tag(),
+            upgrade_values_file.path(),
+        )?;
+
         // Delete deprecated objects.
         yq.delete_object(
             YamlKey::try_from(".loki-stack.loki.config.ingester.lifecycler.ring.kvstore")?,
