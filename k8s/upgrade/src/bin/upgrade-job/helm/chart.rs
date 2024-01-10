@@ -253,6 +253,46 @@ impl CoreValues {
     pub(crate) fn localpv_helper_image_tag(&self) -> &str {
         self.localpv_provisioner.helper_image_tag()
     }
+
+    /// This is a getter for the openebs/node-disk-manager container's image tag.
+    pub(crate) fn localpv_ndm_image_tag(&self) -> &str {
+        self.localpv_provisioner.ndm_image_tag()
+    }
+
+    /// This is a getter for the openebs/linux-utils container's image tag.
+    pub(crate) fn localpv_ndm_helper_tag(&self) -> &str {
+        self.localpv_provisioner.ndm_helper_tag()
+    }
+
+    /// This is a getter for the openebs/node-disk-exporter container's image tag.
+    pub(crate) fn localpv_ndm_exporter_image_tag(&self) -> &str {
+        self.localpv_provisioner.ndm_exporter_image_tag()
+    }
+
+    /// This is a getter for the openebs/node-disk-operator container's image tag.
+    pub(crate) fn localpv_ndm_operator_image_tag(&self) -> &str {
+        self.localpv_provisioner.ndm_operator_image_tag()
+    }
+
+    /// This is a getter for the prometheus/alertmanager container's image tag.
+    pub(crate) fn prometheus_alertmanager_image_tag(&self) -> &str {
+        self.loki_stack.prometheus_alertmanager_image_tag()
+    }
+
+    /// This is a getter for the prometheus/node-exporter container's image tag.
+    pub(crate) fn prometheus_node_exporter_image_tag(&self) -> &str {
+        self.loki_stack.prometheus_node_exporter_image_tag()
+    }
+
+    /// This is a getter for the prom/pushgateway container's image tag.
+    pub(crate) fn prometheus_pushgateway_image_tag(&self) -> &str {
+        self.loki_stack.prometheus_pushgateway_image_tag()
+    }
+
+    /// This is a getter for the prometheus/prometheus container's image tag.
+    pub(crate) fn prometheus_server_image_tag(&self) -> &str {
+        self.loki_stack.prometheus_server_image_tag()
+    }
 }
 
 /// This is used to deserialize the yaml object agents.
@@ -505,6 +545,7 @@ struct LokiStack {
     grafana: Grafana,
     logstash: Logstash,
     loki: Loki,
+    prometheus: Prometheus,
     promtail: Promtail,
 }
 
@@ -568,6 +609,26 @@ impl LokiStack {
     fn grafana_sidecar_image_tag(&self) -> &str {
         self.grafana.sidecar_image_tag()
     }
+
+    /// This is a getter for the prometheus/alertmanager container's image tag.
+    fn prometheus_alertmanager_image_tag(&self) -> &str {
+        self.prometheus.alertmanager_image_tag()
+    }
+
+    /// This is a getter for the prometheus/node-exporter container's image tag.
+    fn prometheus_node_exporter_image_tag(&self) -> &str {
+        self.prometheus.node_exporter_image_tag()
+    }
+
+    /// This is a getter for the prom/pushgateway container's image tag.
+    fn prometheus_pushgateway_image_tag(&self) -> &str {
+        self.prometheus.pushgateway_image_tag()
+    }
+
+    /// This is a getter for the prometheus/prometheus container's image tag.
+    fn prometheus_server_image_tag(&self) -> &str {
+        self.prometheus.server_image_tag()
+    }
 }
 
 /// This is used to deserialize the YAML object 'loki-stack.filebeat'.
@@ -589,7 +650,7 @@ impl Filebeat {
 #[serde(rename_all(deserialize = "camelCase"))]
 struct Grafana {
     download_dashboards_image: GrafanaDownloadDashboardsImage,
-    image: GrafanaImage,
+    image: GenericImage,
     sidecar: GrafanaSidecar,
 }
 
@@ -623,42 +684,16 @@ impl GrafanaDownloadDashboardsImage {
     }
 }
 
-/// This is used to deserialize the YAML object 'loki-stack.grafana.image'.
-#[derive(Deserialize)]
-struct GrafanaImage {
-    tag: String,
-}
-
-impl GrafanaImage {
-    /// This is a getter for the grafana/grafana container image on the grafana chart.
-    fn tag(&self) -> &str {
-        self.tag.as_str()
-    }
-}
-
 /// This is used to deserialize the YAML object 'loki-stack.grafana.sidecar'.
 #[derive(Deserialize)]
 struct GrafanaSidecar {
-    image: GrafanaSidecarImage,
+    image: GenericImage,
 }
 
 impl GrafanaSidecar {
     /// This is a getter for the kiwigrid/k8s-sidecar sidecar container image tag.
     fn image_tag(&self) -> &str {
         self.image.tag()
-    }
-}
-
-/// This is used to deserialize the YAML object 'loki-stack.grafana.sidecar.image'.
-#[derive(Deserialize)]
-struct GrafanaSidecarImage {
-    tag: String,
-}
-
-impl GrafanaSidecarImage {
-    /// This is a getter for the kiwigrid/k8s-sidecar container image on the grafana chart.
-    fn tag(&self) -> &str {
-        self.tag.as_str()
     }
 }
 
@@ -679,7 +714,7 @@ impl Logstash {
 /// This is used to deserialize the YAML object 'loki-stack.loki'.
 #[derive(Deserialize)]
 struct Loki {
-    image: LokiImage,
+    image: GenericImage,
 }
 
 impl Loki {
@@ -688,15 +723,83 @@ impl Loki {
     }
 }
 
-/// This is used to deserialize the YAML object 'loki-stack.loki.image'.
+/// This is used to deserialize the yaml object 'loki-stack.prometheus'.
 #[derive(Deserialize)]
-struct LokiImage {
-    tag: String,
+#[serde(rename_all(deserialize = "camelCase"))]
+struct Prometheus {
+    alertmanager: PrometheusAlertmanager,
+    node_exporter: PrometheusNodeExporter,
+    pushgateway: PrometheusPushgateway,
+    server: PrometheusServer,
 }
 
-impl LokiImage {
-    fn tag(&self) -> &str {
-        self.tag.as_str()
+impl Prometheus {
+    /// Returns the image tag of the alertmanager container.
+    fn alertmanager_image_tag(&self) -> &str {
+        self.alertmanager.image_tag()
+    }
+
+    /// Returns the image tag of the nodeExporter container.
+    fn node_exporter_image_tag(&self) -> &str {
+        self.node_exporter.image_tag()
+    }
+
+    /// Returns the pushgateway container's image tag.
+    fn pushgateway_image_tag(&self) -> &str {
+        self.pushgateway.image_tag()
+    }
+
+    /// Returns the prometheus server's container image tag.
+    fn server_image_tag(&self) -> &str {
+        self.server.image_tag()
+    }
+}
+
+/// This is used to deserialize the prometheus chart's alertmanager YAML object.
+#[derive(Deserialize)]
+struct PrometheusAlertmanager {
+    image: GenericImage,
+}
+
+impl PrometheusAlertmanager {
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+}
+
+/// This is used to deserialize the prometheus chart's nodeExporter YAML object.
+#[derive(Deserialize)]
+struct PrometheusNodeExporter {
+    image: GenericImage,
+}
+
+impl PrometheusNodeExporter {
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+}
+
+/// This is used to deserialize the prometheus chart's pushgateway YAML object.
+#[derive(Deserialize)]
+struct PrometheusPushgateway {
+    image: GenericImage,
+}
+
+impl PrometheusPushgateway {
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+}
+
+/// This is used to deserialize the prometheus chart's server YAML object.
+#[derive(Deserialize)]
+struct PrometheusServer {
+    image: GenericImage,
+}
+
+impl PrometheusServer {
+    fn image_tag(&self) -> &str {
+        self.image.tag()
     }
 }
 
@@ -831,6 +934,10 @@ struct LocalpvProvisioner {
     release: LocalpvProvisionerRelease,
     localpv: LocalpvProvisionerLocalpv,
     helper_pod: LocalpvProvisionerHelperPod,
+    /// This is the NDM helm subchart values. This is absent ('None' case) if
+    /// openebsNDM.enabled=false.
+    #[serde(rename(deserialize = "openebs-ndm"))]
+    openebs_ndm: LocalpvProvisionerNdm,
 }
 
 impl LocalpvProvisioner {
@@ -844,9 +951,29 @@ impl LocalpvProvisioner {
         self.localpv.image_tag()
     }
 
-    /// This is a getter for the linux-utils helper container.
+    /// This is a getter for the linux-utils helper container's image tag.
     fn helper_image_tag(&self) -> &str {
         self.helper_pod.image_tag()
+    }
+
+    /// This is a getter for the openebs/node-disk-manager container's image tag.
+    fn ndm_image_tag(&self) -> &str {
+        self.openebs_ndm.ndm_image_tag()
+    }
+
+    /// This is a getter for the openebs/linux-utils container's image tag.
+    fn ndm_helper_tag(&self) -> &str {
+        self.openebs_ndm.ndm_helper_image_tag()
+    }
+
+    /// This is a getter for the openebs/node-disk-exporter container's image tag.
+    fn ndm_exporter_image_tag(&self) -> &str {
+        self.openebs_ndm.ndm_exporter_image_tag()
+    }
+
+    /// This is a getter for the openebs/node-disk-operator container's image tag.
+    fn ndm_operator_image_tag(&self) -> &str {
+        self.openebs_ndm.ndm_operator_image_tag()
     }
 }
 
@@ -868,7 +995,7 @@ impl LocalpvProvisionerRelease {
 /// This is used to deserialize the 'localpv' yaml object in the localpv-provisioner helm chart.
 #[derive(Deserialize)]
 struct LocalpvProvisionerLocalpv {
-    image: LocalpvProvisionerLocalpvImage,
+    image: GenericImage,
 }
 
 impl LocalpvProvisionerLocalpv {
@@ -878,15 +1005,15 @@ impl LocalpvProvisionerLocalpv {
     }
 }
 
-/// This is used to deserialize the 'localpv.image' yaml object in the localpv-provisioner helm
+/// This is used to deserialize various 'image' yaml objects in the localpv-provisioner helm
 /// chart.
 #[derive(Deserialize)]
-struct LocalpvProvisionerLocalpvImage {
+struct GenericImage {
     tag: String,
 }
 
-impl LocalpvProvisionerLocalpvImage {
-    /// This is getter for the openebs/provisioner-localpv container's image tag.
+impl GenericImage {
+    /// This is getter for the various container image tags in the localpv-provisioner helm chart.
     fn tag(&self) -> &str {
         self.tag.as_str()
     }
@@ -895,7 +1022,7 @@ impl LocalpvProvisionerLocalpvImage {
 /// This is used to deserialize the 'helperPod' yaml object in the localpv-provisioner helm chart.
 #[derive(Deserialize)]
 struct LocalpvProvisionerHelperPod {
-    image: LocalpvProvisionerHelperPodImage,
+    image: GenericImage,
 }
 
 impl LocalpvProvisionerHelperPod {
@@ -905,16 +1032,72 @@ impl LocalpvProvisionerHelperPod {
     }
 }
 
-/// This is used to deserialize the 'helperPod.image' yaml object in the localpv-provisioner helm
-/// chart.
 #[derive(Deserialize)]
-struct LocalpvProvisionerHelperPodImage {
-    tag: String,
+#[serde(rename_all(deserialize = "camelCase"))]
+struct LocalpvProvisionerNdm {
+    helper_pod: LocalpvProvisionerHelperPod,
+    ndm: Ndm,
+    ndm_exporter: NdmExporter,
+    ndm_operator: NdmOperator,
 }
 
-impl LocalpvProvisionerHelperPodImage {
-    /// This is getter for the openebs/linux-utils helper pod container's image tag.
-    fn tag(&self) -> &str {
-        self.tag.as_str()
+impl LocalpvProvisionerNdm {
+    /// Returns the ndm daemonset image tag.
+    fn ndm_image_tag(&self) -> &str {
+        self.ndm.image_tag()
+    }
+
+    /// Returns the ndm helper image tag.
+    fn ndm_helper_image_tag(&self) -> &str {
+        self.helper_pod.image_tag()
+    }
+
+    /// Returns the ndm exporter image tag.
+    fn ndm_exporter_image_tag(&self) -> &str {
+        self.ndm_exporter.image_tag()
+    }
+
+    /// Returns the ndm operator image tag.
+    fn ndm_operator_image_tag(&self) -> &str {
+        self.ndm_operator.image_tag()
+    }
+}
+
+/// This is used to deserialize the '.localpv-provisioner.openebs-ndm.ndm' YAML object.
+#[derive(Deserialize)]
+struct Ndm {
+    image: GenericImage,
+}
+
+impl Ndm {
+    /// This returns the image tag for ndm.
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+}
+
+/// This is used to deserialize the '.localpv-provisioner.openebs-ndm.ndmExporter' YAML object.
+#[derive(Deserialize)]
+struct NdmExporter {
+    image: GenericImage,
+}
+
+impl NdmExporter {
+    /// This returns the image tag for ndm-exporter.
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+}
+
+/// This is used to deserialize the '.localpv-provisioner.openebs-ndm.ndmOperator' YAML object.
+#[derive(Deserialize)]
+struct NdmOperator {
+    image: GenericImage,
+}
+
+impl NdmOperator {
+    /// This returns the image tag for ndm-operator.
+    fn image_tag(&self) -> &str {
+        self.image.tag()
     }
 }
