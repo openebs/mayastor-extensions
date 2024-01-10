@@ -1,6 +1,7 @@
-{ allInOne ? true, incremental ? false, img_tag ? "", tag ? "" }:
+{ allInOne ? true, incremental ? false, img_tag ? "", tag ? "", img_org ? "" }:
 self: super: {
-  images = super.callPackage ./pkgs/images { inherit img_tag; };
+  sourcer = super.callPackage ./lib/sourcer.nix { };
+  images = super.callPackage ./pkgs/images { inherit img_tag img_org; };
   extensions = super.callPackage ./pkgs/extensions { inherit allInOne incremental tag; };
   openapi-generator = super.callPackage ./../dependencies/control-plane/nix/pkgs/openapi-generator { };
   utils = super.callPackage ./pkgs/utils { inherit incremental; };

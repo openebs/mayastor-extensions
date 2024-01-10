@@ -2,17 +2,24 @@
 # avoid dependency on docker tool chain. Though the maturity of OCI
 # builder in nixpkgs is questionable which is why we postpone this step.
 
-{ dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, runCommand, img_tag ? "" }:
+{ pkgs, dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, runCommand, sourcer, img_tag ? "", img_org ? "" }:
 let
-  whitelistSource = extensions.project-builder.whitelistSource;
-  helm_chart = whitelistSource ../../.. [ "chart" "scripts/helm" "scripts/utils" ] "mayastor-extensions";
+  repo-org = if img_org != "" then img_org else "${builtins.readFile (pkgs.runCommand "repo_org" {
+    buildInputs = with pkgs; [ git ];
+   } ''
+    export GIT_DIR="${sourcer.git-src}/.git"
+    cp ${sourcer.repo-org}/git-org-name.sh .
+    patchShebangs ./git-org-name.sh
+    ./git-org-name.sh ${sourcer.git-src} --case lower --remote origin > $out
+  '')}";
+  helm_chart = sourcer.whitelistSource ../../.. [ "chart" "scripts/helm" "scripts/utils" ];
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
   tag = if img_tag != "" then img_tag else extensions.version;
   build-extensions-image = { pname, buildType, package, extraCommands ? '''', copyToRoot ? [ ], config ? { } }:
     dockerTools.buildImage {
       inherit extraCommands tag;
       created = "now";
-      name = "openebs/mayastor-${pname}${image_suffix.${buildType}}";
+      name = "${repo-org}/mayastor-${pname}${image_suffix.${buildType}}";
       copyToRoot = [ package ] ++ copyToRoot;
       config = {
         Entrypoint = [ package.binary ];
