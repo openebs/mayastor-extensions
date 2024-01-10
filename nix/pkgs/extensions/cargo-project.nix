@@ -15,6 +15,7 @@
 , openapi-generator
 , which
 , utillinux
+, sourcer
   # with allInOne set to true all components are built as part of the same "cargo build" derivation
   # this allows for a quicker build of all components but slower single components
   # with allInOne set to false each component gets its own "cargo build" derivation allowing for faster
@@ -39,18 +40,6 @@ let
     rustc = stable_channel.rustc;
     cargo = stable_channel.cargo;
   };
-  whitelistSource = src: allowedPrefixes: dirName:
-    builtins.path {
-      filter = (path: type:
-        lib.any
-          (allowedPrefix:
-            (lib.hasPrefix (toString (src + "/${allowedPrefix}")) path) ||
-            (type == "directory" && lib.hasPrefix path (toString (src + "/${allowedPrefix}")))
-          )
-          allowedPrefixes);
-      path = src;
-      name = dirName;
-    };
   PROTOC = "${protobuf}/bin/protoc";
   PROTOC_INCLUDE = "${protobuf}/include";
   version = gitVersions.version;
@@ -74,7 +63,7 @@ let
     "dependencies/control-plane/k8s/operators"
     "k8s"
   ];
-  src = whitelistSource ../../../. src_list "mayastor-extensions";
+  src = sourcer.whitelistSource ../../../. src_list;
   buildProps = rec {
     name = "extensions-${version}";
     inherit version src;
@@ -113,7 +102,7 @@ let
   builder = if incremental then build_with_naersk else build_with_default;
 in
 {
-  inherit PROTOC PROTOC_INCLUDE version src whitelistSource;
+  inherit PROTOC PROTOC_INCLUDE version src;
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if allInOne then
