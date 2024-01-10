@@ -1,6 +1,6 @@
-{ stdenv, git, lib, pkgs, allInOne, incremental, tag ? "" }:
+{ stdenv, git, lib, pkgs, allInOne, incremental, sourcer, tag ? "" }:
 let
-  versionDrv = import ../../lib/version.nix { inherit lib stdenv git tag; };
+  versionDrv = import ../../lib/version.nix { inherit sourcer lib stdenv git tag; };
   version = builtins.readFile "${versionDrv}";
   gitVersions = {
     "version" = version;
@@ -8,7 +8,7 @@ let
     "tag_or_long" = builtins.readFile "${versionDrv.tag_or_long}";
   };
   project-builder =
-    pkgs.callPackage ../extensions/cargo-project.nix { inherit gitVersions allInOne incremental; };
+    pkgs.callPackage ../extensions/cargo-project.nix { inherit sourcer gitVersions allInOne incremental; };
   installer = { pname, src, suffix ? "" }:
     stdenv.mkDerivation rec {
       inherit pname src;

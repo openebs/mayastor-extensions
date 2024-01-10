@@ -50,6 +50,7 @@ Options:
   -d, --dry-run              Output actions that would be taken, but don't run them.
   -h, --help                 Display this text.
   --registry <host[:port]>   Push the built images to the provided registry.
+                             To also replace the image org provide the full repository path, example: docker.io/org.
   --debug                    Build debug version of images where possible.
   --skip-build               Don't perform nix-build.
   --skip-publish             Don't publish built images.
@@ -244,7 +245,11 @@ for name in $IMAGES; do
   image_basename=$($NIX_EVAL -f . images.$BUILD_TYPE.$name.imageName | xargs)
   image=$image_basename
   if [ -n "$REGISTRY" ]; then
-    image="${REGISTRY}/${image}"
+    if [[ "${REGISTRY}" =~ '/' ]]; then
+      image="${REGISTRY}/$(echo ${image} | cut -d'/' -f2)"
+    else
+      image="${REGISTRY}/${image}"
+    fi
   fi
 
   if [ "$_helm_dependencies_updated" = "false" ]; then
