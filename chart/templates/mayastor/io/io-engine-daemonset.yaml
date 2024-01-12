@@ -50,8 +50,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
-        args:
-        - "--api-versions={{ .Values.io_engine.api }}"
         ports:
           - containerPort: 9502
             protocol: TCP

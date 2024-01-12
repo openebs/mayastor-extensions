@@ -1,8 +1,5 @@
 use crate::{
-    client::{
-        grpc_client::{init_client, GrpcClient},
-        ApiVersion,
-    },
+    client::grpc_client::{init_client, GrpcClient},
     error::ExporterError,
     serve::metric_route,
 };
@@ -44,10 +41,6 @@ pub(crate) struct Cli {
     /// TCP address where prometheus endpoint will listen to
     #[clap(long, short, default_value = "0.0.0.0:9502")]
     metrics_endpoint: SocketAddr,
-
-    /// Io engine api versions
-    #[clap(short, long, value_delimiter = ',', required = true)]
-    api_versions: Vec<ApiVersion>,
 }
 
 impl Cli {
@@ -68,18 +61,12 @@ pub(crate) fn grpc_client<'a>() -> &'a GrpcClient {
 #[tokio::main]
 async fn main() -> Result<(), ExporterError> {
     let args = Cli::args();
-
     utils::print_package_info!();
 
     utils::tracing_telemetry::init_tracing("metrics-exporter-io_engine", vec![], None);
 
     initialize_cache().await;
-
-    // sort to get the latest api version
-    let mut api_versions = args.api_versions;
-    api_versions.sort_by(|a, b| b.cmp(a));
-
-    let client = init_client(api_versions.get(0).unwrap_or(&ApiVersion::V0).clone()).await?;
+    let client = init_client().await?;
     // Initialize io engine gRPC client.
     GRPC_CLIENT
         .set(client)

@@ -1,6 +1,9 @@
 use crate::{
     cache::store_resource_data,
-    collector::pool::{PoolCapacityCollector, PoolStatusCollector},
+    collector::{
+        pool::{PoolCapacityCollector, PoolStatusCollector},
+        pool_stat::PoolIoStatsCollector,
+    },
     grpc_client,
 };
 use actix_web::{http::header, HttpResponse, Responder};
@@ -12,6 +15,7 @@ pub(crate) async fn metrics_handler() -> impl Responder {
     store_resource_data(grpc_client()).await;
     let pools_collector = PoolCapacityCollector::default();
     let pool_status_collector = PoolStatusCollector::default();
+    let pool_iostat_collector = PoolIoStatsCollector::default();
     // Create a new registry for prometheus
     let registry = Registry::default();
     // Register pools collector in the registry
@@ -19,6 +23,9 @@ pub(crate) async fn metrics_handler() -> impl Responder {
         warn!(%error, "Pools collector already registered");
     }
     if let Err(error) = Registry::register(&registry, Box::new(pool_status_collector)) {
+        warn!(%error, "Pools status collector already registered");
+    }
+    if let Err(error) = Registry::register(&registry, Box::new(pool_iostat_collector)) {
         warn!(%error, "Pools status collector already registered");
     }
 
