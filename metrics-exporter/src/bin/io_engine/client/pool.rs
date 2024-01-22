@@ -1,5 +1,3 @@
-use crate::{client::grpc_client::GrpcClient, error::ExporterError, ApiVersion};
-
 use serde::{Deserialize, Serialize};
 
 /// This stores Capacity and state information of a pool.
@@ -45,23 +43,6 @@ pub(crate) struct Pools {
     pub(crate) pools: Vec<PoolInfo>,
 }
 
-/// Trait to be implemented by grpc client to call pool rpc.
-#[tonic::async_trait]
-pub(crate) trait PoolOperations: Send + Sync + Sized {
-    async fn list_pools(&self) -> Result<Pools, ExporterError>;
-}
-
-impl From<rpc::io_engine::Pool> for PoolInfo {
-    fn from(value: rpc::io_engine::Pool) -> Self {
-        Self {
-            name: value.name,
-            used: value.used,
-            capacity: value.capacity,
-            state: value.state as u64,
-            committed: value.used,
-        }
-    }
-}
 impl From<rpc::v1::pool::Pool> for PoolInfo {
     fn from(value: rpc::v1::pool::Pool) -> Self {
         Self {
@@ -71,38 +52,5 @@ impl From<rpc::v1::pool::Pool> for PoolInfo {
             state: value.state as u64,
             committed: value.committed,
         }
-    }
-}
-
-#[tonic::async_trait]
-impl PoolOperations for GrpcClient {
-    async fn list_pools(&self) -> Result<Pools, ExporterError> {
-        let pools = match self.api_version() {
-            ApiVersion::V0 => match self.client_v0()?.list_pools(rpc::io_engine::Null {}).await {
-                Ok(response) => response
-                    .into_inner()
-                    .pools
-                    .into_iter()
-                    .map(PoolInfo::from)
-                    .collect::<Vec<_>>(),
-                Err(error) => return Err(ExporterError::GrpcResponseError(error.to_string())),
-            },
-            ApiVersion::V1 => match self
-                .client_v1()?
-                .pool
-                .list_pools(rpc::v1::pool::ListPoolOptions::default())
-                .await
-            {
-                Ok(response) => response
-                    .into_inner()
-                    .pools
-                    .into_iter()
-                    .map(PoolInfo::from)
-                    .collect::<Vec<_>>(),
-                Err(error) => return Err(ExporterError::GrpcResponseError(error.to_string())),
-            },
-        };
-
-        Ok(Pools { pools })
     }
 }
