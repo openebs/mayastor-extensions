@@ -1,12 +1,11 @@
 use crate::{
-    cache::store_data,
-    client::{grpc_client::init_client, ApiVersion},
-    config::ExporterConfig,
+    client::grpc_client::{init_client, GrpcClient},
     error::ExporterError,
     serve::metric_route,
 };
 use actix_web::{middleware, HttpServer};
 use clap::Parser;
+use once_cell::sync::OnceCell;
 use std::{env, net::SocketAddr};
 
 /// Cache module for exporter.
@@ -15,17 +14,10 @@ pub(crate) mod cache;
 pub(crate) mod client;
 /// Collector module.
 pub(crate) mod collector;
-/// Config module for metrics-exporter.
-pub(crate) mod config;
 /// Error module.
 pub(crate) mod error;
 /// Prometheus metrics handler module.
 pub(crate) mod serve;
-
-/// Initialize metrics-exporter config that are passed through arguments.
-fn initialize_exporter(args: &Cli) {
-    ExporterConfig::initialize(args.metrics_endpoint, args.polling_time.into());
-}
 
 /// Initialize cache.
 async fn initialize_cache() {
@@ -45,18 +37,10 @@ fn get_node_name() -> Result<String, ExporterError> {
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
-struct Cli {
+pub(crate) struct Cli {
     /// TCP address where prometheus endpoint will listen to
     #[clap(long, short, default_value = "0.0.0.0:9502")]
     metrics_endpoint: SocketAddr,
-
-    /// Polling time in seconds to get pools data through gRPC calls
-    #[clap(short, long, default_value = "300s")]
-    polling_time: humantime::Duration,
-
-    /// Io engine api versions
-    #[clap(short, long, value_delimiter = ',', required = true)]
-    api_versions: Vec<ApiVersion>,
 }
 
 impl Cli {
@@ -65,32 +49,35 @@ impl Cli {
     }
 }
 
+static GRPC_CLIENT: OnceCell<GrpcClient> = OnceCell::new();
+
+/// Get IO engine gRPC Client.
+pub(crate) fn grpc_client<'a>() -> &'a GrpcClient {
+    GRPC_CLIENT
+        .get()
+        .expect("gRPC Client should have been initialised")
+}
+
 #[tokio::main]
 async fn main() -> Result<(), ExporterError> {
     let args = Cli::args();
-
     utils::print_package_info!();
 
     utils::tracing_telemetry::init_tracing("metrics-exporter-io_engine", vec![], None);
 
-    initialize_exporter(&args);
-
     initialize_cache().await;
-
-    // sort to get the latest api version
-    let mut api_versions = args.api_versions;
-    api_versions.sort_by(|a, b| b.cmp(a));
-
-    let client = init_client(api_versions.get(0).unwrap_or(&ApiVersion::V0).clone()).await?;
-
-    store_data(client).await;
+    let client = init_client().await?;
+    // Initialize io engine gRPC client.
+    GRPC_CLIENT
+        .set(client)
+        .expect("Expect to be initialised only once");
     let app = move || {
         actix_web::App::new()
             .wrap(middleware::Logger::default())
             .configure(metric_route)
     };
     HttpServer::new(app)
-        .bind(ExporterConfig::get_config().metrics_endpoint())
+        .bind(args.metrics_endpoint)
         .map_err(|_| {
             ExporterError::HttpBindError("Failed to bind endpoint to http server".to_string())
         })?

@@ -1,26 +1,26 @@
 use super::{Cache, ResourceOps};
 use crate::client::{
     grpc_client::GrpcClient,
-    pool::{PoolInfo, Pools},
+    pool_stat::{PoolIoStat, PoolIoStats},
 };
 use std::ops::DerefMut;
 use tracing::error;
 
-impl ResourceOps for Pools {
-    type ResourceVec = Vec<PoolInfo>;
+impl ResourceOps for PoolIoStats {
+    type ResourceVec = Vec<PoolIoStat>;
 
     fn set(&mut self, val: Self::ResourceVec) {
-        self.pools = val
+        self.pool_stats = val
     }
 
     fn invalidate(&mut self) {
-        self.pools = vec![]
+        self.pool_stats = vec![]
     }
 }
 
-/// To store pools state and capacity data in cache.
-pub(crate) async fn store_pool_info_data(client: &GrpcClient) -> Result<(), ()> {
-    let pools = client.list_pools().await;
+/// To store pool iostat data in cache.
+pub(crate) async fn store_pool_stats_data(client: &GrpcClient) -> Result<(), ()> {
+    let pool_stats = client.get_pool_iostat().await;
     let mut cache = match Cache::get_cache().lock() {
         Ok(cache) => cache,
         Err(error) => {
@@ -29,15 +29,15 @@ pub(crate) async fn store_pool_info_data(client: &GrpcClient) -> Result<(), ()> 
         }
     };
     let pools_cache = cache.deref_mut();
-    match pools {
+    match pool_stats {
         // set pools in the cache
         Ok(pools) => {
-            pools_cache.pool_mut().set(pools.pools);
+            pools_cache.pool_iostat_mut().set(pools.pool_stats);
         }
         // invalidate cache in case of error
         Err(error) => {
             error!(?error, "Error getting pools data, invalidating pools cache");
-            pools_cache.pool_mut().invalidate();
+            pools_cache.pool_iostat_mut().invalidate();
             return Err(());
         }
     };

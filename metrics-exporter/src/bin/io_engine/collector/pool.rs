@@ -1,9 +1,12 @@
-use crate::{cache::Cache, client::pool::PoolInfo, get_node_name};
+use crate::{cache::Cache, client::pool::PoolInfo, collector::init_gauge_vec, get_node_name};
 use prometheus::{
     core::{Collector, Desc},
-    GaugeVec, Opts,
+    GaugeVec,
 };
-use std::{fmt::Debug, ops::DerefMut};
+use std::{
+    fmt::Debug,
+    ops::{Deref, DerefMut},
+};
 use tracing::error;
 
 /// Collects Pool capacity metrics from cache.
@@ -24,30 +27,22 @@ impl Default for PoolCapacityCollector {
 impl PoolCapacityCollector {
     /// Initialize all the metrics to be defined for pools capacity collector.
     pub fn new() -> Self {
-        let pool_total_size_opts = Opts::new("total_size_bytes", "Total size of the pool in bytes")
-            .subsystem("disk_pool")
-            .variable_labels(vec!["node".to_string(), "name".to_string()]);
-        let pool_used_size_opts = Opts::new("used_size_bytes", "Used size of the pool in bytes")
-            .subsystem("disk_pool")
-            .variable_labels(vec!["node".to_string(), "name".to_string()]);
-        let pool_committed_size_opts = Opts::new(
+        let mut descs = Vec::new();
+        let pool_total_size = init_gauge_vec(
+            "total_size_bytes",
+            "Total size of the pool in bytes",
+            &mut descs,
+        );
+        let pool_used_size = init_gauge_vec(
+            "total_used_bytes",
+            "Used size of the pool in bytes",
+            &mut descs,
+        );
+        let pool_committed_size = init_gauge_vec(
             "committed_size_bytes",
             "Committed size of the pool in bytes",
-        )
-        .subsystem("disk_pool")
-        .variable_labels(vec!["node".to_string(), "name".to_string()]);
-        let mut descs = Vec::new();
-
-        let pool_total_size = GaugeVec::new(pool_total_size_opts, &["node", "name"])
-            .expect("Unable to create gauge metric type for pool_total_size");
-        let pool_used_size = GaugeVec::new(pool_used_size_opts, &["node", "name"])
-            .expect("Unable to create gauge metric type for pool_used_size");
-        let pool_committed_size = GaugeVec::new(pool_committed_size_opts, &["node", "name"])
-            .expect("Unable to create gauge metric type for pool_committed_size");
-        // Descriptors for the custom metrics
-        descs.extend(pool_total_size.desc().into_iter().cloned());
-        descs.extend(pool_used_size.desc().into_iter().cloned());
-        descs.extend(pool_committed_size.desc().into_iter().cloned());
+            &mut descs,
+        );
 
         Self {
             pool_total_size,
@@ -64,15 +59,15 @@ impl Collector for PoolCapacityCollector {
     }
 
     fn collect(&self) -> Vec<prometheus::proto::MetricFamily> {
-        let mut c = match Cache::get_cache().lock() {
+        let c = match Cache::get_cache().lock() {
             Ok(c) => c,
             Err(error) => {
                 error!(%error,"Error while getting cache resource");
                 return Vec::new();
             }
         };
-        let cp = c.deref_mut();
-        let mut metric_family = Vec::with_capacity(3 * cp.pool_mut().pools.capacity());
+        let cp = c.deref();
+        let mut metric_family = Vec::with_capacity(3 * cp.pool().pools.capacity());
         let node_name = match get_node_name() {
             Ok(name) => name,
             Err(error) => {
@@ -81,7 +76,7 @@ impl Collector for PoolCapacityCollector {
             }
         };
 
-        for i in &cp.pool_mut().pools {
+        for i in &cp.pool().pools {
             let p: &PoolInfo = i;
 
             let pool_total_size = match self
@@ -146,13 +141,8 @@ impl Default for PoolStatusCollector {
 impl PoolStatusCollector {
     /// Initialize all the metrics to be defined for pools status collector.
     pub fn new() -> Self {
-        let pool_status_opts = Opts::new("status", "Status of the pool")
-            .subsystem("disk_pool")
-            .variable_labels(vec!["node".to_string(), "name".to_string()]);
         let mut descs = Vec::new();
-        let pool_status = GaugeVec::new(pool_status_opts, &["node", "name"])
-            .expect("Unable to create gauge metric type for pool_status");
-        descs.extend(pool_status.desc().into_iter().cloned());
+        let pool_status = init_gauge_vec("status", "Status of the pool", &mut descs);
         Self { pool_status, descs }
     }
 }
