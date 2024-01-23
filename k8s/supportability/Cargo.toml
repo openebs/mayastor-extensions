@@ -45,3 +45,4 @@ pstor = { path = "../../dependencies/control-plane/utils/pstor" }
 platform = { path = "../../dependencies/control-plane/utils/platform" }
 openapi = { path = "../../dependencies/control-plane/openapi", default-features = false, features = [ "tower-client", "tower-trace" ] }
 kube-proxy = { path = "../proxy" }
+rest-plugin = { path = "../../dependencies/control-plane/control-plane/plugin", default-features = false }
