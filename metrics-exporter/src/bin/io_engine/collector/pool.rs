@@ -34,7 +34,7 @@ impl PoolCapacityCollector {
             &mut descs,
         );
         let pool_used_size = init_gauge_vec(
-            "total_used_bytes",
+            "used_size_bytes",
             "Used size of the pool in bytes",
             &mut descs,
         );
