@@ -1830,6 +1830,7 @@ name = "kubectl-plugin"
 version = "1.0.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "clap",
  "console-logger",
  "humantime",
@@ -3371,6 +3372,7 @@ dependencies = [
  "openapi",
  "platform",
  "pstor",
+ "rest-plugin",
  "schemars",
  "serde",
  "serde_json",

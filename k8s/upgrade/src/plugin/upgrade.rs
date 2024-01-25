@@ -198,6 +198,15 @@ impl UpgradeArgs {
         Ok(())
     }
 
+    /// Execute the upgrade command.
+    pub async fn execute(&self, namespace: &str) -> error::Result<()> {
+        if self.dry_run {
+            self.dummy_apply(namespace).await
+        } else {
+            self.apply(namespace).await
+        }
+    }
+
     /// Dummy upgrade the resources.
     pub async fn dummy_apply(&self, namespace: &str) -> error::Result<()> {
         let mut pods_names: Vec<String> = Vec::new();
