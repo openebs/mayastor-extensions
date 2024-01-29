@@ -1,7 +1,7 @@
 use crate::Error;
 use clap::Parser;
 use plugin::{
-    resources::{CordonResources, DrainResources, GetResources, ScaleResources},
+    resources::{CordonResources, DrainResources, GetResources, ScaleResources, UnCordonResources},
     ExecuteOperation,
 };
 use std::{ops::Deref, path::PathBuf};
@@ -58,7 +58,7 @@ pub enum Operations {
     Cordon(CordonResources),
     /// 'Uncordon' resources.
     #[clap(subcommand)]
-    Uncordon(CordonResources),
+    Uncordon(UnCordonResources),
     /// `Dump` resources.
     Dump(DumpArgs),
     /// `Upgrade` the deployment.
