@@ -1,15 +1,15 @@
-name: Main Helm Chart
+name: Helm Testing Chart
 on:
   push:
     branches:
-      - main
       - 'helm-testing/**'
       - '!helm-testing/**-staging**'
     paths:
       - 'chart/**'
+      - '.github/**'
 
 jobs:
-  main-chart:
+  helm-testing-chart:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -36,7 +36,5 @@ jobs:
         with:
           token: ${{ secrets.OPENEBS_CI_GITHUB }}
           charts_dir: .
-          charts_url: https://openebs.github.io/mayastor-chart-donotuse
-          owner: openebs
           repository: mayastor-chart-donotuse
           branch: gh-pages
