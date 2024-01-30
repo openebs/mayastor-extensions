@@ -34,7 +34,7 @@ jobs:
       - name: Publish Mayastor Helm chart
         uses: stefanprodan/helm-gh-pages@v1.7.0
         with:
-          token: ${{ secrets.OPENEBS_CI_GITHUB }}
+          token: ${{ secrets.ORG_CI_GITHUB }}
           charts_dir: .
           repository: mayastor-chart-donotuse
           branch: gh-pages
