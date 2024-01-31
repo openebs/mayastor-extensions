@@ -12,10 +12,10 @@ jobs:
           echo "Release Tag: ${{ github.event.release.tag_name }}"
           ./scripts/github/release-artifacts.sh --tag "${{ github.event.release.tag_name }}" --workflow "Release Artifacts" --repo-org "${{ github.repository_owner }}" download
         env:
-          GITHUB_TOKEN: ${{ secrets.OPENEBS_RELEASES }}
+          GITHUB_TOKEN: ${{ secrets.ORG_CI_GITHUB }}
       - name: Upload Artifacts
         run: |
           repos="mayastor-extensions mayastor-control-plane mayastor"
           ./scripts/github/release-artifacts.sh --tag "${{ github.event.release.tag_name }}" --repo-org "${{ github.repository_owner }}" --upload "$repos" upload
         env:
-          GITHUB_TOKEN: ${{ secrets.OPENEBS_RELEASES }}
+          GITHUB_TOKEN: ${{ secrets.ORG_CI_GITHUB }}
