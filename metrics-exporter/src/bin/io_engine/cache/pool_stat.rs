@@ -30,7 +30,6 @@ pub(crate) async fn store_pool_stats_data(client: &GrpcClient) -> Result<(), ()>
     };
     let pools_cache = cache.deref_mut();
     match pool_stats {
-        // set pools in the cache
         Ok(pools) => {
             pools_cache.pool_iostat_mut().set(pools.pool_stats);
         }

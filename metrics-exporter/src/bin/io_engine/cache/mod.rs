@@ -1,7 +1,10 @@
+mod nexus_stat;
 mod pool;
 mod pool_stat;
 
-use crate::client::{grpc_client::GrpcClient, pool::Pools, pool_stat::PoolIoStats};
+use crate::client::{
+    grpc_client::GrpcClient, nexus_stat::NexusIoStats, pool::Pools, pool_stat::PoolIoStats,
+};
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
@@ -27,36 +30,48 @@ pub(crate) struct Data {
     pools: Pools,
     /// Contains Pool IOStats data.
     pool_stats: PoolIoStats,
+    /// Contains Nexus IOStats data.
+    nexus_stats: NexusIoStats,
 }
 
 impl Cache {
     /// Initialize the cache with default value.
-    pub fn initialize(data: Data) {
+    pub(crate) fn initialize(data: Data) {
         CACHE.get_or_init(|| Mutex::new(Self { data }));
     }
 
     /// Returns cache.
-    pub fn get_cache() -> &'static Mutex<Cache> {
+    pub(crate) fn get_cache() -> &'static Mutex<Cache> {
         CACHE.get().expect("Cache is not initialized")
     }
 
     /// Get pool mutably stored in struct.
-    pub fn pool_mut(&mut self) -> &mut Pools {
+    pub(crate) fn pool_mut(&mut self) -> &mut Pools {
         &mut self.data.pools
     }
 
     /// Get mutable reference to PoolIOStats.
-    pub fn pool_iostat_mut(&mut self) -> &mut PoolIoStats {
+    pub(crate) fn pool_iostat_mut(&mut self) -> &mut PoolIoStats {
         &mut self.data.pool_stats
     }
 
+    /// Get mutable reference to NexusIOStats.
+    pub(crate) fn nexus_iostat_mut(&mut self) -> &mut NexusIoStats {
+        &mut self.data.nexus_stats
+    }
+
+    /// Get a reference to NexusIoStats.
+    pub(crate) fn nexus_iostat(&self) -> &NexusIoStats {
+        &self.data.nexus_stats
+    }
+
     /// Get a reference to Pool.
-    pub fn pool(&self) -> &Pools {
+    pub(crate) fn pool(&self) -> &Pools {
         &self.data.pools
     }
 
     /// Get a reference to PoolIoStats.
-    pub fn pool_iostat(&self) -> &PoolIoStats {
+    pub(crate) fn pool_iostat(&self) -> &PoolIoStats {
         &self.data.pool_stats
     }
 }
@@ -73,6 +88,9 @@ impl Data {
         Self {
             pools: Pools { pools: vec![] },
             pool_stats: PoolIoStats { pool_stats: vec![] },
+            nexus_stats: NexusIoStats {
+                nexus_stats: vec![],
+            },
         }
     }
 }
@@ -81,4 +99,5 @@ impl Data {
 pub(crate) async fn store_resource_data(client: &GrpcClient) {
     let _ = pool::store_pool_info_data(client).await;
     let _ = pool_stat::store_pool_stats_data(client).await;
+    let _ = nexus_stat::store_nexus_stats_data(client).await;
 }
