@@ -1,6 +1,7 @@
 use crate::{error::ExporterError, get_node_name, get_pod_ip};
 
 use crate::client::{
+    nexus_stat::{NexusIoStat, NexusIoStats},
     pool::{PoolInfo, Pools},
     pool_stat::{PoolIoStat, PoolIoStats},
 };
@@ -61,7 +62,7 @@ pub(crate) struct MayaClientV1 {
 /// Dataplane grpc client.
 #[derive(Debug, Clone)]
 pub(crate) struct GrpcClient {
-    v1_client: Option<MayaClientV1>,
+    client: Option<MayaClientV1>,
 }
 
 /// Number of grpc connect retries without error logging.
@@ -77,7 +78,7 @@ impl GrpcClient {
                 let pool = PoolClient::new(channel.clone());
                 let stats = StatsClient::new(channel.clone());
                 return Ok(Self {
-                    v1_client: Some(MayaClientV1 { pool, stats }),
+                    client: Some(MayaClientV1 { pool, stats }),
                 });
             } else {
                 if num_retires > SILENT_RETRIES {
@@ -94,7 +95,7 @@ impl GrpcClient {
 
     /// Get the v1 api client.
     pub(crate) fn client_v1(&self) -> Result<MayaClientV1, ExporterError> {
-        match self.v1_client.clone() {
+        match self.client.clone() {
             Some(client) => Ok(client),
             None => Err(ExporterError::GrpcClientError(
                 "Could not get v1 client".to_string(),
@@ -158,5 +159,24 @@ impl GrpcClient {
             Err(error) => Err(ExporterError::GrpcResponseError(error.to_string())),
         }?;
         Ok(PoolIoStats { pool_stats })
+    }
+
+    /// Gets Io Statistics of all nexus on the io engine. Maps the response to NexusIoStat struct.
+    pub(crate) async fn get_nexus_iostat(&self) -> Result<NexusIoStats, ExporterError> {
+        let nexus_stats = match self
+            .client_v1()?
+            .stats
+            .get_nexus_io_stats(rpc::v1::stats::ListStatsOption { name: None })
+            .await
+        {
+            Ok(response) => Ok(response
+                .into_inner()
+                .stats
+                .into_iter()
+                .map(NexusIoStat::from)
+                .collect::<Vec<_>>()),
+            Err(error) => Err(ExporterError::GrpcResponseError(error.to_string())),
+        }?;
+        Ok(NexusIoStats { nexus_stats })
     }
 }
