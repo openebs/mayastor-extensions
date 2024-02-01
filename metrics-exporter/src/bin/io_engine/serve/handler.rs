@@ -1,6 +1,7 @@
 use crate::{
     cache::store_resource_data,
     collector::{
+        nexus_stat::NexusIoStatsCollector,
         pool::{PoolCapacityCollector, PoolStatusCollector},
         pool_stat::PoolIoStatsCollector,
     },
@@ -12,27 +13,33 @@ use tracing::{error, warn};
 
 /// Handler for metrics. Initializes all collector and serves data over Http.
 pub(crate) async fn metrics_handler() -> impl Responder {
+    // Fetches stats for all resource from io engine, Populates the cache.
     store_resource_data(grpc_client()).await;
+    // Create collectors for all resources.
     let pools_collector = PoolCapacityCollector::default();
     let pool_status_collector = PoolStatusCollector::default();
     let pool_iostat_collector = PoolIoStatsCollector::default();
-    // Create a new registry for prometheus
+    let nexus_iostat_collector = NexusIoStatsCollector::default();
+    // Create a new registry for prometheus.
     let registry = Registry::default();
-    // Register pools collector in the registry
+    // Register all collectors to the registry.
     if let Err(error) = Registry::register(&registry, Box::new(pools_collector)) {
-        warn!(%error, "Pools collector already registered");
+        warn!(%error, "Pool capacity collector already registered");
     }
     if let Err(error) = Registry::register(&registry, Box::new(pool_status_collector)) {
-        warn!(%error, "Pools status collector already registered");
+        warn!(%error, "Pool status collector already registered");
     }
     if let Err(error) = Registry::register(&registry, Box::new(pool_iostat_collector)) {
-        warn!(%error, "Pools status collector already registered");
+        warn!(%error, "Pool IoStat collector already registered");
+    }
+    if let Err(error) = Registry::register(&registry, Box::new(nexus_iostat_collector)) {
+        warn!(%error, "Nexus IoStat collector already registered");
     }
 
     let mut buffer = Vec::new();
 
     let encoder = prometheus::TextEncoder::new();
-    // Starts collecting metrics via calling gatherers
+    // Internally calls collect() on all collectors and encodes the data into the buffer.
     if let Err(error) = encoder.encode(&registry.gather(), &mut buffer) {
         error!(%error, "Could not encode custom metrics");
     };
