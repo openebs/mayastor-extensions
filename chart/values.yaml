@@ -675,6 +675,9 @@ nats:
   cluster:
     enabled: true
     replicas: 3
+  statefulSetPodLabels:
+    app: nats
+    openebs.io/logging: "true"
   # The nats box can be installed for debugging, by default its enabled.
   natsbox:
     enabled: false

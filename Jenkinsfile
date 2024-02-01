@@ -239,9 +239,6 @@ pipeline {
                 ]
               ]
             ])
-            if (mainBranches()) {
-              notifySlackUponStateChange(currentBuild)
-            }
           }
         }
       }

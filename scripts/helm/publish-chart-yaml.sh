@@ -134,7 +134,7 @@ branch_chart_version()
     else
       die "Cannot determine Chart version from branch: $check_branch"
     fi
-  elif [ "$check_branch" == "main" ]; then
+    elif [[ "$check_branch" == @(helm-testing/develop|main) ]]; then
     if [ -z "$LATEST_RELEASE_BRANCH" ]; then
       LATEST_RELEASE_BRANCH=$(latest_release_branch)
     fi
@@ -351,7 +351,7 @@ echo "APP_TAG: $APP_TAG"
 echo "CHART_VERSION: $CHART_VERSION"
 echo "CHART_APP_VERSION: $CHART_APP_VERSION"
 
-if [ "$CHECK_BRANCH" = "main" ]; then
+if [[ "$CHECK_BRANCH" == @(helm-testing/develop|main) ]]; then
   allowed_diff=("" "major" "minor" "patch" "prerelease")
 else
   # Allow only for a semver difference of at most patch
@@ -366,7 +366,7 @@ fi
 
 if [ -n "$CHECK_BRANCH" ]; then
   if [ "$(semver get prerel "$APP_TAG")" != "" ]; then
-    if [ ! "$CHECK_BRANCH" == "main" ]; then
+    if [[ "$CHECK_BRANCH" != @(helm-testing/develop|main) ]]; then
         die "Script expects Branch Name($APP_TAG) to point to a stable release"
     fi
   fi

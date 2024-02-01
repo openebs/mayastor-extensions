@@ -55,8 +55,11 @@ mkShell {
 
   shellHook = ''
     ./scripts/nix/git-submodule-init.sh
-    pre-commit install
-    pre-commit install --hook commit-msg
+    if [ -z "$CI" ]; then
+      echo
+      pre-commit install
+      pre-commit install --hook commit-msg
+    fi
     export EXTENSIONS_SRC=`pwd`
     export CTRL_SRC="$EXTENSIONS_SRC"/dependencies/control-plane
     export PATH="$PATH:$(pwd)/target/debug"

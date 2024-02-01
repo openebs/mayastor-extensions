@@ -46,6 +46,9 @@ pub(crate) const UPGRADE_SERVICE: &str = "upgrade";
 /// Defines the name of callhome service
 pub(crate) const CALLHOME_SERVICE: &str = "obs-callhome";
 
+/// Defines the name of nats services
+pub(crate) const NATS_SERVICE: &str = "nats";
+
 lazy_static! {
     /// List of resources fall under control plane services
     pub(crate) static ref CONTROL_PLANE_SERVICES: HashMap<&'static str, bool> =
@@ -79,6 +82,12 @@ lazy_static! {
         (CALLHOME_SERVICE, true),
     ]);
 
+    /// List of resources fall under nats services
+    pub(crate) static ref NATS_JOB_SERVICE: HashMap<&'static str, bool> =
+    HashMap::from([
+        (NATS_SERVICE, true),
+    ]);
+
     /// Represents the list of services that requires hostname to collect logs
     pub(crate) static ref HOST_NAME_REQUIRED_SERVICES: HashMap<&'static str, bool> =
         HashMap::from([
@@ -86,5 +95,6 @@ lazy_static! {
             (ETCD_SERVICE, true),
             (CSI_NODE_SERVICE, true),
             (AGENT_HA_NODE_SERVICE, true),
+            (NATS_SERVICE, true),
         ]);
 }
