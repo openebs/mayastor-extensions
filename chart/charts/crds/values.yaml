@@ -1,0 +1,6 @@
+jaeger:
+  # -- Install Jaeger CRDs
+  enabled: true
+  # -- Install Volume Snapshots CRD
+  volumeSnapshots:
+    enabled: true

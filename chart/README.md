@@ -33,17 +33,28 @@ $ helm install mayastor . -n <mayastor-namespace>
 
 ### Installing the Chart via Helm Registry
 
-To install the chart with the release name `my-release`:
+To install the chart with the release name `mymayastor`:
 
 ```console
-$ helm repo add openebs https://openebs.github.io/mayastor-extensions/
-$ helm install my-release openebs/mayastor
+$ helm repo add mayastor https://openebs.github.io/mayastor-extensions/
+$ helm install mymayastor mayastor/mayastor
 ```
+
+### Uninstall Helm Chart
+
+```console
+$ helm uninstall [RELEASE_NAME] 
+```
+
+This removes all the Kubernetes components associated with the chart and deletes the release.
+
+*See [helm uninstall](https://helm.sh/docs/helm/helm_uninstall/) for command documentation.*
 
 ## Chart Dependencies
 
 | Repository | Name | Version |
 |------------|------|---------|
+|  | crds | 0.0.0 |
 | https://charts.bitnami.com/bitnami | etcd | 8.6.0 |
 | https://grafana.github.io/helm-charts | loki-stack | 2.9.11 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.25.0 |
@@ -93,6 +104,8 @@ $ helm install my-release openebs/mayastor
 | base.&ZeroWidthSpace;jaeger.&ZeroWidthSpace;enabled | Enable jaeger tracing | `false` |
 | base.&ZeroWidthSpace;logSilenceLevel | Silence specific module components | `nil` |
 | base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;enabled | Enable the metrics exporter | `true` |
+| crds.&ZeroWidthSpace;enabled | Install CRDs | `true` |
+| crds.&ZeroWidthSpace;jaeger.&ZeroWidthSpace;enabled | Install Jaeger CRDs | `false` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;logLevel | Log level for the csi controller | `"info"` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;preventVolumeModeConversion | Prevent modifying the volume mode when creating a PVC from an existing VolumeSnapshot | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
