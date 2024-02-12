@@ -30,18 +30,6 @@ set -euo pipefail
 latest_release_branch() {
   cd "$ROOTDIR"
 
-  local remote_url=""
-  local openebs_remote=""
-  for remote in $(git remote show); do
-    remote_url=$(git ls-remote --get-url $remote)
-    if [[ "$remote_url" =~ ([\/:]openebs\/mayastor-extensions(.git)?)$ ]]; then
-      openebs_remote=$remote
-      break
-    fi
-  done
-  if [ -z "$openebs_remote" ]; then
-    die "failed to find git remote pointing to 'openebs/mayastor-extensions'"
-  fi
   # The latest release branch name is required for generating the helm chart version/appVersion
   # for the 'main' branch only.
   # The 'git branch' command in the below lines checks remote refs for release/x.y branch entries.
@@ -51,14 +39,18 @@ latest_release_branch() {
   # repo is cloned, and not a user/contributor's fork.
   local latest_release_branch=$(git branch \
     --all \
-    --list "*${openebs_remote}/release/*.*" \
+    --list "origin/release/*.*" \
     --format '%(refname:short)' \
     --sort 'refname' \
     | tail -n 1)
 
+  if [ "$latest_release_branch" == "" ]; then
+    latest_release_branch="origin/release/0.0"
+  fi
+
   cd - >/dev/null
 
-  echo "${latest_release_branch#*$openebs_remote/}"
+  echo "${latest_release_branch#*origin/}"
 }
 
 main_branch_version_from_release_branch() {
