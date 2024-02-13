@@ -29,6 +29,7 @@ spec:
     spec:
       serviceAccount: {{ .Release.Name }}-service-account
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
       {{- if $pcName := include "priority_class" (dict "template" . "localPriorityClass" .Values.csi.node.priorityClassName) }}
@@ -77,6 +78,8 @@ spec:
         args:
         - "--csi-socket={{ .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--node-name=$(MY_NODE_NAME)"
+        - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"
+        - "--enable-registration"
         - "--grpc-endpoint=$(MY_POD_IP):10199"{{ if .Values.csi.node.nvme.io_timeout }}
         - "--nvme-io-timeout={{ .Values.csi.node.nvme.io_timeout }}"
         - "--nvme-core-io-timeout={{ .Values.csi.node.nvme.io_timeout }}"{{ else }}
