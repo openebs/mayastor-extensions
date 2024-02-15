@@ -58,8 +58,13 @@ base:
   default_req_timeout: 5s
   # -- Cache timeout for core agent & diskpool deployment
   cache_poll_period: 30s
-  # -- Silence specific module components
-  logSilenceLevel:
+  logging:
+    # -- Valid values for format are pretty, json and compact
+    format: pretty
+    # -- Enable ansi color code for Pod StdOut/StdErr
+    color: true
+    # -- Silence specific module components
+    silenceLevel:
   initContainers:
     enabled: true
     containers:

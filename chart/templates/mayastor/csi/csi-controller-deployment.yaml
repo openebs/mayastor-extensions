@@ -121,12 +121,14 @@ spec:
             {{- range $key, $val := .Values.csi.node.topology.segments }}
             - "--node-selector={{ $key }}={{ $val }}"
             {{- end }}
+            - "--ansi-colors={{ .Values.base.logging.color }}"
+            - "--fmt-style={{ include "logFormat" . }}"
           env:
             - name: RUST_LOG
               value: {{ .Values.csi.controller.logLevel }}
-            {{- if default .Values.base.logSilenceLevel .Values.csi.controller.logSilenceLevel }}
+            {{- if default .Values.base.logging.silenceLevel .Values.csi.controller.logSilenceLevel }}
             - name: RUST_LOG_SILENCE
-              value: {{ default .Values.base.logSilenceLevel .Values.csi.controller.logSilenceLevel }}
+              value: {{ default .Values.base.logging.silenceLevel .Values.csi.controller.logSilenceLevel }}
             {{- end }}
           volumeMounts:
             - name: socket-dir

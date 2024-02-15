@@ -119,6 +119,14 @@ Usage:
 {{- include "coreListUniq" . | split "," | len -}}
 {{- end -}}
 
+{{- define "logFormat" -}}
+{{- if (regexMatch "^((json|pretty|compact))$" .Values.base.logging.format) -}}
+    {{- print .Values.base.logging.format -}}
+{{- else -}}
+    {{- fail "invalid logging format. valid values are json, pretty, compact" -}}
+{{- end -}}
+{{- end -}}
+
 {{/* Get a list of cores as a comma-separated list */}}
 {{- define "coreListUniq" -}}
 {{- if .Values.io_engine.coreList -}}
