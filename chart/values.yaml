@@ -675,6 +675,8 @@ nats:
   cluster:
     enabled: true
     replicas: 3
+  # Cluster Domain configured on the kubelets
+  k8sClusterDomain: cluster.local
   statefulSetPodLabels:
     app: nats
     openebs.io/logging: "true"
