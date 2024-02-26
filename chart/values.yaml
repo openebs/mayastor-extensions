@@ -85,9 +85,6 @@ base:
   metrics:
     # -- Enable the metrics exporter
     enabled: true
-    # metrics refresh time
-    # WARNING: Lowering pollingInterval value will affect performance adversely
-    pollingInterval: "5m"
 
   jaeger:
     # -- Enable jaeger tracing
