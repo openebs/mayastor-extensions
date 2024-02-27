@@ -61,6 +61,17 @@ Usage:
 {{- end -}}
 
 {{/*
+Renders the csi node init containers, if enabled
+Usage:
+{{ include "csi_node_init_containers" . }}
+*/}}
+{{- define "csi_node_init_containers" -}}
+    {{- if .Values.csi.node.initContainers.enabled }}
+    {{- include "render" (dict "value" .Values.csi.node.initContainers.containers "context" $) | nindent 8 }}
+    {{- end }}
+{{- end -}}
+
+{{/*
 Renders the base image pull secrets for all deployments, if any
 Usage:
 {{ include "base_pull_secrets" . }}
