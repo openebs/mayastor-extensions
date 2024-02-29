@@ -329,6 +329,12 @@ csi:
     tolerations: []
     # -- Set PriorityClass, overrides global
     priorityClassName: ""
+    initContainers:
+      enabled: false
+      containers:
+        - name: nvme-tcp-probe
+          image: busybox:latest
+          command: ['sh', '-c', 'trap "exit 1" TERM; until $(lsmod | grep nvme_tcp &>/dev/null); do [ -z "$WARNED" ] && echo "nvme_tcp module not loaded..."; WARNED=1; sleep 60; done;']
 
 io_engine:
   # -- Log level for the io-engine service
