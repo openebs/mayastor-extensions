@@ -271,6 +271,8 @@ csi:
     snapshotControllerTag: v6.3.3
     # -- csi-node-driver-registrar image release tag
     registrarTag: v2.10.0
+    # -- csi-resizer image release tag
+    resizerTag: v1.9.3
 
   controller:
     # -- Log level for the csi controller
@@ -731,6 +733,8 @@ storageClass:
   enabled: true
   nameSuffix: single-replica
   default: false
+  # -- Enable volume expansion for the default StorageClass.
+  allowVolumeExpansion: true
   parameters:
     protocol: nvmf
     repl: 1
