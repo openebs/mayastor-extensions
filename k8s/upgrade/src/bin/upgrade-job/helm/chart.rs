@@ -172,6 +172,11 @@ impl CoreValues {
         self.csi.node_driver_registrar_image_tag()
     }
 
+    /// This is a getter for the sig-storage/csi-resizer image tag.
+    pub(crate) fn csi_resizer_image_tag(&self) -> &str {
+        self.csi.resizer_image_tag()
+    }
+
     /// This is a getter for the CSI node's NVMe io_timeout.
     pub(crate) fn csi_node_nvme_io_timeout(&self) -> &str {
         self.csi.node_nvme_io_timeout()
@@ -461,6 +466,11 @@ impl Csi {
         self.image.node_driver_registrar_tag()
     }
 
+    /// This is a getter for the sig-storage/csi-resizer image tag.
+    fn resizer_image_tag(&self) -> &str {
+        self.image.resizer_tag()
+    }
+
     /// This is a getter for the CSI node NVMe io_timeout.
     fn node_nvme_io_timeout(&self) -> &str {
         self.node.nvme_io_timeout()
@@ -483,6 +493,9 @@ struct CsiImage {
     snapshot_controller_tag: String,
     /// This is the image tag for the csi-node-driver-registrar container.
     registrar_tag: String,
+    /// This is the image tag for the csi-resizer container.
+    #[serde(default)]
+    resizer_tag: String,
 }
 
 impl CsiImage {
@@ -509,6 +522,11 @@ impl CsiImage {
     /// This is a getter for registrarTag.
     fn node_driver_registrar_tag(&self) -> &str {
         self.registrar_tag.as_str()
+    }
+
+    /// This is a getter for resizerTag.
+    fn resizer_tag(&self) -> &str {
+        self.resizer_tag.as_str()
     }
 }
 
