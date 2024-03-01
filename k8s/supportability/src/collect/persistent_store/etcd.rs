@@ -66,7 +66,10 @@ impl EtcdStore {
         let mut first = true;
         let mut dump;
         loop {
-            dump = self.etcd.get_values_paged(prefix, ETCD_PAGED_LIMIT).await?;
+            dump = self
+                .etcd
+                .get_values_paged_all(prefix, ETCD_PAGED_LIMIT)
+                .await?;
             if !first && dump.get(0).is_some() {
                 dump.remove(0);
             }
