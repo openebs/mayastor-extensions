@@ -7,6 +7,7 @@ use actix_web::{middleware, HttpServer};
 use clap::Parser;
 use once_cell::sync::OnceCell;
 use std::{env, net::SocketAddr};
+use utils::tracing_telemetry::{FmtLayer, FmtStyle};
 
 /// Cache module for exporter.
 pub(crate) mod cache;
@@ -41,6 +42,14 @@ pub(crate) struct Cli {
     /// TCP address where prometheus endpoint will listen to
     #[clap(long, short, default_value = "0.0.0.0:9502")]
     metrics_endpoint: SocketAddr,
+
+    /// Formatting style to be used while logging.
+    #[clap(default_value = FmtStyle::Pretty.as_ref(), short, long)]
+    fmt_style: FmtStyle,
+
+    /// Use ANSI colors for the logs.
+    #[clap(long)]
+    ansi_colors: bool,
 }
 
 impl Cli {
@@ -62,9 +71,11 @@ pub(crate) fn grpc_client<'a>() -> &'a GrpcClient {
 async fn main() -> Result<(), ExporterError> {
     let args = Cli::args();
     utils::print_package_info!();
-
-    utils::tracing_telemetry::init_tracing("metrics-exporter-io_engine", vec![], None);
-
+    utils::tracing_telemetry::TracingTelemetry::builder()
+        .with_writer(FmtLayer::Stdout)
+        .with_style(args.fmt_style)
+        .with_colours(args.ansi_colors)
+        .init("metrics-exporter-io_engine");
     initialize_cache().await;
     let client = init_client().await?;
     // Initialize io engine gRPC client.

@@ -11,7 +11,7 @@ use opts::CliArgs;
 use tracing::{error, info};
 use utils::{
     print_package_info, raw_version_str,
-    tracing_telemetry::{default_tracing_tags, flush_traces, init_tracing},
+    tracing_telemetry::{default_tracing_tags, flush_traces, TracingTelemetry},
 };
 
 mod common;
@@ -40,15 +40,18 @@ async fn main() -> Result<()> {
 /// Initialize logging components -- tracing.
 fn init_logging() {
     let tags = default_tracing_tags(raw_version_str(), env!("CARGO_PKG_VERSION"));
-
-    init_tracing("upgrade-job", tags, None);
+    let opts = CliArgs::parse();
+    TracingTelemetry::builder()
+        .with_tracing_tags(tags)
+        .with_style(opts.fmt_style())
+        .with_colours(opts.ansi_colours())
+        .init("upgrade-job");
 }
 
 /// This function handles the following tasks -- 1. Argument parsing, 2. Validating arguments whose
 /// validation depends on other arguments.
 pub(crate) async fn parse_cli_args() -> Result<CliArgs> {
     let opts = CliArgs::parse();
-
     validate_namespace(opts.namespace()).await?;
     validate_rest_endpoint(opts.rest_endpoint()).await?;
 
