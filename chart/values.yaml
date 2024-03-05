@@ -13,7 +13,7 @@ image:
     #       The below tag values will be picked for images by default.
     #       If not specified, 'tag' option provided above will be picked.
     controlPlane: 8ed2dbbd6759
-    dataPlane: 6fc68bab781d
+    dataPlane: 1c2cdc7d9e20
     extensions: adf25dd087d6
   # -- ImagePullPolicy for our images
   pullPolicy: Always
