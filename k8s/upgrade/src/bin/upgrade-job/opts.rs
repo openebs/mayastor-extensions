@@ -1,7 +1,7 @@
 use crate::common::constants::PRODUCT;
 use clap::Parser;
 use std::path::PathBuf;
-use utils::{package_description, version_info_str};
+use utils::{package_description, tracing_telemetry::FmtStyle, version_info_str};
 
 /// Validate input whose validation depends on other inputs.
 pub(crate) mod validators;
@@ -48,6 +48,14 @@ pub(crate) struct CliArgs {
     /// (can specify multiple or separate values with commas: key1=path1,key2=path2).
     #[arg(long)]
     helm_args_set_file: String,
+
+    /// Formatting style to be used while logging.
+    #[clap(default_value = FmtStyle::Pretty.as_ref(), short, long)]
+    fmt_style: FmtStyle,
+
+    /// Use ANSI colors for the logs.
+    #[clap(long)]
+    ansi_colors: bool,
 }
 
 impl CliArgs {
@@ -59,6 +67,16 @@ impl CliArgs {
     /// This returns the Kubernetes Namespace for the Helm chart release.
     pub(crate) fn namespace(&self) -> String {
         self.namespace.clone()
+    }
+
+    /// This returns formatting style to be used.
+    pub(crate) fn fmt_style(&self) -> FmtStyle {
+        self.fmt_style
+    }
+
+    /// This returns ansi_colours arg.
+    pub(crate) fn ansi_colours(&self) -> bool {
+        self.ansi_colors
     }
 
     /// This returns the Helm release name for the installed Helm chart.
