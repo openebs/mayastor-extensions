@@ -398,6 +398,11 @@ where
         target_values.csi_node_driver_registrar_image_tag(),
         upgrade_values_file.path(),
     )?;
+    yq.set_literal_value(
+        YamlKey::try_from(".csi.image.resizerTag")?,
+        target_values.csi_resizer_image_tag(),
+        upgrade_values_file.path(),
+    )?;
 
     // helm upgrade .. --set image.tag=<version> --set image.repoTags.controlPlane= --set
     // image.repoTags.dataPlane= --set image.repoTags.extensions=

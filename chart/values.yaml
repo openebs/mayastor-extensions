@@ -271,6 +271,8 @@ csi:
     snapshotControllerTag: v6.3.3
     # -- csi-node-driver-registrar image release tag
     registrarTag: v2.10.0
+    # -- csi-resizer image release tag
+    resizerTag: v1.9.3
 
   controller:
     # -- Log level for the csi controller
@@ -327,6 +329,12 @@ csi:
     tolerations: []
     # -- Set PriorityClass, overrides global
     priorityClassName: ""
+    initContainers:
+      enabled: false
+      containers:
+        - name: nvme-tcp-probe
+          image: busybox:latest
+          command: ['sh', '-c', 'trap "exit 1" TERM; until $(lsmod | grep nvme_tcp &>/dev/null); do [ -z "$WARNED" ] && echo "nvme_tcp module not loaded..."; WARNED=1; sleep 60; done;']
 
 io_engine:
   # -- Log level for the io-engine service
@@ -731,6 +739,8 @@ storageClass:
   enabled: true
   nameSuffix: single-replica
   default: false
+  # -- Enable volume expansion for the default StorageClass.
+  allowVolumeExpansion: true
   parameters:
     protocol: nvmf
     repl: 1

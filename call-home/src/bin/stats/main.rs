@@ -22,7 +22,7 @@ use std::net::SocketAddr;
 use tracing::{error, info, trace};
 use utils::{
     raw_version_str,
-    tracing_telemetry::{default_tracing_tags, flush_traces, init_tracing},
+    tracing_telemetry::{default_tracing_tags, flush_traces, FmtStyle, TracingTelemetry},
 };
 mod cache;
 mod exporter;
@@ -54,6 +54,14 @@ struct Cli {
     /// Sends opentelemetry spans to the Jaeger endpoint agent.
     #[clap(long, short)]
     jaeger: Option<String>,
+
+    /// Formatting style to be used while logging.
+    #[clap(default_value = FmtStyle::Pretty.as_ref(), short, long)]
+    fmt_style: FmtStyle,
+
+    /// Use ANSI colors for the logs.
+    #[clap(long)]
+    ansi_colors: bool,
 }
 
 impl Cli {
@@ -157,7 +165,12 @@ async fn main() -> errors::Result<()> {
 pub(crate) fn init_logging(args: &Cli) {
     let tags = default_tracing_tags(raw_version_str(), env!("CARGO_PKG_VERSION"));
 
-    init_tracing("stats", tags, args.jaeger.clone());
+    TracingTelemetry::builder()
+        .with_tracing_tags(tags)
+        .with_style(args.fmt_style)
+        .with_colours(args.ansi_colors)
+        .with_jaeger(args.jaeger.clone())
+        .init("call-home");
 }
 
 fn stats_route(cfg: &mut web::ServiceConfig) {

@@ -107,6 +107,7 @@ $ helm install my-release openebs/mayastor
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;registrarTag | csi-node-driver-registrar image release tag | `"v2.10.0"` |
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;registry | Image registry to pull all CSI Sidecar images | `"registry.k8s.io"` |
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;repo | Image registry's namespace | `"sig-storage"` |
+| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;resizerTag | csi-resizer image release tag | `"v1.9.3"` |
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;snapshotControllerTag | csi-snapshot-controller image release tag | `"v6.3.3"` |
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;snapshotterTag | csi-snapshotter image release tag | `"v6.3.3"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;kubeletDir | The kubeletDir directory for the csi-node plugin | `"/var/lib/kubelet"` |
@@ -189,5 +190,6 @@ $ helm install my-release openebs/mayastor
 | operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for diskpool operator | `"16Mi"` |
 | operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
 | priorityClassName | Pod scheduling priority. Setting this value will apply to all components except the external Chart dependencies. If any component has `priorityClassName` set, then this value would be overridden for that component. For external components like etcd, jaeger or loki-stack, PriorityClass can only be set at component level. | `""` |
+| storageClass.&ZeroWidthSpace;allowVolumeExpansion | Enable volume expansion for the default StorageClass. | `true` |
 | tolerations | Tolerations to be applied to all components except external Chart dependencies. If any component has tolerations set, then it would override this value. For external components like etcd, jaeger and loki-stack, tolerations can only be set at component level. | `[]` |
 
