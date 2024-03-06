@@ -10,10 +10,21 @@ jobs:
   commitlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        env:
+          checkout_token: ${{ secrets.ORG_CI_GITHUB }}
+        if: ${{ env.checkout_token == '' }}
         with:
-          submodules: true
           fetch-depth: 0
+          submodules: recursive
+      - uses: actions/checkout@v4
+        env:
+          checkout_token: ${{ secrets.ORG_CI_GITHUB }}
+        if: ${{ env.checkout_token != '' }}
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.ORG_CI_GITHUB }}
       - name: Install CommitLint and Dependencies
         run: npm install @commitlint/config-conventional @commitlint/cli
       - name: Lint Commits
