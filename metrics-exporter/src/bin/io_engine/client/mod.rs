@@ -6,6 +6,7 @@ pub(crate) mod nexus_stat;
 pub(crate) mod pool;
 /// PoolIoStats module
 pub(crate) mod pool_stat;
+pub(crate) mod replica_stat;
 
 /// Convert ticks to time in microseconds.
 fn ticks_to_time(tick: u64, tick_rate: u64) -> u64 {
