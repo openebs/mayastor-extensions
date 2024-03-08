@@ -418,6 +418,7 @@ io_engine:
 etcd:
   # Configuration for etcd's localpv hostpath storage class.
   localpvScConfig:
+    enabled: true
     # Name of etcd's localpv hostpath storage class.
     name: "mayastor-etcd-localpv"
     # -- Host path where local etcd data is stored in.
@@ -518,6 +519,7 @@ loki-stack:
   enabled: true
   # Configuration for loki's localpv hostpath storage class.
   localpvScConfig:
+    enabled: true
     # Name of loki's localpv hostpath storage class.
     name: "mayastor-loki-localpv"
     # -- Host path where local etcd data is stored in.
