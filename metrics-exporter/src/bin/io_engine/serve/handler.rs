@@ -4,6 +4,7 @@ use crate::{
         nexus_stat::NexusIoStatsCollector,
         pool::{PoolCapacityCollector, PoolStatusCollector},
         pool_stat::PoolIoStatsCollector,
+        replica_stat::ReplicaIoStatsCollector,
     },
     grpc_client,
 };
@@ -20,6 +21,7 @@ pub(crate) async fn metrics_handler() -> impl Responder {
     let pool_status_collector = PoolStatusCollector::default();
     let pool_iostat_collector = PoolIoStatsCollector::default();
     let nexus_iostat_collector = NexusIoStatsCollector::default();
+    let replica_iostat_collector = ReplicaIoStatsCollector::default();
     // Create a new registry for prometheus.
     let registry = Registry::default();
     // Register all collectors to the registry.
@@ -34,6 +36,9 @@ pub(crate) async fn metrics_handler() -> impl Responder {
     }
     if let Err(error) = Registry::register(&registry, Box::new(nexus_iostat_collector)) {
         warn!(%error, "Nexus IoStat collector already registered");
+    }
+    if let Err(error) = Registry::register(&registry, Box::new(replica_iostat_collector)) {
+        warn!(%error, "Replica IoStat collector already registered");
     }
 
     let mut buffer = Vec::new();

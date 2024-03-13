@@ -1,9 +1,11 @@
 mod nexus_stat;
 mod pool;
 mod pool_stat;
+mod replica_stat;
 
 use crate::client::{
     grpc_client::GrpcClient, nexus_stat::NexusIoStats, pool::Pools, pool_stat::PoolIoStats,
+    replica_stat::ReplicaIoStats,
 };
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
@@ -32,6 +34,8 @@ pub(crate) struct Data {
     pool_stats: PoolIoStats,
     /// Contains Nexus IOStats data.
     nexus_stats: NexusIoStats,
+    /// Contains Replica IOStats data.
+    replica_stats: ReplicaIoStats,
 }
 
 impl Cache {
@@ -74,6 +78,16 @@ impl Cache {
     pub(crate) fn pool_iostat(&self) -> &PoolIoStats {
         &self.data.pool_stats
     }
+
+    /// Get a reference to ReplicaIoStats.
+    pub(crate) fn replica_iostat(&self) -> &ReplicaIoStats {
+        &self.data.replica_stats
+    }
+
+    /// Get mutable reference to ReplicaIOStats.
+    pub(crate) fn replica_iostat_mut(&mut self) -> &mut ReplicaIoStats {
+        &mut self.data.replica_stats
+    }
 }
 
 impl Default for Data {
@@ -91,6 +105,9 @@ impl Data {
             nexus_stats: NexusIoStats {
                 nexus_stats: vec![],
             },
+            replica_stats: ReplicaIoStats {
+                replica_stats: vec![],
+            },
         }
     }
 }
@@ -100,4 +117,5 @@ pub(crate) async fn store_resource_data(client: &GrpcClient) {
     let _ = pool::store_pool_info_data(client).await;
     let _ = pool_stat::store_pool_stats_data(client).await;
     let _ = nexus_stat::store_nexus_stats_data(client).await;
+    let _ = replica_stat::store_replica_stats_data(client).await;
 }
