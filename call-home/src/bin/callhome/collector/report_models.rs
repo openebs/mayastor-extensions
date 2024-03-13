@@ -1,5 +1,5 @@
 use obs::common::{constants::ACTION, errors};
-use openapi::models::Volume;
+use openapi::models::{Volume, VolumeStatus};
 use prometheus_parse::{Sample, Value};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
@@ -21,12 +21,14 @@ pub(crate) struct Volumes {
     created: u32,
     #[serde(skip_serializing_if = "is_zero")]
     deleted: u32,
+    volume_replica_counts: VolumeReplicaCounts,
+    volume_state_counts: VolumeStateCounts,
 }
 impl Volumes {
     /// Receives a openapi::models::Volumes object and returns a new report_models::volume object by
     /// using the data provided.
     pub(crate) fn new(volumes: openapi::models::Volumes, event_data: EventData) -> Self {
-        let volumes_size_vector = get_volumes_size_vector(volumes.entries);
+        let volumes_size_vector = get_volumes_size_vector(&volumes.entries);
         Self {
             count: volumes_size_vector.len() as u64,
             max_size_in_bytes: get_max_value(volumes_size_vector.clone()),
@@ -35,6 +37,86 @@ impl Volumes {
             capacity_percentiles_in_bytes: Percentiles::new(volumes_size_vector),
             created: event_data.volume_created.value(),
             deleted: event_data.volume_deleted.value(),
+            volume_replica_counts: VolumeReplicaCounts::new(&volumes.entries),
+            volume_state_counts: VolumeStateCounts::new(&volumes.entries),
+        }
+    }
+}
+
+// The count of volumes with a specific number of replicas.
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct VolumeReplicaCounts {
+    one_replica: u32,
+    two_replicas: u32,
+    three_replicas: u32,
+    four_replicas: u32,
+    five_or_more_replicas: u32,
+}
+
+impl VolumeReplicaCounts {
+    // Receives a openapi::models::Volumes object and returns number of volumes with specific number
+    // of replicas.
+    fn new(volumes: &[Volume]) -> Self {
+        Self {
+            one_replica: volumes
+                .iter()
+                .filter(|vol| vol.spec.num_replicas == 1)
+                .count() as u32,
+            two_replicas: volumes
+                .iter()
+                .filter(|vol| vol.spec.num_replicas == 2)
+                .count() as u32,
+            three_replicas: volumes
+                .iter()
+                .filter(|vol| vol.spec.num_replicas == 3)
+                .count() as u32,
+            four_replicas: volumes
+                .iter()
+                .filter(|vol| vol.spec.num_replicas == 4)
+                .count() as u32,
+            five_or_more_replicas: volumes
+                .iter()
+                .filter(|vol| vol.spec.num_replicas >= 5)
+                .count() as u32,
+        }
+    }
+}
+
+// The count of volumes with a specific state of the volume.
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct VolumeStateCounts {
+    unknown: u64,
+    online: u64,
+    degraded: u64,
+    faulted: u64,
+    shutdown: u64,
+}
+
+impl VolumeStateCounts {
+    // Receives a openapi::models::Volumes object and returns number of volumes with specific state
+    // of the volume.
+    fn new(volumes: &[Volume]) -> Self {
+        Self {
+            unknown: volumes
+                .iter()
+                .filter(|vol| vol.state.status == VolumeStatus::Unknown)
+                .count() as u64,
+            online: volumes
+                .iter()
+                .filter(|vol| vol.state.status == VolumeStatus::Online)
+                .count() as u64,
+            degraded: volumes
+                .iter()
+                .filter(|vol| vol.state.status == VolumeStatus::Degraded)
+                .count() as u64,
+            faulted: volumes
+                .iter()
+                .filter(|vol| vol.state.status == VolumeStatus::Faulted)
+                .count() as u64,
+            shutdown: volumes
+                .iter()
+                .filter(|vol| vol.state.status == VolumeStatus::Shutdown)
+                .count() as u64,
         }
     }
 }
@@ -201,7 +283,7 @@ fn get_percentile(mut values: Vec<u64>, percentile: usize) -> u64 {
 }
 
 /// Gets a vector containing volume sizes from Vec<Volume>.
-fn get_volumes_size_vector(volumes: Vec<Volume>) -> Vec<u64> {
+fn get_volumes_size_vector(volumes: &[Volume]) -> Vec<u64> {
     let mut volume_size_vector = Vec::with_capacity(volumes.len());
     for volume in volumes.iter() {
         volume_size_vector.push(volume.spec.size);
