@@ -4,6 +4,7 @@ use crate::client::{
     nexus_stat::{NexusIoStat, NexusIoStats},
     pool::{PoolInfo, Pools},
     pool_stat::{PoolIoStat, PoolIoStats},
+    replica_stat::{ReplicaIoStat, ReplicaIoStats},
 };
 use actix_web::http::Uri;
 use std::time::Duration;
@@ -178,5 +179,25 @@ impl GrpcClient {
             Err(error) => Err(ExporterError::GrpcResponseError(error.to_string())),
         }?;
         Ok(NexusIoStats { nexus_stats })
+    }
+
+    /// Gets Io Statistics of all replica on the io engine. Maps the response to ReplicaIoStat
+    /// struct.
+    pub(crate) async fn get_replica_iostat(&self) -> Result<ReplicaIoStats, ExporterError> {
+        let replica_stats = match self
+            .client_v1()?
+            .stats
+            .get_replica_io_stats(rpc::v1::stats::ListStatsOption { name: None })
+            .await
+        {
+            Ok(response) => Ok(response
+                .into_inner()
+                .stats
+                .into_iter()
+                .filter_map(|replica| ReplicaIoStat::try_from(replica).ok())
+                .collect::<Vec<_>>()),
+            Err(error) => Err(ExporterError::GrpcResponseError(error.to_string())),
+        }?;
+        Ok(ReplicaIoStats { replica_stats })
     }
 }
