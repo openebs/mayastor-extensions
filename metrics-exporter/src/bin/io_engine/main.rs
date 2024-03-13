@@ -48,7 +48,7 @@ pub(crate) struct Cli {
     fmt_style: FmtStyle,
 
     /// Use ANSI colors for the logs.
-    #[clap(long)]
+    #[clap(long, default_value_t = true, action = clap::ArgAction::Set)]
     ansi_colors: bool,
 }
 
