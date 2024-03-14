@@ -8,7 +8,7 @@ TEMPLATE="$CHART_DIR/README.md.tmpl"
 README="$CHART_DIR/README.md"
 SKIP_GIT=${SKIP_GIT:-}
 
-set -euxo pipefail
+set -euo pipefail
 
 helm-docs --dry-run -g "$CHART_DIR_NAME" -t "$TEMPLATE" > "$README"
 
