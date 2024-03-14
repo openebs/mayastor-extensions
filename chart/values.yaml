@@ -1,3 +1,10 @@
+crds:
+  # -- Install CRDs
+  enabled: true
+  jaeger:
+    # -- Install Jaeger CRDs
+    enabled: false
+
 image:
   # -- Image registry to pull our product images
   registry: docker.io
