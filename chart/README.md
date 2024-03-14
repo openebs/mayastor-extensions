@@ -43,7 +43,7 @@ $ helm install mymayastor mayastor/mayastor
 ### Uninstall Helm Chart
 
 ```console
-$ helm uninstall [RELEASE_NAME] 
+$ helm uninstall [RELEASE_NAME]
 ```
 
 This removes all the Kubernetes components associated with the chart and deletes the release.
