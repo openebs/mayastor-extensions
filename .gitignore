@@ -10,7 +10,9 @@
 /result*
 __pycache__
 /tests/bdd/openapi/
-/chart/charts/
+/chart/charts/*
+# charts/crds is valid chart for git
+!/chart/charts/crds/
 /chart/Chart.lock
 !/openapi/Cargo.toml
 !/openapi/build.rs

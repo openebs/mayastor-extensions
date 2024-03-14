@@ -25,6 +25,9 @@ version: 2.6.0-0-main-unstable-2024-03-14-12-54-57-0
 appVersion: 2.6.0-0-main-unstable-2024-03-14-12-54-57-0
 
 dependencies:
+  - name: crds
+    version: "0.0.0"
+    condition: crds.enabled
   - name: etcd
     repository: https://charts.bitnami.com/bitnami
     version: 8.6.0
