@@ -1,6 +1,13 @@
 jaeger:
   # -- Install Jaeger CRDs
   enabled: true
-# -- Install Volume Snapshots CRD
+
 volumeSnapshots:
+  # -- Install Volume Snapshot CRDs
   enabled: true
+  # -- Install volumesnapshots.snapshot.storage.k8s.io CRD
+  snapshotsEnabled: true
+  # -- Install volumesnapshotclasses.snapshot.storage.k8s.io CRD
+  snapshotClassesEnabled: true
+  # -- Install volumesnapshotcontents.snapshot.storage.k8s.io CRD
+  snapshotContentsEnabled: true

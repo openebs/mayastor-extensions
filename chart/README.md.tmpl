@@ -56,7 +56,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 {{ template "chart.valuesHeader" . }}
 
 | Key | Description | Default |
-|-----|-------------|:-------:|
+|:----|:------------|:--------|
 {{ range .Values }}
 {{- if or .Description .AutoDescription -}}
 {{ if eq .Type "object" -}}

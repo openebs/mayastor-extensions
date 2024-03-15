@@ -64,7 +64,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 ## Values
 
 | Key | Description | Default |
-|-----|-------------|:-------:|
+|:----|:------------|:--------|
 | agents.&ZeroWidthSpace;core.&ZeroWidthSpace;capacity.&ZeroWidthSpace;thin.&ZeroWidthSpace;poolCommitment | The allowed pool commitment limit when dealing with thin provisioned volumes. Example: If the commitment is 250 and the pool is 10GiB we can overcommit the pool up to 25GiB (create 2 10GiB and 1 5GiB volume) but no further. | `"250%"` |
 | agents.&ZeroWidthSpace;core.&ZeroWidthSpace;capacity.&ZeroWidthSpace;thin.&ZeroWidthSpace;snapshotCommitment | When creating snapshots for an existing volume, each replica pool must have at least this much free space percentage of the volume size. Example: if this value is 40, the pool has 40GiB free, then the max volume size allowed to be snapped on the pool is 100GiB. | `"40%"` |
 | agents.&ZeroWidthSpace;core.&ZeroWidthSpace;capacity.&ZeroWidthSpace;thin.&ZeroWidthSpace;volumeCommitment | When creating replicas for an existing volume, each replica pool must have at least this much free space percentage of the volume size. Example: if this value is 40, the pool has 40GiB free, then the max volume size allowed to be created on the pool is 100GiB. | `"40%"` |
@@ -108,6 +108,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;enabled | Enable the metrics exporter | `true` |
 | crds.&ZeroWidthSpace;enabled | Install CRDs | `true` |
 | crds.&ZeroWidthSpace;jaeger.&ZeroWidthSpace;enabled | Install Jaeger CRDs | `false` |
+| crds.&ZeroWidthSpace;volumeSnapshots.&ZeroWidthSpace;enabled | Install Volume Snapshot CRDs | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;logLevel | Log level for the csi controller | `"info"` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;preventVolumeModeConversion | Prevent modifying the volume mode when creating a PVC from an existing VolumeSnapshot | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
