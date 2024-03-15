@@ -5,6 +5,7 @@ use upgrade::{
     error::job_error::Result,
     events::event_recorder::{EventAction, EventRecorder},
     helm_upgrade::{HelmUpgradeRunner, HelmUpgraderBuilder},
+    rest_client::RestClientSet,
 };
 
 /// This function starts and sees upgrade through to the end.
@@ -97,7 +98,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
         if let Err(error) = upgrade_data_plane(
             opts.namespace(),
-            opts.rest_endpoint(),
+            RestClientSet::new_with_url(opts.rest_endpoint())?,
             target_version,
             ha_is_enabled,
         )

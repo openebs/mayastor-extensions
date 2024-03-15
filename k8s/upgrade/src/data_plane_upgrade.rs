@@ -30,7 +30,7 @@ use utils::{API_REST_LABEL, CSI_NODE_NVME_ANA, ETCD_LABEL};
 /// Upgrade data plane by controlled restart of io-engine pods
 pub async fn upgrade_data_plane(
     namespace: String,
-    rest_endpoint: String,
+    rest_client: RestClientSet,
     upgrade_target_version: String,
     ha_is_enabled: bool,
 ) -> Result<()> {
@@ -63,9 +63,6 @@ pub async fn upgrade_data_plane(
     let io_engine_listparams =
         ListParams::default().labels(yet_to_upgrade_io_engine_label_selector.as_str());
     let namespace = namespace.clone();
-
-    // Generate storage REST API client.
-    let rest_client = RestClientSet::new_with_url(rest_endpoint)?;
 
     info!("Starting data-plane upgrade...");
 

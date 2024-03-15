@@ -31,6 +31,11 @@ impl RestClientSet {
         Ok(RestClientSet { client })
     }
 
+    /// Wrap around an existing openapi::tower::client::ApiClient.
+    pub fn new_from_api_client(client: ApiClient) -> Self {
+        Self { client }
+    }
+
     pub fn nodes_api(&self) -> &dyn openapi::apis::nodes_api::tower::client::Nodes {
         self.client.nodes_api()
     }
