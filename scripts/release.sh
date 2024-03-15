@@ -36,7 +36,12 @@ cleanup_and_exit() {
   # Remove helm subcharts, if `helm dependency update` was run.
   if [ "$_helm_dependencies_updated" = "true" ]; then
     echo "Cleaning up helm chart dependencies..."
-    rm -rf "$CHART_DIR"/charts
+    for dep_chart in "$CHART_DIR"/charts/*; do
+      if [ "$dep_chart" = "$CHART_DIR/charts/crds" ]; then
+        continue
+      fi
+      rm -rf "$dep_chart"
+    done
   fi
 
   exit "$status"
