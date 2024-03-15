@@ -4,6 +4,9 @@ crds:
   jaeger:
     # -- Install Jaeger CRDs
     enabled: false
+  volumeSnapshots:
+    # -- Install Volume Snapshot CRDs
+    enabled: true
 
 image:
   # -- Image registry to pull our product images
