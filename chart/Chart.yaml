@@ -25,6 +25,9 @@ version: 2.6.0-0-test-blaise-exp-2-0.0-2024-03-06-18-51-45
 appVersion: 2.6.0-0-test-blaise-exp-2-0.0-2024-03-06-18-51-45
 
 dependencies:
+  - name: crds
+    version: "0.0.0"
+    condition: crds.enabled
   - name: etcd
     repository: https://charts.bitnami.com/bitnami
     version: 8.6.0

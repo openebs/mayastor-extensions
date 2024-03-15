@@ -28,10 +28,21 @@ jobs:
             arch: x86_64
             suffix: .exe
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        env:
+          checkout_token: ${{ secrets.ORG_CI_GITHUB }}
+        if: ${{ env.checkout_token == '' }}
         with:
-          submodules: recursive
           fetch-depth: 0
+          submodules: recursive
+      - uses: actions/checkout@v4
+        env:
+          checkout_token: ${{ secrets.ORG_CI_GITHUB }}
+        if: ${{ env.checkout_token != '' }}
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.ORG_CI_GITHUB }}
       - run: |
           # BUG: HEAD tag is fetched as lightweight instead of annotated
           # https://github.com/actions/checkout/issues/290
