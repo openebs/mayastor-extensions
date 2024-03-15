@@ -1,24 +1,21 @@
-use crate::{
-    common::{constants::PRODUCT, error::Result},
-    opts::validators::{
+use clap::Parser;
+use opts::{
+    validators::{
         validate_helm_chart_dir, validate_helm_release, validate_helmv3_in_path,
         validate_namespace, validate_rest_endpoint,
     },
-    upgrade::upgrade,
+    CliArgs,
 };
-use clap::Parser;
-use opts::CliArgs;
+use product_upgrade::upgrade;
 use tracing::{error, info};
+use upgrade::{constants::job_constants::PRODUCT, error::job_error::Result};
 use utils::{
     print_package_info, raw_version_str,
     tracing_telemetry::{default_tracing_tags, flush_traces, TracingTelemetry},
 };
 
-mod common;
-mod events;
-mod helm;
 mod opts;
-mod upgrade;
+mod product_upgrade;
 
 #[tokio::main]
 async fn main() -> Result<()> {

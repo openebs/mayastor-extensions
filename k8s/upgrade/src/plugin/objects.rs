@@ -1,5 +1,5 @@
 use crate::{
-    plugin::constants::{
+    constants::plugin_constants::{
         upgrade_name_concat, UPGRADE_BINARY_NAME, UPGRADE_CONFIG_MAP,
         UPGRADE_CONFIG_MAP_MOUNT_PATH, UPGRADE_CONFIG_MAP_NAME_SUFFIX,
         UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,

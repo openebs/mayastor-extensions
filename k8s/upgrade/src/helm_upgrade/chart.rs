@@ -1,4 +1,6 @@
-use crate::common::error::{ReadingFile, U8VectorToString, YamlParseFromFile, YamlParseFromSlice};
+use crate::error::job_error::{
+    ReadingFile, U8VectorToString, YamlParseFromFile, YamlParseFromSlice,
+};
 use k8s_openapi::api::core::v1::{Container, Probe};
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -7,7 +9,7 @@ use std::{fs::read, path::Path, str};
 
 /// This struct is used to deserialize helm charts' Chart.yaml file.
 #[derive(Deserialize)]
-pub(crate) struct Chart {
+pub struct Chart {
     /// This is the name of the helm chart.
     name: String,
     /// This is the version of the helm chart.
@@ -16,19 +18,19 @@ pub(crate) struct Chart {
 
 impl Chart {
     /// This is a getter for the helm chart name.
-    pub(crate) fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         self.name.as_str()
     }
 
     /// This is a getter for the helm chart version.
-    pub(crate) fn version(&self) -> &Version {
+    pub fn version(&self) -> &Version {
         &self.version
     }
 }
 
 /// This is a set of tools for types whose instances are created
 /// by deserializing a helm chart's values.yaml files.
-pub(crate) trait HelmValuesCollection {
+pub trait HelmValuesCollection {
     /// This is a getter for state of the 'ha' feature (enabled/disabled).
     fn ha_is_enabled(&self) -> bool;
 }
@@ -43,7 +45,7 @@ pub(crate) struct UmbrellaValues {
 }
 
 impl TryFrom<&[u8]> for UmbrellaValues {
-    type Error = crate::common::error::Error;
+    type Error = crate::error::job_error::Error;
 
     fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
         serde_yaml::from_slice(buf).context(YamlParseFromSlice {
@@ -82,7 +84,7 @@ pub(crate) struct CoreValues {
 }
 
 impl TryFrom<&Path> for CoreValues {
-    type Error = crate::common::error::Error;
+    type Error = crate::error::job_error::Error;
 
     fn try_from(path: &Path) -> Result<Self, Self::Error> {
         let buf = read(path).context(ReadingFile {
@@ -96,7 +98,7 @@ impl TryFrom<&Path> for CoreValues {
 }
 
 impl TryFrom<&[u8]> for CoreValues {
-    type Error = crate::common::error::Error;
+    type Error = crate::error::job_error::Error;
 
     fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
         serde_yaml::from_slice(buf).context(YamlParseFromSlice {
@@ -929,7 +931,7 @@ enum PromtailInitContainer {
 /// This is used to serialize the config.clients yaml object in promtail chart v6.13.1
 /// when migrating from promtail v3.11.0 to v6.13.1.
 #[derive(Debug, Serialize)]
-pub(crate) struct PromtailConfigClient {
+pub struct PromtailConfigClient {
     url: String,
 }
 

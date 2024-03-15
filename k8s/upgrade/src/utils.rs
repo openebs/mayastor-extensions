@@ -1,6 +1,6 @@
-use crate::common::{
-    constants::{CHART_VERSION_LABEL_KEY, PRODUCT},
-    error::{
+use crate::{
+    constants::job_constants::{CHART_VERSION_LABEL_KEY, PRODUCT},
+    error::job_error::{
         CordonStorageNode, EmptyStorageNodeSpec, GetStorageNode, HelmChartVersionLabelHasNoValue,
         ListStorageVolumes, NoNamespaceInPod, Result, SemverParse, StorageNodeUncordon,
     },
@@ -16,9 +16,9 @@ use tracing::{info, warn};
 
 /// Contains the Rebuild Results.
 #[derive(Default)]
-pub(crate) struct RebuildResult {
-    pub(crate) rebuilding: bool,
-    pub(crate) discarded_volumes: Vec<Volume>,
+pub struct RebuildResult {
+    pub rebuilding: bool,
+    pub discarded_volumes: Vec<Volume>,
 }
 
 /// Function to check for any volume rebuild in progress across the cluster.

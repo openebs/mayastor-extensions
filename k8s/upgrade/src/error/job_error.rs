@@ -1,10 +1,10 @@
 use crate::{
-    common::constants::{
+    constants::job_constants::{
         CHART_VERSION_LABEL_KEY, CORE_CHART_NAME, PRODUCT, TO_UMBRELLA_SEMVER, UMBRELLA_CHART_NAME,
         UMBRELLA_CHART_UPGRADE_DOCS_URL,
     },
     events::event_recorder::EventNote,
-    helm::chart::PromtailConfigClient,
+    helm_upgrade::chart::PromtailConfigClient,
 };
 use k8s_openapi::api::core::v1::Container;
 use snafu::Snafu;
@@ -15,9 +15,9 @@ use url::Url;
 /// defined withing the same scope and must return to the outer scope (calling scope) using
 /// the try operator -- '?'.
 #[derive(Debug, Snafu)]
-#[snafu(visibility(pub(crate)))]
+#[snafu(visibility(pub))]
 #[snafu(context(suffix(false)))]
-pub(crate) enum Error {
+pub enum Error {
     /// Error for when the storage REST API URL is parsed.
     #[snafu(display(
         "Failed to parse {} REST API URL {}: {}",
@@ -93,9 +93,9 @@ pub(crate) enum Error {
 
     /// Error for when the input Pod's owner does not exists.
     #[snafu(display(
-        ".metadata.ownerReferences empty for Pod {} in {} namespace, while trying to find Pod's Job owner",
-        pod_name,
-        pod_namespace
+    ".metadata.ownerReferences empty for Pod {} in {} namespace, while trying to find Pod's Job owner",
+    pod_name,
+    pod_namespace
     ))]
     JobPodOwnerNotFound {
         pod_name: String,
@@ -115,9 +115,9 @@ pub(crate) enum Error {
 
     /// Error for when the owner of this Pod is not a Job.
     #[snafu(display(
-        "Pod {} in {} namespace has an owner which is not a Job, while trying to find Pod's Job owner",
-        pod_name,
-        pod_namespace
+    "Pod {} in {} namespace has an owner which is not a Job, while trying to find Pod's Job owner",
+    pod_name,
+    pod_namespace
     ))]
     JobPodOwnerIsNotJob {
         pod_name: String,
@@ -375,12 +375,12 @@ pub(crate) enum Error {
 
     /// Error for when detected helm chart name is not known helm chart.
     #[snafu(display(
-        "'{}' is not a known {} helm chart, only helm charts '{}-<version-tag>' and '{}-<version-tag>' \
+    "'{}' is not a known {} helm chart, only helm charts '{}-<version-tag>' and '{}-<version-tag>' \
         are supported",
-        chart_name,
-        PRODUCT,
-        CORE_CHART_NAME,
-        UMBRELLA_CHART_NAME
+    chart_name,
+    PRODUCT,
+    CORE_CHART_NAME,
+    UMBRELLA_CHART_NAME
     ))]
     NotAKnownHelmChart { chart_name: String },
 
@@ -453,9 +453,9 @@ pub(crate) enum Error {
     /// Error in deserializing a promtail helm chart's deprecated extraClientConfig to a
     /// serde_json::Value.
     #[snafu(display(
-        "Failed to deserialize .loki-stack.promtail.config.snippets.extraClientConfig to a serde_json::Value {}: {}",
-        config,
-        source
+    "Failed to deserialize .loki-stack.promtail.config.snippets.extraClientConfig to a serde_json::Value {}: {}",
+    config,
+    source
     ))]
     DeserializePromtailExtraConfig {
         source: serde_yaml::Error,
@@ -714,9 +714,9 @@ pub(crate) enum Error {
 
     /// Error for when unwraping of Result<DirEntry, std::io::Error> fails.
     #[snafu(display(
-        "Failed to collect DirEntry list from read_dir() into a Vec<_> for directory {}: {}",
-        path.display(),
-        source
+    "Failed to collect DirEntry list from read_dir() into a Vec<_> for directory {}: {}",
+    path.display(),
+    source
     ))]
     CollectDirEntries {
         source: std::io::Error,
@@ -725,4 +725,4 @@ pub(crate) enum Error {
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.
-pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
+pub type Result<T, E = Error> = std::result::Result<T, E>;

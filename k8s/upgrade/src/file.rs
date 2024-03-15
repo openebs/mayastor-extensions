@@ -1,4 +1,4 @@
-use crate::common::error::{Result, TempFileCreation, WriteToTempFile};
+use crate::error::job_error::{Result, TempFileCreation, WriteToTempFile};
 use snafu::ResultExt;
 use std::{io::Write, path::Path};
 use tempfile::NamedTempFile as TempFile;

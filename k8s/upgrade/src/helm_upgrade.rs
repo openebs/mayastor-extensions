@@ -1,19 +1,17 @@
 use crate::{
-    common::{
-        constants::{CORE_CHART_NAME, TO_UMBRELLA_SEMVER, UMBRELLA_CHART_NAME},
-        error::{
-            HelmUpgradeOptionNamespaceAbsent, HelmUpgradeOptionReleaseNameAbsent,
-            InvalidUpgradePath, NoInputHelmChartDir, NotAKnownHelmChart, Result, RollbackForbidden,
-            UmbrellaChartNotUpgraded,
-        },
-        regex::Regex,
+    constants::job_constants::{CORE_CHART_NAME, TO_UMBRELLA_SEMVER, UMBRELLA_CHART_NAME},
+    error::job_error::{
+        HelmUpgradeOptionNamespaceAbsent, HelmUpgradeOptionReleaseNameAbsent, InvalidUpgradePath,
+        NoInputHelmChartDir, NotAKnownHelmChart, Result, RollbackForbidden,
+        UmbrellaChartNotUpgraded,
     },
-    helm::{
+    helm_upgrade::{
         chart::{CoreValues, HelmValuesCollection, UmbrellaValues},
         client::HelmReleaseClient,
         values::generate_values_yaml_file,
     },
-    upgrade::path::{
+    regex::Regex,
+    upgrade_path::{
         is_valid_for_core_chart, version_from_chart_yaml_file, version_from_rest_deployment_label,
     },
     vec_to_strings,
@@ -25,15 +23,27 @@ use std::{future::Future, path::PathBuf, pin::Pin, str};
 use tempfile::NamedTempFile as TempFile;
 use tracing::info;
 
+/// Contains the HelmReleaseClient. Used for interacting with installed helm chart releases.
+pub mod client;
+
+/// Contains validation and logic to generate helm values options for the `helm upgrade` command.
+pub mod values;
+
+/// Contains the structs required to deserialize yaml files from the helm charts.
+pub mod chart;
+
+/// This contains tools for use with yaml files.
+pub mod yaml;
+
 /// HelmUpgradeRunner is returned after an upgrade is validated and dry-run-ed. Running
 /// it carries out helm upgrade.
-pub(crate) type HelmUpgradeRunner = Pin<Box<dyn Future<Output = Result<()>>>>;
+pub type HelmUpgradeRunner = Pin<Box<dyn Future<Output = Result<()>>>>;
 
 /// A trait object of type HelmUpgrader is either CoreHelmUpgrader or an UmbrellaHelmUpgrader.
 /// They either deal with upgrading the Core helm chart or the Umbrella helm chart respectively.
 /// The Umbrella helm chart is not upgraded using this binary, as it is out of scope.
 #[async_trait]
-pub(crate) trait HelmUpgrader {
+pub trait HelmUpgrader {
     /// Returns a closure which runs the real upgrade, post-dry-run.
     async fn dry_run(self: Box<Self>) -> Result<HelmUpgradeRunner>;
 
@@ -49,7 +59,7 @@ pub(crate) trait HelmUpgrader {
 
 /// This is a builder for the Helm chart upgrade.
 #[derive(Default)]
-pub(crate) struct HelmUpgraderBuilder {
+pub struct HelmUpgraderBuilder {
     release_name: Option<String>,
     namespace: Option<String>,
     core_chart_dir: Option<PathBuf>,
@@ -61,7 +71,7 @@ pub(crate) struct HelmUpgraderBuilder {
 impl HelmUpgraderBuilder {
     /// This is a builder option to add the Namespace of the helm chart to be upgraded.
     #[must_use]
-    pub(crate) fn with_namespace<J>(mut self, ns: J) -> Self
+    pub fn with_namespace<J>(mut self, ns: J) -> Self
     where
         J: ToString,
     {
@@ -71,7 +81,7 @@ impl HelmUpgraderBuilder {
 
     /// This is a builder option to add the release name of the helm chart to be upgraded.
     #[must_use]
-    pub(crate) fn with_release_name<J>(mut self, release_name: J) -> Self
+    pub fn with_release_name<J>(mut self, release_name: J) -> Self
     where
         J: ToString,
     {
@@ -81,23 +91,20 @@ impl HelmUpgraderBuilder {
 
     /// This is a builder option to set the directory path of the Umbrella helm chart CLI option.
     #[must_use]
-    pub(crate) fn with_core_chart_dir(mut self, dir: PathBuf) -> Self {
+    pub fn with_core_chart_dir(mut self, dir: PathBuf) -> Self {
         self.core_chart_dir = Some(dir);
         self
     }
 
     /// This sets the flag to skip upgrade path validation.
     #[must_use]
-    pub(crate) fn with_skip_upgrade_path_validation(
-        mut self,
-        skip_upgrade_path_validation: bool,
-    ) -> Self {
+    pub fn with_skip_upgrade_path_validation(mut self, skip_upgrade_path_validation: bool) -> Self {
         self.skip_upgrade_path_validation = skip_upgrade_path_validation;
         self
     }
 
     /// This is a builder option to add set flags during helm upgrade.
-    pub(crate) fn with_helm_args_set<J>(mut self, helm_args_set: J) -> Self
+    pub fn with_helm_args_set<J>(mut self, helm_args_set: J) -> Self
     where
         J: ToString,
     {
@@ -106,7 +113,7 @@ impl HelmUpgraderBuilder {
     }
 
     /// This is a builder option to add set-file options during helm upgrade.
-    pub(crate) fn with_helm_args_set_file<J>(mut self, helm_args_set_file: J) -> Self
+    pub fn with_helm_args_set_file<J>(mut self, helm_args_set_file: J) -> Self
     where
         J: ToString,
     {
@@ -115,7 +122,7 @@ impl HelmUpgraderBuilder {
     }
 
     /// This builds the HelmUpgrade object.
-    pub(crate) async fn build(self) -> Result<Box<dyn HelmUpgrader>> {
+    pub async fn build(self) -> Result<Box<dyn HelmUpgrader>> {
         // Unwrapping builder inputs. Fails for mandatory inputs.
         let release_name = self
             .release_name
@@ -262,7 +269,7 @@ impl HelmUpgraderBuilder {
 
 /// This is a HelmUpgrader for the core helm chart. Unlike the UmbrellaHelmUpgrader,
 /// this actually can set up a helm upgrade.
-pub(crate) struct CoreHelmUpgrader {
+pub struct CoreHelmUpgrader {
     // TODO: remove this when same version upgrade is implemented.
     already_upgraded: bool,
     chart_dir: PathBuf,
@@ -347,7 +354,7 @@ is the same as that of this upgrade-job's helm chart"
 
 /// This is a HelmUpgrader for the Umbrella chart. This gathers information, and doesn't
 /// set up a helm upgrade or a dry-run in any way.
-pub(crate) struct UmbrellaHelmUpgrader {
+pub struct UmbrellaHelmUpgrader {
     release_name: String,
     source_version: Version,
     target_version: Version,

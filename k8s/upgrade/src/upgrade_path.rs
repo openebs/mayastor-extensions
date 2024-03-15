@@ -1,13 +1,11 @@
 use crate::{
-    common::{
-        constants::CHART_VERSION_LABEL_KEY,
-        error::{
-            ListDeploymentsWithLabel, NoRestDeployment, NoVersionLabelInDeployment, ReadingFile,
-            Result, SemverParse, YamlParseBufferForUnsupportedVersion, YamlParseFromFile,
-        },
-        kube_client::KubeClientSet,
+    constants::job_constants::CHART_VERSION_LABEL_KEY,
+    error::job_error::{
+        ListDeploymentsWithLabel, NoRestDeployment, NoVersionLabelInDeployment, ReadingFile,
+        Result, SemverParse, YamlParseBufferForUnsupportedVersion, YamlParseFromFile,
     },
-    helm::chart::Chart,
+    helm_upgrade::chart::Chart,
+    kube_client::KubeClientSet,
 };
 use kube_client::{api::ListParams, ResourceExt};
 use semver::Version;
@@ -18,8 +16,7 @@ use utils::API_REST_LABEL;
 
 /// Validates the upgrade path from 'from' Version to 'to' Version for the Core helm chart.
 pub(crate) fn is_valid_for_core_chart(from: &Version) -> Result<bool> {
-    let unsupported_version_buf =
-        &include_bytes!("../../../../../upgrade/config/unsupported_versions.yaml")[..];
+    let unsupported_version_buf = &include_bytes!("../config/unsupported_versions.yaml")[..];
     let unsupported_versions = UnsupportedVersions::try_from(unsupported_version_buf)
         .context(YamlParseBufferForUnsupportedVersion)?;
     Ok(!unsupported_versions.contains(from))

@@ -1,22 +1,19 @@
-use crate::{
-    common::{
-        constants::CORE_CHART_NAME,
-        error::{
-            FindingHelmChart, GetNamespace, HelmCommand, HelmListCommand, HelmRelease, HelmVersion,
-            HelmVersionCommand, ListStorageNodes, NotADirectory, NotAFile, ReadingFile,
-            RegexCompile, Result, U8VectorToString, ValidateDirPath, ValidateFilePath,
-            YamlParseFromFile,
-        },
-        kube_client::KubeClientSet,
-        rest_client::RestClientSet,
-    },
-    helm::chart::Chart,
-    vec_to_strings,
-};
-use regex::bytes::Regex;
 use snafu::{ensure, ResultExt};
 use std::{fs, path::PathBuf, process::Command, str};
 use tracing::debug;
+use upgrade::{
+    constants::job_constants::CORE_CHART_NAME,
+    error::job_error::{
+        FindingHelmChart, GetNamespace, HelmCommand, HelmListCommand, HelmRelease, HelmVersion,
+        HelmVersionCommand, ListStorageNodes, NotADirectory, NotAFile, ReadingFile, Result,
+        U8VectorToString, ValidateDirPath, ValidateFilePath, YamlParseFromFile,
+    },
+    helm_upgrade::chart::Chart,
+    kube_client::KubeClientSet,
+    regex::Regex,
+    rest_client::RestClientSet,
+    vec_to_strings,
+};
 
 /// Validate that the helm release specified in the CLI options exists in the namespace,
 /// which is also specified in the CLI options.
@@ -51,10 +48,7 @@ pub(crate) fn validate_helm_release(name: String, namespace: String) -> Result<(
 
     // Validate that the release-name list has the name which is specified in the CLI options.
     let regex = format!(r"(\n)?{name}(\n)?");
-    if !Regex::new(regex.as_str())
-        .context(RegexCompile { expression: regex })?
-        .is_match(output.stdout.as_slice())
-    {
+    if !Regex::new(regex.as_str())?.is_match(stdout_str) {
         return HelmRelease { name, namespace }.fail();
     }
 
@@ -92,12 +86,7 @@ pub(crate) fn validate_helmv3_in_path() -> Result<()> {
 
     // Parse based on regex, to validate if the version string (semver) is v3.x.
     let regex: &str = r"^(v3\.[0-9]+\.[0-9])";
-    if !Regex::new(regex)
-        .context(RegexCompile {
-            expression: regex.to_string(),
-        })?
-        .is_match(output.stdout.as_slice())
-    {
+    if !Regex::new(regex)?.is_match(stdout_str) {
         return HelmVersion {
             version: stdout_str.to_string(),
         }

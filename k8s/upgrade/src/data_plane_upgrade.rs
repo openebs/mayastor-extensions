@@ -1,18 +1,16 @@
 use crate::{
-    common::{
-        constants::{
-            AGENT_CORE_LABEL, CHART_VERSION_LABEL_KEY, CORDON_FOR_ANA_CHECK, DRAIN_FOR_UPGRADE,
-            IO_ENGINE_LABEL, PRODUCT,
-        },
-        error::{
-            DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
-            ListNodesWithLabel, ListPodsWithLabel, ListPodsWithLabelAndField, ListStorageNodes,
-            PodDelete, Result, StorageNodeUncordon, TooManyIoEnginePods,
-        },
-        kube_client::KubeClientSet,
-        rest_client::RestClientSet,
+    constants::job_constants::{
+        AGENT_CORE_LABEL, CHART_VERSION_LABEL_KEY, CORDON_FOR_ANA_CHECK, DRAIN_FOR_UPGRADE,
+        IO_ENGINE_LABEL, PRODUCT,
     },
-    upgrade::utils::{
+    error::job_error::{
+        DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
+        ListNodesWithLabel, ListPodsWithLabel, ListPodsWithLabelAndField, ListStorageNodes,
+        PodDelete, Result, StorageNodeUncordon, TooManyIoEnginePods,
+    },
+    kube_client::KubeClientSet,
+    rest_client::RestClientSet,
+    utils::{
         all_pods_are_ready, cordon_storage_node, data_plane_is_upgraded, list_all_volumes,
         rebuild_result, uncordon_storage_node, RebuildResult,
     },
@@ -30,7 +28,7 @@ use tracing::info;
 use utils::{API_REST_LABEL, CSI_NODE_NVME_ANA, ETCD_LABEL};
 
 /// Upgrade data plane by controlled restart of io-engine pods
-pub(crate) async fn upgrade_data_plane(
+pub async fn upgrade_data_plane(
     namespace: String,
     rest_endpoint: String,
     upgrade_target_version: String,
