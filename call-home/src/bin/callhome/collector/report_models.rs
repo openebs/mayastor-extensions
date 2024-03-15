@@ -200,6 +200,48 @@ impl Nexus {
     }
 }
 
+/// StorageMedia contains storage media devices count, total capacity of all the storage media
+/// devices and disk_types which contains capacity and count of storage media for each disk_type.
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageMedia {
+    count: u64,
+    total_capacity_in_bytes: u64,
+    disk_types: HashMap<String, DiskTypeInfo>,
+}
+
+impl StorageMedia {
+    /// Receives a vector of openapi::models::BlockDevice and returns a new
+    /// report_models::StorageMedia object by using the data provided.
+    pub(crate) fn new(disks: Vec<BlockDevice>) -> Self {
+        let mut disk_types = HashMap::new();
+
+        // obtain the details of each disk using the Block Device API.
+        for device in disks.clone() {
+            let disk_type = get_disk_type(device.clone());
+
+            // add the capacity of the disk to the total capacity for the disk type
+            disk_types
+                .entry(disk_type.clone())
+                .or_insert(DiskTypeInfo::default())
+                .capacity_in_bytes += device.size * 512;
+
+            // increase the total count for the disk type
+            disk_types
+                .entry(disk_type)
+                .or_insert(DiskTypeInfo::default())
+                .count += 1;
+        }
+
+        let total_capacity: u64 = disks.iter().map(|disk| disk.size).sum();
+        Self {
+            count: disks.len() as u64,
+            total_capacity_in_bytes: total_capacity * 512,
+            disk_types,
+        }
+    }
+}
+
 /// StorageNodes contains per node data.
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
@@ -364,6 +406,7 @@ pub(crate) struct Report {
     pub(crate) versions: Versions,
     pub(crate) storage_nodes: StorageNodes,
     pub(crate) spdk_managed_disks: SpdkManagedDisks,
+    pub(crate) storage_media: StorageMedia,
 }
 
 /// Get maximum value from a vector.

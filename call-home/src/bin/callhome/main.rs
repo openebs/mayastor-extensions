@@ -12,7 +12,7 @@ use crate::{
     transmitter::*,
 };
 use clap::Parser;
-use collector::report_models::{Nexus, SpdkManagedDisks, StorageNodes};
+use collector::report_models::{Nexus, SpdkManagedDisks, StorageMedia, StorageNodes};
 use obs::common::constants::*;
 use openapi::tower::client::{ApiClient, Configuration};
 use sha256::digest;
@@ -235,6 +235,18 @@ async fn generate_report(
                 StorageNodes::new(replicas.clone().into_body(), pools.into_body())
         }
     }
+
+    // find valid disks to calculate storage media metrics
+    let valid_disks = disks
+        .into_iter()
+        .filter(|device| {
+            device.size > 0
+                && device.devtype != "partition"
+                && !device.devpath.starts_with("/devices/virtual/")
+        })
+        .collect();
+
+    report.storage_media = StorageMedia::new(valid_disks);
 
     report.nexus = Nexus::new(event_data);
     report
