@@ -12,7 +12,7 @@ use crate::{
     transmitter::*,
 };
 use clap::Parser;
-use collector::report_models::Nexus;
+use collector::report_models::{Nexus, SpdkManagedDisks, StorageNodes};
 use obs::common::constants::*;
 use openapi::tower::client::{ApiClient, Configuration};
 use sha256::digest;
@@ -177,9 +177,21 @@ async fn generate_report(
         }
     };
 
+    let mut disks = Vec::new();
     let nodes = http_client.nodes_api().get_nodes(None).await;
     match nodes {
-        Ok(nodes) => report.storage_node_count = nodes.into_body().len() as u8,
+        Ok(nodes) => {
+            for node in nodes.clone().into_body() {
+                let _ = http_client
+                    .block_devices_api()
+                    .get_node_block_devices(&node.id, Some(true))
+                    .await
+                    .map(|b_devs_result| {
+                        disks.extend(b_devs_result.into_body());
+                    });
+            }
+            report.storage_node_count = nodes.into_body().len() as u8
+        }
         Err(err) => {
             error!("{:?}", err);
         }
@@ -187,8 +199,8 @@ async fn generate_report(
 
     let pools = http_client.pools_api().get_pools().await;
     match pools {
-        Ok(pools) => report.pools = Pools::new(pools.into_body(), event_data.clone()),
-        Err(err) => {
+        Ok(ref pools) => report.pools = Pools::new(pools.clone().into_body(), event_data.clone()),
+        Err(ref err) => {
             error!("{:?}", err);
         }
     };
@@ -208,11 +220,21 @@ async fn generate_report(
 
     let replicas = http_client.replicas_api().get_replicas().await;
     match replicas {
-        Ok(replicas) => report.replicas = Replicas::new(replicas.into_body().len(), volumes),
-        Err(err) => {
+        Ok(ref replicas) => {
+            report.replicas = Replicas::new(replicas.clone().into_body().len(), volumes)
+        }
+        Err(ref err) => {
             error!("{:?}", err);
         }
     };
+
+    if let Ok(pools) = pools {
+        report.spdk_managed_disks = SpdkManagedDisks::new(pools.clone().into_body(), disks.clone());
+        if let Ok(replicas) = replicas {
+            report.storage_nodes =
+                StorageNodes::new(replicas.clone().into_body(), pools.into_body())
+        }
+    }
 
     report.nexus = Nexus::new(event_data);
     report

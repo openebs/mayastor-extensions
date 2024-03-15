@@ -1,11 +1,11 @@
 use obs::common::{constants::ACTION, errors};
-use openapi::models::{Volume, VolumeStatus};
+use openapi::models::{BlockDevice, Volume, VolumeStatus};
 use prometheus_parse::{Sample, Value};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 use url::Url;
 
 /// Volumes contains volume count, min, max, mean and capacity percentiles.
@@ -134,6 +134,7 @@ pub(crate) struct Pools {
     created: u32,
     #[serde(skip_serializing_if = "is_zero")]
     deleted: u32,
+    total_capacity_in_bytes: u64,
 }
 impl Pools {
     /// Receives a vector of openapi::models::Pool and returns a new report_models::Pools object by
@@ -145,9 +146,10 @@ impl Pools {
             max_size_in_bytes: get_max_value(pools_size_vector.clone()),
             min_size_in_bytes: get_min_value(pools_size_vector.clone()),
             mean_size_in_bytes: get_mean_value(pools_size_vector.clone()),
-            capacity_percentiles_in_bytes: Percentiles::new(pools_size_vector),
+            capacity_percentiles_in_bytes: Percentiles::new(pools_size_vector.clone()),
             created: event_data.pool_created.value(),
             deleted: event_data.pool_deleted.value(),
+            total_capacity_in_bytes: pools_size_vector.iter().sum(),
         }
     }
 }
@@ -198,6 +200,124 @@ impl Nexus {
     }
 }
 
+/// StorageNodes contains per node data.
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StorageNodes {
+    nodes: HashMap<String, NodeInfo>,
+}
+
+impl StorageNodes {
+    /// Receives a vector of openapi::models::Replica, a vector of openapi::models::Pool and returns
+    /// a new report_models::StorageNodes object by using the data provided.
+    pub(crate) fn new(
+        replicas: Vec<openapi::models::Replica>,
+        pools: Vec<openapi::models::Pool>,
+    ) -> Self {
+        let mut storage_nodes = Self::default();
+
+        for pool in pools {
+            if let Some(spec) = pool.spec {
+                storage_nodes
+                    .nodes
+                    .entry(spec.node.clone())
+                    .or_insert(NodeInfo::default())
+                    .spdk_managed_disks_count += spec.disks.len() as u64;
+
+                let pool_info = PoolInfo::new(pool.id, replicas.clone());
+                storage_nodes
+                    .nodes
+                    .entry(spec.node)
+                    .or_insert(NodeInfo::default())
+                    .pools
+                    .push(pool_info)
+            }
+        }
+
+        storage_nodes
+    }
+}
+
+/// NodeInfo contains PoolInfo (replicas capacity and replicas count) for each pool in a node and
+/// spdk managed disks count for the node.
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct NodeInfo {
+    pools: Vec<PoolInfo>,
+    spdk_managed_disks_count: u64,
+}
+
+/// PoolInfo contains total replicas capacity and replicas count in a pool.
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct PoolInfo {
+    replicas: u64,
+    replicas_capacity_in_bytes: u64,
+}
+
+impl PoolInfo {
+    /// Receives pool_id and a vector of openapi::models::Replica and returns a new
+    /// report_models::PoolInfo object by using the data provided.
+    pub(crate) fn new(pool_id: String, replicas: Vec<openapi::models::Replica>) -> Self {
+        let pool_replicas = replicas.iter().filter(|replica| replica.pool == pool_id);
+        Self {
+            replicas: pool_replicas.clone().count() as u64,
+            replicas_capacity_in_bytes: pool_replicas.map(|replica| replica.size).sum(),
+        }
+    }
+}
+
+/// SpdkManagedDisks contains capacity and count of spdk managed disks for each disk_type.
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SpdkManagedDisks {
+    disk_types: HashMap<String, DiskTypeInfo>,
+}
+
+impl SpdkManagedDisks {
+    /// Receives a vector of openapi::models::Pool, a vector of openapi::models::BlockDevice and
+    /// returns a new report_models::SpdkManagedDisks object by using the data provided.
+    pub(crate) fn new(pools: Vec<openapi::models::Pool>, disks: Vec<BlockDevice>) -> Self {
+        let mut spdk_disks = Self::default();
+
+        // Retrieve the list of disks associated with each pool, and then obtain the details of each
+        // disk using the Block Device API.
+        for pool in pools {
+            if let Some(spec) = pool.spec {
+                for pool_disk in spec.disks {
+                    if let Some(bdev) = disks.iter().find(|bd| bd.devlinks.contains(&pool_disk)) {
+                        let disk_type = get_disk_type(bdev.clone());
+
+                        // add the capacity of the disk to the total capacity for the disk type
+                        spdk_disks
+                            .disk_types
+                            .entry(disk_type.clone())
+                            .or_insert(DiskTypeInfo::default())
+                            .capacity_in_bytes += bdev.size * 512;
+
+                        // increase the total count for the disk type
+                        spdk_disks
+                            .disk_types
+                            .entry(disk_type)
+                            .or_insert(DiskTypeInfo::default())
+                            .count += 1;
+                    }
+                }
+            }
+        }
+
+        spdk_disks
+    }
+}
+
+/// DiskTypeInfo contains total capacity and count for a disk type.
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct DiskTypeInfo {
+    count: u64,
+    capacity_in_bytes: u64,
+}
+
 /// Versions will contain versions of different mayastor components.
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
@@ -242,6 +362,8 @@ pub(crate) struct Report {
     pub(crate) replicas: Replicas,
     pub(crate) nexus: Nexus,
     pub(crate) versions: Versions,
+    pub(crate) storage_nodes: StorageNodes,
+    pub(crate) spdk_managed_disks: SpdkManagedDisks,
 }
 
 /// Get maximum value from a vector.
@@ -310,6 +432,42 @@ fn get_pools_size_vector(pools: Vec<openapi::models::Pool>) -> Vec<u64> {
         };
     }
     pools_size_vector
+}
+
+// Gets disk type from BlockDevice data.
+fn get_disk_type(device: BlockDevice) -> String {
+    // Get device name
+    let devname = device.devname;
+
+    // Determine disk type based on device properties
+    let disk_type = if devname.starts_with("/dev/sr") {
+        "Optical Drive"
+    } else if devname.starts_with("/dev/fd") {
+        "Floppy Disk"
+    } else if devname.starts_with("/dev/md") {
+        "RAID Device"
+    } else if devname.starts_with("/dev/dm") || devname.starts_with("/dev/mapper") {
+        "Device Mapper"
+    } else if devname.starts_with("/dev/xvd") {
+        "Amazon Disk"
+    } else if devname.starts_with("/dev/mmcblk") {
+        "Memory Card"
+    } else if devname.starts_with("/dev/mtd") {
+        "Embedded Storage"
+    } else if devname.starts_with("/dev/tape") {
+        "Magnetic Tape"
+    } else {
+        match (device.connection_type.as_str(), device.is_rotational) {
+            ("usb", _) => "USB Disk",
+            ("nvme", _) => "NVMe SSD",
+            ("scsi", Some(true)) => "HDD",
+            ("scsi", Some(false)) => "SSD",
+            ("ata", Some(true)) => "HDD",
+            ("ata", Some(false)) => "SSD",
+            _ => "Unknown",
+        }
+    };
+    disk_type.to_string()
 }
 
 /// EventData consists of pool and volume events.
