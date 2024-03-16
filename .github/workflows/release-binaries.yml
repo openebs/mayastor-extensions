@@ -20,6 +20,9 @@ jobs:
           - os: ubuntu-latest
             target: linux-musl
             arch: aarch64
+          - os: macos-14
+            target: apple-darwin
+            arch: aarch64
           - os: macos-latest
             target: apple-darwin
             arch: x86_64
