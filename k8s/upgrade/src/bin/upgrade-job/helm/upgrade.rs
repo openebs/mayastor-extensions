@@ -304,7 +304,6 @@ is the same as that of this upgrade-job's helm chart"
                 self.release_name.as_str(),
                 self.chart_dir.as_path(),
                 Some(dry_run_extra_args),
-                false,
             )
             .await?;
         info!("Helm upgrade dry-run succeeded!");
@@ -323,7 +322,6 @@ is the same as that of this upgrade-job's helm chart"
                     self.release_name,
                     self.chart_dir,
                     Some(self.helm_upgrade_extra_args),
-                    true,
                 )
                 .await?;
             info!("Helm upgrade successful!");
