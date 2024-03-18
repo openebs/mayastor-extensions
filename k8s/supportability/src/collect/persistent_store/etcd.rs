@@ -21,9 +21,10 @@ impl EtcdStore {
         namespace: String,
     ) -> Result<Self, EtcdError> {
         let client_set = ClientSet::new(kube_config_path.clone(), namespace.clone()).await?;
-        let platform_info = platform::k8s::K8s::from(client_set.kube_client())
-            .await
-            .map_err(|e| EtcdError::Custom(format!("Failed to get k8s platform info: {e}")))?;
+        let platform_info =
+            platform::k8s::K8s::from_custom(client_set.kube_client(), client_set.namespace())
+                .await
+                .map_err(|e| EtcdError::Custom(format!("Failed to get k8s platform info: {e}")))?;
         let key_prefix = pstor::build_key_prefix(&platform_info, API_VERSION);
 
         // if an endpoint is provided it will be used, else the kubeconfig path will be used

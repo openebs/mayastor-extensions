@@ -97,6 +97,10 @@ impl ClientSet {
     pub(crate) fn kube_client(&self) -> kube::Client {
         self.client.clone()
     }
+    /// Get a reference to the namespace.
+    pub(crate) fn namespace(&self) -> &str {
+        &self.namespace
+    }
 
     /// Get a new api for a `dynamic_object` for the provided GVK.
     pub(crate) async fn dynamic_object_api(
