@@ -61,8 +61,10 @@ impl HelmValuesCollection for UmbrellaValues {
 /// This is used to deserialize the values.yaml of the Core chart.
 #[derive(Deserialize)]
 pub(crate) struct CoreValues {
-    /// This contains values for all of the agents.
+    /// This contains values for all the agents.
     agents: Agents,
+    /// This contains values for all the base components.
+    base: Base,
     /// This is the yaml object which contains values for the container image registry, repository,
     /// tag, etc.
     image: Image,
@@ -182,6 +184,11 @@ impl CoreValues {
         self.csi.node_nvme_io_timeout()
     }
 
+    /// This returns the value of the removed key for CSI socket mount path.
+    pub(crate) fn deprecated_node_csi_mount_path(&self) -> &str {
+        self.csi.deprecated_node_csi_mount_path()
+    }
+
     /// This is a getter for the grafana/loki container image tag.
     pub(crate) fn loki_stack_loki_image_tag(&self) -> &str {
         self.loki_stack.loki_image_tag()
@@ -298,6 +305,11 @@ impl CoreValues {
     pub(crate) fn prometheus_server_image_tag(&self) -> &str {
         self.loki_stack.prometheus_server_image_tag()
     }
+
+    /// This is the value of the deprecated key for log silence configuration.
+    pub(crate) fn deprecated_log_silence_level(&self) -> &str {
+        self.base.deprecated_log_silence_level()
+    }
 }
 
 /// This is used to deserialize the yaml object agents.
@@ -310,6 +322,20 @@ impl Agents {
     /// This is a getter for state of the 'ha' feature (enabled/disabled).
     fn ha_is_enabled(&self) -> bool {
         self.ha.enabled()
+    }
+}
+
+/// This is used to deserialize the yaml object base.
+#[derive(Deserialize)]
+struct Base {
+    #[serde(default, rename(deserialize = "logSilenceLevel"))]
+    deprecated_log_silence_level: String,
+}
+
+impl Base {
+    /// This returns the value for the removed base.logSilenceLevel YAML key.
+    fn deprecated_log_silence_level(&self) -> &str {
+        self.deprecated_log_silence_level.as_str()
     }
 }
 
@@ -475,6 +501,11 @@ impl Csi {
     fn node_nvme_io_timeout(&self) -> &str {
         self.node.nvme_io_timeout()
     }
+
+    /// This returns the mount path value's key, the old one with the typo.
+    fn deprecated_node_csi_mount_path(&self) -> &str {
+        self.node.deprecated_plugin_mount_path()
+    }
 }
 
 /// This contains the image tags for the CSI sidecar containers.
@@ -534,12 +565,19 @@ impl CsiImage {
 #[derive(Deserialize)]
 struct CsiNode {
     nvme: CsiNodeNvme,
+    #[serde(default, rename(deserialize = "pluginMounthPath"))]
+    deprecated_plugin_mount_path: String,
 }
 
 impl CsiNode {
     /// This is a getter for the NVMe IO timeout.
     fn nvme_io_timeout(&self) -> &str {
         self.nvme.io_timeout()
+    }
+
+    /// This returns the csi node mount path key's value. The key had a typo, it's been removed.
+    fn deprecated_plugin_mount_path(&self) -> &str {
+        self.deprecated_plugin_mount_path.as_str()
     }
 }
 
