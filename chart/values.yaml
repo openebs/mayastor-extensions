@@ -335,7 +335,7 @@ csi:
       keep_alive_tmo: ""
     # -- The kubeletDir directory for the csi-node plugin
     kubeletDir: /var/lib/kubelet
-    pluginMounthPath: /csi
+    pluginMountPath: /csi
     socketPath: csi.sock
     # -- Set tolerations, overrides global
     tolerations: []
