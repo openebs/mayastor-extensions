@@ -63,9 +63,9 @@ spec:
         env:
         - name: RUST_LOG
           value: {{ .Values.csi.node.logLevel }}
-        {{- if default .Values.base.logSilenceLevel .Values.csi.node.logSilenceLevel }}
+        {{- if default .Values.base.logging.silenceLevel .Values.csi.node.logSilenceLevel }}
         - name: RUST_LOG_SILENCE
-          value: {{ default .Values.base.logSilenceLevel .Values.csi.node.logSilenceLevel }}
+          value: {{ default .Values.base.logging.silenceLevel .Values.csi.node.logSilenceLevel }}
         {{- end }}
         - name: MY_NODE_NAME
           valueFrom:
@@ -93,6 +93,8 @@ spec:
         {{- range $key, $val := .Values.csi.node.topology.segments }}
         - "--node-selector={{ $key }}={{ $val }}"
         {{- end }}
+        - "--fmt-style={{ include "logFormat" . }}"
+        - "--ansi-colors={{ .Values.base.logging.color }}"
         command:
         - csi-node
         volumeMounts:
