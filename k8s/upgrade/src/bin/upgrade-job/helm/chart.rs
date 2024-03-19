@@ -79,7 +79,7 @@ pub(crate) struct CoreValues {
     #[serde(rename(deserialize = "loki-stack"))]
     loki_stack: LokiStack,
     /// This contains the sub-chart values for the hostpath provisioner's helm chart.
-    #[serde(rename(deserialize = "localpv-provisioner"))]
+    #[serde(default, rename(deserialize = "localpv-provisioner"))]
     localpv_provisioner: LocalpvProvisioner,
 }
 
@@ -984,7 +984,7 @@ impl PromtailConfigClient {
 }
 
 /// This is used to deserialize the helm values of the localpv-provisioner helm chart.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 struct LocalpvProvisioner {
     release: LocalpvProvisionerRelease,
@@ -1035,7 +1035,7 @@ impl LocalpvProvisioner {
 
 /// This is used to deserialize the 'release.version' yaml object in the localpv-provisioner helm
 /// chart.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct LocalpvProvisionerRelease {
     version: String,
 }
@@ -1049,7 +1049,7 @@ impl LocalpvProvisionerRelease {
 }
 
 /// This is used to deserialize the 'localpv' yaml object in the localpv-provisioner helm chart.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct LocalpvProvisionerLocalpv {
     image: GenericImage,
 }
@@ -1063,7 +1063,7 @@ impl LocalpvProvisionerLocalpv {
 
 /// This is used to deserialize various 'image' yaml objects in the localpv-provisioner helm
 /// chart.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct GenericImage {
     tag: String,
 }
@@ -1076,7 +1076,7 @@ impl GenericImage {
 }
 
 /// This is used to deserialize the 'helperPod' yaml object in the localpv-provisioner helm chart.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct LocalpvProvisionerHelperPod {
     image: GenericImage,
 }
@@ -1088,7 +1088,7 @@ impl LocalpvProvisionerHelperPod {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 struct LocalpvProvisionerNdm {
     helper_pod: LocalpvProvisionerHelperPod,
@@ -1120,7 +1120,7 @@ impl LocalpvProvisionerNdm {
 }
 
 /// This is used to deserialize the '.localpv-provisioner.openebs-ndm.ndm' YAML object.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct Ndm {
     image: GenericImage,
 }
@@ -1133,7 +1133,7 @@ impl Ndm {
 }
 
 /// This is used to deserialize the '.localpv-provisioner.openebs-ndm.ndmExporter' YAML object.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct NdmExporter {
     image: GenericImage,
 }
@@ -1146,7 +1146,7 @@ impl NdmExporter {
 }
 
 /// This is used to deserialize the '.localpv-provisioner.openebs-ndm.ndmOperator' YAML object.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct NdmOperator {
     image: GenericImage,
 }
