@@ -1,11 +1,10 @@
 use crate::{
-    plugin::{
-        constants::{get_image_version_tag, SINGLE_REPLICA_VOLUME, UPGRADE_TO_DEVELOP_BRANCH},
-        error,
-        upgrade::{get_pvc_from_uuid, get_source_version},
-        user_prompt,
+    constants::plugin_constants::{
+        get_image_version_tag, SINGLE_REPLICA_VOLUME, UPGRADE_TO_DEVELOP_BRANCH,
     },
-    upgrade::UpgradeArgs,
+    error::plugin_error as error,
+    plugin::{upgrade::UpgradeArgs, user_prompt},
+    upgrade::{get_pvc_from_uuid, get_source_version},
 };
 use openapi::{
     clients::tower::{self, Configuration},

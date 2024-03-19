@@ -1,18 +1,16 @@
 use crate::{
-    common::{
-        constants::{
-            AGENT_CORE_LABEL, CHART_VERSION_LABEL_KEY, CORDON_FOR_ANA_CHECK, DRAIN_FOR_UPGRADE,
-            IO_ENGINE_LABEL, PRODUCT,
-        },
-        error::{
-            DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
-            ListNodesWithLabel, ListPodsWithLabel, ListPodsWithLabelAndField, ListStorageNodes,
-            PodDelete, Result, StorageNodeUncordon, TooManyIoEnginePods,
-        },
-        kube_client::KubeClientSet,
-        rest_client::RestClientSet,
+    constants::job_constants::{
+        AGENT_CORE_LABEL, CHART_VERSION_LABEL_KEY, CORDON_FOR_ANA_CHECK, DRAIN_FOR_UPGRADE,
+        IO_ENGINE_LABEL, PRODUCT,
     },
-    upgrade::utils::{
+    error::job_error::{
+        DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
+        ListNodesWithLabel, ListPodsWithLabel, ListPodsWithLabelAndField, ListStorageNodes,
+        PodDelete, Result, StorageNodeUncordon, TooManyIoEnginePods,
+    },
+    kube_client::KubeClientSet,
+    rest_client::RestClientSet,
+    utils::{
         all_pods_are_ready, cordon_storage_node, data_plane_is_upgraded, list_all_volumes,
         rebuild_result, uncordon_storage_node, RebuildResult,
     },
@@ -30,9 +28,9 @@ use tracing::info;
 use utils::{API_REST_LABEL, CSI_NODE_NVME_ANA, ETCD_LABEL};
 
 /// Upgrade data plane by controlled restart of io-engine pods
-pub(crate) async fn upgrade_data_plane(
+pub async fn upgrade_data_plane(
     namespace: String,
-    rest_endpoint: String,
+    rest_client: RestClientSet,
     upgrade_target_version: String,
     ha_is_enabled: bool,
 ) -> Result<()> {
@@ -65,9 +63,6 @@ pub(crate) async fn upgrade_data_plane(
     let io_engine_listparams =
         ListParams::default().labels(yet_to_upgrade_io_engine_label_selector.as_str());
     let namespace = namespace.clone();
-
-    // Generate storage REST API client.
-    let rest_client = RestClientSet::new_with_url(rest_endpoint)?;
 
     info!("Starting data-plane upgrade...");
 

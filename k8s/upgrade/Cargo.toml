@@ -7,6 +7,10 @@ edition = "2021"
 name = "upgrade-job"
 path = "src/bin/upgrade-job/main.rs"
 
+[[bin]]
+name = "restart-io-engines"
+path = "src/bin/restart-io-engines/main.rs"
+
 [lib]
 name = "upgrade"
 path = "src/lib.rs"

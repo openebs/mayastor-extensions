@@ -93,14 +93,14 @@ async fn init_rest(cli_args: &CliArgs) -> Result<(), Error> {
 }
 
 pub enum Error {
-    Upgrade(upgrade::error::Error),
+    Upgrade(upgrade::error::plugin_error::Error),
     RestPlugin(plugin::resources::error::Error),
     RestClient(anyhow::Error),
     Generic(anyhow::Error),
 }
 
-impl From<upgrade::error::Error> for Error {
-    fn from(e: upgrade::error::Error) -> Self {
+impl From<upgrade::error::plugin_error::Error> for Error {
+    fn from(e: upgrade::error::plugin_error::Error) -> Self {
         Error::Upgrade(e)
     }
 }

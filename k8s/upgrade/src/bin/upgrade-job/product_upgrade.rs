@@ -1,19 +1,12 @@
-use crate::{
-    common::{constants::PRODUCT, error::Result},
+use crate::opts::CliArgs;
+use upgrade::{
+    constants::job_constants::PRODUCT,
+    data_plane_upgrade::upgrade_data_plane,
+    error::job_error::Result,
     events::event_recorder::{EventAction, EventRecorder},
-    helm::upgrade::{HelmUpgradeRunner, HelmUpgraderBuilder},
-    opts::CliArgs,
+    helm_upgrade::{HelmUpgradeRunner, HelmUpgraderBuilder},
+    rest_client::RestClientSet,
 };
-use data_plane::upgrade_data_plane;
-
-/// Contains the data-plane upgrade logic.
-pub(crate) mod data_plane;
-
-/// Contains upgrade utilities.
-pub(crate) mod utils;
-
-/// Tools to validate upgrade path.
-pub(crate) mod path;
 
 /// This function starts and sees upgrade through to the end.
 pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
@@ -105,7 +98,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
         if let Err(error) = upgrade_data_plane(
             opts.namespace(),
-            opts.rest_endpoint(),
+            RestClientSet::new_with_url(opts.rest_endpoint())?,
             target_version,
             ha_is_enabled,
         )

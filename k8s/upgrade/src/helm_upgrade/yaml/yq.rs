@@ -1,12 +1,12 @@
 use crate::{
-    common::error::{
-        NotAValidYamlKeyForStringValue, NotYqV4, RegexCompile, Result, U8VectorToString,
-        YqAppendToArrayCommand, YqAppendToObjectCommand, YqCommandExec, YqDeleteObjectCommand,
-        YqMergeCommand, YqSetCommand, YqVersionCommand,
+    error::job_error::{
+        NotAValidYamlKeyForStringValue, NotYqV4, Result, U8VectorToString, YqAppendToArrayCommand,
+        YqAppendToObjectCommand, YqCommandExec, YqDeleteObjectCommand, YqMergeCommand,
+        YqSetCommand, YqVersionCommand,
     },
+    regex::Regex,
     vec_to_strings,
 };
-use regex::Regex;
 use snafu::{ensure, ResultExt};
 use std::{
     fmt::Display,
@@ -21,7 +21,7 @@ use std::{
 pub(crate) struct YamlKey(String);
 
 impl TryFrom<&str> for YamlKey {
-    type Error = crate::common::error::Error;
+    type Error = crate::error::job_error::Error;
 
     /// This generates a YamlKey after vetting it. A yaml dot notation
     /// pattern is considered a valid input.
@@ -31,11 +31,7 @@ impl TryFrom<&str> for YamlKey {
         // again the set may be repeated any number of times. E.g: ".a.x.p.j".
         let yaml_key_regex = r"^(\..+)+$";
         ensure!(
-            Regex::new(yaml_key_regex)
-                .context(RegexCompile {
-                    expression: yaml_key_regex.to_string(),
-                })?
-                .is_match(value),
+            Regex::new(yaml_key_regex)?.is_match(value),
             NotAValidYamlKeyForStringValue {
                 key: value_as_string
             }
@@ -84,15 +80,11 @@ impl YqV4 {
         // Yq v4.x.y, else die.
         let yq_version_regex = r"^(.+4\.[0-9]+\.[0-9]+.*)$".to_string();
         ensure!(
-            Regex::new(yq_version_regex.as_str())
-                .context(RegexCompile {
-                    expression: yq_version_regex,
-                })?
-                .is_match(
-                    str::from_utf8(yq_version_output.stdout.as_slice())
-                        .context(U8VectorToString)?
-                        .trim()
-                ),
+            Regex::new(yq_version_regex.as_str())?.is_match(
+                str::from_utf8(yq_version_output.stdout.as_slice())
+                    .context(U8VectorToString)?
+                    .trim()
+            ),
             NotYqV4
         );
 

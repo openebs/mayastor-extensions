@@ -1,16 +1,13 @@
 use crate::{
-    common::{
-        constants::{
-            TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE, TWO_DOT_SIX, TWO_DOT_THREE,
-        },
-        error::{
-            DeserializePromtailExtraConfig, Result, SemverParse,
-            SerializePromtailConfigClientToJson, SerializePromtailExtraConfigToJson,
-            SerializePromtailInitContainerToJson,
-        },
-        file::write_to_tempfile,
+    constants::job_constants::{
+        TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE, TWO_DOT_SIX, TWO_DOT_THREE,
     },
-    helm::{
+    error::job_error::{
+        DeserializePromtailExtraConfig, Result, SemverParse, SerializePromtailConfigClientToJson,
+        SerializePromtailExtraConfigToJson, SerializePromtailInitContainerToJson,
+    },
+    file::write_to_tempfile,
+    helm_upgrade::{
         chart::{CoreValues, PromtailConfigClient},
         yaml::yq::{YamlKey, YqV4},
     },

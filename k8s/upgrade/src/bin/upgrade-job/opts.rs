@@ -1,6 +1,6 @@
-use crate::common::constants::PRODUCT;
 use clap::Parser;
 use std::path::PathBuf;
+use upgrade::constants::job_constants::PRODUCT;
 use utils::{package_description, tracing_telemetry::FmtStyle, version_info_str};
 
 /// Validate input whose validation depends on other inputs.

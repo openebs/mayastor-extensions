@@ -1,5 +1,5 @@
-use crate::plugin::{
-    constants::{
+use crate::{
+    constants::plugin_constants::{
         get_image_version_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
         AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_IMAGE_REGISTRY,
         DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, HELM_RELEASE_VERSION_LABEL,
@@ -9,11 +9,14 @@ use crate::plugin::{
         UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX,
         UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
-    error, objects,
-    user_prompt::{
-        upgrade_dry_run_summary, CONTROL_PLANE_PODS_LIST, DATA_PLANE_PODS_LIST,
-        DATA_PLANE_PODS_LIST_SKIP_RESTART, DELETE_INCOMPLETE_JOB, HELM_UPGRADE_VALIDATION_ERROR,
-        UPGRADE_DRY_RUN_SUMMARY, UPGRADE_JOB_STARTED,
+    error::plugin_error as error,
+    plugin::{
+        objects,
+        user_prompt::{
+            upgrade_dry_run_summary, CONTROL_PLANE_PODS_LIST, DATA_PLANE_PODS_LIST,
+            DATA_PLANE_PODS_LIST_SKIP_RESTART, DELETE_INCOMPLETE_JOB,
+            HELM_UPGRADE_VALIDATION_ERROR, UPGRADE_DRY_RUN_SUMMARY, UPGRADE_JOB_STARTED,
+        },
     },
 };
 use k8s_openapi::api::{
@@ -884,7 +887,7 @@ struct ImageProperties {
 }
 
 impl TryFrom<Deployment> for ImageProperties {
-    type Error = crate::plugin::error::Error;
+    type Error = error::Error;
 
     fn try_from(d: Deployment) -> error::Result<Self> {
         let pod_spec = d

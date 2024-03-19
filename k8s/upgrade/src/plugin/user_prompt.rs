@@ -1,4 +1,4 @@
-use crate::plugin::constants::release_version;
+use crate::constants::plugin_constants::release_version;
 
 /// Warning to users before doing an upgrade.
 pub const UPGRADE_WARNING: &str =  "\nVolumes which make use of a single volume replica instance will be unavailable for some time during upgrade.\nIt is recommended that you do not create new volumes which make use of only one volume replica.";
