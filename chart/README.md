@@ -102,7 +102,9 @@ This removes all the Kubernetes components associated with the chart and deletes
 | base.&ZeroWidthSpace;default_req_timeout | Request timeout for rest & core agents | `"5s"` |
 | base.&ZeroWidthSpace;imagePullSecrets.&ZeroWidthSpace;enabled | Enable imagePullSecrets for pulling our container images | `false` |
 | base.&ZeroWidthSpace;jaeger.&ZeroWidthSpace;enabled | Enable jaeger tracing | `false` |
-| base.&ZeroWidthSpace;logSilenceLevel | Silence specific module components | `nil` |
+| base.&ZeroWidthSpace;logging.&ZeroWidthSpace;color | Enable ansi color code for Pod StdOut/StdErr | `true` |
+| base.&ZeroWidthSpace;logging.&ZeroWidthSpace;format | Valid values for format are pretty, json and compact | `"pretty"` |
+| base.&ZeroWidthSpace;logging.&ZeroWidthSpace;silenceLevel | Silence specific module components | `nil` |
 | base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;enabled | Enable the metrics exporter | `true` |
 | crds.&ZeroWidthSpace;enabled | Install CRDs | `true` |
 | crds.&ZeroWidthSpace;jaeger.&ZeroWidthSpace;enabled | Install Jaeger CRDs | `false` |
