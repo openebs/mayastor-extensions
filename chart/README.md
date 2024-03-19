@@ -106,9 +106,9 @@ This removes all the Kubernetes components associated with the chart and deletes
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;format | Valid values for format are pretty, json and compact | `"pretty"` |
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;silenceLevel | Silence specific module components | `nil` |
 | base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;enabled | Enable the metrics exporter | `true` |
-| crds.&ZeroWidthSpace;enabled | Install CRDs | `true` |
-| crds.&ZeroWidthSpace;jaeger.&ZeroWidthSpace;enabled | Install Jaeger CRDs | `false` |
-| crds.&ZeroWidthSpace;volumeSnapshots.&ZeroWidthSpace;enabled | Install Volume Snapshot CRDs | `true` |
+| crds.&ZeroWidthSpace;csi.&ZeroWidthSpace;volumeSnapshots.&ZeroWidthSpace;enabled | Install Volume Snapshot CRDs | `true` |
+| crds.&ZeroWidthSpace;enabled | Disables the installation of all CRDs if set to false | `true` |
+| crds.&ZeroWidthSpace;jaeger.&ZeroWidthSpace;enabled | Install Jaeger CRDs | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;logLevel | Log level for the csi controller | `"info"` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;preventVolumeModeConversion | Prevent modifying the volume mode when creating a PVC from an existing VolumeSnapshot | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
