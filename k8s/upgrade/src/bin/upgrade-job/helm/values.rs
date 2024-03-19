@@ -264,13 +264,7 @@ where
                 upgrade_values_file.path(),
             )?;
         }
-    }
 
-    // Special-case values for 2.6.x.
-    let two_dot_six = Version::parse(TWO_DOT_SIX).context(SemverParse {
-        version_string: TWO_DOT_SIX.to_string(),
-    })?;
-    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_six) {
         // Switch out image tag for the latest one.
         yq.set_literal_value(
             YamlKey::try_from(".loki-stack.loki.image.tag")?,
@@ -359,6 +353,30 @@ where
         yq.set_literal_value(
             YamlKey::try_from(".loki-stack.promtail.readinessProbe.httpGet.path")?,
             target_values.promtail_readiness_probe_http_get_path(),
+            upgrade_values_file.path(),
+        )?;
+
+        // This helm value key was changed:
+        // Ref: https://github.com/openebs/mayastor-extensions/pull/419
+        yq.set_literal_value(
+            YamlKey::try_from(".base.logging.silenceLevel")?,
+            source_values.deprecated_log_silence_level(),
+            upgrade_values_file.path(),
+        )?;
+        yq.delete_object(
+            YamlKey::try_from(".base.logSilenceLevel")?,
+            upgrade_values_file.path(),
+        )?;
+
+        // This is a fix for a typo in the .csi.node.pluginMounthPath key.
+        // It was fixed, and the key now is called .csi.node.pluginMountPath.
+        yq.set_literal_value(
+            YamlKey::try_from(".csi.node.pluginMountPath")?,
+            source_values.deprecated_node_csi_mount_path(),
+            upgrade_values_file.path(),
+        )?;
+        yq.delete_object(
+            YamlKey::try_from(".csi.node.pluginMounthPath")?,
             upgrade_values_file.path(),
         )?;
     }
