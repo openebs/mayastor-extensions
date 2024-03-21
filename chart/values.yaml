@@ -311,7 +311,7 @@ csi:
     topology:
       segments:
         openebs.io/csi-node: mayastor
-      # -- Add topology segments to the csi-node daemonset node selector
+      # -- Add topology segments to the csi-node and agent-ha-node daemonset node selector
       nodeSelector: false
     resources:
       limits:
