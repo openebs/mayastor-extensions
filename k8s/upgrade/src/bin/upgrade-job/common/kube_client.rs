@@ -1,10 +1,7 @@
 use crate::common::error::{K8sClientGeneration, KubeClientSetBuilderNs, Result};
-use k8s_openapi::{
-    api::{
-        apps::v1::Deployment,
-        core::v1::{Namespace, Node, Pod},
-    },
-    apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition,
+use k8s_openapi::api::{
+    apps::v1::Deployment,
+    core::v1::{Namespace, Node, Pod},
 };
 use kube::{api::Api, Client};
 use snafu::ResultExt;
@@ -40,7 +37,6 @@ impl KubeClientSetBuilder {
             pods_api: Api::namespaced(client.clone(), namespace.as_str()),
             namespaces_api: Api::all(client.clone()),
             deployments_api: Api::namespaced(client.clone(), namespace.as_str()),
-            crd_api: Api::all(client),
         });
     }
 }
@@ -52,7 +48,6 @@ pub(crate) struct KubeClientSet {
     pods_api: Api<Pod>,
     namespaces_api: Api<Namespace>,
     deployments_api: Api<Deployment>,
-    crd_api: Api<CustomResourceDefinition>,
 }
 
 impl KubeClientSet {
@@ -78,11 +73,6 @@ impl KubeClientSet {
     /// Generate the Deployment api client.
     pub(crate) fn deployments_api(&self) -> &Api<Deployment> {
         &self.deployments_api
-    }
-
-    /// Generate the CustomResourceDefinition api client.
-    pub(crate) fn crd_api(&self) -> &Api<CustomResourceDefinition> {
-        &self.crd_api
     }
 
     /// Get a clone of the kube::Client.

@@ -11,10 +11,11 @@ in
 mkShell {
   name = "helm-scripts-shell";
   buildInputs = [
+    coreutils
     git
-    semver-tool
-    yq-go
     helm-docs
     kubernetes-helm-wrapped
+    semver-tool
+    yq-go
   ];
 }
