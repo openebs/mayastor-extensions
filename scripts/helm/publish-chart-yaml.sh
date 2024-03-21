@@ -214,6 +214,7 @@ ROOTDIR="$SCRIPTDIR/../.."
 CHART_FILE=${CHART_FILE:-"$ROOTDIR/chart/Chart.yaml"}
 CHART_VALUES=${CHART_VALUES:-"$ROOTDIR/chart/values.yaml"}
 CHART_DOC=${CHART_DOC:-"$ROOTDIR/chart/doc.yaml"}
+CRDS_SUBCHART_CHART_FILE="${CHART_FILE%Chart.yaml}charts/crds/Chart.yaml"
 CHART_NAME="mayastor"
 # Tag that has been pushed
 APP_TAG=
@@ -371,6 +372,8 @@ if [ -n "$CHECK_BRANCH" ]; then
     if [ -z "$DRY_RUN" ]; then
       sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
       sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
+      # Set same versions on the CRD subchart
+      sed -i "s/^version:.*/version: $newChartVersion/" "$CRDS_SUBCHART_CHART_FILE"
       # Set image tag to empty because main branch uses repoTags.
       yq_ibl '.image.tag |= ""' "$CHART_VALUES"
       # always pull since image changes with commits to the branch
@@ -388,6 +391,8 @@ if [ -n "$CHECK_BRANCH" ]; then
       if [ -z "$DRY_RUN" ]; then
         sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
         sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
+        # Set same versions on the CRD subchart
+        sed -i "s/^version:.*/version: $newChartVersion/" "$CRDS_SUBCHART_CHART_FILE"
         # point image tag to the release branch images
         yq_ibl ".image.tag |= \"${CHECK_BRANCH////-}\"" "$CHART_VALUES"
         # always pull since image changes with commits to the branch
@@ -473,6 +478,8 @@ echo "NEW_CHART_APP_VERSION: $newChartAppVersion"
 if [ -z "$DRY_RUN" ]; then
   sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
   sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
+  # Set same versions on the CRD subchart
+  sed -i "s/^version:.*/version: $newChartVersion/" "$CRDS_SUBCHART_CHART_FILE"
   yq_ibl ".image.tag |= \"v$newChartAppVersion\"" "$CHART_VALUES"
   # tags are stable so we don't need to pull always
   yq_ibl ".image.pullPolicy |= \"IfNotPresent\"" "$CHART_VALUES"
