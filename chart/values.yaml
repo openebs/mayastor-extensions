@@ -773,13 +773,8 @@ storageClass:
     repl: 1
 
 localpv-provisioner:
-  # -- Enables the openebs dynamic-localpv provisioner. If disabled, modify etcd and loki-stack storage class accordingly.
+  # -- Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki-stack storage class accordingly.
   enabled: true
-  # Enable/disable the openebs NDM sub-chart. It's recommended to keep this disabled.
-  openebsNDM:
-    enabled: false
-  # Enable/disable the creation of the openebs-device StorageClass. It's recommended to keep this disabled.
-  deviceClass:
-    enabled: false
   hostpathClass:
+    # -- Enable default hostpath localpv StorageClass.
     enabled: false
