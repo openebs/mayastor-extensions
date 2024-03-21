@@ -243,26 +243,6 @@ where
                 target_values.localpv_helper_image_tag(),
                 upgrade_values_file.path(),
             )?;
-            yq.set_literal_value(
-                YamlKey::try_from(".localpv-provisioner.openebs-ndm.ndm.image.tag")?,
-                target_values.localpv_ndm_image_tag(),
-                upgrade_values_file.path(),
-            )?;
-            yq.set_literal_value(
-                YamlKey::try_from(".localpv-provisioner.openebs-ndm.helperPod.image.tag")?,
-                target_values.localpv_ndm_helper_tag(),
-                upgrade_values_file.path(),
-            )?;
-            yq.set_literal_value(
-                YamlKey::try_from(".localpv-provisioner.openebs-ndm.ndmExporter.image.tag")?,
-                target_values.localpv_ndm_exporter_image_tag(),
-                upgrade_values_file.path(),
-            )?;
-            yq.set_literal_value(
-                YamlKey::try_from(".localpv-provisioner.openebs-ndm.ndmOperator.image.tag")?,
-                target_values.localpv_ndm_operator_image_tag(),
-                upgrade_values_file.path(),
-            )?;
         }
 
         // Switch out image tag for the latest one.
