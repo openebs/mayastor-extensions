@@ -23,6 +23,7 @@ mkShell {
     cargo-udeps
     clang
     commitlint
+    coreutils
     cowsay
     git
     helm-docs

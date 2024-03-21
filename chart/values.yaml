@@ -1,9 +1,13 @@
 crds:
-  # -- Install CRDs
+  # -- Disables the installation of all CRDs if set to false
   enabled: true
   jaeger:
     # -- Install Jaeger CRDs
-    enabled: false
+    enabled: true
+  csi:
+    volumeSnapshots:
+      # -- Install Volume Snapshot CRDs
+      enabled: true
 
 image:
   # -- Image registry to pull our product images
