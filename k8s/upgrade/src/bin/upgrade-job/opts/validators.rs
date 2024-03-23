@@ -189,7 +189,7 @@ fn validate_core_helm_chart_variant_in_dir(dir_path: PathBuf) -> Result<()> {
 
     // Validate crds directory.
     let mut crds_dir_path = dir_path.clone();
-    crds_dir_path.push("crds");
+    crds_dir_path.push("charts/crds");
     ensure!(
         path_exists_and_is_dir(crds_dir_path.clone())?,
         NotADirectory {
