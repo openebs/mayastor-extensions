@@ -299,6 +299,8 @@ csi:
   controller:
     # -- Log level for the csi controller
     logLevel: info
+    # The maximum number of concurrent create volume requests.
+    maxCreateVolume: 10
     resources:
       limits:
         # -- Cpu limits for csi controller

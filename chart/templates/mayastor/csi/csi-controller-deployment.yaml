@@ -48,7 +48,7 @@ spec:
             - "--default-fstype=ext4"
             - "--extra-create-metadata" # This is needed for volume group feature to work
             - "--timeout=36s"
-            - "--worker-threads=10" # 10 for create and 10 for delete
+            - "--worker-threads={{ .Values.csi.controller.maxCreateVolume }}" # 10 for create and 10 for delete
             {{- if default .Values.csi.controller.preventVolumeModeConversion }}
             - "--prevent-volume-mode-conversion"
             {{- end }}
@@ -123,6 +123,7 @@ spec:
             {{- end }}
             - "--ansi-colors={{ .Values.base.logging.color }}"
             - "--fmt-style={{ include "logFormat" . }}"
+            - "--create-volume-limit={{ .Values.csi.controller.maxCreateVolume }}"
           env:
             - name: RUST_LOG
               value: {{ .Values.csi.controller.logLevel }}
