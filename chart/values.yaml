@@ -178,6 +178,17 @@ agents:
         # Example: if this value is 40, the pool has 40GiB free, then the max volume size allowed
         # to be snapped on the pool is 100GiB.
         snapshotCommitment: "40%"
+    # -- If a faulted replica comes back online within this time period then it will be
+    # rebuilt using the partial rebuild capability (using a log of missed IO), hence a bit
+    # faster depending on the log size. Otherwise, the replica will be fully rebuilt.
+    # A blank value "" means internally derived value will be used.
+    partialRebuildWaitPeriod: ""
+    # The maximum number of system-wide rebuilds permitted at any given time.
+    # If set to an empty string, there are no limits.
+    maxRebuilds: ""
+    # The maximum number of concurrent create volume requests.
+    maxCreateVolume: 10
+
     resources:
       limits:
         # -- Cpu limits for core agents
@@ -189,11 +200,6 @@ agents:
         cpu: "500m"
         # -- Memory requests for core agents
         memory: "32Mi"
-    # -- If a faulted replica comes back online within this time period then it will be
-    # rebuilt using the partial rebuild capability (using a log of missed IO), hence a bit
-    # faster depending on the log size. Otherwise, the replica will be fully rebuilt.
-    # A blank value "" means internally derived value will be used.
-    partialRebuildWaitPeriod: ""
     # -- Set tolerations, overrides global
     tolerations: []
     # -- Set PriorityClass, overrides global.
