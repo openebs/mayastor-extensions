@@ -1,7 +1,10 @@
 use crate::Error;
 use clap::Parser;
 use plugin::{
-    resources::{CordonResources, DrainResources, GetResources, ScaleResources, UnCordonResources},
+    resources::{
+        CordonResources, DrainResources, GetResources, LabelResources, ScaleResources,
+        UnCordonResources,
+    },
     ExecuteOperation,
 };
 use std::{ops::Deref, path::PathBuf};
@@ -47,6 +50,9 @@ pub enum Operations {
     /// 'Drain' resources.
     #[clap(subcommand)]
     Drain(DrainResources),
+    /// 'Label' resources.
+    #[clap(subcommand)]
+    Label(LabelResources),
     /// 'Get' resources.
     #[clap(subcommand)]
     Get(GetResourcesK8s),
@@ -82,6 +88,8 @@ impl ExecuteOperation for Operations {
                 }
             },
             Operations::Drain(resource) => resource.execute(cli_args).await?,
+            Operations::Label(resource) => resource.execute(cli_args).await?,
+
             Operations::Scale(resource) => resource.execute(cli_args).await?,
             Operations::Cordon(resource) => resource.execute(cli_args).await?,
             Operations::Uncordon(resource) => resource.execute(cli_args).await?,
