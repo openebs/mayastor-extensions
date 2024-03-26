@@ -24,6 +24,7 @@ Usage: kubectl-mayastor [OPTIONS] <COMMAND>
 
 Commands:
   drain      'Drain' resources
+  label      'Label' resources
   get        'Get' resources
   scale      'Scale' resources
   cordon     'Cordon' resources
@@ -212,7 +213,7 @@ b5de71a6-055d-433a-a1c5-2b39ade05d86  0dafa450-7a19-4e21-a919-89c6f9bd2a97  Comp
 </details>
 
 <details>
-<summary> Node Cordon And Drain Operations </summary>
+<summary> Node Cordon, Drain and Label Operations </summary>
 
 1. Node Cordoning
 ```
@@ -263,6 +264,16 @@ Node io-engine-1 successfully uncordoned
  node-2-14048  95.217.152.7:10124   Online  true      Draining     my_drain_2
  node-1-14048  95.217.158.66:10124  Online  true      Drained      my_drain_1
 
+```
+7. Node Labeling
+```
+❯ kubectl mayastor label node kworker1 zone-us=east-1
+Node node-1-14048  labelled successfully. Current labels: {"zone-us": "east-1"}
+```
+8. Node Unlabelling
+```
+❯ kubectl mayastor label node kworker1 zone-us-
+Node node-1-14048 labelled successfully. Current labels: {}
 ```
 </details>
 
