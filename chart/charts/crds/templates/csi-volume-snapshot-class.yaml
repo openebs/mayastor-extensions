@@ -7,6 +7,7 @@ metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-csi/external-snapshotter/pull/814
     controller-gen.kubebuilder.io/version: v0.11.3
+    {{- include "crds.extraAnnotations" .Values.csi.volumeSnapshots | nindent 4 }}
   creationTimestamp: null
   name: volumesnapshotclasses.snapshot.storage.k8s.io
 spec:
