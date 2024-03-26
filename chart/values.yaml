@@ -178,6 +178,17 @@ agents:
         # Example: if this value is 40, the pool has 40GiB free, then the max volume size allowed
         # to be snapped on the pool is 100GiB.
         snapshotCommitment: "40%"
+    # -- If a faulted replica comes back online within this time period then it will be
+    # rebuilt using the partial rebuild capability (using a log of missed IO), hence a bit
+    # faster depending on the log size. Otherwise, the replica will be fully rebuilt.
+    # A blank value "" means internally derived value will be used.
+    partialRebuildWaitPeriod: ""
+    # The maximum number of system-wide rebuilds permitted at any given time.
+    # If set to an empty string, there are no limits.
+    maxRebuilds: ""
+    # The maximum number of concurrent create volume requests.
+    maxCreateVolume: 10
+
     resources:
       limits:
         # -- Cpu limits for core agents
@@ -189,11 +200,6 @@ agents:
         cpu: "500m"
         # -- Memory requests for core agents
         memory: "32Mi"
-    # -- If a faulted replica comes back online within this time period then it will be
-    # rebuilt using the partial rebuild capability (using a log of missed IO), hence a bit
-    # faster depending on the log size. Otherwise, the replica will be fully rebuilt.
-    # A blank value "" means internally derived value will be used.
-    partialRebuildWaitPeriod: ""
     # -- Set tolerations, overrides global
     tolerations: []
     # -- Set PriorityClass, overrides global.
@@ -293,6 +299,8 @@ csi:
   controller:
     # -- Log level for the csi controller
     logLevel: info
+    # The maximum number of concurrent create volume requests.
+    maxCreateVolume: 10
     resources:
       limits:
         # -- Cpu limits for csi controller
@@ -368,10 +376,8 @@ io_engine:
         crdt1: 30
   nvme:
     # -- Timeout for IOs
-    # The default here is exaggerated for local disks but we've observed that in
+    # The default here is exaggerated for local disks, but we've observed that in
     # shared virtual environments having a higher timeout value is beneficial.
-    # In certain cases, you may have to set this to an even higher value. For example,
-    # in Hetzner we've had better results setting it to 300s.
     # Please adjust this according to your hardware and needs.
     ioTimeout: "110s"
     # Timeout for admin commands
@@ -382,6 +388,9 @@ io_engine:
       # -- Max size setting (both initiator and target) for an NVMe queue
       # -- You may need to increase this for a higher outstanding IOs per volume
       maxQueueDepth: "32"
+      # Max qpairs per controller.
+      maxQpairsPerCtrl: "32"
+
 
   # -- Pass additional arguments to the Environment Abstraction Layer.
   # Example: --set {product}.envcontext=iova-mode=pa

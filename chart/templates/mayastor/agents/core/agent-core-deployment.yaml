@@ -61,6 +61,8 @@ spec:
             - "--disable-ha"{{ end }}
             - "--fmt-style={{ include "logFormat" . }}"
             - "--ansi-colors={{ .Values.base.logging.color }}"
+            - "--create-volume-limit={{ .Values.agents.core.maxCreateVolume }}"{{ if .Values.agents.core.maxRebuilds }}
+            - "--max-rebuilds={{ .Values.agents.core.maxRebuilds }}"{{ end }}
           ports:
             - containerPort: 50051
           env:
