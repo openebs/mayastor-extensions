@@ -266,26 +266,6 @@ impl CoreValues {
         self.localpv_provisioner.helper_image_tag()
     }
 
-    /// This is a getter for the openebs/node-disk-manager container's image tag.
-    pub(crate) fn localpv_ndm_image_tag(&self) -> &str {
-        self.localpv_provisioner.ndm_image_tag()
-    }
-
-    /// This is a getter for the openebs/linux-utils container's image tag.
-    pub(crate) fn localpv_ndm_helper_tag(&self) -> &str {
-        self.localpv_provisioner.ndm_helper_tag()
-    }
-
-    /// This is a getter for the openebs/node-disk-exporter container's image tag.
-    pub(crate) fn localpv_ndm_exporter_image_tag(&self) -> &str {
-        self.localpv_provisioner.ndm_exporter_image_tag()
-    }
-
-    /// This is a getter for the openebs/node-disk-operator container's image tag.
-    pub(crate) fn localpv_ndm_operator_image_tag(&self) -> &str {
-        self.localpv_provisioner.ndm_operator_image_tag()
-    }
-
     /// This is a getter for the prometheus/alertmanager container's image tag.
     pub(crate) fn prometheus_alertmanager_image_tag(&self) -> &str {
         self.loki_stack.prometheus_alertmanager_image_tag()
@@ -990,10 +970,6 @@ struct LocalpvProvisioner {
     release: LocalpvProvisionerRelease,
     localpv: LocalpvProvisionerLocalpv,
     helper_pod: LocalpvProvisionerHelperPod,
-    /// This is the NDM helm subchart values. This is absent ('None' case) if
-    /// openebsNDM.enabled=false.
-    #[serde(rename(deserialize = "openebs-ndm"))]
-    openebs_ndm: LocalpvProvisionerNdm,
 }
 
 impl LocalpvProvisioner {
@@ -1010,26 +986,6 @@ impl LocalpvProvisioner {
     /// This is a getter for the linux-utils helper container's image tag.
     fn helper_image_tag(&self) -> &str {
         self.helper_pod.image_tag()
-    }
-
-    /// This is a getter for the openebs/node-disk-manager container's image tag.
-    fn ndm_image_tag(&self) -> &str {
-        self.openebs_ndm.ndm_image_tag()
-    }
-
-    /// This is a getter for the openebs/linux-utils container's image tag.
-    fn ndm_helper_tag(&self) -> &str {
-        self.openebs_ndm.ndm_helper_image_tag()
-    }
-
-    /// This is a getter for the openebs/node-disk-exporter container's image tag.
-    fn ndm_exporter_image_tag(&self) -> &str {
-        self.openebs_ndm.ndm_exporter_image_tag()
-    }
-
-    /// This is a getter for the openebs/node-disk-operator container's image tag.
-    fn ndm_operator_image_tag(&self) -> &str {
-        self.openebs_ndm.ndm_operator_image_tag()
     }
 }
 
@@ -1083,76 +1039,6 @@ struct LocalpvProvisionerHelperPod {
 
 impl LocalpvProvisionerHelperPod {
     /// This is getter for the openebs/linux-utils helper pod container's image tag.
-    fn image_tag(&self) -> &str {
-        self.image.tag()
-    }
-}
-
-#[derive(Default, Deserialize)]
-#[serde(rename_all(deserialize = "camelCase"))]
-struct LocalpvProvisionerNdm {
-    helper_pod: LocalpvProvisionerHelperPod,
-    ndm: Ndm,
-    ndm_exporter: NdmExporter,
-    ndm_operator: NdmOperator,
-}
-
-impl LocalpvProvisionerNdm {
-    /// Returns the ndm daemonset image tag.
-    fn ndm_image_tag(&self) -> &str {
-        self.ndm.image_tag()
-    }
-
-    /// Returns the ndm helper image tag.
-    fn ndm_helper_image_tag(&self) -> &str {
-        self.helper_pod.image_tag()
-    }
-
-    /// Returns the ndm exporter image tag.
-    fn ndm_exporter_image_tag(&self) -> &str {
-        self.ndm_exporter.image_tag()
-    }
-
-    /// Returns the ndm operator image tag.
-    fn ndm_operator_image_tag(&self) -> &str {
-        self.ndm_operator.image_tag()
-    }
-}
-
-/// This is used to deserialize the '.localpv-provisioner.openebs-ndm.ndm' YAML object.
-#[derive(Default, Deserialize)]
-struct Ndm {
-    image: GenericImage,
-}
-
-impl Ndm {
-    /// This returns the image tag for ndm.
-    fn image_tag(&self) -> &str {
-        self.image.tag()
-    }
-}
-
-/// This is used to deserialize the '.localpv-provisioner.openebs-ndm.ndmExporter' YAML object.
-#[derive(Default, Deserialize)]
-struct NdmExporter {
-    image: GenericImage,
-}
-
-impl NdmExporter {
-    /// This returns the image tag for ndm-exporter.
-    fn image_tag(&self) -> &str {
-        self.image.tag()
-    }
-}
-
-/// This is used to deserialize the '.localpv-provisioner.openebs-ndm.ndmOperator' YAML object.
-#[derive(Default, Deserialize)]
-struct NdmOperator {
-    image: GenericImage,
-}
-
-impl NdmOperator {
-    /// This returns the image tag for ndm-operator.
     fn image_tag(&self) -> &str {
         self.image.tag()
     }
