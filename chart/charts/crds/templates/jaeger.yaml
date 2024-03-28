@@ -1,10 +1,12 @@
 {{- if .Values.jaeger.enabled -}}
-{{- $crdName := "jaegers.jaegertracing.io" -}}
-{{- if (include "crdIsAbsent" (list $crdName)) -}}
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: jaegers.jaegertracing.io
+  {{- if or (.Values.jaeger.keep) (.Values.jaeger.annotations) }}
+  annotations:
+    {{- include "crds.extraAnnotations" .Values.jaeger | nindent 4 }}
+  {{- end }}
   labels:
     app: jaeger-operator
 spec:
@@ -45,5 +47,4 @@ spec:
       storage: true
       subresources:
         status: {}
-{{- end -}}
 {{- end -}}
