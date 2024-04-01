@@ -326,6 +326,9 @@ csi:
     kubeletDir: /var/lib/kubelet
     pluginMounthPath: /csi
     socketPath: csi.sock
+    # Additional arguments when creating filesystems
+    mkfs_args:
+      xfs: ""
     # -- Set tolerations, overrides global
     tolerations: []
     # -- Set PriorityClass, overrides global
