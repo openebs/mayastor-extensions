@@ -24,7 +24,7 @@ pub(crate) const DRAIN_FOR_UPGRADE: &str = "mayastor-upgrade";
 pub(crate) const CORDON_FOR_ANA_CHECK: &str = "mayastor-upgrade-nvme-ana-check";
 
 /// This is the allowed upgrade to-version/to-version-range for the Umbrella chart.
-pub(crate) const TO_UMBRELLA_SEMVER: &str = "3.10.0";
+pub(crate) const TO_UMBRELLA_SEMVER: &str = "4.0.0";
 
 /// This is the user docs URL for the Umbrella chart.
 pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str =
