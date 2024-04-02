@@ -229,7 +229,8 @@ impl HelmUpgraderBuilder {
                 source_values_buf,
                 target_values_filepath.as_path(),
                 chart_dir.as_path(),
-            )?;
+            )
+            .await?;
 
             // helm upgrade .. -f <values-yaml> --set <a> --set-file <args> --atomic
             let helm_upgrade_extra_args = vec_to_strings![

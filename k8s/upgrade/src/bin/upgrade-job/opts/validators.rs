@@ -7,7 +7,7 @@ use crate::{
             RegexCompile, Result, U8VectorToString, ValidateDirPath, ValidateFilePath,
             YamlParseFromFile,
         },
-        kube_client::KubeClientSet,
+        kube_client as KubeClient,
         rest_client::RestClientSet,
     },
     helm::chart::Chart,
@@ -214,13 +214,9 @@ fn validate_core_helm_chart_variant_in_dir(dir_path: PathBuf) -> Result<()> {
 /// - if the kubernetes API is reachable.
 /// - if the input namespace exists.
 pub(crate) async fn validate_namespace(ns: String) -> Result<()> {
-    let k8s_client = KubeClientSet::builder()
-        .with_namespace(ns.as_str())
-        .build()
-        .await?;
+    let ns_api = KubeClient::namespaces_api().await?;
 
-    k8s_client
-        .namespaces_api()
+    ns_api
         .get(ns.as_str())
         .await
         .context(GetNamespace { namespace: ns })?;
