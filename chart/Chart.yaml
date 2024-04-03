@@ -26,7 +26,7 @@ appVersion: "2.6.0"
 
 dependencies:
   - name: crds
-    version: "0.0.0"
+    version: 0.0.0
     condition: crds.enabled
   - name: etcd
     repository: https://charts.bitnami.com/bitnami
