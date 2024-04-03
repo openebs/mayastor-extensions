@@ -179,7 +179,7 @@ yq_ibl() {
     exit "$error"
   fi
   if [ -n "$diff_out" ]; then
-    echo "$diff_out" | patch --quiet "$2" -
+    echo "$diff_out" | patch --quiet --no-backup-if-mismatch "$2" -
   fi
   set -euo pipefail
 }
