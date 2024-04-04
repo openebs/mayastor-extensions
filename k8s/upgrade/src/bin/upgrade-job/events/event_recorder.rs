@@ -4,7 +4,7 @@ use crate::common::{
         EventChannelSend, EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
         JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result, SerializeEventNote,
     },
-    kube_client::KubeClientSet,
+    kube_client as KubeClient,
 };
 use k8s_openapi::{api::core::v1::ObjectReference, serde_json};
 use kube::runtime::events::{Event, EventType, Recorder};
@@ -91,19 +91,12 @@ impl EventRecorderBuilder {
             .unwrap_or(vers_placeholder.clone());
         let target_version = self.target_version.clone().unwrap_or(vers_placeholder);
 
-        let k8s_client = KubeClientSet::builder()
-            .with_namespace(namespace.as_str())
-            .build()
-            .await?;
+        let pods_api = KubeClient::pods_api(namespace.as_str()).await?;
 
-        let pod = k8s_client
-            .pods_api()
-            .get(pod_name.as_str())
-            .await
-            .context(GetPod {
-                pod_name: pod_name.clone(),
-                pod_namespace: namespace.clone(),
-            })?;
+        let pod = pods_api.get(pod_name.as_str()).await.context(GetPod {
+            pod_name: pod_name.clone(),
+            pod_namespace: namespace.clone(),
+        })?;
 
         let pod_owner = match pod.metadata.owner_references {
             Some(references) if references.len() == 1 && references[0].kind.eq("Job") => {
@@ -142,10 +135,9 @@ impl EventRecorderBuilder {
         };
 
         let (tx, mut rx) = mpsc::unbounded_channel::<Event>();
-
+        let k8s_client = KubeClient::client().await?;
         let event_loop_handle = tokio::spawn(async move {
-            let event_handler =
-                Recorder::new(k8s_client.client(), pod_owner.name.into(), job_obj_ref);
+            let event_handler = Recorder::new(k8s_client, pod_owner.name.into(), job_obj_ref);
 
             // Function exits when 'None'. Avoids panics.
             let mut current_event = rx.recv().await;

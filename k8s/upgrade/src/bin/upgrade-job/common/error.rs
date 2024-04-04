@@ -384,10 +384,6 @@ pub(crate) enum Error {
     ))]
     NotAKnownHelmChart { chart_name: String },
 
-    /// Error for when namespace option is not set when building KubeClientSet.
-    #[snafu(display("Mandatory KubeClientSetBuilder option 'namespace' not set"))]
-    KubeClientSetBuilderNs,
-
     /// Error for when mandatory options for an EventRecorder are missing when building.
     #[snafu(display("Mandatory options for EventRecorder were not given"))]
     EventRecorderOptionsAbsent,
@@ -695,6 +691,9 @@ pub(crate) enum Error {
         args: Vec<String>,
         std_err: String,
     },
+
+    #[snafu(display("failed to list CustomResourceDefinitions: {source}"))]
+    ListCrds { source: kube::Error },
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.
