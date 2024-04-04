@@ -179,7 +179,7 @@ yq_ibl() {
     exit "$error"
   fi
   if [ -n "$diff_out" ]; then
-    echo "$diff_out" | patch --quiet "$2" -
+    echo "$diff_out" | patch --quiet --no-backup-if-mismatch "$2" -
   fi
   set -euo pipefail
 }
@@ -374,6 +374,8 @@ if [ -n "$CHECK_BRANCH" ]; then
       sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
       # Set same versions on the CRD subchart
       sed -i "s/^version:.*/version: $newChartVersion/" "$CRDS_SUBCHART_CHART_FILE"
+      yq_ibl "(.dependencies[] | select(.name == \"crds\").version) |= \"$newChartVersion\"" "$CHART_FILE"
+
       # Set image tag to empty because main branch uses repoTags.
       yq_ibl '.image.tag |= ""' "$CHART_VALUES"
       # always pull since image changes with commits to the branch
@@ -393,6 +395,8 @@ if [ -n "$CHECK_BRANCH" ]; then
         sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
         # Set same versions on the CRD subchart
         sed -i "s/^version:.*/version: $newChartVersion/" "$CRDS_SUBCHART_CHART_FILE"
+        yq_ibl "(.dependencies[] | select(.name == \"crds\").version) |= \"$newChartVersion\"" "$CHART_FILE"
+
         # point image tag to the release branch images
         yq_ibl ".image.tag |= \"${CHECK_BRANCH////-}\"" "$CHART_VALUES"
         # always pull since image changes with commits to the branch
@@ -480,6 +484,8 @@ if [ -z "$DRY_RUN" ]; then
   sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
   # Set same versions on the CRD subchart
   sed -i "s/^version:.*/version: $newChartVersion/" "$CRDS_SUBCHART_CHART_FILE"
+  yq_ibl "(.dependencies[] | select(.name == \"crds\").version) |= \"$newChartVersion\"" "$CHART_FILE"
+
   yq_ibl ".image.tag |= \"v$newChartAppVersion\"" "$CHART_VALUES"
   # tags are stable so we don't need to pull always
   yq_ibl ".image.pullPolicy |= \"IfNotPresent\"" "$CHART_VALUES"
