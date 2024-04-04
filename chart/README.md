@@ -54,7 +54,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 
 | Repository | Name | Version |
 |------------|------|---------|
-|  | crds | 0.0.0 |
+|  | crds | 2.6.0 |
 | https://charts.bitnami.com/bitnami | etcd | 8.6.0 |
 | https://grafana.github.io/helm-charts | loki-stack | 2.9.11 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.25.0 |
