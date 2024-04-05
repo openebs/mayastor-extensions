@@ -55,7 +55,7 @@ let
     # Script doesn't need to be used with main branch `--alias-tag <main-branch-style-tag>`.
     # The repo chart is already prepared.
     if [[ "$(semver validate ${tag})" == "valid" ]] &&
-      [[ ! ${tag} =~ ^(v?[0-9]+\.[0-9]+\.[0-9]+-0-main-unstable(-[0-9]+){6}-0)$ ]]; then
+      [[ ! ${tag} =~ ^(v?[0-9]+\.[0-9]+\.[0-9]+-0-(main|release)-unstable(-[0-9]+){6}-0)$ ]]; then
       CHART_FILE=build/chart/Chart.yaml build/scripts/helm/publish-chart-yaml.sh --app-tag ${tag} --override-index ""
     fi
 
