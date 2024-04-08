@@ -28,6 +28,11 @@ set -euo pipefail
 # Requires a 'git fetch origin' (origin being the remote entry for openebs/mayastor-extensions) or equivalent, if not
 # done already.
 latest_release_branch() {
+  if [ -n "$LATEST_RELEASE_BRANCH" ]; then
+    echo "$LATEST_RELEASE_BRANCH"
+    return 0
+  fi
+
   cd "$ROOTDIR"
 
   # The latest release branch name is required for generating the helm chart version/appVersion
@@ -53,38 +58,45 @@ latest_release_branch() {
   echo "${latest_release_branch#*origin/}"
 }
 
-main_branch_version_from_release_branch() {
+helm_testing_branch_version() {
   local release_branch=$1
+  local helm_kind=""
 
-  # Validate release branch name.
-  if ! [[ "$release_branch" =~ ^(release\/[0-9]+\.[0-9]+)$ ]]; then
+  if [[ "$check_branch" == "helm-testing/develop" ]]; then
+    release_branch=$(latest_release_branch)
+    helm_kind="main"
+  elif [[ "$check_branch" =~ ^helm-testing\/release\/[0-9.]+$ ]]; then
+    release_branch="${check_branch#helm-testing/}"
+    helm_kind="release"
+  else
+    die "Unknown helm-testing branch: $check_branch"
+  fi
+
+  if ! [[ "$release_branch" =~ release\/[0-9.]+$ ]]; then
     die "'$release_branch' is not a valid release branch"
   fi
 
-  # It is possible that this version isn't released, and may never see an actual release.
-  # However, it is the latest possible release, and no newer version of a higher semver
-  # values likely exists on that repo.
-  # Adds a '.0' at the end to make the version semver compliant.
-  local latest_version="${release_branch#*release/}".0
-
-  local bumped_latest=""
-  # Bump minor by default.
-  if [ -n "$BUMP_MAJOR_FOR_MAIN" ]; then
-    bumped_latest=$(semver bump major "$latest_version")
+  local latest_version="${release_branch#*release/}"
+  if [[ "$latest_version" =~ ^[0-9]+$ ]]; then
+    latest_version=${latest_version}.0.0
+  elif [[ "$latest_version" =~ ^[0-9]+.[0-9]+$ ]]; then
+    latest_version=${latest_version}.0
+  elif [[ "$latest_version" =~ ^[0-9]+.[0-9]+.[0-9]+$ ]]; then
+    latest_version=${latest_version}
   else
-    bumped_latest=$(semver bump minor "$latest_version")
+    die "'$release_branch' is not a supported release"
   fi
 
-  # Date-time appended to main tag, if present. Else, defaulting to 'main'.
-  local penultimate_member=""
-  if [ -n "$DATE_TIME" ]; then
-    penultimate_member=$DATE_TIME
-  else
-    penultimate_member="main"
-    echo_stderr "WARNING: No input timestamp for main branch helm chart, using 'main' instead"
+  local bumped_latest="$latest_version"
+  if [[ "$check_branch" == "helm-testing/develop" ]]; then
+    bump="minor"
+    if [ -n "$BUMP_MAJOR_FOR_MAIN" ]; then
+      bump="major"
+    fi
+    bumped_latest=$(semver bump "$bump" "$latest_version")
   fi
 
-  semver bump prerel 0-main-unstable-"$penultimate_member"-0 "$bumped_latest"
+  semver bump prerel 0-"$helm_kind"-unstable-"$DATE_TIME"-0 "$bumped_latest"
 }
 
 # Checks if version is semver and removes "v" from the beginning
@@ -106,9 +118,11 @@ version()
 
 # Get the expected Chart version for the given branch
 # Example:
-# For 'develop', the Chart should be x.0.0-develop
-# For 'main', if DATE_TIME is not defined then chart should be v0.0.0-main
-# Else for 'main', the Chart should be x.0.0-$date-$time, example: v0.0.0-2023-03-30-13-07-40
+# For 'develop', the Chart should be 0.0.0
+# For 'helm-testing/develop', the Chart should be $vNext-0-main-unstable-$date-time-0,
+# eg: 2.0.0-0-main-unstable-2023-03-30-13-07-40-0
+# For 'helm-testing/release/2.1', the Chart should be 2.1.0-0-main-unstable-$date-time-0,
+# eg: 2.0.0-0-release-unstable-2023-03-30-13-07-40-0
 # For 'release/2.0' the Chart should be 2.0.0
 branch_chart_version()
 {
@@ -117,24 +131,12 @@ branch_chart_version()
   if [ "$check_branch" == "develop" ]; then
     # Develop has no meaningful version
     echo "0.0.0"
-  elif [[ "$check_branch" =~  ^(helm-testing\/[0-9.]+)$  ]]; then
-    release_v="${check_branch#helm-testing/}"
-    if [ "$(semver validate "$release_v")" == "valid" ]; then
-      echo "$release_v"
-    elif [ "$(semver validate "$release_v.0")" == "valid" ]; then
-      echo "$release_v.0"
-    else
-      die "Cannot determine Chart version from branch: $check_branch"
-    fi
-    elif [[ "$check_branch" == @(helm-testing/develop|main) ]]; then
-    if [ -z "$LATEST_RELEASE_BRANCH" ]; then
-      LATEST_RELEASE_BRANCH=$(latest_release_branch)
-    fi
+  elif [[ "$check_branch" =~ ^helm-testing\/ ]]; then
     # The main branch helm chart appVersion should follow this format: <bumped-latest>-0-main-unstable-<timestamp>-0
     # If there is no timestamp, then the version defaults to <bumped-latest>-0-main-unstable-main-0
     # Here 'bumped-latest' is the version obtained when the latest release branch version is bumped
     # as per semver convention. It is by-default a minor version bump, but it could be a major one as well.
-    main_branch_version_from_release_branch "$LATEST_RELEASE_BRANCH"
+    helm_testing_branch_version "${check_branch}"
   elif [ "$RELEASE_V" != "${check_branch}" ]; then
     if [ "$(semver validate "$RELEASE_V")" == "valid" ]; then
       echo "$RELEASE_V"
@@ -171,7 +173,8 @@ index_yaml()
 
 # yq-go eats up blank lines
 # this function gets around that using diff with --ignore-blank-lines
-yq_ibl() {
+yq_ibl()
+{
   set +e
   diff_out=$(diff -B <(yq '.' "$2") <(yq "$1" "$2"))
   error=$?
@@ -184,6 +187,29 @@ yq_ibl() {
   set -euo pipefail
 }
 
+output_yaml()
+{
+  newChartVersion=$1
+  newChartAppVersion=$2
+  imageTag=$3
+  imagePullPolicy=$4
+
+  echo "NEW_CHART_VERSION: $newChartVersion"
+  echo "NEW_CHART_APP_VERSION: $newChartAppVersion"
+
+  if [ -z "$DRY_RUN" ]; then
+    sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
+    sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
+    # Set same versions on the CRD subchart
+    sed -i "s/^version:.*/version: $newChartVersion/" "$CRDS_SUBCHART_CHART_FILE"
+    yq_ibl "(.dependencies[] | select(.name == \"crds\").version) |= \"$newChartVersion\"" "$CHART_FILE"
+
+    yq_ibl ".image.tag |= \"$imageTag\"" "$CHART_VALUES"
+    yq_ibl ".image.pullPolicy |= \"$imagePullPolicy\"" "$CHART_VALUES"
+    yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
+  fi
+}
+
 help() {
   cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
@@ -193,7 +219,7 @@ Options:
   -h, --help                                       Display this text.
   --check-chart           <branch>                 Check if the chart version/app version is correct for the branch.
   --develop-to-release                             Also upgrade the chart to the release version matching the branch.
-  --to-main                                        Also upgrade the chart to the appropriate main branch chart version.
+  --helm-testing          <branch>                 Upgrade the chart to the appropriate branch chart version.
   --app-tag               <tag>                    The appVersion tag.
   --override-index        <latest_version>         Override the latest chart version from the published chart's index.
   --index-file            <index_yaml>             Use the provided index.yaml instead of fetching from the git branch.
@@ -232,7 +258,7 @@ INDEX_BRANCH_FILE="index.yaml"
 INDEX_FILE=
 DRY_RUN=
 DEVELOP_TO_REL=
-TO_MAIN=
+HELM_TESTING=
 DATE_TIME_FMT="%Y-%m-%d-%H-%M-%S"
 DATE_TIME=
 IGNORE_INDEX_CHECK=
@@ -263,8 +289,10 @@ while [ "$#" -gt 0 ]; do
       DEVELOP_TO_REL=1
       shift
       ;;
-    --to-main)
-      TO_MAIN=1
+    --helm-testing)
+      HELM_TESTING=1
+      shift
+      CHECK_BRANCH=$1
       shift
       ;;
     --app-tag)
@@ -328,9 +356,9 @@ CHART_VERSION=$(version "$CHART_VERSION")
 CHART_APP_VERSION=$(version "$CHART_APP_VERSION")
 
 if [ -n "$CHECK_BRANCH" ]; then
-  # It's ok to leave out the timestamp for a --check-chart, but not for a --to-main.
-  if [ -n "$TO_MAIN" ] && [ -z "$DATE_TIME" ]; then
-    die "ERROR: No date-time input for main branch helm chart version"
+  # It's ok to leave out the timestamp for a --check-chart, but not for a --helm-testing.
+  if [ -n "$HELM_TESTING" ] && [ -z "$DATE_TIME" ]; then
+    die "ERROR: No date-time input for helm-testing chart version"
   fi
   APP_TAG=$(branch_chart_version "$CHECK_BRANCH")
 else
@@ -344,13 +372,12 @@ echo "APP_TAG: $APP_TAG"
 echo "CHART_VERSION: $CHART_VERSION"
 echo "CHART_APP_VERSION: $CHART_APP_VERSION"
 
-if [[ "$CHECK_BRANCH" == @(helm-testing/develop|main) ]]; then
+if [[ "$CHECK_BRANCH" == "helm-testing/develop" ]]; then
   allowed_diff=("" "major" "minor" "patch" "prerelease")
 else
   # Allow only for a semver difference of at most patch
   allowed_diff=("" "patch" "prerelease")
 fi
-
 
 diff="$(semver diff "$CHART_VERSION" "$CHART_APP_VERSION")"
 if ! [[ " ${allowed_diff[*]} " =~ " $diff " ]]; then
@@ -359,50 +386,15 @@ fi
 
 if [ -n "$CHECK_BRANCH" ]; then
   if [ "$(semver get prerel "$APP_TAG")" != "" ]; then
-    if [[ "$CHECK_BRANCH" != @(helm-testing/develop|main) ]]; then
+    if ! [[ "$CHECK_BRANCH" =~ ^helm-testing\/(release\/[0-9.]+$|develop) ]]; then
         die "Script expects Branch Name($APP_TAG) to point to a stable release"
     fi
   fi
-  if [ -n "$TO_MAIN" ]; then
-    newChartVersion="$APP_TAG"
-    newChartAppVersion="$APP_TAG"
-    echo "NEW_CHART_VERSION: $newChartVersion"
-    echo "NEW_CHART_APP_VERSION: $newChartAppVersion"
-
-    if [ -z "$DRY_RUN" ]; then
-      sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
-      sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
-      # Set same versions on the CRD subchart
-      sed -i "s/^version:.*/version: $newChartVersion/" "$CRDS_SUBCHART_CHART_FILE"
-      yq_ibl "(.dependencies[] | select(.name == \"crds\").version) |= \"$newChartVersion\"" "$CHART_FILE"
-
-      # Set image tag to empty because main branch uses repoTags.
-      yq_ibl '.image.tag |= ""' "$CHART_VALUES"
-      # always pull since image changes with commits to the branch
-      yq_ibl ".image.pullPolicy |= \"IfNotPresent\"" "$CHART_VALUES"
-      yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
-    fi
-    exit 0
+  if [ -n "$HELM_TESTING" ]; then
+    output_yaml "$APP_TAG" "$APP_TAG" "" "IfNotPresent"
   elif [ -n "$DEVELOP_TO_REL" ]; then
     if [ "$CHART_VERSION" == "0.0.0" ]; then
-      newChartVersion="$APP_TAG"
-      newChartAppVersion="$APP_TAG"
-      echo "NEW_CHART_VERSION: $newChartVersion"
-      echo "NEW_CHART_APP_VERSION: $newChartAppVersion"
-
-      if [ -z "$DRY_RUN" ]; then
-        sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
-        sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
-        # Set same versions on the CRD subchart
-        sed -i "s/^version:.*/version: $newChartVersion/" "$CRDS_SUBCHART_CHART_FILE"
-        yq_ibl "(.dependencies[] | select(.name == \"crds\").version) |= \"$newChartVersion\"" "$CHART_FILE"
-
-        # point image tag to the release branch images
-        yq_ibl ".image.tag |= \"${CHECK_BRANCH////-}\"" "$CHART_VALUES"
-        # always pull since image changes with commits to the branch
-        yq_ibl ".image.pullPolicy |= \"Always\"" "$CHART_VALUES"
-        yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
-      fi
+      output_yaml "$APP_TAG" "$APP_TAG" "${CHECK_BRANCH////-}" "Always"
     else
       die "ERROR: source chart is not from develop branch"
     fi
@@ -476,18 +468,4 @@ else
   newChartAppVersion="$APP_TAG"
 fi
 
-echo "NEW_CHART_VERSION: $newChartVersion"
-echo "NEW_CHART_APP_VERSION: $newChartAppVersion"
-
-if [ -z "$DRY_RUN" ]; then
-  sed -i "s/^version:.*$/version: $newChartVersion/" "$CHART_FILE"
-  sed -i "s/^appVersion:.*$/appVersion: \"$newChartAppVersion\"/" "$CHART_FILE"
-  # Set same versions on the CRD subchart
-  sed -i "s/^version:.*/version: $newChartVersion/" "$CRDS_SUBCHART_CHART_FILE"
-  yq_ibl "(.dependencies[] | select(.name == \"crds\").version) |= \"$newChartVersion\"" "$CHART_FILE"
-
-  yq_ibl ".image.tag |= \"v$newChartAppVersion\"" "$CHART_VALUES"
-  # tags are stable so we don't need to pull always
-  yq_ibl ".image.pullPolicy |= \"IfNotPresent\"" "$CHART_VALUES"
-  yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
-fi
+output_yaml "$newChartVersion" "$newChartAppVersion" "v$newChartAppVersion" "IfNotPresent"
