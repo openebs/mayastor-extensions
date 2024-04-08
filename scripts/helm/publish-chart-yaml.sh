@@ -395,8 +395,8 @@ if [ -n "$CHECK_BRANCH" ]; then
   elif [ -n "$DEVELOP_TO_REL" ]; then
     if [ "$CHART_VERSION" == "0.0.0" ]; then
       output_yaml "$APP_TAG" "$APP_TAG" "${CHECK_BRANCH////-}" "Always"
-    else
-      die "ERROR: source chart is not from develop branch"
+    elif [ "$CHART_VERSION" != "$APP_TAG" ]; then
+      die "ERROR: Already on $CHART_VERSION which does not match $APP_TAG"
     fi
     exit 0
   fi
