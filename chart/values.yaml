@@ -15,7 +15,7 @@ image:
   # -- Image registry's namespace
   repo: openebs
   # -- Release tag for our images
-  tag: develop
+  tag: ""
   repoTags:
     # Note: Below image tag configuration is optional and typically should never be
     #       used. Setting specific image tags for the different repositories proves useful
@@ -23,11 +23,11 @@ image:
     #       release/pre-release container image tags.
     #       The below tag values will be picked for images by default.
     #       If not specified, 'tag' option provided above will be picked.
-    controlPlane: 4cc26d30db56
-    dataPlane: bf6450d646f1
-    extensions: 23092a325529
+    controlPlane: ac3e8d7c1083
+    dataPlane: 03a7c8574896
+    extensions: 3604570b4f74
   # -- ImagePullPolicy for our images
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
 
 # -- Node labels for pod assignment
 # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
