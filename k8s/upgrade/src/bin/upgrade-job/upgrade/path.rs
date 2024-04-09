@@ -5,7 +5,7 @@ use crate::{
             ListDeploymentsWithLabel, NoRestDeployment, NoVersionLabelInDeployment, ReadingFile,
             Result, SemverParse, YamlParseBufferForUnsupportedVersion, YamlParseFromFile,
         },
-        kube_client::KubeClientSet,
+        kube_client as KubeClient,
     },
     helm::chart::Chart,
 };
@@ -42,9 +42,8 @@ pub(crate) fn version_from_chart_yaml_file(path: PathBuf) -> Result<Version> {
 pub(crate) async fn version_from_rest_deployment_label(ns: &str) -> Result<Version> {
     let labels = format!("{API_REST_LABEL},{CHART_VERSION_LABEL_KEY}");
 
-    let k8s_client = KubeClientSet::builder().with_namespace(ns).build().await?;
-    let mut deploy_list = k8s_client
-        .deployments_api()
+    let deployments_api = KubeClient::deployments_api(ns).await?;
+    let mut deploy_list = deployments_api
         .list(&ListParams::default().labels(labels.as_str()))
         .await
         .context(ListDeploymentsWithLabel {

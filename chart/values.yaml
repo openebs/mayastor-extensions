@@ -1,9 +1,6 @@
 crds:
   # -- Disables the installation of all CRDs if set to false
   enabled: true
-  jaeger:
-    # -- Install Jaeger CRDs
-    enabled: true
   csi:
     volumeSnapshots:
       # -- Install Volume Snapshot CRDs
@@ -103,7 +100,9 @@ base:
     enabled: true
 
   jaeger:
-    # -- Enable jaeger tracing
+    # Enable jaeger tracing (for development only).
+    # Since version 1.31 the Jaeger Operator uses webhooks to validate Jaeger custom resources (CRs).
+    # This requires an installed version of the cert-manager.
     enabled: false
     initContainer: true
     agent:
@@ -143,9 +142,6 @@ operators:
 jaeger-operator:
   # Name of jaeger operator
   name: "{{ .Release.Name }}"
-  crd:
-    # Install jaeger CRDs
-    install: false
   jaeger:
     # Install jaeger-operator
     create: false
@@ -349,6 +345,9 @@ csi:
     kubeletDir: /var/lib/kubelet
     pluginMountPath: /csi
     socketPath: csi.sock
+    # Additional arguments when creating filesystems
+    mkfs_args:
+      xfs: ""
     # -- Set tolerations, overrides global
     tolerations: []
     # -- Set PriorityClass, overrides global
@@ -773,13 +772,8 @@ storageClass:
     repl: 1
 
 localpv-provisioner:
-  # -- Enables the openebs dynamic-localpv provisioner. If disabled, modify etcd and loki-stack storage class accordingly.
+  # -- Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki-stack storage class accordingly.
   enabled: true
-  # Enable/disable the openebs NDM sub-chart. It's recommended to keep this disabled.
-  openebsNDM:
-    enabled: false
-  # Enable/disable the creation of the openebs-device StorageClass. It's recommended to keep this disabled.
-  deviceClass:
-    enabled: false
   hostpathClass:
+    # -- Enable default hostpath localpv StorageClass.
     enabled: false

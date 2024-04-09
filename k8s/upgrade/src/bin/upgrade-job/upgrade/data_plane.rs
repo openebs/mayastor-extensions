@@ -9,7 +9,7 @@ use crate::{
             ListNodesWithLabel, ListPodsWithLabel, ListPodsWithLabelAndField, ListStorageNodes,
             PodDelete, Result, StorageNodeUncordon, TooManyIoEnginePods,
         },
-        kube_client::KubeClientSet,
+        kube_client as KubeClient,
         rest_client::RestClientSet,
     },
     upgrade::utils::{
@@ -37,22 +37,19 @@ pub(crate) async fn upgrade_data_plane(
     ha_is_enabled: bool,
 ) -> Result<()> {
     // Generate k8s clients.
-    let k8s_client = KubeClientSet::builder()
-        .with_namespace(namespace.clone())
-        .build()
-        .await?;
+    let k8s_pods_api = KubeClient::pods_api(namespace.as_str()).await?;
 
     // This makes data-plane upgrade idempotent.
     let io_engine_label = format!("{IO_ENGINE_LABEL},{CHART_VERSION_LABEL_KEY}");
     let io_engine_listparams = ListParams::default().labels(io_engine_label.as_str());
-    let io_engine_pod_list = k8s_client
-        .pods_api()
-        .list(&io_engine_listparams)
-        .await
-        .context(ListPodsWithLabel {
-            label: io_engine_label,
-            namespace: namespace.clone(),
-        })?;
+    let io_engine_pod_list =
+        k8s_pods_api
+            .list(&io_engine_listparams)
+            .await
+            .context(ListPodsWithLabel {
+                label: io_engine_label,
+                namespace: namespace.clone(),
+            })?;
     if data_plane_is_upgraded(&upgrade_target_version, &io_engine_pod_list).await? {
         info!("Skipping data-plane upgrade: All data-plane Pods are already upgraded");
         return Ok(());
@@ -87,8 +84,7 @@ pub(crate) async fn upgrade_data_plane(
     }
 
     loop {
-        let initial_io_engine_pod_list: ObjectList<Pod> = k8s_client
-            .pods_api()
+        let initial_io_engine_pod_list: ObjectList<Pod> = k8s_pods_api
             .list(&io_engine_listparams)
             .await
             .context(ListPodsWithLabel {
@@ -105,7 +101,7 @@ pub(crate) async fn upgrade_data_plane(
             // Validate the control plane pod is up and running before we start.
             verify_control_plane_is_running(
                 namespace.clone(),
-                &k8s_client,
+                &k8s_pods_api,
                 &upgrade_target_version,
             )
             .await?;
@@ -144,7 +140,7 @@ pub(crate) async fn upgrade_data_plane(
             if is_node_drainable(
                 ha_is_enabled,
                 node_name,
-                k8s_client.nodes_api(),
+                KubeClient::nodes_api().await?,
                 &rest_client,
             )
             .await?
@@ -154,14 +150,14 @@ pub(crate) async fn upgrade_data_plane(
             }
 
             // restart the data plane pod
-            delete_data_plane_pod(node_name, pod, &k8s_client).await?;
+            delete_data_plane_pod(node_name, pod, &k8s_pods_api).await?;
 
             // validate the new pod is up and running
             verify_data_plane_pod_is_running(
                 node_name,
                 namespace.clone(),
                 &upgrade_target_version,
-                &k8s_client,
+                &k8s_pods_api,
             )
             .await?;
 
@@ -225,11 +221,7 @@ async fn uncordon_drained_storage_node(node_id: &str, rest_client: &RestClientSe
 }
 
 /// Issue delete command on dataplane pods.
-async fn delete_data_plane_pod(
-    node_name: &str,
-    pod: &Pod,
-    k8s_client: &KubeClientSet,
-) -> Result<()> {
+async fn delete_data_plane_pod(node_name: &str, pod: &Pod, k8s_pods_api: &Api<Pod>) -> Result<()> {
     // Deleting the io-engine pod
     let pod_name = pod.name_any();
     info!(
@@ -237,8 +229,7 @@ async fn delete_data_plane_pod(
         node.name = node_name,
         "Deleting the pod"
     );
-    k8s_client
-        .pods_api()
+    k8s_pods_api
         .delete(pod_name.as_str(), &DeleteParams::default())
         .await
         .context(PodDelete {
@@ -254,7 +245,7 @@ async fn verify_data_plane_pod_is_running(
     node_name: &str,
     namespace: String,
     upgrade_target_version: &String,
-    k8s_client: &KubeClientSet,
+    k8s_pods_api: &Api<Pod>,
 ) -> Result<()> {
     let duration = Duration::from_secs(5_u64);
     // Validate the new pod is up and running
@@ -263,7 +254,7 @@ async fn verify_data_plane_pod_is_running(
         node_name,
         namespace.clone(),
         upgrade_target_version,
-        k8s_client,
+        k8s_pods_api,
     )
     .await?
     {
@@ -350,7 +341,7 @@ async fn data_plane_pod_is_running(
     node: &str,
     namespace: String,
     upgrade_target_version: &String,
-    k8s_client: &KubeClientSet,
+    k8s_pods_api: &Api<Pod>,
 ) -> Result<bool> {
     let node_name_pod_field = format!("spec.nodeName={node}");
     let pod_label = format!("{IO_ENGINE_LABEL},{CHART_VERSION_LABEL_KEY}={upgrade_target_version}");
@@ -358,15 +349,15 @@ async fn data_plane_pod_is_running(
         .labels(pod_label.as_str())
         .fields(node_name_pod_field.as_str());
 
-    let pod_list: ObjectList<Pod> = k8s_client
-        .pods_api()
-        .list(&io_engine_listparam)
-        .await
-        .context(ListPodsWithLabelAndField {
-            label: pod_label,
-            field: node_name_pod_field,
-            namespace: namespace.clone(),
-        })?;
+    let pod_list: ObjectList<Pod> =
+        k8s_pods_api
+            .list(&io_engine_listparam)
+            .await
+            .context(ListPodsWithLabelAndField {
+                label: pod_label,
+                field: node_name_pod_field,
+                namespace: namespace.clone(),
+            })?;
 
     if pod_list.items.is_empty() {
         return Ok(false);
@@ -381,11 +372,12 @@ async fn data_plane_pod_is_running(
 
 async fn verify_control_plane_is_running(
     namespace: String,
-    k8s_client: &KubeClientSet,
+    k8s_pods_api: &Api<Pod>,
     upgrade_target_version: &String,
 ) -> Result<()> {
     let duration = Duration::from_secs(3_u64);
-    while !control_plane_is_running(namespace.clone(), k8s_client, upgrade_target_version).await? {
+    while !control_plane_is_running(namespace.clone(), k8s_pods_api, upgrade_target_version).await?
+    {
         sleep(duration).await;
     }
 
@@ -395,13 +387,12 @@ async fn verify_control_plane_is_running(
 /// Validate if control-plane pods are running -- etcd, agent-core, api-rest.
 async fn control_plane_is_running(
     namespace: String,
-    k8s_client: &KubeClientSet,
+    k8s_pods_api: &Api<Pod>,
     upgrade_target_version: &String,
 ) -> Result<bool> {
     let agent_core_selector_label =
         format!("{AGENT_CORE_LABEL},{CHART_VERSION_LABEL_KEY}={upgrade_target_version}");
-    let pod_list: ObjectList<Pod> = k8s_client
-        .pods_api()
+    let pod_list: ObjectList<Pod> = k8s_pods_api
         .list(&ListParams::default().labels(agent_core_selector_label.as_str()))
         .await
         .context(ListPodsWithLabel {
@@ -412,8 +403,7 @@ async fn control_plane_is_running(
 
     let api_rest_selector_label =
         format!("{API_REST_LABEL},{CHART_VERSION_LABEL_KEY}={upgrade_target_version}");
-    let pod_list: ObjectList<Pod> = k8s_client
-        .pods_api()
+    let pod_list: ObjectList<Pod> = k8s_pods_api
         .list(&ListParams::default().labels(api_rest_selector_label.as_str()))
         .await
         .context(ListPodsWithLabel {
@@ -422,8 +412,7 @@ async fn control_plane_is_running(
         })?;
     let rest_is_ready = all_pods_are_ready(pod_list);
 
-    let pod_list: ObjectList<Pod> = k8s_client
-        .pods_api()
+    let pod_list: ObjectList<Pod> = k8s_pods_api
         .list(&ListParams::default().labels(ETCD_LABEL))
         .await
         .context(ListPodsWithLabel {
@@ -441,7 +430,7 @@ async fn control_plane_is_running(
 async fn is_node_drainable(
     ha_is_enabled: bool,
     node_name: &str,
-    k8s_nodes_api: &Api<Node>,
+    k8s_nodes_api: Api<Node>,
     rest_client: &RestClientSet,
 ) -> Result<bool> {
     if !ha_is_enabled {

@@ -54,12 +54,12 @@ This removes all the Kubernetes components associated with the chart and deletes
 
 | Repository | Name | Version |
 |------------|------|---------|
-|  | crds | 0.0.0 |
+|  | crds | 2.6.0 |
 | https://charts.bitnami.com/bitnami | etcd | 8.6.0 |
 | https://grafana.github.io/helm-charts | loki-stack | 2.9.11 |
-| https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.25.0 |
+| https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.50.1 |
 | https://nats-io.github.io/k8s/helm/charts/ | nats | 0.19.14 |
-| https://openebs.github.io/dynamic-localpv-provisioner | localpv-provisioner | 3.5.0 |
+| https://openebs.github.io/dynamic-localpv-provisioner | localpv-provisioner | 4.0.0 |
 
 ## Values
 
@@ -101,14 +101,12 @@ This removes all the Kubernetes components associated with the chart and deletes
 | base.&ZeroWidthSpace;cache_poll_period | Cache timeout for core agent & diskpool deployment | `"30s"` |
 | base.&ZeroWidthSpace;default_req_timeout | Request timeout for rest & core agents | `"5s"` |
 | base.&ZeroWidthSpace;imagePullSecrets.&ZeroWidthSpace;enabled | Enable imagePullSecrets for pulling our container images | `false` |
-| base.&ZeroWidthSpace;jaeger.&ZeroWidthSpace;enabled | Enable jaeger tracing | `false` |
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;color | Enable ansi color code for Pod StdOut/StdErr | `true` |
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;format | Valid values for format are pretty, json and compact | `"pretty"` |
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;silenceLevel | Silence specific module components | `nil` |
 | base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;enabled | Enable the metrics exporter | `true` |
 | crds.&ZeroWidthSpace;csi.&ZeroWidthSpace;volumeSnapshots.&ZeroWidthSpace;enabled | Install Volume Snapshot CRDs | `true` |
 | crds.&ZeroWidthSpace;enabled | Disables the installation of all CRDs if set to false | `true` |
-| crds.&ZeroWidthSpace;jaeger.&ZeroWidthSpace;enabled | Install Jaeger CRDs | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;logLevel | Log level for the csi controller | `"info"` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;preventVolumeModeConversion | Prevent modifying the volume mode when creating a PVC from an existing VolumeSnapshot | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
@@ -169,7 +167,8 @@ This removes all the Kubernetes components associated with the chart and deletes
 | io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;iface | NVMF target interface (ip, mac, name or subnet) | `""` |
 | io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;ptpl | Reservations Persist Through Power Loss State | `true` |
 | io_engine.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| localpv-provisioner.&ZeroWidthSpace;enabled | Enables the openebs dynamic-localpv provisioner. If disabled, modify etcd and loki-stack storage class accordingly. | `true` |
+| localpv-provisioner.&ZeroWidthSpace;enabled | Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki-stack storage class accordingly. | `true` |
+| localpv-provisioner.&ZeroWidthSpace;hostpathClass.&ZeroWidthSpace;enabled | Enable default hostpath localpv StorageClass. | `false` |
 | loki-stack.&ZeroWidthSpace;enabled | Enable loki log collection for our components | `true` |
 | loki-stack.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;basePath | Host path where local etcd data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/loki"` |
 | loki-stack.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of loki's localpv hostpath storage class. | `"Delete"` |
