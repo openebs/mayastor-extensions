@@ -1,13 +1,3 @@
-jaeger:
-  # -- Install Jaeger CRDs
-  enabled: true
-  # -- Keep CRDs on chart uninstall
-  keep: true
-  # -- Annotations to be added to all CRDs
-  annotations: {}
-    # Example for Argo CD to prevent CRDs from being recycled
-    # argocd.argoproj.io/sync-options: Prune=false
-
 csi:
   volumeSnapshots:
     # -- Install Volume Snapshot CRDs
@@ -18,4 +8,3 @@ csi:
     annotations: {}
     # Example for Argo CD to prevent CRDs from being recycled
     # argocd.argoproj.io/sync-options: Prune=false
-
