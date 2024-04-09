@@ -12,7 +12,7 @@ image:
   # -- Image registry's namespace
   repo: openebs
   # -- Release tag for our images
-  tag: release-2.6
+  tag: ""
   repoTags:
     # Note: Below image tag configuration is optional and typically should never be
     #       used. Setting specific image tags for the different repositories proves useful
@@ -24,7 +24,7 @@ image:
     dataPlane: 6c66a3367def
     extensions: 6423ebc3d7e3
   # -- ImagePullPolicy for our images
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
 
 # -- Node labels for pod assignment
 # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
