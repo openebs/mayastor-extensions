@@ -66,7 +66,7 @@ Usage:
 {{ include "csi_node_init_containers" . }}
 */}}
 {{- define "csi_node_init_containers" -}}
-    {{- if .Values.csi.node.initContainers.enabled }}
+    {{- if (.Values.csi.node.initContainers).enabled }}
     {{- include "render" (dict "value" .Values.csi.node.initContainers.containers "context" $) | nindent 8 }}
     {{- end }}
 {{- end -}}
