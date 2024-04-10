@@ -63,6 +63,9 @@ spec:
             - "--ansi-colors={{ .Values.base.logging.color }}"
             - "--create-volume-limit={{ .Values.agents.core.maxCreateVolume }}"{{ if .Values.agents.core.maxRebuilds }}
             - "--max-rebuilds={{ .Values.agents.core.maxRebuilds }}"{{ end }}
+            {{- if .Values.agents.core.partialRebuildDisable }}
+            - "--disable-partial-rebuild"
+            {{- end }}
           ports:
             - containerPort: 50051
           env:
