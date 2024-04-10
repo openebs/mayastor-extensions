@@ -183,6 +183,8 @@ agents:
     # faster depending on the log size. Otherwise, the replica will be fully rebuilt.
     # A blank value "" means internally derived value will be used.
     partialRebuildWaitPeriod: ""
+    # Set to true to disable partial rebuilds.
+    partialRebuildDisable:
     # The maximum number of system-wide rebuilds permitted at any given time.
     # If set to an empty string, there are no limits.
     maxRebuilds: ""
