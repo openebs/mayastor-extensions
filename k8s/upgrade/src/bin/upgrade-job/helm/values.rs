@@ -361,6 +361,14 @@ where
             YamlKey::try_from(".csi.node.pluginMounthPath")?,
             upgrade_values_file.path(),
         )?;
+
+        // This sets the image tag for the jaeger-operator. This is required for the
+        // jaeger-operator dependency update from 2.50.0 to 2.50.1.
+        yq.set_literal_value(
+            YamlKey::try_from(".jaeger-operator.image.tag")?,
+            source_values.jaeger_operator_image_tag(),
+            upgrade_values_file.path(),
+        )?;
     }
 
     // Default options.

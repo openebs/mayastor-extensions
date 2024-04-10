@@ -75,6 +75,9 @@ pub(crate) struct CoreValues {
     eventing: Eventing,
     /// This contains Kubernetes CSI sidecar container image details.
     csi: Csi,
+    /// The contains the values for the jaegertracing/jaeger-operator chart.
+    #[serde(rename(deserialize = "jaeger-operator"))]
+    jaeger_operator: JaegerOperator,
     /// This contains loki-stack details.
     #[serde(rename(deserialize = "loki-stack"))]
     loki_stack: LokiStack,
@@ -289,6 +292,10 @@ impl CoreValues {
     /// This is the value of the deprecated key for log silence configuration.
     pub(crate) fn deprecated_log_silence_level(&self) -> &str {
         self.base.deprecated_log_silence_level()
+    }
+
+    pub(crate) fn jaeger_operator_image_tag(&self) -> &str {
+        self.jaeger_operator.image_tag()
     }
 }
 
@@ -1039,6 +1046,19 @@ struct LocalpvProvisionerHelperPod {
 
 impl LocalpvProvisionerHelperPod {
     /// This is getter for the openebs/linux-utils helper pod container's image tag.
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+}
+
+/// This is used to deserialize the '.jaeger-operator' yaml object.
+#[derive(Deserialize)]
+struct JaegerOperator {
+    image: GenericImage,
+}
+
+impl JaegerOperator {
+    /// This returns the image tag of the jaeger-operator from the jaeger-operator helm chart.
     fn image_tag(&self) -> &str {
         self.image.tag()
     }
