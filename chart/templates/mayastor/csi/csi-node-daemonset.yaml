@@ -77,7 +77,7 @@ spec:
               fieldPath: status.podIP
         - name: RUST_BACKTRACE
           value: "1"
-        {{- if .Values.csi.node.mkfs_args.xfs }}
+        {{- if (.Values.csi.node.mkfs_args).xfs }}
         - name: MKFS_XFS_ARGS
           value: {{ .Values.csi.node.mkfs_args.xfs | quote }}
         {{- end }}
