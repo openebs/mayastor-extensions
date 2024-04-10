@@ -303,7 +303,7 @@ entries:
     version: 2.0.0-rc.1
   - apiVersion: v2
     appVersion: 0.0.0
-    created: "2024-04-08T11:26:45.900904212Z"
+    created: "2024-04-10T13:59:45.512783547Z"
     dependencies:
     - condition: crds.enabled
       name: crds
@@ -315,7 +315,7 @@ entries:
     - condition: base.jaeger.enabled
       name: jaeger-operator
       repository: https://jaegertracing.github.io/helm-charts
-      version: 2.25.0
+      version: 2.50.1
     - condition: loki-stack.enabled
       name: loki-stack
       repository: https://grafana.github.io/helm-charts
@@ -329,7 +329,7 @@ entries:
       repository: https://openebs.github.io/dynamic-localpv-provisioner
       version: 4.0.0
     description: Mayastor Helm chart for Kubernetes
-    digest: cbd2cd8380fdb358016a1bb089f793b9a381478c293f635828a78945d7f83bd5
+    digest: a2b3e31f864c496b50352031df1ae4cb0ba9c63412b7403e5974f0e7d3d8fe74
     name: mayastor
     type: application
     urls:
@@ -365,4 +365,4 @@ entries:
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2024-04-08T11:26:45.882102165Z"
+generated: "2024-04-10T13:59:45.491150301Z"
