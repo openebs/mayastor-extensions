@@ -1,9 +1,6 @@
 crds:
   # -- Disables the installation of all CRDs if set to false
   enabled: true
-  jaeger:
-    # -- Install Jaeger CRDs
-    enabled: true
   csi:
     volumeSnapshots:
       # -- Install Volume Snapshot CRDs
@@ -103,7 +100,9 @@ base:
     enabled: true
 
   jaeger:
-    # -- Enable jaeger tracing
+    # Enable jaeger tracing (for development only).
+    # Since version 1.31 the Jaeger Operator uses webhooks to validate Jaeger custom resources (CRs).
+    # This requires an installed version of the cert-manager.
     enabled: false
     initContainer: true
     agent:
@@ -143,9 +142,6 @@ operators:
 jaeger-operator:
   # Name of jaeger operator
   name: "{{ .Release.Name }}"
-  crd:
-    # Install jaeger CRDs
-    install: false
   jaeger:
     # Install jaeger-operator
     create: false
