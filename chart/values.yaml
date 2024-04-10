@@ -706,6 +706,8 @@ nats:
   cluster:
     enabled: true
     replicas: 3
+  # Define if NATS is using FQDN name for clustering (i.e. nats-0.nats.default.svc.cluster.local) or short name (i.e. nats-0.nats.default).
+  useFQDN: false
   statefulSetPodLabels:
     app: nats
     openebs.io/logging: "true"
