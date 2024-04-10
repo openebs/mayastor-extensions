@@ -32,7 +32,7 @@ dependencies:
     repository: https://charts.bitnami.com/bitnami
     version: 8.6.0
   - name: jaeger-operator
-    version: 2.25.0
+    version: 2.50.1
     repository: https://jaegertracing.github.io/helm-charts
     condition: base.jaeger.enabled
   - name: loki-stack
