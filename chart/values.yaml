@@ -174,16 +174,18 @@ agents:
         # Example: if this value is 40, the pool has 40GiB free, then the max volume size allowed
         # to be snapped on the pool is 100GiB.
         snapshotCommitment: "40%"
-    # -- If a faulted replica comes back online within this time period then it will be
-    # rebuilt using the partial rebuild capability (using a log of missed IO), hence a bit
-    # faster depending on the log size. Otherwise, the replica will be fully rebuilt.
-    # A blank value "" means internally derived value will be used.
-    partialRebuildWaitPeriod: ""
-    # Set to true to disable partial rebuilds.
-    partialRebuildDisable:
-    # The maximum number of system-wide rebuilds permitted at any given time.
-    # If set to an empty string, there are no limits.
-    maxRebuilds: ""
+    rebuild:
+      # -- The maximum number of system-wide rebuilds permitted at any given time.
+      # If set to an empty string, there are no limits.
+      maxConcurrent: ""
+      partial:
+        # -- Partial rebuild uses a log of missed IO to rebuild replicas which have become temporarily faulted,
+        # hence a bit faster, depending on the log size.
+        enabled: true
+        # -- If a faulted replica comes back online within this time period then it will be
+        # rebuilt using the partial rebuild capability. Otherwise, the replica will be fully rebuilt.
+        # A blank value "" means internally derived value will be used.
+        waitPeriod: ""
     # The maximum number of concurrent create volume requests.
     maxCreateVolume: 10
 

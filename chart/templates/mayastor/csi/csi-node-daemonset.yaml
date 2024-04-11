@@ -82,7 +82,7 @@ spec:
           value: {{ .Values.csi.node.mkfs_args.xfs | quote }}
         {{- end }}
         args:
-        - "--csi-socket={{ .Values.csi.node.pluginMountPath }}/{{ .Values.csi.node.socketPath }}"
+        - "--csi-socket={{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--node-name=$(MY_NODE_NAME)"
         - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"
         - "--enable-registration"
@@ -109,7 +109,7 @@ spec:
         - name: run-udev
           mountPath: /run/udev
         - name: plugin-dir
-          mountPath: {{ .Values.csi.node.pluginMountPath }}
+          mountPath: {{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}
         - name: kubelet-dir
           mountPath: {{ .Values.csi.node.kubeletDir }}
           mountPropagation: "Bidirectional"
@@ -124,11 +124,11 @@ spec:
         image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-node-driver-registrar:{{ .Values.csi.image.registrarTag }}"
         imagePullPolicy: {{ .Values.csi.image.pullPolicy }}
         args:
-        - "--csi-address={{ .Values.csi.node.pluginMountPath }}/{{ .Values.csi.node.socketPath }}"
+        - "--csi-address={{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--kubelet-registration-path={{ .Values.csi.node.kubeletDir }}/plugins/io.openebs.mayastor/csi.sock"
         volumeMounts:
         - name: plugin-dir
-          mountPath: {{ .Values.csi.node.pluginMountPath }}
+          mountPath: {{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}
         - name: registration-dir
           mountPath: /registration
         resources:
