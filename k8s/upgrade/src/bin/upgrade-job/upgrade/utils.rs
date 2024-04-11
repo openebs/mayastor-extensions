@@ -7,7 +7,7 @@ use crate::common::{
     rest_client::RestClientSet,
 };
 use k8s_openapi::api::core::v1::Pod;
-use kube::{api::ObjectList, ResourceExt};
+use kube::ResourceExt;
 use openapi::models::{CordonDrainState, Volume, VolumeStatus};
 use semver::Version;
 use snafu::ResultExt;
@@ -139,7 +139,7 @@ pub(crate) fn replica_rebuild_count(volume: &Volume) -> i32 {
 
 /// This function returns 'true' only if all of the containers in the Pods contained in the
 /// ObjectList<Pod> have their Ready status.condition value set to true.
-pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> bool {
+pub(crate) fn all_pods_are_ready(pod_list: Vec<Pod>) -> bool {
     let not_ready_warning = |pod_name: &String, namespace: &String| {
         warn!(
             "Couldn't verify the ready condition of Pod '{}' in namespace '{}' to be true",
@@ -180,7 +180,7 @@ pub(crate) fn all_pods_are_ready(pod_list: ObjectList<Pod>) -> bool {
 /// chart.
 pub(crate) async fn data_plane_is_upgraded(
     target_version: &str,
-    io_engine_pod_list: &ObjectList<Pod>,
+    io_engine_pod_list: &Vec<Pod>,
 ) -> Result<bool> {
     let target_version_requirement: Version =
         Version::parse(target_version).context(SemverParse {

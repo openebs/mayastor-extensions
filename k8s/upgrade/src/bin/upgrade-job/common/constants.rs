@@ -30,6 +30,10 @@ pub(crate) const TO_UMBRELLA_SEMVER: &str = "4.0.0";
 pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str =
     "https://openebs.io/docs/user-guides/upgrade#mayastor-upgrade";
 
+/// This is the limit for the number of objects we want to collect over the network from
+/// the kubernetes api.
+pub(crate) const KUBE_API_PAGE_SIZE: u32 = 500;
+
 /// Version value for the earliest possible 2.0 release.
 pub(crate) const TWO_DOT_O_RC_ONE: &str = "2.0.0-rc.1";
 
