@@ -71,7 +71,7 @@ spec:
           value: "1"
         args:
         - "--node-name=$(MY_NODE_NAME)"
-        - "--csi-socket={{ .Values.csi.node.pluginMountPath }}/{{ .Values.csi.node.socketPath }}"
+        - "--csi-socket={{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--grpc-endpoint=$(MY_POD_IP):50053"
         - "--cluster-agent=https://{{ .Release.Name }}-agent-core:50052"{{ if .Values.base.jaeger.enabled }}
         - "--jaeger={{ .Values.base.jaeger.agent.name }}:{{ .Values.base.jaeger.agent.port }}"{{ end }}{{ if .Values.eventing.enabled }}
@@ -86,7 +86,7 @@ spec:
         - name: run-udev
           mountPath: /run/udev
         - name: plugin-dir
-          mountPath: {{ .Values.csi.node.pluginMountPath }}
+          mountPath: {{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}
         resources:
           limits:
             cpu: {{ .Values.agents.ha.node.resources.limits.cpu | quote }}
