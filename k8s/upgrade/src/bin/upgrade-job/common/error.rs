@@ -202,20 +202,6 @@ pub(crate) enum Error {
         pod_namespace: String,
     },
 
-    /// Error for when a Kubernetes API request for GET-ing a list of Pods filtered by label(s)
-    /// fails.
-    #[snafu(display(
-        "Failed to list Pods with label {} in namespace {}: {}",
-        label,
-        namespace,
-        source
-    ))]
-    ListPodsWithLabel {
-        source: kube::Error,
-        label: String,
-        namespace: String,
-    },
-
     /// Error for when a Kubernetes API request for GET-ing a list of Nodes filtered by label(s)
     /// fails.
     #[snafu(display("Failed to list Nodes with label {}: {}", label, source))]
