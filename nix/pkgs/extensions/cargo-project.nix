@@ -99,10 +99,13 @@ let
         lockFile = ../../../Cargo.lock;
       };
     });
+  cargoDeps = rustPlatform.importCargoLock {
+    lockFile = ../../../Cargo.lock;
+  };
   builder = if incremental then build_with_naersk else build_with_default;
 in
 {
-  inherit PROTOC PROTOC_INCLUDE version src;
+  inherit PROTOC PROTOC_INCLUDE version src cargoDeps;
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if allInOne then
