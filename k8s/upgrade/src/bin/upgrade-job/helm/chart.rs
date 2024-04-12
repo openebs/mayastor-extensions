@@ -678,6 +678,7 @@ impl LokiStack {
 #[derive(Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 struct Filebeat {
+    #[serde(default)]
     image_tag: String,
 }
 
@@ -692,6 +693,7 @@ impl Filebeat {
 #[derive(Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 struct Grafana {
+    #[serde(default)]
     download_dashboards_image: GrafanaDownloadDashboardsImage,
     image: GenericImage,
     sidecar: GrafanaSidecar,
@@ -715,8 +717,9 @@ impl Grafana {
 }
 
 /// This is used to deserialize the YAML object 'loki-stack.grafana.downloadDashboardsImage'.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct GrafanaDownloadDashboardsImage {
+    #[serde(default)]
     tag: String,
 }
 
@@ -730,6 +733,7 @@ impl GrafanaDownloadDashboardsImage {
 /// This is used to deserialize the YAML object 'loki-stack.grafana.sidecar'.
 #[derive(Deserialize)]
 struct GrafanaSidecar {
+    #[serde(default)]
     image: GenericImage,
 }
 
@@ -770,9 +774,13 @@ impl Loki {
 #[derive(Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 struct Prometheus {
+    #[serde(default)]
     alertmanager: PrometheusAlertmanager,
+    #[serde(default)]
     node_exporter: PrometheusNodeExporter,
+    #[serde(default)]
     pushgateway: PrometheusPushgateway,
+    #[serde(default)]
     server: PrometheusServer,
 }
 
@@ -799,8 +807,9 @@ impl Prometheus {
 }
 
 /// This is used to deserialize the prometheus chart's alertmanager YAML object.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct PrometheusAlertmanager {
+    #[serde(default)]
     image: GenericImage,
 }
 
@@ -811,8 +820,9 @@ impl PrometheusAlertmanager {
 }
 
 /// This is used to deserialize the prometheus chart's nodeExporter YAML object.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct PrometheusNodeExporter {
+    #[serde(default)]
     image: GenericImage,
 }
 
@@ -823,8 +833,9 @@ impl PrometheusNodeExporter {
 }
 
 /// This is used to deserialize the prometheus chart's pushgateway YAML object.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct PrometheusPushgateway {
+    #[serde(default)]
     image: GenericImage,
 }
 
@@ -835,8 +846,9 @@ impl PrometheusPushgateway {
 }
 
 /// This is used to deserialize the prometheus chart's server YAML object.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct PrometheusServer {
+    #[serde(default)]
     image: GenericImage,
 }
 
@@ -1028,6 +1040,7 @@ impl LocalpvProvisionerLocalpv {
 /// chart.
 #[derive(Default, Deserialize)]
 struct GenericImage {
+    #[serde(default)]
     tag: String,
 }
 
@@ -1054,6 +1067,7 @@ impl LocalpvProvisionerHelperPod {
 /// This is used to deserialize the '.jaeger-operator' yaml object.
 #[derive(Deserialize)]
 struct JaegerOperator {
+    #[serde(default)]
     image: GenericImage,
 }
 
