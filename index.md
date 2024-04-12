@@ -8,7 +8,7 @@ OpenEBS Data Engines and Control Plane are implemented as micro-services, deploy
 
 OpenEBS turns any storage available on the Kubernetes worker nodes into local or distributed Kubernetes Persistent Volumes.
 * Local Volumes are accessible only from a single node in the cluster. Pods using Local Volume have to be scheduled on the node where volume is provisioned. Local Volumes are typically preferred for distributed workloads like Cassandra, MongoDB, Elastic, etc that are distributed in nature and have high availability built into them. Depending on the type of storage attached to your Kubernetes worker openebs offers different flavors of Local PV - Hostpath, LVM and  ZFS.
-* Replicated Volumes as the name suggests, are those that have their data synchronously replicated to multiple nodes. Volumes can sustain node failures. The replication also can be setup across availability zones helping applications move across availability zones. OpenEBS offers MayaStor as an replicated storage solution, which provides high availability and high performance.
+* Replicated Volumes as the name suggests, are those that have their data synchronously replicated to multiple nodes. Volumes can sustain node failures. The replication also can be setup across availability zones helping applications move across availability zones. OpenEBS offers Mayastor as an replicated storage solution, which provides high availability and high performance.
 
 ## Documentation and user guides
 
@@ -25,7 +25,7 @@ arts/openebs/Chart.yaml).
 openebs
 ├── (default) LocalPV HostPath
 ├── (default) LocalPV LVM
-├── (default) LocalPV LVM
+├── (default) LocalPV ZFS
 └── (default) MayaStor (replicated)
 ```
 
