@@ -18,8 +18,7 @@ You can run OpenEBS on any Kubernetes 1.23+ cluster in a matter of minutes. See 
 
 ### How to customize OpenEBS Helm chart?
 
-OpenEBS helm chart is an umbrella chart that pulls together engine specific charts. The engine charts are included as dependencies. 
-arts/openebs/Chart.yaml). 
+OpenEBS helm chart is an umbrella chart that pulls together engine specific charts. The engine charts are included as [dependencies](https://github.com/openebs/openebs/tree/HEAD/charts/Chart.yaml).
 
 ```bash
 openebs
