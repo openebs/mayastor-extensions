@@ -25,7 +25,7 @@ openebs
 ├── (default) LocalPV HostPath
 ├── (default) LocalPV LVM
 ├── (default) LocalPV ZFS
-└── (default) MayaStor (replicated)
+└── (default) Mayastor (replicated)
 ```
 
 ### Prerequisites
@@ -54,7 +54,7 @@ helm install openebs --namespace openebs openebs/openebs --create-namespace
 
 The above commands will install OpenEBS LocalPV Hostpath, OpenEBS LocalPV LVM, OpenEBS LocalPV ZFS and OpenEBS Mayastor components in openebs namespace and chart name as openebs. 
 
-If you want to not install OpenEBS Mayastor which is a replicated storage engine you can use the following command.
+OpenEBS Replicated storage i.e. Mayastor can be excluded during the installation with the following command:
 
 ```bash
 helm install openebs --namespace openebs openebs/openebs --set engines.replicated.mayastor.enabled=false --create-namespace
