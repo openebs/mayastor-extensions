@@ -1,7 +1,8 @@
 use crate::{
     common::{
         constants::{
-            TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE, TWO_DOT_SIX, TWO_DOT_THREE,
+            KUBE_API_PAGE_SIZE, TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE,
+            TWO_DOT_SIX, TWO_DOT_THREE,
         },
         error::{
             DeserializePromtailExtraConfig, ListCrds, Result, SemverParse,
@@ -489,8 +490,6 @@ fn loki_address_to_clients(
 
 /// Use pre-defined helm chart templating to disable CRD installation if they already exist.
 async fn safe_crd_install(upgrade_values_filepath: &Path, yq: &YqV4) -> Result<()> {
-    const MAX_ENTRIES: u32 = 500;
-
     let mut crd_set_to_helm_toggle: HashMap<Vec<&str>, YamlKey> = HashMap::new();
     // These 3 CRDs usually exist together.
     crd_set_to_helm_toggle.insert(
@@ -507,8 +506,8 @@ async fn safe_crd_install(upgrade_values_filepath: &Path, yq: &YqV4) -> Result<(
     );
 
     let crds_api = KubeClient::crds_api().await?;
-    let mut all_crd_names: Vec<String> = Vec::with_capacity(MAX_ENTRIES as usize);
-    let mut list_params = ListParams::default().limit(MAX_ENTRIES);
+    let mut all_crd_names: Vec<String> = Vec::with_capacity(KUBE_API_PAGE_SIZE as usize);
+    let mut list_params = ListParams::default().limit(KUBE_API_PAGE_SIZE);
 
     loop {
         let crd_list = crds_api

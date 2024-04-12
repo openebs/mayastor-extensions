@@ -1,10 +1,22 @@
 use crate::{
-    common::{constants::PRODUCT, error::Result},
+    common::{
+        constants::{
+            CHART_VERSION_LABEL_KEY, CORE_CHART_NAME, IO_ENGINE_LABEL,
+            PARTIAL_REBUILD_DISABLE_EXTENTS, PRODUCT,
+        },
+        error::{PartialRebuildNotAllowed, Result},
+        kube_client as KubeClient,
+    },
     events::event_recorder::{EventAction, EventRecorder},
     helm::upgrade::{HelmUpgradeRunner, HelmUpgraderBuilder},
     opts::CliArgs,
 };
 use data_plane::upgrade_data_plane;
+
+use k8s_openapi::api::core::v1::Pod;
+use kube::ResourceExt;
+use semver::Version;
+use tracing::error;
 
 /// Contains the data-plane upgrade logic.
 pub(crate) mod data_plane;
@@ -54,9 +66,6 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
     event.set_source_version(source_version.clone());
     event.set_target_version(target_version.clone());
 
-    // Capture HA state before helm upgrade is consumed.
-    let ha_is_enabled = helm_upgrader.source_values().ha_is_enabled();
-
     // Dry-run helm upgrade.
     let dry_run_result: Result<HelmUpgradeRunner> = helm_upgrader.dry_run().await;
     let run_helm_upgrade = match dry_run_result {
@@ -82,10 +91,13 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
         .await?;
 
     // Control plane containers are updated in this step.
-    if let Err(error) = run_helm_upgrade.await {
-        event.publish_unrecoverable(&error, false).await;
-        return Err(error);
-    }
+    let final_values = match run_helm_upgrade.await {
+        Ok(values) => values,
+        Err(error) => {
+            event.publish_unrecoverable(&error, false).await;
+            return Err(error);
+        }
+    };
 
     event
         .publish_normal(
@@ -96,6 +108,22 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
     // Data plane containers are updated in this step.
     if !opts.skip_data_plane_restart() {
+        let yet_to_upgrade_io_engine_label = format!(
+            "{IO_ENGINE_LABEL},{CHART_VERSION_LABEL_KEY}!={}",
+            target_version.as_str()
+        );
+        let yet_to_upgrade_io_engine_pods = KubeClient::list_pods(
+            opts.namespace(),
+            Some(yet_to_upgrade_io_engine_label.clone()),
+            None,
+        )
+        .await?;
+
+        partial_rebuild_check(
+            yet_to_upgrade_io_engine_pods.as_slice(),
+            final_values.partial_rebuild_is_enabled(),
+        )?;
+
         event
             .publish_normal(
                 format!("Upgrading {PRODUCT} data-plane"),
@@ -107,7 +135,9 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
             opts.namespace(),
             opts.rest_endpoint(),
             target_version,
-            ha_is_enabled,
+            final_values.ha_is_enabled(),
+            yet_to_upgrade_io_engine_label,
+            yet_to_upgrade_io_engine_pods,
         )
         .await
         {
@@ -129,6 +159,33 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
             EventAction::Successful,
         )
         .await?;
+
+    Ok(())
+}
+
+fn partial_rebuild_check(
+    yet_to_upgrade_io_engine_pods: &[Pod],
+    partial_rebuild_is_enabled: bool,
+) -> Result<()> {
+    let partial_rebuild_disable_required = yet_to_upgrade_io_engine_pods
+        .iter()
+        .filter_map(|pod| pod.labels().get(CHART_VERSION_LABEL_KEY))
+        .any(|v| {
+            let version =
+                Version::parse(v).expect("failed to parse version from io-engine Pod label");
+            version.ge(&PARTIAL_REBUILD_DISABLE_EXTENTS.0)
+                & version.le(&PARTIAL_REBUILD_DISABLE_EXTENTS.1)
+        });
+
+    if partial_rebuild_disable_required && partial_rebuild_is_enabled {
+        error!("Partial rebuild must be disabled for upgrades from {CORE_CHART_NAME} chart versions >= {}, <= {}", PARTIAL_REBUILD_DISABLE_EXTENTS.0, PARTIAL_REBUILD_DISABLE_EXTENTS.1);
+        return PartialRebuildNotAllowed {
+            chart_name: CORE_CHART_NAME.to_string(),
+            lower_extent: PARTIAL_REBUILD_DISABLE_EXTENTS.0.to_string(),
+            upper_extent: PARTIAL_REBUILD_DISABLE_EXTENTS.1.to_string(),
+        }
+        .fail();
+    }
 
     Ok(())
 }
