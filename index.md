@@ -58,7 +58,7 @@ The above commands will install OpenEBS LocalPV Hostpath, OpenEBS LocalPV LVM, O
 If you want to not install OpenEBS Mayastor which is a replicated storage engine you can use the following command.
 
 ```bash
-helm install openebs --namespace openebs openebs/openebs --set mayastor.enabled=false --create-namespace
+helm install openebs --namespace openebs openebs/openebs --set engines.replicated.mayastor.enabled=false --create-namespace
 ```
 
 To view the chart and get the following output.
