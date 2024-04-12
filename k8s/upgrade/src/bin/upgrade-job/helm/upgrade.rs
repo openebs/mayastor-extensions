@@ -27,7 +27,8 @@ use tracing::info;
 
 /// HelmUpgradeRunner is returned after an upgrade is validated and dry-run-ed. Running
 /// it carries out helm upgrade.
-pub(crate) type HelmUpgradeRunner = Pin<Box<dyn Future<Output = Result<()>>>>;
+pub(crate) type HelmUpgradeRunner =
+    Pin<Box<dyn Future<Output = Result<Box<dyn HelmValuesCollection>>>>>;
 
 /// A trait object of type HelmUpgrader is either CoreHelmUpgrader or an UmbrellaHelmUpgrader.
 /// They either deal with upgrading the Core helm chart or the Umbrella helm chart respectively.
@@ -42,9 +43,6 @@ pub(crate) trait HelmUpgrader {
 
     /// Return the target helm chart version as a String.
     fn target_version(&self) -> String;
-
-    /// Returns a deserialized struct with tools to gather information about the source helm values.
-    fn source_values(&self) -> &dyn HelmValuesCollection;
 }
 
 /// This is a builder for the Helm chart upgrade.
@@ -183,14 +181,11 @@ impl HelmUpgraderBuilder {
             // Fail if the Umbrella chart isn't already upgraded.
             ensure!(already_upgraded, UmbrellaChartNotUpgraded);
 
-            // Deserialize umbrella chart values yaml.
-            let source_values = UmbrellaValues::try_from(source_values_buf.as_slice())?;
-
             Ok(Box::new(UmbrellaHelmUpgrader {
                 release_name,
+                client,
                 source_version,
                 target_version,
-                source_values,
             }))
         } else if Regex::new(core_regex.as_str())?.is_match(chart) {
             // Skip upgrade-path validation and allow all upgrades for the Core helm chart, if
@@ -292,7 +287,9 @@ impl HelmUpgrader for CoreHelmUpgrader {
 is the same as that of this upgrade-job's helm chart"
                 );
 
-                Ok(())
+                let source_values: Box<dyn HelmValuesCollection> = Box::new(self.source_values);
+
+                Ok(source_values)
             }));
         }
 
@@ -320,14 +317,20 @@ is the same as that of this upgrade-job's helm chart"
             info!("Starting helm upgrade...");
             self.client
                 .upgrade(
-                    self.release_name,
+                    self.release_name.as_str(),
                     self.chart_dir,
                     Some(self.helm_upgrade_extra_args),
                 )
                 .await?;
             info!("Helm upgrade successful!");
 
-            Ok(())
+            let final_values_buf = self
+                .client
+                .get_values_as_yaml::<&str, String>(self.release_name.as_str(), None)?;
+            let final_values: Box<dyn HelmValuesCollection> =
+                Box::new(CoreValues::try_from(final_values_buf.as_slice())?);
+
+            Ok(final_values)
         }))
     }
 
@@ -338,19 +341,15 @@ is the same as that of this upgrade-job's helm chart"
     fn target_version(&self) -> String {
         self.target_version.to_string()
     }
-
-    fn source_values(&self) -> &dyn HelmValuesCollection {
-        &self.source_values
-    }
 }
 
 /// This is a HelmUpgrader for the Umbrella chart. This gathers information, and doesn't
 /// set up a helm upgrade or a dry-run in any way.
 pub(crate) struct UmbrellaHelmUpgrader {
     release_name: String,
+    client: HelmReleaseClient,
     source_version: Version,
     target_version: Version,
-    source_values: UmbrellaValues,
 }
 
 #[async_trait]
@@ -362,7 +361,13 @@ impl HelmUpgrader for UmbrellaHelmUpgrader {
                 self.release_name.as_str()
             );
 
-            Ok(())
+            let final_values_buf = self
+                .client
+                .get_values_as_yaml::<&str, String>(self.release_name.as_str(), None)?;
+            let final_values: Box<dyn HelmValuesCollection> =
+                Box::new(UmbrellaValues::try_from(final_values_buf.as_slice())?);
+
+            Ok(final_values)
         }))
     }
 
@@ -372,9 +377,5 @@ impl HelmUpgrader for UmbrellaHelmUpgrader {
 
     fn target_version(&self) -> String {
         self.target_version.to_string()
-    }
-
-    fn source_values(&self) -> &dyn HelmValuesCollection {
-        &self.source_values
     }
 }

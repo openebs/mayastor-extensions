@@ -31,6 +31,8 @@ impl Chart {
 pub(crate) trait HelmValuesCollection {
     /// This is a getter for state of the 'ha' feature (enabled/disabled).
     fn ha_is_enabled(&self) -> bool;
+    /// This is a getter for the partial-rebuild toggle value.
+    fn partial_rebuild_is_enabled(&self) -> bool;
 }
 
 /// UmbrellaValues is used to deserialize the helm values.yaml for the Umbrella chart. The Core
@@ -55,6 +57,10 @@ impl TryFrom<&[u8]> for UmbrellaValues {
 impl HelmValuesCollection for UmbrellaValues {
     fn ha_is_enabled(&self) -> bool {
         self.core.ha_is_enabled()
+    }
+
+    fn partial_rebuild_is_enabled(&self) -> bool {
+        self.core.partial_rebuild_is_enabled()
     }
 }
 
@@ -114,14 +120,13 @@ impl HelmValuesCollection for CoreValues {
     fn ha_is_enabled(&self) -> bool {
         self.agents.ha_is_enabled()
     }
+
+    fn partial_rebuild_is_enabled(&self) -> bool {
+        self.agents.partial_rebuild_is_enabled()
+    }
 }
 
 impl CoreValues {
-    /// This is a getter for state of the 'ha' feature (enabled/disabled).
-    pub(crate) fn ha_is_enabled(&self) -> bool {
-        self.agents.ha_is_enabled()
-    }
-
     /// This is a getter for the container image tag of the Core chart.
     pub(crate) fn image_tag(&self) -> &str {
         self.image.tag()
@@ -302,6 +307,7 @@ impl CoreValues {
 /// This is used to deserialize the yaml object agents.
 #[derive(Deserialize)]
 struct Agents {
+    core: Core,
     ha: Ha,
 }
 
@@ -309,6 +315,10 @@ impl Agents {
     /// This is a getter for state of the 'ha' feature (enabled/disabled).
     fn ha_is_enabled(&self) -> bool {
         self.ha.enabled()
+    }
+
+    fn partial_rebuild_is_enabled(&self) -> bool {
+        self.core.partial_rebuild_is_enabled()
     }
 }
 
@@ -323,6 +333,57 @@ impl Base {
     /// This returns the value for the removed base.logSilenceLevel YAML key.
     fn deprecated_log_silence_level(&self) -> &str {
         self.deprecated_log_silence_level.as_str()
+    }
+}
+
+/// This is used to deserialize the yaml object 'agents.core'.
+#[derive(Deserialize)]
+struct Core {
+    #[serde(default)]
+    rebuild: Rebuild,
+}
+
+impl Core {
+    fn partial_rebuild_is_enabled(&self) -> bool {
+        self.rebuild.partial_is_enabled()
+    }
+}
+
+/// This is used to deserialize the yaml object 'agents.core.rebuild'.
+#[derive(Default, Deserialize)]
+struct Rebuild {
+    partial: RebuildPartial,
+}
+
+impl Rebuild {
+    fn partial_is_enabled(&self) -> bool {
+        self.partial.enabled()
+    }
+}
+
+/// This is used to deserialize the yaml object 'agents.core.rebuild.partial'.
+#[derive(Deserialize)]
+struct RebuildPartial {
+    enabled: bool,
+}
+
+impl Default for RebuildPartial {
+    /// We've never shipped with partial rebuild set to off. Also for a good while after
+    /// the feature was introduced, it was enabled without an option to disable it. So
+    /// assuming that partial rebuild is enabled, if the YAML object for Rebuild is missing.
+    /// The Rebuild type will be deserialized with a default value if it's absent from the
+    /// helm values.
+    ///
+    ///     #[serde(default)]
+    ///     rebuild: Rebuild,
+    fn default() -> Self {
+        Self { enabled: true }
+    }
+}
+
+impl RebuildPartial {
+    fn enabled(&self) -> bool {
+        self.enabled
     }
 }
 
