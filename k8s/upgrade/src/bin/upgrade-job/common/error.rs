@@ -477,23 +477,6 @@ pub(crate) enum Error {
     #[snafu(display("Failed to send Event over the channel"))]
     EventChannelSend,
 
-    /// Error for when the no value for version label is found on the helm chart.
-    #[snafu(display(
-        "Failed to get the value of the {} label in Pod {} in Namespace {}",
-        CHART_VERSION_LABEL_KEY,
-        pod_name,
-        namespace
-    ))]
-    HelmChartVersionLabelHasNoValue { pod_name: String, namespace: String },
-
-    /// Error for when a pod does not have Namespace set on it.
-    #[snafu(display(
-        "Found None when trying to get Namespace for Pod {}, context: {}",
-        pod_name,
-        context
-    ))]
-    NoNamespaceInPod { pod_name: String, context: String },
-
     /// Error for the Umbrella chart is not upgraded.
     #[snafu(display(
         "The {} helm chart is not upgraded to version {}: Upgrade for helm chart {} is not \
@@ -680,6 +663,13 @@ pub(crate) enum Error {
 
     #[snafu(display("failed to list CustomResourceDefinitions: {source}"))]
     ListCrds { source: kube::Error },
+
+    #[snafu(display("Partial rebuild must be disabled for upgrades from {chart_name} chart versions >= {lower_extent}, <= {upper_extent}"))]
+    PartialRebuildNotAllowed {
+        chart_name: String,
+        lower_extent: String,
+        upper_extent: String,
+    },
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.

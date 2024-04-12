@@ -13,8 +13,8 @@ use crate::{
         rest_client::RestClientSet,
     },
     upgrade::utils::{
-        all_pods_are_ready, cordon_storage_node, data_plane_is_upgraded, list_all_volumes,
-        rebuild_result, uncordon_storage_node, RebuildResult,
+        all_pods_are_ready, cordon_storage_node, list_all_volumes, rebuild_result,
+        uncordon_storage_node, RebuildResult,
     },
 };
 use k8s_openapi::api::core::v1::{Node, Pod};
@@ -35,21 +35,16 @@ pub(crate) async fn upgrade_data_plane(
     rest_endpoint: String,
     upgrade_target_version: String,
     ha_is_enabled: bool,
+    yet_to_upgrade_io_engine_label: String,
+    yet_to_upgrade_io_engine_pods: Vec<Pod>,
 ) -> Result<()> {
     // This makes data-plane upgrade idempotent.
-    let io_engine_label = format!("{IO_ENGINE_LABEL},{CHART_VERSION_LABEL_KEY}");
-    let io_engine_pod_list =
-        KubeClient::list_pods(namespace.clone(), Some(io_engine_label), None).await?;
-
-    if data_plane_is_upgraded(&upgrade_target_version, &io_engine_pod_list).await? {
+    if yet_to_upgrade_io_engine_pods.is_empty() {
         info!("Skipping data-plane upgrade: All data-plane Pods are already upgraded");
         return Ok(());
     }
 
     // If here, then there is a need to proceed to data-plane upgrade.
-
-    let yet_to_upgrade_io_engine_label_selector =
-        format!("{IO_ENGINE_LABEL},{CHART_VERSION_LABEL_KEY}!={upgrade_target_version}");
 
     // Generate storage REST API client.
     let rest_client = RestClientSet::new_with_url(rest_endpoint)?;
@@ -74,7 +69,7 @@ pub(crate) async fn upgrade_data_plane(
     loop {
         let initial_io_engine_pod_list: Vec<Pod> = KubeClient::list_pods(
             namespace.clone(),
-            Some(yet_to_upgrade_io_engine_label_selector.clone()),
+            Some(yet_to_upgrade_io_engine_label.clone()),
             None,
         )
         .await?;

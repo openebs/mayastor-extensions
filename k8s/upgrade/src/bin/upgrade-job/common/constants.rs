@@ -1,3 +1,5 @@
+use semver::Version;
+
 /// This is the name of the project that is being upgraded.
 pub(crate) const PRODUCT: &str = "Mayastor";
 
@@ -33,6 +35,10 @@ pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str =
 /// This is the limit for the number of objects we want to collect over the network from
 /// the kubernetes api.
 pub(crate) const KUBE_API_PAGE_SIZE: u32 = 500;
+
+/// The Core chart version limits for requiring partial rebuild to be disabled for upgrade.
+pub(crate) const PARTIAL_REBUILD_DISABLE_EXTENTS: (Version, Version) =
+    (Version::new(2, 2, 0), Version::new(2, 5, 0));
 
 /// Version value for the earliest possible 2.0 release.
 pub(crate) const TWO_DOT_O_RC_ONE: &str = "2.0.0-rc.1";
