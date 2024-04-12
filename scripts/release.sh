@@ -130,7 +130,6 @@ ALL_IN_ONE="true"
 INCREMENTAL="false"
 DEFAULT_BINARIES="kubectl-plugin"
 BUILD_BINARIES=
-BIN_TARGET_PLAT="linux-musl"
 BINARY_OUT_LINK="."
 # This variable will be used to flag if the helm chart dependencies have been
 # been updated.
@@ -282,7 +281,7 @@ if [ -n "$BUILD_BINARIES" ]; then
   mkdir -p $BINARY_OUT_LINK
   for name in $BUILD_BINARIES; do
     echo "Building static $name ..."
-    $NIX_BUILD --out-link $BINARY_OUT_LINK/$name -A utils.$BUILD_TYPE.$BIN_TARGET_PLAT.$name
+    $NIX_BUILD --out-link $BINARY_OUT_LINK/$name -A extensions.$BUILD_TYPE.$name --arg static true
   done
 fi
 
