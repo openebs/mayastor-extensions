@@ -7,12 +7,12 @@
 OpenEBS Data Engines and Control Plane are implemented as micro-services, deployed as containers and orchestrated by Kubernetes itself. An added advantage of being a completely Kubernetes native solution is that administrators and developers can interact and manage OpenEBS using all the wonderful tooling that is available for Kubernetes like kubectl, Helm, Prometheus, Grafana, etc.
 
 OpenEBS turns any storage available on the Kubernetes worker nodes into local or distributed Kubernetes Persistent Volumes.
-* Local Volumes are accessible only from a single node in the cluster. Pods using Local Volume have to be scheduled on the node where volume is provisioned. Local Volumes are typically preferred for distributed workloads like Cassandra, MongoDB, Elastic, etc that are distributed in nature and have high availability built into them. Depending on the type of storage attached to your Kubernetes worker openebs offers different flavors of Local PV - Hostpath, LVM and  ZFS.
+* Local Volumes are accessible only from a single node in the cluster. Pods using Local Volume have to be scheduled on the node where volume is provisioned. Local Volumes are typically preferred for distributed workloads like Cassandra, MongoDB, Elastic, etc that are distributed in nature and have high availability built into them. Depending on the type of storage attached to the Kubernetes worker openebs offers different flavors of Local PV - Hostpath, LVM and  ZFS.
 * Replicated Volumes as the name suggests, are those that have their data synchronously replicated to multiple nodes. Volumes can sustain node failures. The replication also can be setup across availability zones helping applications move across availability zones. OpenEBS offers Mayastor as an replicated storage solution, which provides high availability and high performance.
 
 ## Documentation and user guides
 
-You can run OpenEBS on any Kubernetes 1.23+ cluster in a matter of minutes. See the [Quickstart Guide to OpenEBS](https://openebs.io/docs/quickstart-guide/installation) for detailed instructions.
+OpenEBS can run on any Kubernetes 1.23+ cluster in a matter of minutes. See the [Quickstart Guide to OpenEBS](https://openebs.io/docs/quickstart-guide/installation) for detailed instructions.
 
 ## Getting started
 
@@ -25,7 +25,7 @@ openebs
 ├── (default) LocalPV HostPath
 ├── (default) LocalPV LVM
 ├── (default) LocalPV ZFS
-└── (default) Mayastor (replicated)
+└── (default) Replicated PV Mayastor
 ```
 
 ### Prerequisites
@@ -37,7 +37,7 @@ openebs
 
 ### Setup Helm Repository
 
-Before installing OpenEBS Helm charts, you need to add the [OpenEBS Helm repository](https://openebs.github.io/openebs) to your Helm client.
+Before installing OpenEBS Helm charts, the [OpenEBS Helm repository](https://openebs.github.io/openebs) needs to be added to the helm client.
 
 #### Setup helm repository
 
@@ -69,7 +69,7 @@ NAME    NAMESPACE       REVISION        UPDATED                                 
 openebs openebs         1               2024-03-25 09:13:00.903321318 +0000 UTC deployed        openebs-4.0.0   4.0.0
 ```
 
-As a next step [verify your installation](https://openebs.io/docs/quickstart-guide/installation#verifying-openebs-installation) and do the [post installation](https://openebs.io/docs/quickstart-guide/installation#post-installation-considerations) steps.
+As a next step [verify the installation](https://openebs.io/docs/quickstart-guide/installation#verifying-openebs-installation) and do the [post installation](https://openebs.io/docs/quickstart-guide/installation#post-installation-considerations) steps.
 
 For more details on customizing and installing OpenEBS please see the [chart values](https://github.com/openebs/openebs/tree/HEAD/charts/README.md).
 
