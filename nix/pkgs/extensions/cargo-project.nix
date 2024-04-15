@@ -26,16 +26,28 @@
   # for this we use naersk which is not as fully fledged as the builtin rustPlatform so it should only be used
   # for development and not for CI
 , incremental ? false
+, static ? false
 }:
 let
   stable_channel = {
     rustc = channel.default.stable;
     cargo = channel.default.stable;
   };
-  rustPlatform = makeRustPlatform {
-    rustc = stable_channel.rustc;
-    cargo = stable_channel.cargo;
+  static-target = pkgs.rust.toRustTargetSpec pkgs.pkgsStatic.hostPlatform;
+  static-channel = channel.rust_default {
+    override = { targets = [ "${static-target}" ]; };
   };
+  rustPlatform =
+    if static then
+      pkgs.pkgsStatic.makeRustPlatform
+        {
+          rustc = static-channel.stable;
+          cargo = static-channel.stable;
+        } else
+      makeRustPlatform {
+        rustc = stable_channel.rustc;
+        cargo = stable_channel.cargo;
+      };
   naersk = pkgs.callPackage sources.naersk {
     rustc = stable_channel.rustc;
     cargo = stable_channel.cargo;
@@ -64,6 +76,10 @@ let
     "k8s"
   ];
   src = sourcer.whitelistSource ../../../. src_list;
+  static_ssl = (pkgs.pkgsStatic.openssl.override {
+    static = true;
+  });
+  hostTarget = pkgs.rust.toRustTargetSpec pkgs.hostPlatform;
   buildProps = rec {
     name = "extensions-${version}";
     inherit version src;
@@ -94,18 +110,33 @@ let
   build_with_default = { buildType, cargoBuildFlags }:
     rustPlatform.buildRustPackage (buildProps // {
       inherit buildType cargoBuildFlags;
-      preBuild = "patchShebangs ./dependencies/control-plane/scripts/rust/";
+      preBuild = ''
+        patchShebangs ./dependencies/control-plane/scripts/rust/
+      '' + pkgs.lib.optionalString (static) ''
+        # the rust builder from nixpkgks does not parse target and just uses the host target...
+        export NIX_CC_WRAPPER_TARGET_HOST_${builtins.replaceStrings [ "-" ] [ "_" ] hostTarget}=
+        export OPENSSL_STATIC=1
+        export OPENSSL_LIB_DIR=${static_ssl.out}/lib
+        export OPENSSL_INCLUDE_DIR=${static_ssl.dev}/include
+      '';
+      ${if static then "RUSTFLAGS" else null} = [ "-C" "target-feature=+crt-static" ];
       cargoLock = {
         lockFile = ../../../Cargo.lock;
       };
     });
-  builder = if incremental then build_with_naersk else build_with_default;
+  cargoDeps = rustPlatform.importCargoLock {
+    lockFile = ../../../Cargo.lock;
+  };
+  builder =
+    if static then build_with_default
+    else if incremental then build_with_naersk else build_with_default;
+  buildAllInOne = if static then false else allInOne;
 in
 {
-  inherit PROTOC PROTOC_INCLUDE version src;
+  inherit PROTOC PROTOC_INCLUDE version src cargoDeps;
 
   build = { buildType, cargoBuildFlags ? [ ] }:
-    if allInOne then
+    if buildAllInOne then
       builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p metrics-exporter" "-p call-home" "-p upgrade" ]; }
     else
       builder { inherit buildType cargoBuildFlags; };
