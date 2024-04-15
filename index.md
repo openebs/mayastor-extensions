@@ -22,9 +22,9 @@ OpenEBS Helm chart is a unified Helm chart that pulls together engine specific c
 
 ```bash
 openebs
-├── (default) LocalPV HostPath
-├── (default) LocalPV LVM
-├── (default) LocalPV ZFS
+├── (default) Local PV HostPath
+├── (default) Local PV LVM
+├── (default) Local PV ZFS
 └── (default) Replicated PV Mayastor
 ```
 
