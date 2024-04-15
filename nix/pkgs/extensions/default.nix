@@ -1,4 +1,4 @@
-{ stdenv, git, lib, pkgs, allInOne, incremental, sourcer, tag ? "" }:
+{ stdenv, git, lib, pkgs, allInOne, incremental, static, sourcer, tag ? "" }:
 let
   versionDrv = import ../../lib/version.nix { inherit sourcer lib stdenv git tag; };
   version = builtins.readFile "${versionDrv}";
@@ -8,7 +8,7 @@ let
     "tag_or_long" = builtins.readFile "${versionDrv.tag_or_long}";
   };
   project-builder =
-    pkgs.callPackage ../extensions/cargo-project.nix { inherit sourcer gitVersions allInOne incremental; };
+    pkgs.callPackage ../extensions/cargo-project.nix { inherit sourcer gitVersions allInOne incremental static; };
   installer = { pname, src, suffix ? "" }:
     stdenv.mkDerivation rec {
       inherit pname src;
@@ -69,6 +69,13 @@ let
             obs_builder { inherit buildType builder; cargoBuildFlags = [ "--bin call-home-stats" ]; };
         pname = "obs-callhome-stats";
       };
+    };
+    kubectl-plugin = installer {
+      src = builder.build {
+        inherit buildType;
+        cargoBuildFlags = [ "--bin kubectl-mayastor" ];
+      };
+      pname = "kubectl-mayastor";
     };
   };
 in
