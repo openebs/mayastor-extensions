@@ -18,7 +18,7 @@ OpenEBS can run on any Kubernetes 1.23+ cluster in a matter of minutes. See the 
 
 ### How to customize OpenEBS Helm chart?
 
-OpenEBS helm chart is a unfied chart that pulls together engine specific charts. The engine charts are included as [dependencies](https://github.com/openebs/openebs/tree/HEAD/charts/Chart.yaml).
+OpenEBS Helm chart is a unified Helm chart that pulls together engine specific charts. The engine charts are included as [dependencies](https://github.com/openebs/openebs/tree/HEAD/charts/Chart.yaml).
 
 ```bash
 openebs
@@ -37,16 +37,16 @@ openebs
 
 ### Setup Helm Repository
 
-Before installing OpenEBS Helm chart, the [OpenEBS Helm repository](https://openebs.github.io/openebs) needs to be added to the helm client.
+Before installing OpenEBS Helm chart, the [OpenEBS Helm repository](https://openebs.github.io/openebs) needs to be added to the Helm client.
 
-#### Setup helm repository
+#### Setup Helm repository
 
 ```bash
 helm repo add openebs https://openebs.github.io/openebs
 helm repo update
 ```
 
-#### Install OpenEBS helm chart with default values.
+#### Install OpenEBS Helm chart with default values.
 
 ```bash
 helm install openebs --namespace openebs openebs/openebs --create-namespace
@@ -80,4 +80,4 @@ helm ls --all
 helm delete `<RELEASE NAME>` -n `<RELEASE NAMESPACE>`
 ```
 
-> **Tip**: Prior to deleting the helm chart, make sure all the storage volumes and pools are deleted.
+> **Tip**: Prior to deleting the Helm chart, make sure all the storage volumes and pools are deleted.
