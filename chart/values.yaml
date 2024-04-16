@@ -20,7 +20,7 @@ image:
     #       release/pre-release container image tags.
     #       The below tag values will be picked for images by default.
     #       If not specified, 'tag' option provided above will be picked.
-    controlPlane: 571257f3a443
+    controlPlane: 714e22f57379
     dataPlane: 3a9facea6495
     extensions: 3a0616858878
   # -- ImagePullPolicy for our images
