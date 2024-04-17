@@ -28,6 +28,8 @@ jobs:
       - name: Install CommitLint and Dependencies
         run: npm install @commitlint/config-conventional @commitlint/cli
       - name: Lint Commits
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Only run for PR's and simply succeed the bors staging branch
           if [ ! ${{ github.ref }} = "refs/heads/staging" ]; then
@@ -36,11 +38,13 @@ jobs:
             # Ensure code-review commits don't get merged
             sed "s/code-review-rule': \[0/code-review-rule': [2/g" -i commitlint.config.js
             npx commitlint --from $first_commit --to $last_commit -V
-
             git log --pretty=format:%s $first_commit..$last_commit > ./subjects
             duplicates="$(cat ./subjects | sort | uniq -D)"
-            if [ "$duplicates" != "" ]; then
-              echo -e "Duplicate commits found:\n$duplicates" >&2
-              exit 1
+            ignore_dups="$(gh pr view ${{ github.event.pull_request.number }} --json labels -q .labels.[].name | grep -w 'ignore duplicate commits' || true)"
+            if [ -z "$ignore_dups" ]; then
+              if [ "$duplicates" != "" ]; then
+                echo -e "Duplicate commits found:\n$duplicates" >&2
+                exit 1
+              fi
             fi
           fi
