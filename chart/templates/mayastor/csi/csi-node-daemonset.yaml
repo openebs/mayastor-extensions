@@ -81,6 +81,10 @@ spec:
         - name: MKFS_XFS_ARGS
           value: {{ .Values.csi.node.mkfs_args.xfs | quote }}
         {{- end }}
+        {{- if $safeMount := .Values.base.safeMount }}
+        - name: USE_SAFE_MOUNT
+          value: {{ $safeMount | quote }}
+        {{- end }}
         args:
         - "--csi-socket={{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--node-name=$(MY_NODE_NAME)"
