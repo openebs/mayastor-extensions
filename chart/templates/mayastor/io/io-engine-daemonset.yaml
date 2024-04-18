@@ -86,6 +86,10 @@ spec:
           value: "1"
         - name: NEXUS_NVMF_RESV_ENABLE
           value: "1"
+        {{- if $safeMount := .Values.base.safeMount }}
+        - name: USE_SAFE_MOUNT
+          value: {{ $safeMount | quote }}
+        {{- end }}
         args:
         # The -l argument accepts cpu-list. Indexing starts at zero.
         # For example -l 1,2,10-20 means use core 1, 2, 10 to 20.
