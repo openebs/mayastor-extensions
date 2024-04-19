@@ -55,7 +55,7 @@ spec:
       # the same.
       containers:
       - name: csi-node
-        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Chart.Name }}-csi-node:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
+        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Values.image.chart }}-csi-node:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         # we need privileged because we mount filesystems and use mknod
         securityContext:
