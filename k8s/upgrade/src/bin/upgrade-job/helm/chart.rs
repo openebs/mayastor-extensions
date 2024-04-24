@@ -1045,7 +1045,7 @@ impl PromtailConfigClient {
 
 /// This is used to deserialize the helm values of the localpv-provisioner helm chart.
 #[derive(Default, Deserialize)]
-#[serde(rename_all(deserialize = "camelCase"))]
+#[serde(default, rename_all(deserialize = "camelCase"))]
 struct LocalpvProvisioner {
     release: LocalpvProvisionerRelease,
     localpv: LocalpvProvisionerLocalpv,
@@ -1073,6 +1073,7 @@ impl LocalpvProvisioner {
 /// chart.
 #[derive(Default, Deserialize)]
 struct LocalpvProvisionerRelease {
+    #[serde(default)]
     version: String,
 }
 
@@ -1087,6 +1088,7 @@ impl LocalpvProvisionerRelease {
 /// This is used to deserialize the 'localpv' yaml object in the localpv-provisioner helm chart.
 #[derive(Default, Deserialize)]
 struct LocalpvProvisionerLocalpv {
+    #[serde(default)]
     image: GenericImage,
 }
 
@@ -1115,6 +1117,7 @@ impl GenericImage {
 /// This is used to deserialize the 'helperPod' yaml object in the localpv-provisioner helm chart.
 #[derive(Default, Deserialize)]
 struct LocalpvProvisionerHelperPod {
+    #[serde(default)]
     image: GenericImage,
 }
 
