@@ -13,8 +13,7 @@ image:
   repo: openebs
   # -- Release tag for our images
   tag: develop
-  # -- Chart
-  chart: mayastor
+  prefix: mayastor
   repoTags:
     # Note: Below image tag configuration is optional and typically should never be
     #       used. Setting specific image tags for the different repositories proves useful
