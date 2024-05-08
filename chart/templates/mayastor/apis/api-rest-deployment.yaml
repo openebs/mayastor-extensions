@@ -42,7 +42,7 @@ spec:
             requests:
               cpu: {{ .Values.apis.rest.resources.requests.cpu | quote }}
               memory: {{ .Values.apis.rest.resources.requests.memory | quote }}
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Values.image.chart }}-api-rest:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Values.image.prefix }}-api-rest:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "--dummy-certificates"

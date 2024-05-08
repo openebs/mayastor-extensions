@@ -43,7 +43,7 @@ spec:
             requests:
               cpu: {{ .Values.agents.core.resources.requests.cpu | quote }}
               memory: {{ .Values.agents.core.resources.requests.memory | quote }}
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Values.image.chart }}-agent-core:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Values.image.prefix }}-agent-core:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "-s{{ .Release.Name }}-etcd:{{ .Values.etcd.service.port }}"
@@ -91,7 +91,7 @@ spec:
             requests:
               cpu: {{ .Values.agents.ha.cluster.resources.requests.cpu | quote }}
               memory: {{ .Values.agents.ha.cluster.resources.requests.memory | quote }}
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Values.image.chart }}-agent-ha-cluster:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ .Values.image.prefix }}-agent-ha-cluster:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "-g=0.0.0.0:50052"
