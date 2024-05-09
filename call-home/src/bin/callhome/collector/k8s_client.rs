@@ -30,14 +30,10 @@ impl K8sClient {
         loop {
             let node_list = nodes.list_metadata(&list_params).await?;
 
-            let continue_ = node_list.metadata.continue_.clone();
-
             nodes_count += node_list.items.len();
 
-            match continue_ {
-                Some(token) => {
-                    list_params = list_params.continue_token(token.as_str());
-                }
+            match node_list.metadata.continue_ {
+                Some(ref token) => list_params = list_params.continue_token(token),
                 None => break,
             }
         }
