@@ -251,3 +251,11 @@ Usage:
         {{- end -}}
     {{- end -}}
 {{- end -}}
+
+{{/*
+Adds the image prefix to image name
+*/}}
+{{- define "image_prefix" -}}
+    {{ $product := .Files.Get "product.yaml" | fromYaml }}
+    {{- print $product.imagePrefix -}}
+{{- end -}}
