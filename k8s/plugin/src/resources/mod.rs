@@ -3,7 +3,7 @@ use clap::Parser;
 use plugin::{
     resources::{
         CordonResources, DrainResources, GetResources, LabelResources, ScaleResources,
-        UnCordonResources,
+        SetPropertyResources, UnCordonResources,
     },
     ExecuteOperation,
 };
@@ -59,6 +59,9 @@ pub enum Operations {
     /// 'Scale' resources.
     #[clap(subcommand)]
     Scale(ScaleResources),
+    /// 'Set' resources.
+    #[clap(subcommand)]
+    Set(SetPropertyResources),
     /// 'Cordon' resources.
     #[clap(subcommand)]
     Cordon(CordonResources),
@@ -91,6 +94,7 @@ impl ExecuteOperation for Operations {
             Operations::Label(resource) => resource.execute(cli_args).await?,
 
             Operations::Scale(resource) => resource.execute(cli_args).await?,
+            Operations::Set(resource) => resource.execute(cli_args).await?,
             Operations::Cordon(resource) => resource.execute(cli_args).await?,
             Operations::Uncordon(resource) => resource.execute(cli_args).await?,
             Operations::Dump(resources) => {
