@@ -27,6 +27,7 @@ Commands:
   label      'Label' resources
   get        'Get' resources
   scale      'Scale' resources
+  set        'Set' resources
   cordon     'Cordon' resources
   uncordon   'Uncordon' resources
   dump       'Dump' resources
@@ -210,6 +211,26 @@ b5de71a6-055d-433a-a1c5-2b39ade05d86  0dafa450-7a19-4e21-a919-89c6f9bd2a97  Comp
 ```
 **NOTE: The above command lists usable blockdevices if `--all` flag is not used, but currently since there isn't a way to identify whether the `disk` has a blobstore pool, `disks` not used by `pools` created by `control-plane` are shown as usable if they lack any filesystem uuid.**
 
+14. Snapshot topology for a specific volume
+```
+❯ kubectl mayastor get volume-snapshot-topology --volume ec4e66fd-3b33-4439-b504-d49aba53da26
+ SNAPSHOT-ID                           ID                                    POOL    SNAPSHOT_STATUS  SIZE      ALLOCATED_SIZE  SOURCE
+ 25823425-41fa-434a-9efd-a356b70b5d7c  b2241dfb-f0a8-4fcc-a7d4-31bbccc66757  pool-3  Offline                                    2ffac7e4-d017-4844-9ae3-10d94bbfea73
+ ├─                                    b197eac8-2dc0-41d6-9097-3d21d3b734e8  pool-1  Online           12582912  12582912        8f764ec7-a119-4403-9389-121e087262a4
+ └─                                    a3c3b1ab-a1da-4db0-816f-56c0d09ece57  pool-2  Online           12582912  12582912        6b7963de-c994-4134-b5d7-540a4a554d44
+ 25823425-41fa-434a-9efd-a356b70b5d7d  95767535-a537-4a86-83bd-a304d183434d  pool-3  Offline                                    2ffac7e4-d017-4844-9ae3-10d94bbfea73
+ ├─                                    9e39117e-96fa-46a0-a7ee-6d004e3b3495  pool-1  Online           12582912  0               8f764ec7-a119-4403-9389-121e087262a4
+ └─                                    79f15ccb-0ac6-4812-936e-57055430a2d6  pool-2  Online           12582912  0               6b7963de-c994-4134-b5d7-540a4a554d44
+ ```
+ ```
+❯ kubectl mayastor get volume-snapshot-topology --snapshot 25823425-41fa-434a-9efd-a356b70b5d7c
+ SNAPSHOT-ID                           ID                                    POOL    SNAPSHOT_STATUS  SIZE      ALLOCATED_SIZE  SOURCE
+ 25823425-41fa-434a-9efd-a356b70b5d7c  b2241dfb-f0a8-4fcc-a7d4-31bbccc66757  pool-3  Offline                                    2ffac7e4-d017-4844-9ae3-10d94bbfea73
+ ├─                                    b197eac8-2dc0-41d6-9097-3d21d3b734e8  pool-1  Online           12582912  12582912        8f764ec7-a119-4403-9389-121e087262a4
+ └─                                    a3c3b1ab-a1da-4db0-816f-56c0d09ece57  pool-2  Online           12582912  12582912        6b7963de-c994-4134-b5d7-540a4a554d44
+
+ ```
+
 </details>
 
 <details>
@@ -284,6 +305,17 @@ Node node-1-14048 labelled successfully. Current labels: {}
 ```
 ❯ kubectl mayastor scale volume 0c08667c-8b59-4d11-9192-b54e27e0ce0f 5
 Volume 0c08667c-8b59-4d11-9192-b54e27e0ce0f Scaled Successfully 🚀
+
+```
+</details>
+
+<details>
+<summary> Set Resources operations </summary>
+
+1. Set Volume Resource by ID
+```
+❯ kubectl mayastor set volume ec4e66fd-3b33-4439-b504-d49aba53da26 max-snapshots 30
+Volume ec4e66fd-3b33-4439-b504-d49aba53da26 property max_snapshots(30) set successfully
 
 ```
 </details>
