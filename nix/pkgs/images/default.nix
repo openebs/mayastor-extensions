@@ -2,7 +2,7 @@
 # avoid dependency on docker tool chain. Though the maturity of OCI
 # builder in nixpkgs is questionable which is why we postpone this step.
 
-{ pkgs, dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, runCommand, sourcer, img_tag ? "", img_org ? "" }:
+{ pkgs, dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, runCommand, sourcer, img_tag ? "", img_org ? "", img_prefix }:
 let
   repo-org = if img_org != "" then img_org else "${builtins.readFile (pkgs.runCommand "repo_org" {
     buildInputs = with pkgs; [ git ];
@@ -19,7 +19,7 @@ let
     dockerTools.buildImage {
       inherit extraCommands tag;
       created = "now";
-      name = "${repo-org}/mayastor-${pname}${image_suffix.${buildType}}";
+      name = "${repo-org}/${img_prefix}-${pname}${image_suffix.${buildType}}";
       copyToRoot = [ package ] ++ copyToRoot;
       config = {
         Entrypoint = [ package.binary ];

@@ -118,6 +118,7 @@ BRANCH=${GIT_BRANCH////-}
 IMAGES=
 DEFAULT_IMAGES="metrics.exporter.io-engine obs.callhome stats.aggregator upgrade.job"
 IMAGES_THAT_REQUIRE_HELM_CHART=("upgrade.job")
+PRODUCT_PREFIX=${MAYASTOR_PRODUCT_PREFIX:-""}
 UPLOAD=
 SKIP_PUBLISH=
 SKIP_BUILD=
@@ -285,7 +286,7 @@ if [ -n "$BUILD_BINARIES" ]; then
 fi
 
 for name in $IMAGES; do
-  image_basename=$($NIX_EVAL -f . images.$BUILD_TYPE.$name.imageName | xargs)
+  image_basename=$($NIX_EVAL -f . images.$BUILD_TYPE.$name.imageName --argstr product_prefix "$PRODUCT_PREFIX" | xargs)
   image=$image_basename
   if [ -n "$REGISTRY" ]; then
     if [[ "${REGISTRY}" =~ '/' ]]; then
@@ -325,7 +326,7 @@ for name in $IMAGES; do
   if [ -z $SKIP_BUILD ]; then
     archive=${name}
     echo "Building $image:$TAG ..."
-    $NIX_BUILD --out-link $archive-image -A images.$BUILD_TYPE.$archive --arg allInOne "$ALL_IN_ONE" --arg incremental "$INCREMENTAL"
+    $NIX_BUILD --out-link $archive-image -A images.$BUILD_TYPE.$archive --arg allInOne "$ALL_IN_ONE" --arg incremental "$INCREMENTAL" --argstr product_prefix "$PRODUCT_PREFIX"
     $DOCKER load -i $archive-image
     $RM $archive-image
     if [ "$image" != "$image_basename" ]; then
