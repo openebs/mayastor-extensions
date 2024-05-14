@@ -22,7 +22,7 @@ image:
     #       If not specified, 'tag' option provided above will be picked.
     controlPlane: 92e4e994ff1c
     dataPlane: fa171b027ef2
-    extensions: a007317088c1
+    extensions: da06b5185eeb
   # -- ImagePullPolicy for our images
   pullPolicy: IfNotPresent
 
