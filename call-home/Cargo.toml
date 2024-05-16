@@ -18,6 +18,7 @@ name = "obs-callhome-stats"
 path = "src/bin/stats/main.rs"
 
 [dependencies]
+constants = { path = "../constants" }
 openapi = {path = "../dependencies/control-plane/openapi"}
 kube = { version = "0.85.0", features = ["runtime", "derive"] }
 k8s-openapi = { version = "0.19.0", features = ["v1_20"] }

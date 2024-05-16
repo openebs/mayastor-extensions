@@ -19,8 +19,7 @@ use std::{
     iter::FromIterator,
     path::{Path, PathBuf},
 };
-
-const MAYASTOR_CSI_DRIVER: &str = "io.openebs.csi-mayastor";
+use utils::csi_plugin_name;
 
 /// K8s resource dumper client
 #[derive(Clone)]
@@ -333,7 +332,7 @@ async fn get_k8s_vs_classes(
 ) -> Result<(), K8sResourceDumperError> {
     log("\t Collecting Kubernetes VolumeSnapshotClass resources".to_string());
     match k8s_client
-        .list_volumesnapshot_classes(Some(MAYASTOR_CSI_DRIVER), None, None)
+        .list_volumesnapshot_classes(Some(&csi_plugin_name()), None, None)
         .await
     {
         Ok(vscs) => {
@@ -356,7 +355,7 @@ async fn get_k8s_vsnapshot_contents(
 ) -> Result<(), K8sResourceDumperError> {
     log("\t Collecting Kubernetes VolumeSnapshotContents resources".to_string());
     match k8s_client
-        .list_volumesnapshotcontents(Some(MAYASTOR_CSI_DRIVER), None, None)
+        .list_volumesnapshotcontents(Some(&csi_plugin_name()), None, None)
         .await
     {
         Ok(vscs) => {

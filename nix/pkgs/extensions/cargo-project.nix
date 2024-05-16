@@ -62,6 +62,7 @@ let
     "console-logger"
     "call-home"
     "upgrade"
+    "constants"
     "dependencies/control-plane/openapi/Cargo.toml"
     "dependencies/control-plane/openapi/build.rs"
     "dependencies/control-plane/control-plane/plugin"

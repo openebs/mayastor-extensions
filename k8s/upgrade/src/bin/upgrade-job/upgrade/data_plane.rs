@@ -1,8 +1,8 @@
 use crate::{
     common::{
         constants::{
-            AGENT_CORE_LABEL, CHART_VERSION_LABEL_KEY, CORDON_FOR_ANA_CHECK, DRAIN_FOR_UPGRADE,
-            IO_ENGINE_LABEL, PRODUCT,
+            cordon_ana_check, drain_for_upgrade, helm_release_version_key, product_pascal,
+            AGENT_CORE_LABEL, IO_ENGINE_LABEL,
         },
         error::{
             DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
@@ -27,7 +27,7 @@ use snafu::ResultExt;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::info;
-use utils::{API_REST_LABEL, CSI_NODE_NVME_ANA, ETCD_LABEL};
+use utils::{csi_node_nvme_ana, API_REST_LABEL, ETCD_LABEL};
 
 /// Upgrade data plane by controlled restart of io-engine pods
 pub(crate) async fn upgrade_data_plane(
@@ -52,8 +52,9 @@ pub(crate) async fn upgrade_data_plane(
     info!("Starting data-plane upgrade...");
 
     info!(
-        "Trying to remove upgrade {PRODUCT} Node Drain label from {PRODUCT} Nodes, \
-        if any left over from previous upgrade attempts..."
+        "Trying to remove upgrade {product} Node Drain label from {product} Nodes, \
+        if any left over from previous upgrade attempts...",
+        product = product_pascal()
     );
 
     let storage_nodes_resp = rest_client
@@ -137,7 +138,10 @@ pub(crate) async fn upgrade_data_plane(
             uncordon_drained_storage_node(node_name, &rest_client).await?;
         }
 
-        info!("Checking to see if new {PRODUCT} Nodes have been added to the cluster, which require upgrade");
+        info!(
+            "Checking to see if new {} Nodes have been added to the cluster, which require upgrade",
+            product_pascal()
+        );
     }
 
     info!("Successfully upgraded data-plane!");
@@ -147,7 +151,7 @@ pub(crate) async fn upgrade_data_plane(
 
 /// Uncordon storage Node by removing drain label.
 async fn uncordon_drained_storage_node(node_id: &str, rest_client: &RestClientSet) -> Result<()> {
-    let drain_label_for_upgrade: String = DRAIN_FOR_UPGRADE.to_string();
+    let drain_label_for_upgrade: String = drain_for_upgrade();
     let sleep_duration = Duration::from_secs(1_u64);
     loop {
         let storage_node =
@@ -175,15 +179,15 @@ async fn uncordon_drained_storage_node(node_id: &str, rest_client: &RestClientSe
             {
                 rest_client
                     .nodes_api()
-                    .delete_node_cordon(node_id, DRAIN_FOR_UPGRADE)
+                    .delete_node_cordon(node_id, &drain_for_upgrade())
                     .await
                     .context(StorageNodeUncordon {
                         node_id: node_id.to_string(),
                     })?;
 
                 info!(node.id = %node_id,
-                    label = %DRAIN_FOR_UPGRADE,
-                    "Removed drain label from {PRODUCT} Node"
+                    label = %drain_for_upgrade(),
+                    "Removed drain label from {} Node", product_pascal()
                 );
             }
             _ => return Ok(()),
@@ -251,7 +255,7 @@ async fn wait_for_rebuild(node_name: &str, rest_client: &RestClientSet) -> Resul
 
 /// Issue the node drain command on the node.
 async fn drain_storage_node(node_id: &str, rest_client: &RestClientSet) -> Result<()> {
-    let drain_label_for_upgrade: String = DRAIN_FOR_UPGRADE.to_string();
+    let drain_label_for_upgrade: String = drain_for_upgrade();
     let sleep_duration = Duration::from_secs(5_u64);
     loop {
         let storage_node =
@@ -277,26 +281,26 @@ async fn drain_storage_node(node_id: &str, rest_client: &RestClientSet) -> Resul
             Some(CordonDrainState::drainingstate(drain_state))
                 if drain_state.drainlabels.contains(&drain_label_for_upgrade) =>
             {
-                info!(node.id = %node_id, "Waiting for {PRODUCT} Node drain to complete");
+                info!(node.id = %node_id, "Waiting for {} Node drain to complete", product_pascal());
                 // Wait for node drain to complete.
                 sleep(sleep_duration).await;
             }
             Some(CordonDrainState::drainedstate(drain_state))
                 if drain_state.drainlabels.contains(&drain_label_for_upgrade) =>
             {
-                info!(node.id = %node_id, "Drain completed for {PRODUCT} Node");
+                info!(node.id = %node_id, "Drain completed for {} Node", product_pascal());
                 return Ok(());
             }
             _ => {
                 rest_client
                     .nodes_api()
-                    .put_node_drain(node_id, DRAIN_FOR_UPGRADE)
+                    .put_node_drain(node_id, &drain_for_upgrade())
                     .await
                     .context(DrainStorageNode {
                         node_id: node_id.to_string(),
                     })?;
 
-                info!(node.id = %node_id, "Drain started for {PRODUCT} Node");
+                info!(node.id = %node_id, "Drain started for {} Node", product_pascal());
             }
         }
     }
@@ -309,7 +313,10 @@ async fn data_plane_pod_is_running(
     upgrade_target_version: &String,
 ) -> Result<bool> {
     let node_name_pod_field = format!("spec.nodeName={node}");
-    let pod_label = format!("{IO_ENGINE_LABEL},{CHART_VERSION_LABEL_KEY}={upgrade_target_version}");
+    let pod_label = format!(
+        "{IO_ENGINE_LABEL},{}={upgrade_target_version}",
+        helm_release_version_key()
+    );
 
     let pod_list: Vec<Pod> =
         KubeClient::list_pods(namespace, Some(pod_label), Some(node_name_pod_field)).await?;
@@ -342,14 +349,18 @@ async fn control_plane_is_running(
     namespace: String,
     upgrade_target_version: &String,
 ) -> Result<bool> {
-    let agent_core_selector_label =
-        format!("{AGENT_CORE_LABEL},{CHART_VERSION_LABEL_KEY}={upgrade_target_version}");
+    let agent_core_selector_label = format!(
+        "{AGENT_CORE_LABEL},{}={upgrade_target_version}",
+        helm_release_version_key()
+    );
     let pod_list: Vec<Pod> =
         KubeClient::list_pods(namespace.clone(), Some(agent_core_selector_label), None).await?;
     let core_is_ready = all_pods_are_ready(pod_list);
 
-    let api_rest_selector_label =
-        format!("{API_REST_LABEL},{CHART_VERSION_LABEL_KEY}={upgrade_target_version}");
+    let api_rest_selector_label = format!(
+        "{API_REST_LABEL},{}={upgrade_target_version}",
+        helm_release_version_key()
+    );
     let pod_list: Vec<Pod> =
         KubeClient::list_pods(namespace.clone(), Some(api_rest_selector_label), None).await?;
     let rest_is_ready = all_pods_are_ready(pod_list);
@@ -375,7 +386,7 @@ async fn is_node_drainable(
         return Ok(false);
     }
 
-    let ana_disabled_label = format!("{CSI_NODE_NVME_ANA}=false");
+    let ana_disabled_label = format!("{}=false", csi_node_nvme_ana());
     let ana_disabled_filter = ListParams::default().labels(ana_disabled_label.as_str());
     let ana_disabled_nodes =
         k8s_nodes_api
@@ -394,9 +405,9 @@ async fn is_node_drainable(
         return Ok(true);
     }
 
-    cordon_storage_node(node_name, CORDON_FOR_ANA_CHECK, rest_client).await?;
+    cordon_storage_node(node_name, &cordon_ana_check(), rest_client).await?;
     let result = frontend_nodes_ana_check(node_name, ana_disabled_nodes, rest_client).await;
-    uncordon_storage_node(node_name, CORDON_FOR_ANA_CHECK, rest_client).await?;
+    uncordon_storage_node(node_name, &cordon_ana_check(), rest_client).await?;
 
     result
 }

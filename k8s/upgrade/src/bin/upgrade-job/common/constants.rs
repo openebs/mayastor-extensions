@@ -1,14 +1,14 @@
 use semver::Version;
 
 /// This is the name of the project that is being upgraded.
-pub(crate) const PRODUCT: &str = "Mayastor";
+pub use constants::product_pascal;
 
 /// This is the name of the Helm chart which included the core chart as a sub-chart.
 /// Under the hood, this installs the Core Helm chart (see below).
-pub(crate) const UMBRELLA_CHART_NAME: &str = "openebs";
+pub(crate) const UMBRELLA_CHART_NAME: &str = constants::UMBRELLA_CHART_NAME;
 
 /// This is the name of the Helm chart of this project.
-pub(crate) const CORE_CHART_NAME: &str = "mayastor";
+pub(crate) const CORE_CHART_NAME: &str = constants::PRODUCT_NAME;
 
 /// This is the shared Pod label of the <helm-release>-io-engine DaemonSet.
 pub(crate) const IO_ENGINE_LABEL: &str = "app=io-engine";
@@ -17,20 +17,23 @@ pub(crate) const IO_ENGINE_LABEL: &str = "app=io-engine";
 pub(crate) const AGENT_CORE_LABEL: &str = "app=agent-core";
 
 /// This is the shared label across the helm chart components which carries the chart version.
-pub(crate) const CHART_VERSION_LABEL_KEY: &str = "openebs.io/version";
+pub(crate) use constants::helm_release_version_key;
 
 /// This is the label set on a storage API Node resource when a 'Node Drain' is issued.
-pub(crate) const DRAIN_FOR_UPGRADE: &str = "mayastor-upgrade";
+pub fn drain_for_upgrade() -> String {
+    format!("{CORE_CHART_NAME}-upgrade")
+}
 
 /// This is the label set on a storage API Node resource when a 'Node Drain' is issued.
-pub(crate) const CORDON_FOR_ANA_CHECK: &str = "mayastor-upgrade-nvme-ana-check";
+pub fn cordon_ana_check() -> String {
+    format!("{CORE_CHART_NAME}-upgrade-nvme-ana-check")
+}
 
 /// This is the allowed upgrade to-version/to-version-range for the Umbrella chart.
 pub(crate) const TO_UMBRELLA_SEMVER: &str = "4.0.1";
 
 /// This is the user docs URL for the Umbrella chart.
-pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str =
-    "https://openebs.io/docs/user-guides/upgrade#mayastor-upgrade";
+pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str = constants::UMBRELLA_CHART_UPGRADE_DOCS_URL;
 
 /// This is the limit for the number of objects we want to collect over the network from
 /// the kubernetes api.

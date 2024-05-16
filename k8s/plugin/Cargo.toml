@@ -19,6 +19,7 @@ tls = [ "openapi/tower-client-tls", "rest-plugin/tls" ]
 [dependencies]
 openapi = { path = "../../dependencies/control-plane/openapi", default-features = false, features = [ "tower-trace" ] }
 utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
+constants = { path = "../../constants" }
 rest-plugin = { path = "../../dependencies/control-plane/control-plane/plugin", default-features = false }
 console-logger = { path = "../../console-logger" }
 supportability = { path = "../supportability" }

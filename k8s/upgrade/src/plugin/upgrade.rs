@@ -1,13 +1,11 @@
 use crate::plugin::{
     constants::{
-        get_image_version_tag, upgrade_event_selector, upgrade_image_concat, upgrade_name_concat,
-        AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL, DEFAULT_IMAGE_REGISTRY,
-        DEFAULT_RELEASE_NAME, HELM_RELEASE_NAME_LABEL, HELM_RELEASE_VERSION_LABEL,
-        IO_ENGINE_POD_LABEL, MAX_RETRY_ATTEMPTS, UPGRADE_CONFIG_MAP_MOUNT_PATH,
-        UPGRADE_CONFIG_MAP_NAME_SUFFIX, UPGRADE_EVENT_REASON,
+        get_image_version_tag, upgrade_event_selector, upgrade_image_concat, upgrade_job_img,
+        upgrade_name_concat, AGENT_CORE_POD_LABEL, API_REST_LABEL_SELECTOR, API_REST_POD_LABEL,
+        DEFAULT_IMAGE_REGISTRY, DEFAULT_RELEASE_NAME, IO_ENGINE_POD_LABEL, MAX_RETRY_ATTEMPTS,
+        UPGRADE_CONFIG_MAP_MOUNT_PATH, UPGRADE_CONFIG_MAP_NAME_SUFFIX,
         UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
-        UPGRADE_JOB_IMAGE_NAME, UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX,
-        UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+        UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     error, objects,
     user_prompt::{
@@ -16,6 +14,8 @@ use crate::plugin::{
         UPGRADE_DRY_RUN_SUMMARY, UPGRADE_JOB_STARTED,
     },
 };
+use ::constants::helm_release_name_key;
+use constants::upgrade_event_reason;
 use k8s_openapi::api::{
     apps::v1::Deployment,
     batch::v1::Job,
@@ -330,7 +330,7 @@ impl UpgradeEventClient {
             .await
             .context(error::ListEventsWithFieldSelector { field: selector })?
             .into_iter()
-            .filter(|e| e.reason == Some(UPGRADE_EVENT_REASON.to_string()))
+            .filter(|e| e.reason == Some(upgrade_event_reason()))
             .collect::<Vec<_>>();
 
         event_list.sort_by(|a, b| b.event_time.cmp(&a.event_time));
@@ -717,7 +717,7 @@ impl UpgradeResources {
                         upgrade_image_concat(
                             registry,
                             UPGRADE_JOB_IMAGE_REPO,
-                            UPGRADE_JOB_IMAGE_NAME,
+                            &upgrade_job_img(),
                             upgrade_job_image_tag.as_str(),
                         ),
                         self.release_name.clone(),
@@ -834,7 +834,7 @@ pub(crate) async fn get_deployment_for_rest(ns: &str) -> error::Result<Deploymen
 pub(crate) async fn get_release_name(ns: &str) -> error::Result<String> {
     let deployment = get_deployment_for_rest(ns).await?;
     match &deployment.metadata.labels {
-        Some(label) => match label.get(HELM_RELEASE_NAME_LABEL) {
+        Some(label) => match label.get(&helm_release_name_key()) {
             Some(value) => Ok(value.to_string()),
             None => Ok(DEFAULT_RELEASE_NAME.to_string()),
         },
@@ -944,7 +944,7 @@ pub(crate) async fn get_source_version(ns: &str) -> error::Result<String> {
         .metadata
         .labels
         .ok_or(error::NoDeploymentPresent.build())?
-        .get(HELM_RELEASE_VERSION_LABEL)
+        .get(&constants::helm_release_name_key())
         .ok_or(error::NoDeploymentPresent.build())?
         .to_string();
     Ok(value.to_string())

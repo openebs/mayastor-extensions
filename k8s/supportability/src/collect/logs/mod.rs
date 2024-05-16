@@ -3,8 +3,8 @@ mod loki;
 
 use crate::collect::{
     constants::{
-        CALLHOME_JOB_SERVICE, CONTROL_PLANE_SERVICES, DATA_PLANE_SERVICES,
-        HOST_NAME_REQUIRED_SERVICES, LOGGING_LABEL_SELECTOR, NATS_JOB_SERVICE, UPGRADE_JOB_SERVICE,
+        logging_label_selector, CALLHOME_JOB_SERVICE, CONTROL_PLANE_SERVICES, DATA_PLANE_SERVICES,
+        HOST_NAME_REQUIRED_SERVICES, NATS_JOB_SERVICE, UPGRADE_JOB_SERVICE,
     },
     k8s_resources::{
         client::{ClientSet, K8sResourceError},
@@ -268,7 +268,7 @@ impl Logger for LogCollection {
         let pods = self
             .k8s_logger_client
             .get_k8s_clientset()
-            .get_pods(LOGGING_LABEL_SELECTOR, "")
+            .get_pods(&logging_label_selector(), "")
             .await?;
 
         let control_plane_pods = pods
@@ -295,7 +295,7 @@ impl Logger for LogCollection {
         let pods = self
             .k8s_logger_client
             .get_k8s_clientset()
-            .get_pods(LOGGING_LABEL_SELECTOR, "")
+            .get_pods(&logging_label_selector(), "")
             .await?;
         let data_plane_pods = pods
             .into_iter()
@@ -321,7 +321,7 @@ impl Logger for LogCollection {
         let pods = self
             .k8s_logger_client
             .get_k8s_clientset()
-            .get_pods(LOGGING_LABEL_SELECTOR, "")
+            .get_pods(&logging_label_selector(), "")
             .await?;
 
         let upgrade_pod = pods
@@ -348,7 +348,7 @@ impl Logger for LogCollection {
         let pods = self
             .k8s_logger_client
             .get_k8s_clientset()
-            .get_pods(LOGGING_LABEL_SELECTOR, "")
+            .get_pods(&logging_label_selector(), "")
             .await?;
 
         let callhome_pod = pods
@@ -375,7 +375,7 @@ impl Logger for LogCollection {
         let pods = self
             .k8s_logger_client
             .get_k8s_clientset()
-            .get_pods(LOGGING_LABEL_SELECTOR, "")
+            .get_pods(&logging_label_selector(), "")
             .await?;
 
         let nats_pods = pods
