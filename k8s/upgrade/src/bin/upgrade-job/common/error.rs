@@ -1,6 +1,6 @@
 use crate::{
     common::constants::{
-        helm_release_version_key, product_pascal, CORE_CHART_NAME, TO_UMBRELLA_SEMVER,
+        helm_release_version_key, product_train, CORE_CHART_NAME, TO_UMBRELLA_SEMVER,
         UMBRELLA_CHART_NAME, UMBRELLA_CHART_UPGRADE_DOCS_URL,
     },
     events::event_recorder::EventNote,
@@ -21,7 +21,7 @@ pub(crate) enum Error {
     /// Error for when the storage REST API URL is parsed.
     #[snafu(display(
         "Failed to parse {} REST API URL {}: {}",
-        product_pascal(),
+        product_train(),
         rest_endpoint,
         source
     ))]
@@ -44,7 +44,7 @@ pub(crate) enum Error {
     /// Error for when REST API configuration fails.
     #[snafu(display(
         "Failed to configure {} REST API client with endpoint {}: {:?}",
-        product_pascal(),
+        product_train(),
         rest_endpoint,
         source,
     ))]
@@ -244,7 +244,7 @@ pub(crate) enum Error {
     EmptyPodUid { name: String, namespace: String },
 
     /// Error for when an uncordon request for a storage node fails.
-    #[snafu(display("Failed to uncordon {} Node {}: {}", product_pascal(), node_id, source))]
+    #[snafu(display("Failed to uncordon {} Node {}: {}", product_train(), node_id, source))]
     StorageNodeUncordon {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
         node_id: String,
@@ -259,37 +259,37 @@ pub(crate) enum Error {
     },
 
     /// Error for when listing storage nodes fails.
-    #[snafu(display("Failed to list {} Nodes: {}", product_pascal(), source))]
+    #[snafu(display("Failed to list {} Nodes: {}", product_train(), source))]
     ListStorageNodes {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
     },
 
     /// Error for when GET-ing a storage node fails.
-    #[snafu(display("Failed to list {} Node {}: {}", product_pascal(), node_id, source))]
+    #[snafu(display("Failed to list {} Node {}: {}", product_train(), node_id, source))]
     GetStorageNode {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
         node_id: String,
     },
 
     /// Error for when the storage node's Spec is empty.
-    #[snafu(display("Failed to get {} Node {}", product_pascal(), node_id))]
+    #[snafu(display("Failed to get {} Node {}", product_train(), node_id))]
     EmptyStorageNodeSpec { node_id: String },
 
     /// Error for when a GET request for a list of storage volumes fails.
-    #[snafu(display("Failed to list {} Volumes: {}", product_pascal(), source))]
+    #[snafu(display("Failed to list {} Volumes: {}", product_train(), source))]
     ListStorageVolumes {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
     },
 
     /// Error for when a storage node drain request fails.
-    #[snafu(display("Failed to drain {} Node {}: {}", product_pascal(), node_id, source))]
+    #[snafu(display("Failed to drain {} Node {}: {}", product_train(), node_id, source))]
     DrainStorageNode {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
         node_id: String,
     },
 
     /// Error for when a storage node cordon request fails.
-    #[snafu(display("Failed to cordon {} Node {}: {}", product_pascal(), node_id, source))]
+    #[snafu(display("Failed to cordon {} Node {}: {}", product_train(), node_id, source))]
     CordonStorageNode {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
         node_id: String,
@@ -364,7 +364,7 @@ pub(crate) enum Error {
         "'{}' is not a known {} helm chart, only helm charts '{}-<version-tag>' and '{}-<version-tag>' \
         are supported",
         chart_name,
-        product_pascal(),
+        product_train(),
         CORE_CHART_NAME,
         UMBRELLA_CHART_NAME
     ))]
@@ -399,7 +399,7 @@ pub(crate) enum Error {
         version_string: String,
     },
 
-    /// Error for when the detected upgrade path for product_pascal() is not supported.
+    /// Error for when the detected upgrade path for product_train() is not supported.
     #[snafu(display("The upgrade path is invalid"))]
     InvalidUpgradePath,
 
@@ -501,7 +501,7 @@ pub(crate) enum Error {
     /// Error for when the Storage REST API Deployment is absent.
     #[snafu(display(
         "Found no {} REST API Deployments in the namespace {} with labelSelector {}",
-        product_pascal(),
+        product_train(),
         namespace,
         label_selector
     ))]

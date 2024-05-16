@@ -1,7 +1,7 @@
 use semver::Version;
 
 /// This is the name of the project that is being upgraded.
-pub use constants::product_pascal;
+pub use constants::product_train;
 
 /// This is the name of the Helm chart which included the core chart as a sub-chart.
 /// Under the hood, this installs the Core Helm chart (see below).

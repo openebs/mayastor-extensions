@@ -6,7 +6,7 @@ use utils::version_info;
 
 /// PRODUCT is the name of the project for which this call-home component is deployed.
 pub fn product() -> String {
-    ::constants::product_pascal()
+    ::constants::product_train()
 }
 
 /// Defines the default helm chart release name.

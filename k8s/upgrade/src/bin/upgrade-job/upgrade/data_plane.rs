@@ -1,7 +1,7 @@
 use crate::{
     common::{
         constants::{
-            cordon_ana_check, drain_for_upgrade, helm_release_version_key, product_pascal,
+            cordon_ana_check, drain_for_upgrade, helm_release_version_key, product_train,
             AGENT_CORE_LABEL, IO_ENGINE_LABEL,
         },
         error::{
@@ -54,7 +54,7 @@ pub(crate) async fn upgrade_data_plane(
     info!(
         "Trying to remove upgrade {product} Node Drain label from {product} Nodes, \
         if any left over from previous upgrade attempts...",
-        product = product_pascal()
+        product = product_train()
     );
 
     let storage_nodes_resp = rest_client
@@ -140,7 +140,7 @@ pub(crate) async fn upgrade_data_plane(
 
         info!(
             "Checking to see if new {} Nodes have been added to the cluster, which require upgrade",
-            product_pascal()
+            product_train()
         );
     }
 
@@ -187,7 +187,7 @@ async fn uncordon_drained_storage_node(node_id: &str, rest_client: &RestClientSe
 
                 info!(node.id = %node_id,
                     label = %drain_for_upgrade(),
-                    "Removed drain label from {} Node", product_pascal()
+                    "Removed drain label from {} Node", product_train()
                 );
             }
             _ => return Ok(()),
@@ -281,14 +281,14 @@ async fn drain_storage_node(node_id: &str, rest_client: &RestClientSet) -> Resul
             Some(CordonDrainState::drainingstate(drain_state))
                 if drain_state.drainlabels.contains(&drain_label_for_upgrade) =>
             {
-                info!(node.id = %node_id, "Waiting for {} Node drain to complete", product_pascal());
+                info!(node.id = %node_id, "Waiting for {} Node drain to complete", product_train());
                 // Wait for node drain to complete.
                 sleep(sleep_duration).await;
             }
             Some(CordonDrainState::drainedstate(drain_state))
                 if drain_state.drainlabels.contains(&drain_label_for_upgrade) =>
             {
-                info!(node.id = %node_id, "Drain completed for {} Node", product_pascal());
+                info!(node.id = %node_id, "Drain completed for {} Node", product_train());
                 return Ok(());
             }
             _ => {
@@ -300,7 +300,7 @@ async fn drain_storage_node(node_id: &str, rest_client: &RestClientSet) -> Resul
                         node_id: node_id.to_string(),
                     })?;
 
-                info!(node.id = %node_id, "Drain started for {} Node", product_pascal());
+                info!(node.id = %node_id, "Drain started for {} Node", product_train());
             }
         }
     }

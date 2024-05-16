@@ -3,8 +3,8 @@ use utils::constants::PRODUCT_DOMAIN_NAME;
 pub use utils::PRODUCT_NAME;
 
 /// Name of the product.
-pub fn product_pascal() -> String {
-    PRODUCT_NAME.to_case(convert_case::Case::Pascal)
+pub fn product_train() -> String {
+    PRODUCT_NAME.to_case(convert_case::Case::Train)
 }
 
 /// Helm release name label's key.
@@ -22,7 +22,7 @@ pub fn upgrade_job_container_name() -> String {
 }
 /// UPGRADE_EVENT_REASON is the reason field in upgrade job.
 pub fn upgrade_event_reason() -> String {
-    format!("{}Upgrade", product_pascal())
+    format!("{}Upgrade", product_train())
 }
 /// Upgrade job container image repository.
 pub const UPGRADE_JOB_IMAGE_REPO: &str = "openebs";

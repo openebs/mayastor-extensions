@@ -1,7 +1,7 @@
 use crate::{
     common::{
         constants::{
-            helm_release_version_key, product_pascal, CORE_CHART_NAME, IO_ENGINE_LABEL,
+            helm_release_version_key, product_train, CORE_CHART_NAME, IO_ENGINE_LABEL,
             PARTIAL_REBUILD_DISABLE_EXTENTS,
         },
         error::{PartialRebuildNotAllowed, Result},
@@ -78,14 +78,14 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
     event
         .publish_normal(
-            format!("Starting {} upgrade...", product_pascal()),
+            format!("Starting {} upgrade...", product_train()),
             EventAction::UpgradingCP,
         )
         .await?;
 
     event
         .publish_normal(
-            format!("Upgrading {} control-plane", product_pascal()),
+            format!("Upgrading {} control-plane", product_train()),
             EventAction::UpgradingCP,
         )
         .await?;
@@ -101,7 +101,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
     event
         .publish_normal(
-            format!("Upgraded {} control-plane", product_pascal()),
+            format!("Upgraded {} control-plane", product_train()),
             EventAction::UpgradedCP,
         )
         .await?;
@@ -127,7 +127,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
         event
             .publish_normal(
-                format!("Upgrading {} data-plane", product_pascal()),
+                format!("Upgrading {} data-plane", product_train()),
                 EventAction::UpgradingDP,
             )
             .await?;
@@ -148,7 +148,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
         event
             .publish_normal(
-                format!("Upgraded {} data-plane", product_pascal()),
+                format!("Upgraded {} data-plane", product_train()),
                 EventAction::UpgradedDP,
             )
             .await?;
@@ -156,7 +156,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
     event
         .publish_normal(
-            format!("Successfully upgraded {}", product_pascal()),
+            format!("Successfully upgraded {}", product_train()),
             EventAction::Successful,
         )
         .await?;
