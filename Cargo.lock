@@ -580,6 +580,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap",
+ "constants",
  "events-api",
  "futures",
  "humantime",
@@ -697,6 +698,14 @@ name = "const-oid"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28c122c3980598d243d63d9a704629a2d748d101f278052ff068be5a4423ab6f"
+
+[[package]]
+name = "constants"
+version = "0.1.0"
+dependencies = [
+ "convert_case",
+ "utils",
+]
 
 [[package]]
 name = "convert_case"
@@ -1833,6 +1842,7 @@ dependencies = [
  "async-trait",
  "clap",
  "console-logger",
+ "constants",
  "humantime",
  "kube-proxy",
  "openapi",
@@ -2598,6 +2608,7 @@ dependencies = [
  "tonic",
  "tracing",
  "url",
+ "utils",
  "uuid",
 ]
 
@@ -3345,6 +3356,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "clap",
+ "constants",
  "downcast-rs",
  "flate2",
  "futures",
@@ -3369,6 +3381,7 @@ dependencies = [
  "tokio",
  "tower",
  "urlencoding",
+ "utils",
  "uuid",
  "yaml-rust",
 ]
@@ -3975,6 +3988,8 @@ dependencies = [
  "async-trait",
  "clap",
  "console-logger",
+ "constants",
+ "convert_case",
  "http",
  "humantime",
  "hyper",

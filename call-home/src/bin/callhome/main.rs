@@ -139,7 +139,7 @@ async fn generate_report(
     aggregator_url: Option<Url>,
 ) -> Report {
     let mut report = Report {
-        product_name: PRODUCT.to_string(),
+        product_name: product(),
         k8s_cluster_id,
         deploy_namespace,
         product_version,

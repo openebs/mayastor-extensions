@@ -1,6 +1,6 @@
 use crate::{
     common::{
-        constants::CHART_VERSION_LABEL_KEY,
+        constants::helm_release_version_key,
         error::{
             ListDeploymentsWithLabel, NoRestDeployment, NoVersionLabelInDeployment, ReadingFile,
             Result, SemverParse, YamlParseBufferForUnsupportedVersion, YamlParseFromFile,
@@ -40,7 +40,7 @@ pub(crate) fn version_from_chart_yaml_file(path: PathBuf) -> Result<Version> {
 /// Generate a semver::Version from the CHART_VERSION_LABEL_KEY label on the Storage REST API
 /// Deployment.
 pub(crate) async fn version_from_rest_deployment_label(ns: &str) -> Result<Version> {
-    let labels = format!("{API_REST_LABEL},{CHART_VERSION_LABEL_KEY}");
+    let labels = format!("{API_REST_LABEL},{}", helm_release_version_key());
 
     let deployments_api = KubeClient::deployments_api(ns).await?;
     let mut deploy_list = deployments_api
@@ -76,7 +76,7 @@ pub(crate) async fn version_from_rest_deployment_label(ns: &str) -> Result<Versi
     // the 'already_upgraded' case in         crate::helm::upgrade. The upgraded version will be
     // on the latest-created REST API deployment.
     let deploy = &deploy_list.items[0];
-    let deploy_version = deploy.labels().get(CHART_VERSION_LABEL_KEY).ok_or(
+    let deploy_version = deploy.labels().get(&helm_release_version_key()).ok_or(
         NoVersionLabelInDeployment {
             deployment_name: deploy.name_any(),
             namespace: ns.to_string(),

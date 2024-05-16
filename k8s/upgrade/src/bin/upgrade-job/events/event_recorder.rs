@@ -1,5 +1,5 @@
 use crate::common::{
-    constants::PRODUCT,
+    constants::product_pascal,
     error::{
         EventChannelSend, EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
         JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result, SerializeEventNote,
@@ -205,7 +205,7 @@ impl EventRecorder {
         let note_s = serde_json::to_string(&note).context(SerializeEventNote { note })?;
         self.publish(Event {
             type_: EventType::Normal,
-            reason: format!("{PRODUCT}Upgrade"),
+            reason: constants::upgrade_event_reason(),
             note: Some(note_s),
             action: action.to_string(),
             secondary: None,
@@ -224,7 +224,7 @@ impl EventRecorder {
         let note_s = serde_json::to_string(&note).context(SerializeEventNote { note })?;
         self.publish(Event {
             type_: EventType::Warning,
-            reason: format!("{PRODUCT}Upgrade"),
+            reason: constants::upgrade_event_reason(),
             note: Some(note_s),
             action: action.to_string(),
             secondary: None,
@@ -245,7 +245,7 @@ impl EventRecorder {
         let _ = self
             .publish_warning(format!("Failed to upgrade: {err}"), action)
             .await
-            .map_err(|error| error!(%error, "Failed to upgrade {PRODUCT}"));
+            .map_err(|error| error!(%error, "Failed to upgrade {}", product_pascal()));
     }
 
     /// Shuts down the event channel which makes the event loop worker exit its loop and return.

@@ -42,7 +42,7 @@ impl Receiver {
             .header("CAStor-Cluster-Id", &self.cluster_id)
             .header("CAStor-Version", release_version())
             .header("CAStor-Report-Type", "health_report")
-            .header("CAStor-Product", PRODUCT)
+            .header("CAStor-Product", product())
             .header("CAStor-Time", Utc::now().to_string())
             .header("Content-Type", "text/PGP; charset=binary")
             .body(body)

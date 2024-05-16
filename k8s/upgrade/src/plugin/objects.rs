@@ -1,10 +1,9 @@
 use crate::{
     plugin::constants::{
-        upgrade_name_concat, UPGRADE_BINARY_NAME, UPGRADE_CONFIG_MAP,
+        upgrade_job_container_name, upgrade_name_concat, UPGRADE_BINARY_NAME, UPGRADE_CONFIG_MAP,
         UPGRADE_CONFIG_MAP_MOUNT_PATH, UPGRADE_CONFIG_MAP_NAME_SUFFIX,
         UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
-        UPGRADE_JOB_CONTAINER_NAME, UPGRADE_JOB_NAME_SUFFIX,
-        UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+        UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     upgrade::UpgradeArgs,
     upgrade_labels,
@@ -321,7 +320,7 @@ pub(crate) fn upgrade_job(
                         args: Some(job_args),
                         image: Some(upgrade_image),
                         image_pull_policy,
-                        name: UPGRADE_JOB_CONTAINER_NAME.to_string(),
+                        name: upgrade_job_container_name(),
                         env: Some(vec![
                             EnvVar {
                                 name: "RUST_LOG".to_string(),
