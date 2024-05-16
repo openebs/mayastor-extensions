@@ -77,8 +77,16 @@ Usage:
 {{ include "base_pull_secrets" . }}
 */}}
 {{- define "base_pull_secrets" -}}
-    {{- if .Values.base.imagePullSecrets.enabled }}
-    {{- include "render" (dict "value" .Values.base.imagePullSecrets.secrets "context" $) | nindent 8 }}
+    {{- if .Values.base.imagePullSecrets }}
+        {{- if .Values.base.imagePullSecrets.enabled }}
+        {{- include "render" (dict "value" .Values.base.imagePullSecrets.secrets "context" $) | nindent 8 }}
+        {{- end }}
+    {{- else -}}
+        {{- if .Values.image.pullSecrets }}
+            {{- if .Values.image.pullSecrets.enabled }}
+            {{- include "render" (dict "value" .Values.image.pullSecrets.secrets "context" $) | nindent 8 }}
+            {{- end }}
+        {{- end }}
     {{- end }}
 {{- end -}}
 

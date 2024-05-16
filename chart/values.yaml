@@ -26,6 +26,14 @@ image:
   # -- ImagePullPolicy for our images
   pullPolicy: Always
 
+  # docker-secrets required to pull images if the container registry from image.Registry is protected
+  pullSecrets:
+    # -- Enable pullSecrets for pulling our container images
+    enabled: false
+    # -- Name of the pullSecret in the installed namespace
+    secrets:
+      - name: datacore-image-registry-credentials
+
 # -- Node labels for pod assignment
 # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 # Note that if multi-arch images support 'kubernetes.io/arch: amd64'
@@ -87,13 +95,6 @@ base:
       - name: etcd-probe
         image: busybox:latest
         command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{.Values.etcd.service.port}}; do date; echo "Waiting for etcd..."; sleep 1; done;']
-  # docker-secrets required to pull images if the container registry from image.Registry is protected
-  imagePullSecrets:
-    # -- Enable imagePullSecrets for pulling our container images
-    enabled: false
-    # Name of the imagePullSecret in the installed namespace
-    secrets:
-      - name: login
 
   metrics:
     # -- Enable the metrics exporter
