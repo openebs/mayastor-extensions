@@ -3,15 +3,16 @@ use utils::version_info;
 /// This is used to create labels for the upgrade job.
 #[macro_export]
 macro_rules! upgrade_labels {
-    () => {
+    () => {{
+        let log = constants::loki_logging_key();
         btreemap! {
            "app" => UPGRADE_JOB_NAME_SUFFIX,
-           "openebs.io/logging" => "true",
+           log.as_str() => "true",
         }
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
         .collect()
-    };
+    }};
 }
 
 /// Append the release name to k8s objects.
@@ -63,18 +64,15 @@ pub(crate) fn upgrade_event_selector(release_name: &str, component_name: &str) -
     format!("{kind},{name_key}={name_value}")
 }
 
-pub(crate) const HELM_RELEASE_NAME_LABEL: &str = "openebs.io/release";
-
 pub(crate) const DEFAULT_IMAGE_REGISTRY: &str = "docker.io";
 
 /// The upgrade job will use the UPGRADE_JOB_IMAGE_NAME image (below) with this tag.
 pub(crate) const UPGRADE_JOB_IMAGE_TAG: &str = "develop";
 
 /// Upgrade job container image repository.
-pub(crate) const UPGRADE_JOB_IMAGE_REPO: &str = "openebs";
+pub(crate) const UPGRADE_JOB_IMAGE_REPO: &str = constants::UPGRADE_JOB_IMAGE_REPO;
 
-/// Upgrade job container image name.
-pub(crate) const UPGRADE_JOB_IMAGE_NAME: &str = "mayastor-upgrade-job";
+pub(crate) use constants::upgrade_job_img;
 
 /// Upgrade job name suffix.
 pub(crate) const UPGRADE_JOB_NAME_SUFFIX: &str = "upgrade";
@@ -100,32 +98,25 @@ pub(crate) const UPGRADE_CONFIG_MAP_NAME_SUFFIX: &str = "upgrade-config-map";
 /// Upgrade job binary name.
 pub(crate) const UPGRADE_BINARY_NAME: &str = "upgrade-job";
 
-/// Upgrade job container name.
-pub(crate) const UPGRADE_JOB_CONTAINER_NAME: &str = "mayastor-upgrade-job";
+pub(crate) use constants::upgrade_job_container_name;
 
 /// Defines the Label select for mayastor REST API.
 pub(crate) const API_REST_LABEL_SELECTOR: &str = "app=api-rest";
 
 /// Defines the default helm chart release name.
-pub(crate) const DEFAULT_RELEASE_NAME: &str = "mayastor";
+pub(crate) const DEFAULT_RELEASE_NAME: &str = constants::DEFAULT_RELEASE_NAME;
 
 /// Volumes with one replica
 pub(crate) const SINGLE_REPLICA_VOLUME: u8 = 1;
 
-/// IO_ENGINE_POD_LABEL is the Kubernetes Pod label set on mayastor-io-engine Pods.
+/// IO_ENGINE_POD_LABEL is the Kubernetes Pod label set on io-engine Pods.
 pub(crate) const IO_ENGINE_POD_LABEL: &str = "app=io-engine";
 
-/// AGENT_CORE_POD_LABEL is the Kubernetes Pod label set on mayastor-agent-core Pods.
+/// AGENT_CORE_POD_LABEL is the Kubernetes Pod label set on agent-core Pods.
 pub(crate) const AGENT_CORE_POD_LABEL: &str = "app=agent-core";
 
-/// API_REST_POD_LABEL is the Kubernetes Pod label set on mayastor-api-rest Pods.
+/// API_REST_POD_LABEL is the Kubernetes Pod label set on api-rest Pods.
 pub(crate) const API_REST_POD_LABEL: &str = "app=api-rest";
-
-/// UPGRADE_EVENT_REASON is the reason field in upgrade job.
-pub(crate) const UPGRADE_EVENT_REASON: &str = "MayastorUpgrade";
-
-/// Installed release version.
-pub(crate) const HELM_RELEASE_VERSION_LABEL: &str = "openebs.io/version";
 
 /// Upgrade to develop.
 pub(crate) const UPGRADE_TO_DEVELOP_BRANCH: &str = "develop";

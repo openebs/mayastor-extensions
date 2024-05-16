@@ -1,4 +1,4 @@
-use crate::common::constants::PRODUCT;
+use crate::common::constants::product_pascal;
 use clap::Parser;
 use std::path::PathBuf;
 use utils::{package_description, tracing_telemetry::FmtStyle, version_info_str};
@@ -9,7 +9,7 @@ pub(crate) mod validators;
 /// These are the supported cli configuration options for upgrade.
 #[derive(Parser)]
 #[command(name = package_description!(), version = version_info_str!())]
-#[command(about = format!("Upgrades {}", PRODUCT), long_about = None)]
+#[command(about = format!("Upgrades {}", product_pascal()), long_about = None)]
 pub(crate) struct CliArgs {
     /// This is the URL for the storage REST API server.
     #[arg(short = 'e', long)]

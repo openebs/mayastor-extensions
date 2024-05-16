@@ -5,13 +5,12 @@ use std::{
 use utils::version_info;
 
 /// PRODUCT is the name of the project for which this call-home component is deployed.
-pub const PRODUCT: &str = "Mayastor";
-
-/// Label for release name.
-pub const HELM_RELEASE_NAME_LABEL: &str = "openebs.io/release";
+pub fn product() -> String {
+    ::constants::product_pascal()
+}
 
 /// Defines the default helm chart release name.
-pub const DEFAULT_RELEASE_NAME: &str = "mayastor";
+pub const DEFAULT_RELEASE_NAME: &str = ::constants::DEFAULT_RELEASE_NAME;
 
 /// Defines the Label select for mayastor REST API.
 pub const API_REST_LABEL_SELECTOR: &str = "app=api-rest";
@@ -34,7 +33,7 @@ pub const POOL_STATS: &str = "Pool stats";
 /// Defines the help argument for nexus stats need for promethueus library.
 pub const NEXUS_STATS: &str = "Nexus stats";
 
-/// Variable label for promethueus library.
+/// Variable label for prometheus library.
 pub const ACTION: &str = "action";
 
 /// Create action for events.
@@ -112,7 +111,7 @@ pub fn key_filepath() -> PathBuf {
 }
 
 /// RECEIVER_API_ENDPOINT is the URL to anonymous call-home metrics collection endpoint.
-pub const RECEIVER_ENDPOINT: &str = "https://openebs.phonehome.datacore.com/openebs/report";
+pub const RECEIVER_ENDPOINT: &str = ::constants::CALL_HOME_ENDPOINT;
 
 /// CALL_HOME_FREQUENCY_IN_HOURS is the frequency of call-home metrics transmission, in hours.
 /// The function call_home_frequency() returns the frequency as an std::time::Duration.

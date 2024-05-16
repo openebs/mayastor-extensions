@@ -1,8 +1,8 @@
 use crate::{
     common::{
         constants::{
-            CHART_VERSION_LABEL_KEY, CORE_CHART_NAME, IO_ENGINE_LABEL,
-            PARTIAL_REBUILD_DISABLE_EXTENTS, PRODUCT,
+            helm_release_version_key, product_pascal, CORE_CHART_NAME, IO_ENGINE_LABEL,
+            PARTIAL_REBUILD_DISABLE_EXTENTS,
         },
         error::{PartialRebuildNotAllowed, Result},
         kube_client as KubeClient,
@@ -78,14 +78,14 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
     event
         .publish_normal(
-            format!("Starting {PRODUCT} upgrade..."),
+            format!("Starting {} upgrade...", product_pascal()),
             EventAction::UpgradingCP,
         )
         .await?;
 
     event
         .publish_normal(
-            format!("Upgrading {PRODUCT} control-plane"),
+            format!("Upgrading {} control-plane", product_pascal()),
             EventAction::UpgradingCP,
         )
         .await?;
@@ -101,7 +101,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
     event
         .publish_normal(
-            format!("Upgraded {PRODUCT} control-plane"),
+            format!("Upgraded {} control-plane", product_pascal()),
             EventAction::UpgradedCP,
         )
         .await?;
@@ -109,7 +109,8 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
     // Data plane containers are updated in this step.
     if !opts.skip_data_plane_restart() {
         let yet_to_upgrade_io_engine_label = format!(
-            "{IO_ENGINE_LABEL},{CHART_VERSION_LABEL_KEY}!={}",
+            "{IO_ENGINE_LABEL},{}!={}",
+            helm_release_version_key(),
             target_version.as_str()
         );
         let yet_to_upgrade_io_engine_pods = KubeClient::list_pods(
@@ -126,7 +127,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
         event
             .publish_normal(
-                format!("Upgrading {PRODUCT} data-plane"),
+                format!("Upgrading {} data-plane", product_pascal()),
                 EventAction::UpgradingDP,
             )
             .await?;
@@ -147,7 +148,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
         event
             .publish_normal(
-                format!("Upgraded {PRODUCT} data-plane"),
+                format!("Upgraded {} data-plane", product_pascal()),
                 EventAction::UpgradedDP,
             )
             .await?;
@@ -155,7 +156,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
     event
         .publish_normal(
-            format!("Successfully upgraded {PRODUCT}"),
+            format!("Successfully upgraded {}", product_pascal()),
             EventAction::Successful,
         )
         .await?;
@@ -169,7 +170,7 @@ fn partial_rebuild_check(
 ) -> Result<()> {
     let partial_rebuild_disable_required = yet_to_upgrade_io_engine_pods
         .iter()
-        .filter_map(|pod| pod.labels().get(CHART_VERSION_LABEL_KEY))
+        .filter_map(|pod| pod.labels().get(&helm_release_version_key()))
         .any(|v| {
             let version =
                 Version::parse(v).expect("failed to parse version from io-engine Pod label");

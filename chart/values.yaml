@@ -633,7 +633,7 @@ loki-stack:
         # -- The Loki address to post logs to
         - url: http://{{ .Release.Name }}-loki:3100/loki/api/v1/push
       snippets:
-        # Promtail will export logs to loki only based on based on below
+        # Promtail will export logs to loki only based on below
         # configuration, below scrape config will export only our services
         # which are labeled with openebs.io/logging=true
         scrapeConfigs: |

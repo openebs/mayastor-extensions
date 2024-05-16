@@ -37,8 +37,10 @@ pub(crate) const MAYASTOR_SERVICE: &str = "io-engine";
 /// Defines the name of mayastor-io container(dataplane container)
 pub(crate) const DATA_PLANE_CONTAINER_NAME: &str = "io-engine";
 
-/// Defines the logging label(key-value pair) on mayastor services
-pub(crate) const LOGGING_LABEL_SELECTOR: &str = "openebs.io/logging=true";
+/// Defines the logging label(key-value pair) on services.
+pub(crate) fn logging_label_selector() -> String {
+    format!("{}=true", ::constants::loki_logging_key())
+}
 
 /// Defines the name of upgrade service
 pub(crate) const UPGRADE_SERVICE: &str = "upgrade";
