@@ -1,5 +1,5 @@
 use crate::common::{
-    constants::product_pascal,
+    constants::product_train,
     error::{
         CordonStorageNode, EmptyStorageNodeSpec, GetStorageNode, ListStorageVolumes, Result,
         StorageNodeUncordon,
@@ -205,7 +205,7 @@ pub(crate) async fn cordon_storage_node(
         Some(CordonDrainState::cordonedstate(cordon_state))
             if cordon_state.cordonlabels.contains(&cordon_label) =>
         {
-            info!(node.id = %node_id, "{} Node is already cordoned", product_pascal());
+            info!(node.id = %node_id, "{} Node is already cordoned", product_train());
         }
         _ => {
             rest_client
@@ -216,7 +216,7 @@ pub(crate) async fn cordon_storage_node(
                     node_id: node_id.to_string(),
                 })?;
 
-            info!(node.id = %node_id, "Put cordon label for {} Node", product_pascal());
+            info!(node.id = %node_id, "Put cordon label for {} Node", product_train());
         }
     }
 
@@ -264,13 +264,13 @@ pub(crate) async fn uncordon_storage_node(
                 node.id = %node_id,
                 label = %cordon_label,
                 "Removed cordon label from {} Node",
-                product_pascal()
+                product_train()
             );
         }
         _ => info!(
                 node.id = %node_id,
                 label = %cordon_label,
-                "Cordon label absent from {} Node", product_pascal()
+                "Cordon label absent from {} Node", product_train()
         ),
     }
 

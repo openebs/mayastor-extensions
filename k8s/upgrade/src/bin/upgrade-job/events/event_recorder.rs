@@ -1,5 +1,5 @@
 use crate::common::{
-    constants::product_pascal,
+    constants::product_train,
     error::{
         EventChannelSend, EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
         JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result, SerializeEventNote,
@@ -245,7 +245,7 @@ impl EventRecorder {
         let _ = self
             .publish_warning(format!("Failed to upgrade: {err}"), action)
             .await
-            .map_err(|error| error!(%error, "Failed to upgrade {}", product_pascal()));
+            .map_err(|error| error!(%error, "Failed to upgrade {}", product_train()));
     }
 
     /// Shuts down the event channel which makes the event loop worker exit its loop and return.

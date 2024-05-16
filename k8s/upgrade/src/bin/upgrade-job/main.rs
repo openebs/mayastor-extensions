@@ -1,5 +1,5 @@
 use crate::{
-    common::{constants::product_pascal, error::Result},
+    common::{constants::product_train, error::Result},
     opts::validators::{
         validate_helm_chart_dir, validate_helm_release, validate_helmv3_in_path,
         validate_namespace, validate_rest_endpoint,
@@ -26,12 +26,12 @@ async fn main() -> Result<()> {
     init_logging();
 
     let opts = parse_cli_args().await.map_err(|error| {
-        error!(%error, "Failed to upgrade {}", product_pascal());
+        error!(%error, "Failed to upgrade {}", product_train());
         error
     })?;
 
     upgrade(&opts).await.map_err(|error| {
-        error!(%error, "Failed to upgrade {}", product_pascal());
+        error!(%error, "Failed to upgrade {}", product_train());
         flush_traces();
         error
     })
