@@ -23,7 +23,7 @@ jobs:
           - os: macos-14
             target: apple-darwin
             arch: aarch64
-          - os: macos-latest
+          - os: macos-13
             target: apple-darwin
             arch: x86_64
           - os: ubuntu-latest
