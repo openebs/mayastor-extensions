@@ -6,6 +6,7 @@ on:
     branches:
       - 'release/**'
       - 'develop'
+      - 'macos'
 
 jobs:
   kubectl-plugin:
@@ -14,22 +15,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            target: linux-musl
-            arch: x86_64
-          - os: ubuntu-latest
-            target: linux-musl
-            arch: aarch64
-          - os: macos-14
-            target: apple-darwin
-            arch: aarch64
-          - os: macos-latest
+          - os: macos-13
             target: apple-darwin
             arch: x86_64
-          - os: ubuntu-latest
-            target: windows-gnu
-            arch: x86_64
-            suffix: .exe
     steps:
       - uses: actions/checkout@v4
         env:
