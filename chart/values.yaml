@@ -21,7 +21,7 @@ image:
     #       The below tag values will be picked for images by default.
     #       If not specified, 'tag' option provided above will be picked.
     controlPlane: c70bc8f642b3
-    dataPlane: a26c9e15e4ed
+    dataPlane: fc1b6206d691
     extensions: f5c3947bdcfd
   # -- ImagePullPolicy for our images
   pullPolicy: IfNotPresent
