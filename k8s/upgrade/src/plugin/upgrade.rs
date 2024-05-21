@@ -14,8 +14,7 @@ use crate::plugin::{
         UPGRADE_DRY_RUN_SUMMARY, UPGRADE_JOB_STARTED,
     },
 };
-use ::constants::helm_release_name_key;
-use constants::upgrade_event_reason;
+use constants::{helm_release_name_key, helm_release_version_key, upgrade_event_reason};
 use k8s_openapi::api::{
     apps::v1::Deployment,
     batch::v1::Job,
@@ -944,7 +943,7 @@ pub(crate) async fn get_source_version(ns: &str) -> error::Result<String> {
         .metadata
         .labels
         .ok_or(error::NoDeploymentPresent.build())?
-        .get(&constants::helm_release_name_key())
+        .get(&helm_release_version_key())
         .ok_or(error::NoDeploymentPresent.build())?
         .to_string();
     Ok(value.to_string())
