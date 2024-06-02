@@ -82,10 +82,10 @@ pub(crate) struct CoreValues {
     /// This contains Kubernetes CSI sidecar container image details.
     csi: Csi,
     /// The contains the values for the jaegertracing/jaeger-operator chart.
-    #[serde(rename(deserialize = "jaeger-operator"))]
+    #[serde(default, rename(deserialize = "jaeger-operator"))]
     jaeger_operator: JaegerOperator,
     /// This contains loki-stack details.
-    #[serde(rename(deserialize = "loki-stack"))]
+    #[serde(default, rename(deserialize = "loki-stack"))]
     loki_stack: LokiStack,
     /// This contains the sub-chart values for the hostpath provisioner's helm chart.
     #[serde(default, rename(deserialize = "localpv-provisioner"))]
@@ -643,7 +643,8 @@ impl CsiNodeNvme {
 }
 
 /// This is used to deserialize the yaml object 'loki-stack'.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
+#[serde(default)]
 struct LokiStack {
     filebeat: Filebeat,
     grafana: Grafana,
@@ -736,7 +737,7 @@ impl LokiStack {
 }
 
 /// This is used to deserialize the YAML object 'loki-stack.filebeat'.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 struct Filebeat {
     #[serde(default)]
@@ -751,10 +752,9 @@ impl Filebeat {
 }
 
 /// This is used to deserialize the YAML object 'loki-stack.grafana'.
-#[derive(Deserialize)]
-#[serde(rename_all(deserialize = "camelCase"))]
+#[derive(Default, Deserialize)]
+#[serde(default, rename_all(deserialize = "camelCase"))]
 struct Grafana {
-    #[serde(default)]
     download_dashboards_image: GrafanaDownloadDashboardsImage,
     image: GenericImage,
     sidecar: GrafanaSidecar,
@@ -779,8 +779,8 @@ impl Grafana {
 
 /// This is used to deserialize the YAML object 'loki-stack.grafana.downloadDashboardsImage'.
 #[derive(Default, Deserialize)]
+#[serde(default)]
 struct GrafanaDownloadDashboardsImage {
-    #[serde(default)]
     tag: String,
 }
 
@@ -792,9 +792,9 @@ impl GrafanaDownloadDashboardsImage {
 }
 
 /// This is used to deserialize the YAML object 'loki-stack.grafana.sidecar'.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
+#[serde(default)]
 struct GrafanaSidecar {
-    #[serde(default)]
     image: GenericImage,
 }
 
@@ -806,8 +806,8 @@ impl GrafanaSidecar {
 }
 
 /// This is used to deserialize the YAML object 'loki-stack.logstash'.
-#[derive(Deserialize)]
-#[serde(rename_all(deserialize = "camelCase"))]
+#[derive(Default, Deserialize)]
+#[serde(default, rename_all(deserialize = "camelCase"))]
 struct Logstash {
     image_tag: String,
 }
@@ -820,7 +820,8 @@ impl Logstash {
 }
 
 /// This is used to deserialize the YAML object 'loki-stack.loki'.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
+#[serde(default)]
 struct Loki {
     image: GenericImage,
 }
@@ -832,16 +833,12 @@ impl Loki {
 }
 
 /// This is used to deserialize the yaml object 'loki-stack.prometheus'.
-#[derive(Deserialize)]
-#[serde(rename_all(deserialize = "camelCase"))]
+#[derive(Default, Deserialize)]
+#[serde(default, rename_all(deserialize = "camelCase"))]
 struct Prometheus {
-    #[serde(default)]
     alertmanager: PrometheusAlertmanager,
-    #[serde(default)]
     node_exporter: PrometheusNodeExporter,
-    #[serde(default)]
     pushgateway: PrometheusPushgateway,
-    #[serde(default)]
     server: PrometheusServer,
 }
 
@@ -869,8 +866,8 @@ impl Prometheus {
 
 /// This is used to deserialize the prometheus chart's alertmanager YAML object.
 #[derive(Default, Deserialize)]
+#[serde(default)]
 struct PrometheusAlertmanager {
-    #[serde(default)]
     image: GenericImage,
 }
 
@@ -882,8 +879,8 @@ impl PrometheusAlertmanager {
 
 /// This is used to deserialize the prometheus chart's nodeExporter YAML object.
 #[derive(Default, Deserialize)]
+#[serde(default)]
 struct PrometheusNodeExporter {
-    #[serde(default)]
     image: GenericImage,
 }
 
@@ -895,8 +892,8 @@ impl PrometheusNodeExporter {
 
 /// This is used to deserialize the prometheus chart's pushgateway YAML object.
 #[derive(Default, Deserialize)]
+#[serde(default)]
 struct PrometheusPushgateway {
-    #[serde(default)]
     image: GenericImage,
 }
 
@@ -908,8 +905,8 @@ impl PrometheusPushgateway {
 
 /// This is used to deserialize the prometheus chart's server YAML object.
 #[derive(Default, Deserialize)]
+#[serde(default)]
 struct PrometheusServer {
-    #[serde(default)]
     image: GenericImage,
 }
 
@@ -920,8 +917,8 @@ impl PrometheusServer {
 }
 
 /// This is used to deserialize the yaml object 'promtail'.
-#[derive(Deserialize)]
-#[serde(rename_all(deserialize = "camelCase"))]
+#[derive(Default, Deserialize)]
+#[serde(default, rename_all(deserialize = "camelCase"))]
 struct Promtail {
     config: PromtailConfig,
     init_container: PromtailInitContainer,
@@ -966,9 +963,10 @@ impl Promtail {
 }
 
 /// This is used to deserialize the promtail.config yaml object.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
+#[serde(default)]
 struct PromtailConfig {
-    #[serde(default, rename(deserialize = "lokiAddress"))]
+    #[serde(rename(deserialize = "lokiAddress"))]
     deprecated_loki_address: String,
     file: String,
     snippets: PromtailConfigSnippets,
@@ -997,7 +995,7 @@ impl PromtailConfig {
 }
 
 /// This is used to deserialize the config.snippets yaml object.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 struct PromtailConfigSnippets {
     #[serde(default, rename(deserialize = "extraClientConfigs"))]
@@ -1022,6 +1020,12 @@ impl PromtailConfigSnippets {
 enum PromtailInitContainer {
     DeprecatedInitContainer {},
     InitContainer(Vec<Container>),
+}
+
+impl Default for PromtailInitContainer {
+    fn default() -> Self {
+        Self::InitContainer(Vec::<Container>::new())
+    }
 }
 
 /// This is used to serialize the config.clients yaml object in promtail chart v6.13.1
@@ -1129,7 +1133,7 @@ impl LocalpvProvisionerHelperPod {
 }
 
 /// This is used to deserialize the '.jaeger-operator' yaml object.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct JaegerOperator {
     #[serde(default)]
     image: GenericImage,
