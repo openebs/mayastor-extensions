@@ -66,6 +66,9 @@ pub const DEFAULT_MBUS_URL: &str = "nats://mayastor-nats:4222";
 /// Defines the default namespace.
 pub const DEFAULT_NAMESPACE: &str = "mayastor";
 
+/// Number of bytes in a disk sector.
+pub const BYTES_PER_SECTOR: u64 = 512;
+
 /// DEFAULT_ENCRYPTION_DIR_PATH is the directory path for the temporary files generated during
 /// encryption.
 /// The function encryption_dir() returns the user defined directory path for the encryption
