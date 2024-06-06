@@ -44,18 +44,24 @@ Usage:
     {{- if .Values.base.initContainers.enabled }}
     {{- include "render" (dict "value" .Values.base.initContainers.containers "context" $) | nindent 8 }}
     {{- end }}
-    {{- include "jaeger_agent_init_container" . }}
+    {{- include "jaeger_collector_init_container" . }}
 {{- end -}}
 
 {{/*
 Renders the jaeger agent init container, if enabled
 Usage:
-{{ include "jaeger_agent_init_container" . }}
+{{ include "jaeger_collector_init_container" . }}
 */}}
-{{- define "jaeger_agent_init_container" -}}
+{{- define "jaeger_collector_init_container" -}}
     {{- if .Values.base.jaeger.enabled }}
       {{- if .Values.base.jaeger.initContainer }}
-      {{- include "render" (dict "value" .Values.base.jaeger.agent.initContainer "context" $) | nindent 8 }}
+      {{- if .Values.base.jaeger.collector }}
+      {{- include "render" (dict "value" .Values.base.jaeger.collector.initContainer "context" $) | nindent 8 }}
+      {{- else }}
+        - name: jaeger-probe
+          image: busybox:latest
+          command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 -u jaeger-collector:4317; do date; echo "Waiting for jaeger..."; sleep 1; done;' ]
+      {{- end }}
       {{- end }}
     {{- end }}
 {{- end -}}
@@ -270,4 +276,15 @@ Adds the image prefix to image name
 {{- define "image_prefix" -}}
     {{ $product := .Files.Get "product.yaml" | fromYaml }}
     {{- print $product.imagePrefix -}}
+{{- end -}}
+
+{{/*
+Get the Jaeger URL
+*/}}
+{{- define "jaeger_url" -}}
+    {{- if $collector := .Values.base.jaeger.collector }}
+    {{- $collector.name }}:{{ $collector.port }}
+    {{- else }}
+    {{- print "jaeger-collector:4317" -}}
+    {{- end }}
 {{- end -}}
