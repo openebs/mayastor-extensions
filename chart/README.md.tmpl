@@ -15,7 +15,7 @@
    ```
  - Create secret if downloading the container images from a private repo.
    ```sh
-   kubectl create secret docker-registry <same-as-base.imagePullSecrets.secrets>  --docker-server="https://index.docker.io/v1/" --docker-username="<user-name>" --docker-password="<password>" --docker-email="<user-email>" -n <mayastor-namespace>
+   kubectl create secret docker-registry <same-as-image.pullSecrets[0]>  --docker-server="https://index.docker.io/v1/" --docker-username="<user-name>" --docker-password="<password>" --docker-email="<user-email>" -n <mayastor-namespace>
    ```
 
 ### Installing the chart via the git repo
@@ -42,7 +42,7 @@ $ helm install mymayastor mayastor/{{ template "chart.name" . }}
 ### Uninstall Helm Chart
 
 ```console
-$ helm uninstall [RELEASE_NAME] 
+$ helm uninstall [RELEASE_NAME]
 ```
 
 This removes all the Kubernetes components associated with the chart and deletes the release.
