@@ -202,7 +202,7 @@ async fn generate_report(
         }
     };
 
-    let pools = http_client.pools_api().get_pools().await;
+    let pools = http_client.pools_api().get_pools(None).await;
     match pools {
         Ok(ref pools) => report.pools = Pools::new(pools.clone().into_body(), event_data.clone()),
         Err(ref err) => {
