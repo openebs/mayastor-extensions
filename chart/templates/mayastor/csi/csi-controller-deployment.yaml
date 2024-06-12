@@ -26,7 +26,7 @@ spec:
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
       initContainers:
-        {{- include "jaeger_agent_init_container" . }}
+        {{- include "jaeger_collector_init_container" . }}
         {{- include "rest_agent_init_container" . }}
       {{- if $pcName := include "priority_class" (dict "template" . "localPriorityClass" .Values.csi.controller.priorityClassName) }}
       priorityClassName: {{ $pcName }}
@@ -117,7 +117,7 @@ spec:
           args:
             - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
             - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"{{ if .Values.base.jaeger.enabled }}
-            - "--jaeger={{ .Values.base.jaeger.agent.name }}:{{ .Values.base.jaeger.agent.port }}"{{ end }}
+            - "--jaeger={{ include "jaeger_url" . }}"{{ end }}
             {{- range $key, $val := .Values.csi.node.topology.segments }}
             - "--node-selector={{ $key }}={{ $val }}"
             {{- end }}

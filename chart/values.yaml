@@ -108,6 +108,13 @@ base:
         - name: jaeger-probe
           image: busybox:latest
           command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 -u {{.Values.base.jaeger.agent.name}} {{.Values.base.jaeger.agent.port}}; do date; echo "Waiting for jaeger..."; sleep 1; done;']
+    collector:
+      name: jaeger-collector
+      port: 4317
+      initContainer:
+        - name: jaeger-probe
+          image: busybox:latest
+          command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 -u {{.Values.base.jaeger.collector.name}} {{.Values.base.jaeger.collector.port}}; do date; echo "Waiting for jaeger..."; sleep 1; done;' ]
   initRestContainer:
     enabled: true
     initContainer:
@@ -141,6 +148,10 @@ jaeger-operator:
   jaeger:
     # Install jaeger-operator
     create: false
+    collector:
+      service:
+        otlp:
+          grpc: true
   rbac:
     # Create a clusterRole for Jaeger
     clusterRole: true
