@@ -117,16 +117,16 @@ Options:
 8. Get Nodes
 ```
 ❯ kubectl mayastor get nodes
- ID           GRPC ENDPOINT   STATUS
- io-engine-1  10.1.0.5:10124  Online, Cordoned
- io-engine-3  10.1.0.7:10124  Online, Cordoned, Drained
- io-engine-2  10.1.0.6:10124  Online
+ ID           GRPC ENDPOINT   STATUS                     VERSION
+ io-engine-1  10.1.0.5:10124  Online, Cordoned           v2.7.0
+ io-engine-3  10.1.0.7:10124  Online, Cordoned, Drained  v2.7.0
+ io-engine-2  10.1.0.6:10124  Online                     v2.7.0
 ```
 9. Get Node by ID
 ```
 ❯ kubectl mayastor get node io-engine-1
- ID           GRPC ENDPOINT   STATUS
- io-engine-1  10.1.0.5:10124  Online, Cordoned
+ ID           GRPC ENDPOINT   STATUS            VERSION
+ io-engine-1  10.1.0.5:10124  Online, Cordoned  v2.7.0
 ```
 
 10. Get Volume(s)/Pool(s)/Node(s) to a specific Output Format
