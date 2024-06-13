@@ -456,7 +456,7 @@ etcd:
     openebs.io/logging: "true"
   # -- Number of replicas of etcd
   replicaCount: 3
-  # Kubernetes Cluster Domain
+  # -- Kubernetes Cluster Domain
   clusterDomain: cluster.local
   # TLS authentication for client-to-server communications
   # ref: https://etcd.io/docs/current/op-guide/security/
