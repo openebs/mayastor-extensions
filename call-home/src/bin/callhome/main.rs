@@ -8,6 +8,7 @@ use crate::{
             event_stats, EventData, NexusCreated, NexusDeleted, PoolCreated, PoolDeleted, Pools,
             RebuildEnded, RebuildStarted, Replicas, Report, VolumeCreated, VolumeDeleted, Volumes,
         },
+        storage_rest::list_all_volumes,
     },
     transmitter::*,
 };
@@ -210,14 +211,10 @@ async fn generate_report(
         }
     };
 
-    let volumes = http_client.volumes_api().get_volumes(0, None, None).await;
-    let volumes = match volumes {
-        Ok(volumes) => Some(volumes.into_body()),
-        Err(err) => {
-            error!("{:?}", err);
-            None
-        }
-    };
+    let volumes = list_all_volumes(&http_client)
+        .await
+        .map_err(|error| error!("Failed to list all volumes: {error:?}"))
+        .ok();
 
     if let Some(volumes) = &volumes {
         report.volumes = Volumes::new(volumes.clone(), event_data.clone());

@@ -36,8 +36,9 @@ pub(crate) struct Volumes {
 impl Volumes {
     /// Receives a openapi::models::Volumes object and returns a new report_models::volume object by
     /// using the data provided.
-    pub(crate) fn new(volumes: openapi::models::Volumes, event_data: EventData) -> Self {
-        let volumes_size_vector = get_volumes_size_vector(&volumes.entries);
+
+    pub(crate) fn new(volumes: Vec<Volume>, event_data: EventData) -> Self {
+        let volumes_size_vector = get_volumes_size_vector(volumes.as_slice());
         Self {
             count: volumes_size_vector.len() as u64,
             max_size_in_bytes: get_max_value(volumes_size_vector.clone()),
@@ -46,8 +47,8 @@ impl Volumes {
             capacity_percentiles_in_bytes: Percentiles::new(volumes_size_vector),
             created: event_data.volume_created.value(),
             deleted: event_data.volume_deleted.value(),
-            volume_replica_counts: VolumeReplicaCounts::new(&volumes.entries),
-            volume_state_counts: VolumeStateCounts::new(&volumes.entries),
+            volume_replica_counts: VolumeReplicaCounts::new(volumes.as_slice()),
+            volume_state_counts: VolumeStateCounts::new(volumes.as_slice()),
         }
     }
 }
@@ -173,10 +174,10 @@ pub(crate) struct Replicas {
 impl Replicas {
     /// Receives a Option<openapi::models::Volumes> and replica_count and returns a new
     /// report_models::replica object by using the data provided.
-    pub(crate) fn new(replica_count: usize, volumes: Option<openapi::models::Volumes>) -> Self {
+    pub(crate) fn new(replica_count: usize, volumes: Option<Vec<Volume>>) -> Self {
         let mut replicas = Self::default();
         if let Some(volumes) = volumes {
-            let replicas_size_vector = get_replicas_size_vector(volumes.entries);
+            let replicas_size_vector = get_replicas_size_vector(volumes);
             replicas.count_per_volume_percentiles = Percentiles::new(replicas_size_vector);
         }
         replicas.count = replica_count as u64;
