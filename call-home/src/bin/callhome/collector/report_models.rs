@@ -1,6 +1,9 @@
-use obs::common::{
-    constants::{ACTION, BYTES_PER_SECTOR},
-    errors,
+use obs::{
+    common::{
+        constants::{ACTION, BYTES_PER_SECTOR},
+        errors,
+    },
+    math::percentile_exclusive,
 };
 use openapi::models::{BlockDevice, Volume, VolumeStatus};
 use prometheus_parse::{Sample, Value};
@@ -33,8 +36,9 @@ pub(crate) struct Volumes {
 impl Volumes {
     /// Receives a openapi::models::Volumes object and returns a new report_models::volume object by
     /// using the data provided.
-    pub(crate) fn new(volumes: openapi::models::Volumes, event_data: EventData) -> Self {
-        let volumes_size_vector = get_volumes_size_vector(&volumes.entries);
+
+    pub(crate) fn new(volumes: Vec<Volume>, event_data: EventData) -> Self {
+        let volumes_size_vector = get_volumes_size_vector(volumes.as_slice());
         Self {
             count: volumes_size_vector.len() as u64,
             max_size_in_bytes: get_max_value(volumes_size_vector.clone()),
@@ -43,8 +47,8 @@ impl Volumes {
             capacity_percentiles_in_bytes: Percentiles::new(volumes_size_vector),
             created: event_data.volume_created.value(),
             deleted: event_data.volume_deleted.value(),
-            volume_replica_counts: VolumeReplicaCounts::new(&volumes.entries),
-            volume_state_counts: VolumeStateCounts::new(&volumes.entries),
+            volume_replica_counts: VolumeReplicaCounts::new(volumes.as_slice()),
+            volume_state_counts: VolumeStateCounts::new(volumes.as_slice()),
         }
     }
 }
@@ -170,10 +174,10 @@ pub(crate) struct Replicas {
 impl Replicas {
     /// Receives a Option<openapi::models::Volumes> and replica_count and returns a new
     /// report_models::replica object by using the data provided.
-    pub(crate) fn new(replica_count: usize, volumes: Option<openapi::models::Volumes>) -> Self {
+    pub(crate) fn new(replica_count: usize, volumes: Option<Vec<Volume>>) -> Self {
         let mut replicas = Self::default();
         if let Some(volumes) = volumes {
-            let replicas_size_vector = get_replicas_size_vector(volumes.entries);
+            let replicas_size_vector = get_replicas_size_vector(volumes);
             replicas.count_per_volume_percentiles = Percentiles::new(replicas_size_vector);
         }
         replicas.count = replica_count as u64;
@@ -521,21 +525,10 @@ fn get_mean_value(values: Vec<u64>) -> u64 {
 
 /// Get percentile value from a vector.
 fn get_percentile(mut values: Vec<u64>, percentile: usize) -> u64 {
-    if !values.is_empty() {
-        values.sort();
-        let index_as_f64 = (percentile as f64) * (values.len() - 1) as f64 / 100.0;
-        let index = (percentile * (values.len() - 1)) / 100;
-
-        if index_as_f64 - index as f64 > 0.0 {
-            (values[index] as f64
-                + (index_as_f64 - index as f64) * (values[index + 1] - values[index]) as f64)
-                as u64
-        } else {
-            values[index]
-        }
-    } else {
-        0
-    }
+    values.sort_unstable();
+    percentile_exclusive(values.as_slice(), percentile as f64)
+        .unwrap_or_default()
+        .round() as u64
 }
 
 /// Gets a vector containing volume sizes from Vec<Volume>.
