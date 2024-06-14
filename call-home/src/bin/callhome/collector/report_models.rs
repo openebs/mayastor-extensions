@@ -1,6 +1,9 @@
-use obs::common::{
-    constants::{ACTION, BYTES_PER_SECTOR},
-    errors,
+use obs::{
+    common::{
+        constants::{ACTION, BYTES_PER_SECTOR},
+        errors,
+    },
+    math::percentile_exclusive,
 };
 use openapi::models::{BlockDevice, Volume, VolumeStatus};
 use prometheus_parse::{Sample, Value};
@@ -521,21 +524,10 @@ fn get_mean_value(values: Vec<u64>) -> u64 {
 
 /// Get percentile value from a vector.
 fn get_percentile(mut values: Vec<u64>, percentile: usize) -> u64 {
-    if !values.is_empty() {
-        values.sort();
-        let index_as_f64 = (percentile as f64) * (values.len() - 1) as f64 / 100.0;
-        let index = (percentile * (values.len() - 1)) / 100;
-
-        if index_as_f64 - index as f64 > 0.0 {
-            (values[index] as f64
-                + (index_as_f64 - index as f64) * (values[index + 1] - values[index]) as f64)
-                as u64
-        } else {
-            values[index]
-        }
-    } else {
-        0
-    }
+    values.sort_unstable();
+    percentile_exclusive(values.as_slice(), percentile as f64)
+        .unwrap_or_default()
+        .round() as u64
 }
 
 /// Gets a vector containing volume sizes from Vec<Volume>.
