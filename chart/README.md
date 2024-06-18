@@ -2,7 +2,7 @@
 
 Mayastor Helm chart for Kubernetes
 
-![Version: 0.0.0](https://img.shields.io/badge/Version-0.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.0.0](https://img.shields.io/badge/AppVersion-0.0.0-informational?style=flat-square)
+![Version: 2.7.0](https://img.shields.io/badge/Version-2.7.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2.7.0](https://img.shields.io/badge/AppVersion-2.7.0-informational?style=flat-square)
 
 ## Installation Guide
 
@@ -54,7 +54,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 
 | Repository | Name | Version |
 |------------|------|---------|
-|  | crds | 0.0.0 |
+|  | crds | 2.7.0 |
 | https://charts.bitnami.com/bitnami | etcd | 8.6.0 |
 | https://grafana.github.io/helm-charts | loki-stack | 2.9.11 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.50.1 |
@@ -152,7 +152,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | image.&ZeroWidthSpace;pullSecrets | docker-secrets required to pull images if the container registry from image.registry is protected | `[]` |
 | image.&ZeroWidthSpace;registry | Image registry to pull our product images | `"docker.io"` |
 | image.&ZeroWidthSpace;repo | Image registry's namespace | `"openebs"` |
-| image.&ZeroWidthSpace;tag | Release tag for our images | `"develop"` |
+| image.&ZeroWidthSpace;tag | Release tag for our images | `"release-2.7"` |
 | io_engine.&ZeroWidthSpace;coreList | If not empty, overrides the cpuCount and explicitly sets the list of cores. Example: --set='io_engine.coreList={30,31}' | `[]` |
 | io_engine.&ZeroWidthSpace;cpuCount | The number of cores that each io-engine instance will bind to. | `"2"` |
 | io_engine.&ZeroWidthSpace;envcontext | Pass additional arguments to the Environment Abstraction Layer. Example: --set {product}.envcontext=iova-mode=pa | `""` |
