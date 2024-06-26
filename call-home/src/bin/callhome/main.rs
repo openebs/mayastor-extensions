@@ -17,10 +17,20 @@ use collector::report_models::{MayastorManagedDisks, Nexus, StorageMedia, Storag
 use obs::common::constants::*;
 use openapi::tower::client::{ApiClient, Configuration};
 use sha256::digest;
-use std::{collections::HashMap, time};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+    time,
+};
 use tokio::time::sleep;
-use tracing::{error, info};
-use tracing_subscriber::EnvFilter;
+use tokio_retry::{
+    strategy::{jitter, ExponentialBackoff},
+    Retry,
+};
+use tracing::{error, info, Event, Level, Subscriber};
+use tracing_subscriber::{
+    layer::Context, prelude::__tracing_subscriber_SubscriberExt, EnvFilter, Layer,
+};
 use url::Url;
 use utils::{package_description, version_info_str};
 
@@ -51,17 +61,23 @@ impl CliArgs {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
+    let logs = Arc::new(Mutex::new(Vec::new()));
+    let vec_layer = LogsLayer::new(logs.clone());
 
-    if let Err(error) = run().await {
+    let subscriber = tracing_subscriber::Registry::default()
+        .with(vec_layer)
+        .with(tracing_subscriber::fmt::layer())
+        .with(EnvFilter::from_default_env());
+
+    tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
+
+    if let Err(error) = run(logs).await {
         error!(?error, "failed call-home");
         std::process::exit(1);
     }
 }
 
-async fn run() -> anyhow::Result<()> {
+async fn run(logs: Arc<Mutex<Vec<LogEntry>>>) -> anyhow::Result<()> {
     let args = CliArgs::args();
     let version = release_version();
     let endpoint = args.endpoint;
@@ -106,6 +122,7 @@ async fn run() -> anyhow::Result<()> {
             namespace.clone(),
             version.clone(),
             aggregator_url.clone(),
+            logs.clone(),
         )
         .await;
 
@@ -138,7 +155,12 @@ async fn generate_report(
     deploy_namespace: String,
     product_version: String,
     aggregator_url: Option<Url>,
+    logs: Arc<Mutex<Vec<LogEntry>>>,
 ) -> Report {
+    let retry_strategy = ExponentialBackoff::from_millis(100)
+        .map(jitter) // add jitter to delays
+        .take(5); // retry up to 5 times
+
     let mut report = Report {
         product_name: product(),
         k8s_cluster_id,
@@ -172,7 +194,7 @@ async fn generate_report(
 
     let k8s_node_count = k8s_client.get_node_len().await;
     match k8s_node_count {
-        Ok(k8s_node_count) => report.k8s_node_count = k8s_node_count as u8,
+        Ok(k8s_node_count) => report.k8s_node_count = Some(k8s_node_count as u8),
         Err(err) => {
             error!("{:?}", err);
         }
@@ -180,50 +202,66 @@ async fn generate_report(
 
     // List of disks on each node.
     let mut node_disks = HashMap::new();
-    let nodes = http_client.nodes_api().get_nodes(None).await;
+    let nodes = Retry::spawn(retry_strategy.clone(), || async {
+        http_client.nodes_api().get_nodes(None).await
+    })
+    .await;
     match nodes {
         Ok(nodes) => {
             let nodes = nodes.into_body();
             for node in &nodes {
-                if let Ok(b_devs_result) = http_client
-                    .block_devices_api()
-                    .get_node_block_devices(&node.id, Some(true))
-                    .await
-                {
+                let b_devs_result = Retry::spawn(retry_strategy.clone(), || async {
+                    http_client
+                        .block_devices_api()
+                        .get_node_block_devices(&node.id, Some(true))
+                        .await
+                })
+                .await;
+                if let Ok(b_devs) = b_devs_result {
                     node_disks
                         .entry(node.id.to_string())
                         .or_insert_with(Vec::new)
-                        .extend(b_devs_result.into_body());
+                        .extend(b_devs.into_body());
                 };
             }
-            report.storage_node_count = nodes.len() as u8
+            report.storage_node_count = Some(nodes.len() as u8)
         }
         Err(err) => {
             error!("{:?}", err);
         }
     };
 
-    let pools = http_client.pools_api().get_pools(None).await;
+    let pools = Retry::spawn(retry_strategy.clone(), || async {
+        http_client.pools_api().get_pools(None).await
+    })
+    .await;
     match pools {
-        Ok(ref pools) => report.pools = Pools::new(pools.clone().into_body(), event_data.clone()),
+        Ok(ref pools) => {
+            report.pools = Some(Pools::new(pools.clone().into_body(), event_data.clone()))
+        }
         Err(ref err) => {
             error!("{:?}", err);
         }
     };
 
-    let volumes = list_all_volumes(&http_client)
-        .await
-        .map_err(|error| error!("Failed to list all volumes: {error:?}"))
-        .ok();
+    let volumes = Retry::spawn(retry_strategy.clone(), || async {
+        list_all_volumes(&http_client).await
+    })
+    .await
+    .map_err(|error| error!("Failed to list all volumes: {error:?}"))
+    .ok();
 
     if let Some(volumes) = &volumes {
-        report.volumes = Volumes::new(volumes.clone(), event_data.clone());
+        report.volumes = Some(Volumes::new(volumes.clone(), event_data.clone()));
     }
 
-    let replicas = http_client.replicas_api().get_replicas().await;
+    let replicas = Retry::spawn(retry_strategy, || async {
+        http_client.replicas_api().get_replicas().await
+    })
+    .await;
     match replicas {
         Ok(ref replicas) => {
-            report.replicas = Replicas::new(replicas.clone().into_body().len(), volumes)
+            report.replicas = Some(Replicas::new(replicas.clone().into_body().len(), volumes))
         }
         Err(ref err) => {
             error!("{:?}", err);
@@ -256,5 +294,81 @@ async fn generate_report(
     report.storage_media = StorageMedia::new(valid_disks);
 
     report.nexus = Nexus::new(event_data);
+
+    let logs = logs.lock().unwrap();
+    for log in logs.iter() {
+        let log_string = format!(
+            "[{} {} {}:{}] {}",
+            log.timestamp, log.level, log.file, log.line, log.message
+        );
+        report.logs.push(log_string);
+    }
     report
+}
+
+// Define the LogsLayer
+struct LogsLayer {
+    logs: Arc<Mutex<Vec<LogEntry>>>,
+}
+
+impl LogsLayer {
+    fn new(logs: Arc<Mutex<Vec<LogEntry>>>) -> Self {
+        LogsLayer { logs }
+    }
+}
+
+impl<S> Layer<S> for LogsLayer
+where
+    S: Subscriber,
+{
+    fn on_event(&self, event: &Event, _ctx: Context<S>) {
+        let timestamp = chrono::Utc::now().to_rfc3339();
+        let level = event.metadata().level();
+        let file = event.metadata().file().unwrap_or("").to_string();
+        let line = event.metadata().line().unwrap_or(0);
+
+        let mut visitor = LogVisitor::new();
+        event.record(&mut visitor);
+
+        let log_entry = LogEntry {
+            timestamp,
+            level: level.to_string(),
+            file,
+            line,
+            message: visitor.log,
+        };
+
+        // Only capture logs of level ERROR
+        if level == &Level::ERROR {
+            let mut logs = self.logs.lock().unwrap();
+            logs.push(log_entry);
+        }
+    }
+}
+
+//
+struct LogVisitor {
+    log: String,
+}
+
+impl LogVisitor {
+    fn new() -> Self {
+        LogVisitor { log: String::new() }
+    }
+}
+
+impl tracing::field::Visit for LogVisitor {
+    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+        self.log
+            .push_str(&format!("{}: {:?};", field.name(), value));
+    }
+}
+
+#[derive(Debug, serde::Serialize)]
+struct LogEntry {
+    timestamp: String,
+    level: String,
+    file: String,
+    line: u32,
+    message: String,
 }
