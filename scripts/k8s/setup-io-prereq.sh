@@ -6,8 +6,10 @@ HUGE_PAGES=
 HUGE_PAGES_OVERRIDE=
 NVME_TCP=
 DRY_RUN=
-SYSCTL="sudo sysctl"
-MODPROBE="sudo modprobe"
+SUDO=${SUDO:-"sudo"}
+SYSCTL="$SUDO sysctl"
+MODPROBE="$SUDO modprobe"
+
 help() {
   cat <<EOF
 Usage: $(basename "$0") [COMMAND] [OPTIONS]
@@ -55,7 +57,7 @@ install_kernel_modules() {
   DISTRO="$(distro)"
   case "$DISTRO" in
     Ubuntu)
-      sudo apt-get install linux-modules-extra-$(uname -r)
+      $SUDO apt-get install linux-modules-extra-$(uname -r)
       ;;
     NixOS | *)
       install_kernel_modules_nsup "$DISTRO"

@@ -162,7 +162,7 @@ pipeline {
             sh 'nix-shell --pure --run "./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix'
           }
         }
-        stage('chart template test') {
+        stage('chart template and install test') {
           when {
             expression { helm_test == true }
           }
@@ -170,6 +170,14 @@ pipeline {
           steps {
             sh 'printenv'
             sh 'nix-shell --pure --run "./scripts/helm/test-template.sh" ./scripts/helm/shell.nix'
+            sh 'nix-shell --pure --run "./scripts/k8s/deployer.sh start --label" ./scripts/k8s/shell.nix'
+            sh 'nix-shell --pure --run "./scripts/helm/install.sh --wait" ./scripts/k8s/shell.nix'
+            sh 'nix-shell --pure --run "./scripts/k8s/deployer.sh stop" ./scripts/k8s/shell.nix'
+          }
+          post {
+            always {
+              sh 'nix-shell --pure --run "./scripts/k8s/deployer.sh stop" ./scripts/k8s/shell.nix'
+            }
           }
         }
         stage('image build test') {
