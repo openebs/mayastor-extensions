@@ -16,6 +16,7 @@ KUBECTL="kubectl"
 DOCKER="docker"
 HUGE_PAGES=1800
 LABEL=
+SUDO=${SUDO:-"sudo"}
 
 help() {
   cat <<EOF
@@ -101,6 +102,7 @@ while [ "$#" -gt 0 ]; do
             FALLOCATE="echo $FALLOCATE"
             KUBECTL="echo $KUBECTL"
             DOCKER="echo $DOCKER"
+            SUDO="echo"
           fi
           shift;;
         *)
@@ -114,7 +116,7 @@ if [ -z "$COMMAND" ]; then
 fi
 
 if [ "$COMMAND" = "stop" ]; then
-  sudo nvme disconnect-all
+  $SUDO nvme disconnect-all
   $KIND delete cluster
   exit 0
 fi
@@ -124,7 +126,7 @@ fi
 # Create and cleanup the tmp folder
 # Note: this is static in case you want to restart the worker node
 mkdir -p "$TMP_KIND"
-sudo rm -rf "$TMP_KIND"/*
+$SUDO rm -rf "$TMP_KIND"/*
 
 # Adds the control-plane/master node
 cat <<EOF > "$TMP_KIND_CONFIG"

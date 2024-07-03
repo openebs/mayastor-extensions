@@ -20,10 +20,10 @@ jobs:
       - name: BootStrap k8s cluster
         run: |
           nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
-
       - name: Install Helm Chart
         run: |
           nix-shell ./scripts/k8s/shell.nix --run "./scripts/helm/install.sh --dep-update --wait"
+
   k8s-ci-vm:
     runs-on: ubuntu-latest
     steps:
