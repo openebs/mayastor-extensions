@@ -71,24 +71,24 @@ base:
     silenceLevel:
   initContainers:
     enabled: true
+    image:
+      name: alpine-sh
+      tag: 4.1.0
+      pullPolicy: IfNotPresent
     containers:
       - name: agent-core-grpc-probe
-        image: busybox:latest
         command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50051; do date; echo "Waiting for agent-core-grpc services..."; sleep 1; done;']
       - name: etcd-probe
-        image: busybox:latest
         command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{.Values.etcd.service.port}}; do date; echo "Waiting for etcd..."; sleep 1; done;']
   initHaNodeContainers:
     enabled: true
     containers:
       - name: agent-cluster-grpc-probe
-        image: busybox:latest
         command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50052; do date; echo "Waiting for agent-cluster-grpc services..."; sleep 1; done;']
   initCoreContainers:
     enabled: true
     containers:
       - name: etcd-probe
-        image: busybox:latest
         command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{.Values.etcd.service.port}}; do date; echo "Waiting for etcd..."; sleep 1; done;']
 
   metrics:
@@ -106,20 +106,17 @@ base:
       port: 6831
       initContainer:
         - name: jaeger-probe
-          image: busybox:latest
           command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 -u {{.Values.base.jaeger.agent.name}} {{.Values.base.jaeger.agent.port}}; do date; echo "Waiting for jaeger..."; sleep 1; done;']
     collector:
       name: jaeger-collector
       port: 4317
       initContainer:
         - name: jaeger-probe
-          image: busybox:latest
           command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 -u {{.Values.base.jaeger.collector.name}} {{.Values.base.jaeger.collector.port}}; do date; echo "Waiting for jaeger..."; sleep 1; done;' ]
   initRestContainer:
     enabled: true
     initContainer:
       - name: api-rest-probe
-        image: busybox:latest
         command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-api-rest 8081; do date; echo "Waiting for REST API endpoint to become available"; sleep 1; done;']
 
 operators:
@@ -367,7 +364,6 @@ csi:
       enabled: false
       containers:
         - name: nvme-tcp-probe
-          image: busybox:latest
           command: ['sh', '-c', 'trap "exit 1" TERM; until $(lsmod | grep nvme_tcp &>/dev/null); do [ -z "$WARNED" ] && echo "nvme_tcp module not loaded..."; WARNED=1; sleep 60; done;']
 
 io_engine:
@@ -400,7 +396,6 @@ io_engine:
       maxQueueDepth: "32"
       # Max qpairs per controller.
       maxQpairsPerCtrl: "32"
-
 
   # -- Pass additional arguments to the Environment Abstraction Layer.
   # Example: --set {product}.envcontext=iova-mode=pa
@@ -437,8 +432,14 @@ io_engine:
   tolerations: []
   # -- Set PriorityClass, overrides global
   priorityClassName: ""
+  # -- Runtime class to use. Defaults to cluster standard
+  runtimeClassName: ""
 
 etcd:
+  # -- Disable when using an external etcd cluster.
+  enabled: true
+  # -- (string) Url of the external etcd cluster. Note, etcd.enable must be set to false.
+  externalUrl: ""
   # Configuration for etcd's localpv hostpath storage class.
   localpvScConfig:
     enabled: true
@@ -508,6 +509,11 @@ etcd:
   volumePermissions:
     # chown the mounted volume; this is required if a statically provisioned hostpath volume is used
     enabled: true
+    image:
+      registry: docker.io
+      repository: openebs/alpine-bash
+      tag: 4.1.0
+      pullSecrets: []
   # extra debug information on logs
   debug: false
   initialClusterState: "new"
@@ -578,8 +584,8 @@ loki-stack:
       runAsUser: 1001
     # initContainers to chown the static hostpath PV by 1001 user
     initContainers:
-      - command: ["/bin/bash", "-ec", "chown -R 1001:1001 /data"]
-        image: docker.io/bitnami/bitnami-shell:10
+      - command: ["/bin/sh", "-ec", "chown -R 1001:1001 /data"]
+        image: docker.io/openebs/alpine-sh:4.1.0
         imagePullPolicy: IfNotPresent
         name: volume-permissions
         securityContext:
