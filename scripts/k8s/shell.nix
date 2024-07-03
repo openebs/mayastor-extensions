@@ -12,9 +12,19 @@ pkgs.mkShell {
     kubectl
     kind
     jq
+    nvme-cli
   ] ++ pkgs.lib.optional (inPureNixShell) [
+    kmod
+    procps
     docker
     util-linux
     sudo
   ];
+
+  SUDO = "sudo";
+  shellHook = ''
+    if [ "${toString inPureNixShell}" == "1" ] && [ -f /run/wrappers/bin/sudo ]; then
+      export SUDO=/run/wrappers/bin/sudo
+    fi
+  '';
 }

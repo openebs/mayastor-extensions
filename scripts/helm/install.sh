@@ -78,7 +78,8 @@ echo "Installing Mayastor Chart"
 set -x
 helm install mayastor "$CHART_DIR" -n mayastor --create-namespace \
      --set="etcd.livenessProbe.initialDelaySeconds=5,etcd.readinessProbe.initialDelaySeconds=5,etcd.replicaCount=1" \
-     --set="obs.callhome.enabled=true,obs.callhome.sendReport=false,eventing.enabled=false" \
+     --set="obs.callhome.enabled=true,obs.callhome.sendReport=false,localpv-provisioner.analytics.enabled=false" \
+     --set="eventing.enabled=false" \
      $DRY_RUN $WAIT_ARG
 set +x
 
