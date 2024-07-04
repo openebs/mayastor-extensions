@@ -172,9 +172,12 @@ pipeline {
             sh 'nix-shell --pure --run "./scripts/helm/test-template.sh" ./scripts/helm/shell.nix'
             sh 'nix-shell --pure --run "./scripts/k8s/deployer.sh start --label" ./scripts/k8s/shell.nix'
             sh 'nix-shell --pure --run "./scripts/helm/install.sh --wait" ./scripts/k8s/shell.nix'
-            sh 'nix-shell --pure --run "./scripts/k8s/deployer.sh stop" ./scripts/k8s/shell.nix'
           }
           post {
+            failure {
+              sh 'nix-shell --pure --run "kubectl get pods -A -o wide" ./scripts/k8s/shell.nix'
+              sh 'nix-shell --pure --run "kubectl -n mayastor logs -lopenebs.io/release=mayastor --all-containers=true" ./scripts/k8s/shell.nix'
+            }
             always {
               sh 'nix-shell --pure --run "./scripts/k8s/deployer.sh stop" ./scripts/k8s/shell.nix'
             }

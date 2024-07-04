@@ -23,6 +23,11 @@ jobs:
       - name: Install Helm Chart
         run: |
           nix-shell ./scripts/k8s/shell.nix --run "./scripts/helm/install.sh --dep-update --wait"
+      - name: The job has failed
+        if: ${{ failure() }}
+        run: |
+          nix-shell ./scripts/k8s/shell.nix --run "kubectl get pods -A -o wide"
+          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -lopenebs.io/release=mayastor --all-containers=true"
 
   k8s-ci-vm:
     runs-on: ubuntu-latest
