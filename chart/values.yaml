@@ -790,3 +790,5 @@ localpv-provisioner:
   hostpathClass:
     # -- Enable default hostpath localpv StorageClass.
     enabled: false
+  analytics:
+    enabled: true
