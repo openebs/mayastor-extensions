@@ -19,3 +19,5 @@ jobs:
           ./scripts/github/release-artifacts.sh --tag "${{ github.event.release.tag_name }}" --repo-org "${{ github.repository_owner }}" --upload "$repos" upload
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_CI_GITHUB }}
+      - name: Update krew index
+        uses: rajatjindal/krew-release-bot@v0.0.46
