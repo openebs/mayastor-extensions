@@ -488,7 +488,6 @@ impl Percentiles {
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Report {
-    #[serde(skip_serializing_if = "String::is_empty")]
     pub(crate) k8s_cluster_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) k8s_node_count: Option<u8>,

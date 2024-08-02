@@ -18,9 +18,9 @@ use obs::common::constants::*;
 use openapi::tower::client::{ApiClient, Configuration};
 use sha256::digest;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     sync::{Arc, Mutex},
-    time,
+    time::Duration,
 };
 use tokio::time::sleep;
 use tokio_retry::{
@@ -59,9 +59,11 @@ impl CliArgs {
     }
 }
 
+const ERR_LOG_BUF_CAPACITY: usize = 100;
+
 #[tokio::main]
 async fn main() {
-    let logs = Arc::new(Mutex::new(Vec::new()));
+    let logs = Arc::new(Mutex::new(VecDeque::with_capacity(ERR_LOG_BUF_CAPACITY)));
     let vec_layer = LogsLayer::new(logs.clone());
 
     let subscriber = tracing_subscriber::Registry::default()
@@ -77,7 +79,7 @@ async fn main() {
     }
 }
 
-async fn run(logs: Arc<Mutex<Vec<LogEntry>>>) -> anyhow::Result<()> {
+async fn run(logs: Arc<Mutex<VecDeque<LogEntry>>>) -> anyhow::Result<()> {
     let args = CliArgs::args();
     let version = release_version();
     let endpoint = args.endpoint;
@@ -107,7 +109,7 @@ async fn run(logs: Arc<Mutex<Vec<LogEntry>>>) -> anyhow::Result<()> {
 
     // Generate Mayastor REST client.
     let config = Configuration::builder()
-        .with_timeout(time::Duration::from_secs(30))
+        .with_timeout(Duration::from_secs(30))
         .with_tracing(true)
         .build_url(endpoint)
         .map_err(|error| anyhow::anyhow!("failed to create openapi configuration: {:?}", error))?;
@@ -155,7 +157,7 @@ async fn generate_report(
     deploy_namespace: String,
     product_version: String,
     aggregator_url: Option<Url>,
-    logs: Arc<Mutex<Vec<LogEntry>>>,
+    logs: Arc<Mutex<VecDeque<LogEntry>>>,
 ) -> Report {
     let retry_strategy = ExponentialBackoff::from_millis(100)
         .map(jitter) // add jitter to delays
@@ -295,7 +297,7 @@ async fn generate_report(
 
     report.nexus = Nexus::new(event_data);
 
-    let logs = logs.lock().unwrap();
+    let mut logs = logs.lock().unwrap();
     for log in logs.iter() {
         let log_string = format!(
             "[{} {} {}:{}] {}",
@@ -303,16 +305,18 @@ async fn generate_report(
         );
         report.logs.push(log_string);
     }
+    // Clear logs, as these entries are no longer needed after updating the report.
+    logs.clear();
     report
 }
 
 // Define the LogsLayer
 struct LogsLayer {
-    logs: Arc<Mutex<Vec<LogEntry>>>,
+    logs: Arc<Mutex<VecDeque<LogEntry>>>,
 }
 
 impl LogsLayer {
-    fn new(logs: Arc<Mutex<Vec<LogEntry>>>) -> Self {
+    fn new(logs: Arc<Mutex<VecDeque<LogEntry>>>) -> Self {
         LogsLayer { logs }
     }
 }
@@ -341,7 +345,7 @@ where
         // Only capture logs of level ERROR
         if level == &Level::ERROR {
             let mut logs = self.logs.lock().unwrap();
-            logs.push(log_entry);
+            log_with_limit(&mut logs, log_entry, ERR_LOG_BUF_CAPACITY);
         }
     }
 }
@@ -371,4 +375,13 @@ struct LogEntry {
     file: String,
     line: u32,
     message: String,
+}
+
+/// Ensures the length of a vector is no more than the input limit, and removes elements from
+/// the front if it goes over the limit.
+fn log_with_limit<T>(logs: &mut VecDeque<T>, message: T, limit: usize) {
+    while logs.len().ge(&limit) {
+        logs.pop_front();
+    }
+    logs.push_back(message);
 }
