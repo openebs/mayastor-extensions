@@ -13,7 +13,7 @@ fi
 
 IMAGES="metrics.exporter.io-engine obs.callhome stats.aggregator upgrade.job"
 HELM_DEPS_IMAGES="upgrade.job"
-DEFAULT_BINARIES="kubectl-plugin"
+BUILD_BINARIES="kubectl-plugin"
 PROJECT="extensions"
 . "$SOURCE_REL"
 
