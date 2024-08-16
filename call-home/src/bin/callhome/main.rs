@@ -350,7 +350,6 @@ where
     }
 }
 
-//
 struct LogVisitor {
     log: String,
 }
