@@ -489,19 +489,29 @@ impl Percentiles {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Report {
     pub(crate) k8s_cluster_id: String,
-    pub(crate) k8s_node_count: u8,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) k8s_node_count: Option<u8>,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub(crate) product_name: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub(crate) product_version: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub(crate) deploy_namespace: String,
-    pub(crate) storage_node_count: u8,
-    pub(crate) pools: Pools,
-    pub(crate) volumes: Volumes,
-    pub(crate) replicas: Replicas,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) storage_node_count: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) pools: Option<Pools>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) volumes: Option<Volumes>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) replicas: Option<Replicas>,
     pub(crate) nexus: Nexus,
     pub(crate) versions: Versions,
     pub(crate) storage_nodes: StorageNodes,
     pub(crate) mayastor_managed_disks: MayastorManagedDisks,
     pub(crate) storage_media: StorageMedia,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub(crate) logs: Vec<String>,
 }
 
 /// Get maximum value from a vector.
