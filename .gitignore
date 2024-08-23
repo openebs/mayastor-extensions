@@ -21,6 +21,9 @@ __pycache__
 /.rust-toolchain
 /kubectl-plugin
 
+# Pytest assets
+tests/bdd/venv
+
 # Minikube assets
 tests/bdd/minikube/.cleanup_config.yaml
 tests/bdd/minikube/.cleanup_config.yaml.lock
