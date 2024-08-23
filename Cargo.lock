@@ -581,6 +581,7 @@ dependencies = [
  "chrono",
  "clap",
  "constants",
+ "convert_case",
  "events-api",
  "futures",
  "humantime",
