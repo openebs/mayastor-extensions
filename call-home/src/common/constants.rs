@@ -1,12 +1,20 @@
+use convert_case::{Case::Train, Casing};
 use std::{
     env,
     path::{Path, PathBuf},
 };
 use utils::version_info;
 
+/// CALLHOME_PRODUCT_NAME_ENV is the name of the ENV which configures the product-name for callhome.
+pub const CALLHOME_PRODUCT_NAME_ENV: &str = "CALLHOME_PRODUCT_NAME";
+
 /// PRODUCT is the name of the project for which this call-home component is deployed.
 pub fn product() -> String {
-    ::constants::product_train()
+    env::var(CALLHOME_PRODUCT_NAME_ENV)
+        .ok()
+        .filter(|v| !v.is_empty())
+        .map(|v| v.to_case(Train))
+        .unwrap_or(::constants::product_train())
 }
 
 /// Defines the default helm chart release name.
@@ -136,5 +144,23 @@ pub fn release_version() -> String {
     match version_info.version_tag {
         Some(tag) => tag,
         None => version_info.commit_hash,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_product() {
+        use crate::common::constants::{product, CALLHOME_PRODUCT_NAME_ENV};
+        use std::env::{remove_var as unset, set_var as set};
+
+        set(CALLHOME_PRODUCT_NAME_ENV, "foo bar");
+        assert_eq!(product(), "Foo-Bar".to_string());
+
+        unset(CALLHOME_PRODUCT_NAME_ENV);
+        assert_eq!(product(), "Mayastor".to_string());
+
+        set(CALLHOME_PRODUCT_NAME_ENV, "");
+        assert_eq!(product(), "Mayastor".to_string());
     }
 }
