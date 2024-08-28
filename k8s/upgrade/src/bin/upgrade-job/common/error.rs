@@ -218,6 +218,22 @@ pub(crate) enum Error {
         namespace: String,
     },
 
+    /// Error for when a Kubernetes API request for GET-ing a list of ControllerRevisions
+    /// filtered by label(s) and field(s) fails.
+    #[snafu(display(
+        "Failed to list ControllerRevisions with label '{}', and field '{}' in namespace {}: {}",
+        label,
+        field,
+        namespace,
+        source
+    ))]
+    ListCtrlRevsWithLabelAndField {
+        source: kube::Error,
+        label: String,
+        field: String,
+        namespace: String,
+    },
+
     /// Error for when a Kubernetes API request for GET-ing a list of Nodes filtered by label(s)
     /// and field(s) fails.
     #[snafu(display(

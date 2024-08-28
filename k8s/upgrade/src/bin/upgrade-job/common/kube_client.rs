@@ -1,10 +1,13 @@
 use crate::common::{
     constants::KUBE_API_PAGE_SIZE,
-    error::{K8sClientGeneration, ListNodesWithLabelAndField, ListPodsWithLabelAndField, Result},
+    error::{
+        K8sClientGeneration, ListCtrlRevsWithLabelAndField, ListNodesWithLabelAndField,
+        ListPodsWithLabelAndField, Result,
+    },
 };
 use k8s_openapi::{
     api::{
-        apps::v1::Deployment,
+        apps::v1::{ControllerRevision, Deployment},
         core::v1::{Namespace, Node, Pod},
     },
     apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition,
@@ -34,6 +37,11 @@ pub(crate) async fn namespaces_api() -> Result<Api<Namespace>> {
 /// Generate the CustomResourceDefinition api client.
 pub(crate) async fn crds_api() -> Result<Api<CustomResourceDefinition>> {
     Ok(Api::all(client().await?))
+}
+
+/// Generate ControllerRevision api client.
+pub(crate) async fn controller_revisions_api(namespace: &str) -> Result<Api<ControllerRevision>> {
+    Ok(Api::namespaced(client().await?, namespace))
 }
 
 /// Generate the Pod api client.
@@ -129,4 +137,48 @@ pub(crate) async fn list_nodes_metadata(
     }
 
     Ok(nodes)
+}
+
+/// List ControllerRevisions in a Kubernetes namespace.
+pub(crate) async fn list_controller_revisions(
+    namespace: String,
+    label_selector: Option<String>,
+    field_selector: Option<String>,
+) -> Result<Vec<ControllerRevision>> {
+    let mut ctrl_revs: Vec<ControllerRevision> = Vec::with_capacity(KUBE_API_PAGE_SIZE as usize);
+
+    let mut list_params = ListParams::default().limit(KUBE_API_PAGE_SIZE);
+    if let Some(ref labels) = label_selector {
+        list_params = list_params.labels(labels);
+    }
+    if let Some(ref fields) = field_selector {
+        list_params = list_params.fields(fields);
+    }
+
+    let list_ctrl_revs_error_ctx = ListCtrlRevsWithLabelAndField {
+        label: label_selector.unwrap_or_default(),
+        field: field_selector.unwrap_or_default(),
+        namespace: namespace.clone(),
+    };
+
+    loop {
+        let ctrl_revs_list = controller_revisions_api(namespace.as_str())
+            .await?
+            .list(&list_params)
+            .await
+            .context(list_ctrl_revs_error_ctx.clone())?;
+
+        let maybe_token = ctrl_revs_list.metadata.continue_.clone();
+
+        ctrl_revs.extend(ctrl_revs_list);
+
+        match maybe_token {
+            Some(ref token) => {
+                list_params = list_params.continue_token(token);
+            }
+            None => break,
+        }
+    }
+
+    Ok(ctrl_revs)
 }
