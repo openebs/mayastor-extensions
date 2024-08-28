@@ -1,6 +1,6 @@
 use crate::common::{
     constants::KUBE_API_PAGE_SIZE,
-    error::{K8sClientGeneration, ListPodsWithLabelAndField, Result},
+    error::{K8sClientGeneration, ListNodesWithLabelAndField, ListPodsWithLabelAndField, Result},
 };
 use k8s_openapi::{
     api::{
@@ -11,6 +11,7 @@ use k8s_openapi::{
 };
 use kube::{
     api::{Api, ListParams},
+    core::PartialObjectMeta,
     Client,
 };
 use snafu::ResultExt;
@@ -54,10 +55,10 @@ pub(crate) async fn list_pods(
 
     let mut list_params = ListParams::default().limit(KUBE_API_PAGE_SIZE);
     if let Some(ref labels) = label_selector {
-        list_params = list_params.labels(labels.as_str());
+        list_params = list_params.labels(labels);
     }
     if let Some(ref fields) = field_selector {
-        list_params = list_params.fields(fields.as_str());
+        list_params = list_params.fields(fields);
     }
 
     let list_pods_error_ctx = ListPodsWithLabelAndField {
@@ -75,7 +76,7 @@ pub(crate) async fn list_pods(
 
         let continue_ = pod_list.metadata.continue_.clone();
 
-        pods = pods.into_iter().chain(pod_list).collect();
+        pods.extend(pod_list);
 
         match continue_ {
             Some(token) => {
@@ -86,4 +87,46 @@ pub(crate) async fn list_pods(
     }
 
     Ok(pods)
+}
+
+/// List Nodes metadata in the kubernetes cluster.
+pub(crate) async fn list_nodes_metadata(
+    label_selector: Option<String>,
+    field_selector: Option<String>,
+) -> Result<Vec<PartialObjectMeta<Node>>> {
+    let mut nodes: Vec<PartialObjectMeta<Node>> = Vec::with_capacity(KUBE_API_PAGE_SIZE as usize);
+
+    let mut list_params = ListParams::default().limit(KUBE_API_PAGE_SIZE);
+    if let Some(ref labels) = label_selector {
+        list_params = list_params.labels(labels);
+    }
+    if let Some(ref fields) = field_selector {
+        list_params = list_params.fields(fields);
+    }
+
+    let list_nodes_error_ctx = ListNodesWithLabelAndField {
+        label: label_selector.unwrap_or_default(),
+        field: field_selector.unwrap_or_default(),
+    };
+
+    loop {
+        let nodes_list = nodes_api()
+            .await?
+            .list_metadata(&list_params)
+            .await
+            .context(list_nodes_error_ctx.clone())?;
+
+        let maybe_token = nodes_list.metadata.continue_.clone();
+
+        nodes.extend(nodes_list);
+
+        match maybe_token {
+            Some(ref token) => {
+                list_params = list_params.continue_token(token);
+            }
+            None => break,
+        }
+    }
+
+    Ok(nodes)
 }

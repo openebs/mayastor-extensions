@@ -202,11 +202,6 @@ pub(crate) enum Error {
         pod_namespace: String,
     },
 
-    /// Error for when a Kubernetes API request for GET-ing a list of Nodes filtered by label(s)
-    /// fails.
-    #[snafu(display("Failed to list Nodes with label {}: {}", label, source))]
-    ListNodesWithLabel { source: kube::Error, label: String },
-
     /// Error for when a Kubernetes API request for GET-ing a list of Pods filtered by label(s)
     /// and field(s) fails.
     #[snafu(display(
@@ -221,6 +216,20 @@ pub(crate) enum Error {
         label: String,
         field: String,
         namespace: String,
+    },
+
+    /// Error for when a Kubernetes API request for GET-ing a list of Nodes filtered by label(s)
+    /// and field(s) fails.
+    #[snafu(display(
+        "Failed to list Kubernetes Nodes with label '{}', and field '{}': {}",
+        label,
+        field,
+        source
+    ))]
+    ListNodesWithLabelAndField {
+        source: kube::Error,
+        label: String,
+        field: String,
     },
 
     /// Error for when a Pod does not have a PodSpec struct member.

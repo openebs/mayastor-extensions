@@ -6,8 +6,7 @@ use crate::{
         },
         error::{
             DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
-            ListNodesWithLabel, ListStorageNodes, PodDelete, Result, StorageNodeUncordon,
-            TooManyIoEnginePods,
+            ListStorageNodes, PodDelete, Result, StorageNodeUncordon, TooManyIoEnginePods,
         },
         kube_client as KubeClient,
         rest_client::RestClientSet,
@@ -18,10 +17,7 @@ use crate::{
     },
 };
 use k8s_openapi::api::core::v1::{Node, Pod};
-use kube::{
-    api::{Api, DeleteParams, ListParams, ObjectList},
-    ResourceExt,
-};
+use kube::{api::DeleteParams, core::PartialObjectMeta, ResourceExt};
 use openapi::models::CordonDrainState;
 use snafu::ResultExt;
 use std::time::Duration;
@@ -115,14 +111,7 @@ pub(crate) async fn upgrade_data_plane(
             // Wait for any rebuild to complete
             wait_for_rebuild(node_name, &rest_client).await?;
 
-            if is_node_drainable(
-                ha_is_enabled,
-                node_name,
-                KubeClient::nodes_api().await?,
-                &rest_client,
-            )
-            .await?
-            {
+            if is_node_drainable(ha_is_enabled, node_name, &rest_client).await? {
                 // Issue node drain command if NVMe Ana is enabled.
                 drain_storage_node(node_name, &rest_client).await?;
             }
@@ -378,7 +367,6 @@ async fn control_plane_is_running(
 async fn is_node_drainable(
     ha_is_enabled: bool,
     node_name: &str,
-    k8s_nodes_api: Api<Node>,
     rest_client: &RestClientSet,
 ) -> Result<bool> {
     if !ha_is_enabled {
@@ -387,16 +375,10 @@ async fn is_node_drainable(
     }
 
     let ana_disabled_label = format!("{}=false", csi_node_nvme_ana());
-    let ana_disabled_filter = ListParams::default().labels(ana_disabled_label.as_str());
     let ana_disabled_nodes =
-        k8s_nodes_api
-            .list(&ana_disabled_filter)
-            .await
-            .context(ListNodesWithLabel {
-                label: ana_disabled_label,
-            })?;
+        KubeClient::list_nodes_metadata(Some(ana_disabled_label), None).await?;
 
-    if ana_disabled_nodes.items.is_empty() {
+    if ana_disabled_nodes.is_empty() {
         info!(
             "There are no ANA-incapable nodes in this cluster, it is safe to drain node {}",
             node_name
@@ -416,7 +398,7 @@ async fn is_node_drainable(
 /// ANA-incapability.
 async fn frontend_nodes_ana_check(
     node_name: &str,
-    ana_disabled_nodes: ObjectList<Node>,
+    ana_disabled_nodes: Vec<PartialObjectMeta<Node>>,
     rest_client: &RestClientSet,
 ) -> Result<bool> {
     let volumes = list_all_volumes(rest_client).await?;
