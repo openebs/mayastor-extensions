@@ -46,6 +46,10 @@ spec:
           env:
             - name: RUST_LOG
               value: {{ .Values.obs.callhome.logLevel }}
+          {{- if .Values.obs.callhome.productName }}
+            - name: CALLHOME_PRODUCT_NAME
+              value: {{ .Values.obs.callhome.productName | quote }}
+          {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           resources:
             limits:
