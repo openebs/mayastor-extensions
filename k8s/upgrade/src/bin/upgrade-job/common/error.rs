@@ -332,6 +332,15 @@ pub(crate) enum Error {
     #[snafu(display("Failed to publish Event: {}", source))]
     EventPublish { source: kube_client::Error },
 
+    /// Error for when the 'chart' member of a crate::helm::client::HelmReleaseElement cannot be
+    /// split at the first occurrence of '-', e.g. <chart-name>-2.1.0-rc8.
+    #[snafu(display(
+        "Failed to split helm chart name '{}', at the first occurrence of '{}'",
+        chart_name,
+        delimiter
+    ))]
+    HelmChartNameSplit { chart_name: String, delimiter: char },
+
     /// Error for when a Helm list command execution succeeds, but with an error.
     #[snafu(display(
         "`helm list` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
@@ -545,20 +554,6 @@ pub(crate) enum Error {
     NoVersionLabelInDeployment {
         deployment_name: String,
         namespace: String,
-    },
-
-    /// Error for when a Kubernetes API request for GET-ing a list of Deployments filtered by
-    /// label(s) fails.
-    #[snafu(display(
-        "Failed to list Deployments with label {} in namespace {}: {}",
-        label_selector,
-        namespace,
-        source
-    ))]
-    ListDeploymentsWithLabel {
-        source: kube::Error,
-        namespace: String,
-        label_selector: String,
     },
 
     /// Error for when the helm upgrade run is that of an invalid chart configuration.

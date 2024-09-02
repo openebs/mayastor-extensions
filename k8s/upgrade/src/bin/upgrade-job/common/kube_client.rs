@@ -7,7 +7,7 @@ use crate::common::{
 };
 use k8s_openapi::{
     api::{
-        apps::v1::{ControllerRevision, Deployment},
+        apps::v1::ControllerRevision,
         core::v1::{Namespace, Node, Pod},
     },
     apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition,
@@ -46,11 +46,6 @@ pub(crate) async fn controller_revisions_api(namespace: &str) -> Result<Api<Cont
 
 /// Generate the Pod api client.
 pub(crate) async fn pods_api(namespace: &str) -> Result<Api<Pod>> {
-    Ok(Api::namespaced(client().await?, namespace))
-}
-
-/// Generate the Deployment api client.
-pub(crate) async fn deployments_api(namespace: &str) -> Result<Api<Deployment>> {
     Ok(Api::namespaced(client().await?, namespace))
 }
 

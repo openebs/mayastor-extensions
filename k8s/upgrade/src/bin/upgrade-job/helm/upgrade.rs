@@ -14,7 +14,7 @@ use crate::{
         values::generate_values_yaml_file,
     },
     upgrade::path::{
-        is_valid_for_core_chart, version_from_chart_yaml_file, version_from_rest_deployment_label,
+        is_valid_for_core_chart, version_from_chart_yaml_file, version_from_release_chart,
     },
     vec_to_strings,
 };
@@ -39,10 +39,10 @@ pub(crate) trait HelmUpgrader {
     async fn dry_run(self: Box<Self>) -> Result<HelmUpgradeRunner>;
 
     /// Return the source helm chart version as a String.
-    fn source_version(&self) -> String;
+    fn source_version(&self) -> Version;
 
     /// Return the target helm chart version as a String.
-    fn target_version(&self) -> String;
+    fn target_version(&self) -> Version;
 }
 
 /// This is a builder for the Helm chart upgrade.
@@ -142,7 +142,7 @@ impl HelmUpgraderBuilder {
 
         // The version of the Core helm chart (installed as the parent chart or as a dependent
         // chart) which is installed in the cluster.
-        let source_version = version_from_rest_deployment_label(namespace.as_str()).await?;
+        let source_version = version_from_release_chart(chart)?;
         // source_values from installed helm chart release.
         let source_values_buf =
             client.get_values_as_yaml::<&str, String>(release_name.as_str(), None)?;
@@ -334,12 +334,12 @@ is the same as that of this upgrade-job's helm chart"
         }))
     }
 
-    fn source_version(&self) -> String {
-        self.source_version.to_string()
+    fn source_version(&self) -> Version {
+        self.source_version.clone()
     }
 
-    fn target_version(&self) -> String {
-        self.target_version.to_string()
+    fn target_version(&self) -> Version {
+        self.target_version.clone()
     }
 }
 
@@ -371,11 +371,11 @@ impl HelmUpgrader for UmbrellaHelmUpgrader {
         }))
     }
 
-    fn source_version(&self) -> String {
-        self.source_version.to_string()
+    fn source_version(&self) -> Version {
+        self.source_version.clone()
     }
 
-    fn target_version(&self) -> String {
-        self.target_version.to_string()
+    fn target_version(&self) -> Version {
+        self.target_version.clone()
     }
 }

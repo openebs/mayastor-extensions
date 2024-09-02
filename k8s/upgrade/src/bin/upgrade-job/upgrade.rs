@@ -13,8 +13,6 @@ use crate::{
 };
 use data_plane::upgrade_data_plane;
 
-use k8s_openapi::api::core::v1::Pod;
-use kube::ResourceExt;
 use semver::Version;
 use tracing::error;
 
@@ -63,8 +61,8 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
     // Updating the EventRecorder with version values from the HelmUpgrade.
     // These two operations are thread-safe. The EventRecorder itself is not
     // shared with any other tokio task.
-    event.set_source_version(source_version.clone());
-    event.set_target_version(target_version.clone());
+    event.set_source_version(source_version.to_string());
+    event.set_target_version(target_version.to_string());
 
     // Dry-run helm upgrade.
     let dry_run_result: Result<HelmUpgradeRunner> = helm_upgrader.dry_run().await;
@@ -108,10 +106,12 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
     // Data plane containers are updated in this step.
     if !opts.skip_data_plane_restart() {
+        partial_rebuild_check(&source_version, final_values.partial_rebuild_is_enabled())?;
+
         let yet_to_upgrade_io_engine_label = format!(
             "{IO_ENGINE_LABEL},{}!={}",
             helm_release_version_key(),
-            target_version.as_str()
+            target_version
         );
         let yet_to_upgrade_io_engine_pods = KubeClient::list_pods(
             opts.namespace(),
@@ -119,11 +119,6 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
             None,
         )
         .await?;
-
-        partial_rebuild_check(
-            yet_to_upgrade_io_engine_pods.as_slice(),
-            final_values.partial_rebuild_is_enabled(),
-        )?;
 
         event
             .publish_normal(
@@ -135,7 +130,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
         if let Err(error) = upgrade_data_plane(
             opts.namespace(),
             opts.rest_endpoint(),
-            target_version,
+            target_version.to_string(),
             final_values.ha_is_enabled(),
             yet_to_upgrade_io_engine_label,
             yet_to_upgrade_io_engine_pods,
@@ -164,19 +159,9 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
     Ok(())
 }
 
-fn partial_rebuild_check(
-    yet_to_upgrade_io_engine_pods: &[Pod],
-    partial_rebuild_is_enabled: bool,
-) -> Result<()> {
-    let partial_rebuild_disable_required = yet_to_upgrade_io_engine_pods
-        .iter()
-        .filter_map(|pod| pod.labels().get(&helm_release_version_key()))
-        .any(|v| {
-            let version =
-                Version::parse(v).expect("failed to parse version from io-engine Pod label");
-            version.ge(&PARTIAL_REBUILD_DISABLE_EXTENTS.0)
-                & version.le(&PARTIAL_REBUILD_DISABLE_EXTENTS.1)
-        });
+fn partial_rebuild_check(source_version: &Version, partial_rebuild_is_enabled: bool) -> Result<()> {
+    let partial_rebuild_disable_required = source_version.ge(&PARTIAL_REBUILD_DISABLE_EXTENTS.0)
+        && source_version.le(&PARTIAL_REBUILD_DISABLE_EXTENTS.1);
 
     if partial_rebuild_disable_required && partial_rebuild_is_enabled {
         error!("Partial rebuild must be disabled for upgrades from {CORE_CHART_NAME} chart versions >= {}, <= {}", PARTIAL_REBUILD_DISABLE_EXTENTS.0, PARTIAL_REBUILD_DISABLE_EXTENTS.1);
@@ -189,4 +174,22 @@ fn partial_rebuild_check(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_partial_rebuild_check() {
+        use crate::upgrade::partial_rebuild_check;
+        use semver::Version;
+
+        let source = Version::new(2, 1, 0);
+        assert!(matches!(partial_rebuild_check(&source, true), Ok(())));
+        let source = Version::new(2, 2, 0);
+        assert!(partial_rebuild_check(&source, true).is_err());
+        let source = Version::new(2, 5, 0);
+        assert!(partial_rebuild_check(&source, true).is_err());
+        let source = Version::new(2, 6, 0);
+        assert!(matches!(partial_rebuild_check(&source, true), Ok(())));
+    }
 }
