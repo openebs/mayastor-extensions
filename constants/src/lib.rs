@@ -27,8 +27,7 @@ pub fn upgrade_event_reason() -> String {
 /// Upgrade job container image repository.
 pub const UPGRADE_JOB_IMAGE_REPO: &str = "openebs";
 /// This is the user docs URL for the Umbrella chart.
-pub const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str =
-    "https://openebs.io/docs/user-guides/upgrade#mayastor-upgrade";
+pub const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str = "https://openebs.io/docs/user-guides/upgrade";
 
 /// Defines the default helm chart release name.
 pub const DEFAULT_RELEASE_NAME: &str = PRODUCT_NAME;
@@ -49,3 +48,6 @@ pub const UMBRELLA_CHART_NAME: &str = "openebs";
 
 /// RECEIVER_API_ENDPOINT is the URL to anonymous call-home metrics collection endpoint.
 pub const CALL_HOME_ENDPOINT: &str = "https://openebs.phonehome.datacore.com/openebs/report";
+
+/// Label key containing controller revision hash for a controller resource for DaemonSets.
+pub const DS_CONTROLLER_REVISION_HASH_LABEL_KEY: &str = "controller-revision-hash";

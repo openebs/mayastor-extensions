@@ -16,9 +16,6 @@ pub(crate) const IO_ENGINE_LABEL: &str = "app=io-engine";
 /// This is the shared Pod label of the <helm-release>-agent-core Deployment.
 pub(crate) const AGENT_CORE_LABEL: &str = "app=agent-core";
 
-/// This is the shared label across the helm chart components which carries the chart version.
-pub(crate) use constants::helm_release_version_key;
-
 /// This is the label set on a storage API Node resource when a 'Node Drain' is issued.
 pub fn drain_for_upgrade() -> String {
     format!("{CORE_CHART_NAME}-upgrade")
