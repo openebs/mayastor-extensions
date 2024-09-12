@@ -516,7 +516,6 @@ etcd:
       pullSecrets: []
   # extra debug information on logs
   debug: false
-  initialClusterState: "new"
 
   # -- Pod anti-affinity preset
   # Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
