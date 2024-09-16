@@ -18,6 +18,7 @@ jobs:
         run: |
           branch="${{ github.ref_name }}"
           nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch" --develop-to-release" ./scripts/helm/shell.nix
+          nix-shell --pure --run "./scripts/upgrade/develop-to-release.sh" ./shell.nix
           nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
       - name: Check if the submodules are correct
         run: |
