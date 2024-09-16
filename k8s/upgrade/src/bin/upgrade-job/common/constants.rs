@@ -27,7 +27,7 @@ pub fn cordon_ana_check() -> String {
 }
 
 /// This is the allowed upgrade to-version/to-version-range for the Umbrella chart.
-pub(crate) const TO_UMBRELLA_SEMVER: &str = "4.0.1";
+pub(crate) const TO_UMBRELLA_SEMVER: &str = "4.1.1"; /* @@@UPGRADE_PREP@@@ */
 
 /// This is the user docs URL for the Umbrella chart.
 pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str = constants::UMBRELLA_CHART_UPGRADE_DOCS_URL;
