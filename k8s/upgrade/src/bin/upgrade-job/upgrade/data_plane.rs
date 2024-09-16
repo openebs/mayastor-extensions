@@ -1,13 +1,11 @@
 use crate::{
     common::{
         constants::{
-            cordon_ana_check, drain_for_upgrade, helm_release_version_key, product_train,
-            AGENT_CORE_LABEL, IO_ENGINE_LABEL,
+            cordon_ana_check, drain_for_upgrade, product_train, AGENT_CORE_LABEL, IO_ENGINE_LABEL,
         },
         error::{
             DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
-            ListNodesWithLabel, ListStorageNodes, PodDelete, Result, StorageNodeUncordon,
-            TooManyIoEnginePods,
+            ListStorageNodes, PodDelete, Result, StorageNodeUncordon, TooManyIoEnginePods,
         },
         kube_client as KubeClient,
         rest_client::RestClientSet,
@@ -17,11 +15,9 @@ use crate::{
         uncordon_storage_node, RebuildResult,
     },
 };
+use constants::DS_CONTROLLER_REVISION_HASH_LABEL_KEY;
 use k8s_openapi::api::core::v1::{Node, Pod};
-use kube::{
-    api::{Api, DeleteParams, ListParams, ObjectList},
-    ResourceExt,
-};
+use kube::{api::DeleteParams, core::PartialObjectMeta, ResourceExt};
 use openapi::models::CordonDrainState;
 use snafu::ResultExt;
 use std::time::Duration;
@@ -33,7 +29,7 @@ use utils::{csi_node_nvme_ana, API_REST_LABEL, ETCD_LABEL};
 pub(crate) async fn upgrade_data_plane(
     namespace: String,
     rest_endpoint: String,
-    upgrade_target_version: String,
+    latest_io_engine_ctrl_rev_hash: String,
     ha_is_enabled: bool,
     yet_to_upgrade_io_engine_label: String,
     yet_to_upgrade_io_engine_pods: Vec<Pod>,
@@ -82,7 +78,7 @@ pub(crate) async fn upgrade_data_plane(
 
         for pod in initial_io_engine_pod_list.iter() {
             // Validate the control plane pod is up and running before we start.
-            verify_control_plane_is_running(namespace.clone(), &upgrade_target_version).await?;
+            verify_control_plane_is_running(namespace.clone()).await?;
 
             // Fetch the node name on which the io-engine pod is running
             let node_name = pod
@@ -115,14 +111,7 @@ pub(crate) async fn upgrade_data_plane(
             // Wait for any rebuild to complete
             wait_for_rebuild(node_name, &rest_client).await?;
 
-            if is_node_drainable(
-                ha_is_enabled,
-                node_name,
-                KubeClient::nodes_api().await?,
-                &rest_client,
-            )
-            .await?
-            {
+            if is_node_drainable(ha_is_enabled, node_name, &rest_client).await? {
                 // Issue node drain command if NVMe Ana is enabled.
                 drain_storage_node(node_name, &rest_client).await?;
             }
@@ -131,8 +120,12 @@ pub(crate) async fn upgrade_data_plane(
             delete_data_plane_pod(node_name, pod, namespace.clone()).await?;
 
             // validate the new pod is up and running
-            verify_data_plane_pod_is_running(node_name, namespace.clone(), &upgrade_target_version)
-                .await?;
+            verify_data_plane_pod_is_running(
+                node_name,
+                namespace.clone(),
+                latest_io_engine_ctrl_rev_hash.as_str(),
+            )
+            .await?;
 
             // Uncordon the drained node
             uncordon_drained_storage_node(node_name, &rest_client).await?;
@@ -222,12 +215,14 @@ async fn delete_data_plane_pod(node_name: &str, pod: &Pod, namespace: String) ->
 async fn verify_data_plane_pod_is_running(
     node_name: &str,
     namespace: String,
-    upgrade_target_version: &String,
+    latest_io_engine_ctrl_rev_hash: &str,
 ) -> Result<()> {
     let duration = Duration::from_secs(5_u64);
     // Validate the new pod is up and running
     info!(node.name = %node_name, "Waiting for data-plane Pod to come to Ready state");
-    while !data_plane_pod_is_running(node_name, namespace.clone(), upgrade_target_version).await? {
+    while !data_plane_pod_is_running(node_name, namespace.clone(), latest_io_engine_ctrl_rev_hash)
+        .await?
+    {
         sleep(duration).await;
     }
     Ok(())
@@ -310,12 +305,11 @@ async fn drain_storage_node(node_id: &str, rest_client: &RestClientSet) -> Resul
 async fn data_plane_pod_is_running(
     node: &str,
     namespace: String,
-    upgrade_target_version: &String,
+    latest_io_engine_ctrl_rev_hash: &str,
 ) -> Result<bool> {
     let node_name_pod_field = format!("spec.nodeName={node}");
     let pod_label = format!(
-        "{IO_ENGINE_LABEL},{}={upgrade_target_version}",
-        helm_release_version_key()
+        "{IO_ENGINE_LABEL},{DS_CONTROLLER_REVISION_HASH_LABEL_KEY}={latest_io_engine_ctrl_rev_hash}",
     );
 
     let pod_list: Vec<Pod> =
@@ -332,12 +326,9 @@ async fn data_plane_pod_is_running(
     Ok(all_pods_are_ready(pod_list))
 }
 
-async fn verify_control_plane_is_running(
-    namespace: String,
-    upgrade_target_version: &String,
-) -> Result<()> {
+async fn verify_control_plane_is_running(namespace: String) -> Result<()> {
     let duration = Duration::from_secs(3_u64);
-    while !control_plane_is_running(namespace.clone(), upgrade_target_version).await? {
+    while !control_plane_is_running(namespace.clone()).await? {
         sleep(duration).await;
     }
 
@@ -345,24 +336,13 @@ async fn verify_control_plane_is_running(
 }
 
 /// Validate if control-plane pods are running -- etcd, agent-core, api-rest.
-async fn control_plane_is_running(
-    namespace: String,
-    upgrade_target_version: &String,
-) -> Result<bool> {
-    let agent_core_selector_label = format!(
-        "{AGENT_CORE_LABEL},{}={upgrade_target_version}",
-        helm_release_version_key()
-    );
+async fn control_plane_is_running(namespace: String) -> Result<bool> {
     let pod_list: Vec<Pod> =
-        KubeClient::list_pods(namespace.clone(), Some(agent_core_selector_label), None).await?;
+        KubeClient::list_pods(namespace.clone(), Some(AGENT_CORE_LABEL.to_string()), None).await?;
     let core_is_ready = all_pods_are_ready(pod_list);
 
-    let api_rest_selector_label = format!(
-        "{API_REST_LABEL},{}={upgrade_target_version}",
-        helm_release_version_key()
-    );
     let pod_list: Vec<Pod> =
-        KubeClient::list_pods(namespace.clone(), Some(api_rest_selector_label), None).await?;
+        KubeClient::list_pods(namespace.clone(), Some(API_REST_LABEL.to_string()), None).await?;
     let rest_is_ready = all_pods_are_ready(pod_list);
 
     let pod_list: Vec<Pod> =
@@ -378,7 +358,6 @@ async fn control_plane_is_running(
 async fn is_node_drainable(
     ha_is_enabled: bool,
     node_name: &str,
-    k8s_nodes_api: Api<Node>,
     rest_client: &RestClientSet,
 ) -> Result<bool> {
     if !ha_is_enabled {
@@ -387,16 +366,10 @@ async fn is_node_drainable(
     }
 
     let ana_disabled_label = format!("{}=false", csi_node_nvme_ana());
-    let ana_disabled_filter = ListParams::default().labels(ana_disabled_label.as_str());
     let ana_disabled_nodes =
-        k8s_nodes_api
-            .list(&ana_disabled_filter)
-            .await
-            .context(ListNodesWithLabel {
-                label: ana_disabled_label,
-            })?;
+        KubeClient::list_nodes_metadata(Some(ana_disabled_label), None).await?;
 
-    if ana_disabled_nodes.items.is_empty() {
+    if ana_disabled_nodes.is_empty() {
         info!(
             "There are no ANA-incapable nodes in this cluster, it is safe to drain node {}",
             node_name
@@ -416,7 +389,7 @@ async fn is_node_drainable(
 /// ANA-incapability.
 async fn frontend_nodes_ana_check(
     node_name: &str,
-    ana_disabled_nodes: ObjectList<Node>,
+    ana_disabled_nodes: Vec<PartialObjectMeta<Node>>,
     rest_client: &RestClientSet,
 ) -> Result<bool> {
     let volumes = list_all_volumes(rest_client).await?;

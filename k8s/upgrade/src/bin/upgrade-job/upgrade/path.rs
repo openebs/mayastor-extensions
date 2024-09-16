@@ -1,20 +1,14 @@
 use crate::{
-    common::{
-        constants::helm_release_version_key,
-        error::{
-            ListDeploymentsWithLabel, NoRestDeployment, NoVersionLabelInDeployment, ReadingFile,
-            Result, SemverParse, YamlParseBufferForUnsupportedVersion, YamlParseFromFile,
-        },
-        kube_client as KubeClient,
+    common::error::{
+        HelmChartNameSplit, ReadingFile, Result, SemverParse, YamlParseBufferForUnsupportedVersion,
+        YamlParseFromFile,
     },
     helm::chart::Chart,
 };
-use kube_client::{api::ListParams, ResourceExt};
 use semver::Version;
 use serde::Deserialize;
-use snafu::{ensure, ResultExt};
+use snafu::ResultExt;
 use std::{fs, path::PathBuf};
-use utils::API_REST_LABEL;
 
 /// Validates the upgrade path from 'from' Version to 'to' Version for the Core helm chart.
 pub(crate) fn is_valid_for_core_chart(from: &Version) -> Result<bool> {
@@ -37,54 +31,21 @@ pub(crate) fn version_from_chart_yaml_file(path: PathBuf) -> Result<Version> {
     Ok(to_chart.version().clone())
 }
 
-/// Generate a semver::Version from the CHART_VERSION_LABEL_KEY label on the Storage REST API
-/// Deployment.
-pub(crate) async fn version_from_rest_deployment_label(ns: &str) -> Result<Version> {
-    let labels = format!("{API_REST_LABEL},{}", helm_release_version_key());
-
-    let deployments_api = KubeClient::deployments_api(ns).await?;
-    let mut deploy_list = deployments_api
-        .list(&ListParams::default().labels(labels.as_str()))
-        .await
-        .context(ListDeploymentsWithLabel {
-            namespace: ns.to_string(),
-            label_selector: labels.clone(),
-        })?;
-
-    ensure!(
-        !deploy_list.items.is_empty(),
-        NoRestDeployment {
-            namespace: ns.to_string(),
-            label_selector: labels
-        }
-    );
-
-    // The most recent one sits on top.
-    deploy_list
-        .items
-        .sort_by_key(|b| std::cmp::Reverse(b.creation_timestamp()));
-
-    // The only ways there could be more than one version of the Storage REST API Pod in the
-    // namespace are: 1. More than one version of the Storage cluster is deployed, by means of
-    // multiple helm charts or otherwise         This will never come to a stable state, as some
-    // of the components will be trying to claim the same         resources. So, in this case
-    // the Storage cluster isn't broken because of upgrade-job. Upgrade should
-    //         eventually fail for these cases, because the component containers keep erroring out.
-    // 2. Helm upgrade is stuck with the older REST API Pod in 'Terminating' state: This scenario is
-    //    more likely than the one above. This may result is more-than-one
-    // REST API deployments.         If the helm upgrade has succeeded already, we'd want to hit
-    // the 'already_upgraded' case in         crate::helm::upgrade. The upgraded version will be
-    // on the latest-created REST API deployment.
-    let deploy = &deploy_list.items[0];
-    let deploy_version = deploy.labels().get(&helm_release_version_key()).ok_or(
-        NoVersionLabelInDeployment {
-            deployment_name: deploy.name_any(),
-            namespace: ns.to_string(),
+/// Generate a semver::Version from the 'chart' member of the Helm chart's ReleaseElement.
+/// The output of `helm ls -n <namespace> -o yaml` is a list of ReleaseElements.
+pub(crate) fn version_from_release_chart(chart_name: &str) -> Result<Version> {
+    let delimiter: char = '-';
+    // e.g. <chart>-1.2.3-rc.5 -- here the 2nd chunk is the version
+    let (_, version) = chart_name.split_once(delimiter).ok_or(
+        HelmChartNameSplit {
+            chart_name: chart_name.to_string(),
+            delimiter,
         }
         .build(),
     )?;
-    Version::parse(deploy_version.as_str()).context(SemverParse {
-        version_string: deploy_version.clone(),
+
+    Version::parse(version).context(SemverParse {
+        version_string: version.to_string(),
     })
 }
 
