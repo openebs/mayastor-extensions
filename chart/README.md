@@ -59,7 +59,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | https://grafana.github.io/helm-charts | loki-stack | 2.9.11 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.50.1 |
 | https://nats-io.github.io/k8s/helm/charts/ | nats | 0.19.14 |
-| https://openebs.github.io/dynamic-localpv-provisioner | localpv-provisioner | 4.1.0 |
+| https://openebs.github.io/dynamic-localpv-provisioner | localpv-provisioner | 4.1.1 |
 
 ## Values
 
