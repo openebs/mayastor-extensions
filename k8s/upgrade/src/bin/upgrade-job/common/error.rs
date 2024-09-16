@@ -1,7 +1,7 @@
 use crate::{
     common::constants::{
-        helm_release_version_key, product_train, CORE_CHART_NAME, TO_UMBRELLA_SEMVER,
-        UMBRELLA_CHART_NAME, UMBRELLA_CHART_UPGRADE_DOCS_URL,
+        product_train, CORE_CHART_NAME, TO_UMBRELLA_SEMVER, UMBRELLA_CHART_NAME,
+        UMBRELLA_CHART_UPGRADE_DOCS_URL,
     },
     events::event_recorder::EventNote,
     helm::chart::PromtailConfigClient,
@@ -20,10 +20,8 @@ use url::Url;
 pub(crate) enum Error {
     /// Error for when the storage REST API URL is parsed.
     #[snafu(display(
-        "Failed to parse {} REST API URL {}: {}",
+        "Failed to parse {} REST API URL {rest_endpoint}: {source}",
         product_train(),
-        rest_endpoint,
-        source
     ))]
     RestUrlParse {
         source: url::ParseError,
@@ -31,11 +29,11 @@ pub(crate) enum Error {
     },
 
     /// Error for when Kubernetes API client generation fails.
-    #[snafu(display("Failed to generate kubernetes client: {}", source))]
+    #[snafu(display("Failed to generate kubernetes client: {source}"))]
     K8sClientGeneration { source: kube_client::Error },
 
     /// Error for a Kubernetes API GET request for a namespace resource fails.
-    #[snafu(display("Failed to GET Kubernetes namespace {}: {}", namespace, source))]
+    #[snafu(display("Failed to GET Kubernetes namespace {namespace}: {source}"))]
     GetNamespace {
         source: kube::Error,
         namespace: String,
@@ -43,10 +41,8 @@ pub(crate) enum Error {
 
     /// Error for when REST API configuration fails.
     #[snafu(display(
-        "Failed to configure {} REST API client with endpoint {}: {:?}",
+        "Failed to configure {} REST API client with endpoint {rest_endpoint}: {source:?}",
         product_train(),
-        rest_endpoint,
-        source,
     ))]
     RestClientConfiguration {
         #[snafu(source(false))]
@@ -56,10 +52,7 @@ pub(crate) enum Error {
 
     /// Error for when a Helm command fails.
     #[snafu(display(
-        "Failed to run Helm command,\ncommand: {},\nargs: {:?},\ncommand_error: {}",
-        command,
-        args,
-        source
+        "Failed to run Helm command,\ncommand: {command},\nargs: {args:?},\ncommand_error: {source}",
     ))]
     HelmCommand {
         source: std::io::Error,
@@ -68,34 +61,28 @@ pub(crate) enum Error {
     },
 
     /// Error for when regular expression parsing or compilation fails.
-    #[snafu(display("Failed to compile regex {}: {}", expression, source))]
+    #[snafu(display("Failed to compile regex {expression}: {source}"))]
     RegexCompile {
         source: regex::Error,
         expression: String,
     },
 
     /// Error for when Helm v3.x.y is not present in $PATH.
-    #[snafu(display("Helm version {} does not start with 'v3.x.y'", version))]
+    #[snafu(display("Helm version {version} does not start with 'v3.x.y'"))]
     HelmVersion { version: String },
 
     /// Error for when input Helm release is not found in the input namespace.
-    #[snafu(display(
-        "'deployed' Helm release {} not found in Namespace {}",
-        name,
-        namespace
-    ))]
+    #[snafu(display("'deployed' Helm release {name} not found in Namespace {namespace}",))]
     HelmRelease { name: String, namespace: String },
 
     /// Error for when there is a lack of valid input for the Helm chart directory for the chart to
     /// be upgraded to.
-    #[snafu(display("No input for {} helm chart's directory path", chart_name))]
+    #[snafu(display("No input for {chart_name} helm chart's directory path"))]
     NoInputHelmChartDir { chart_name: String },
 
     /// Error for when the input Pod's owner does not exists.
     #[snafu(display(
-        ".metadata.ownerReferences empty for Pod {} in {} namespace, while trying to find Pod's Job owner",
-        pod_name,
-        pod_namespace
+        ".metadata.ownerReferences empty for Pod {pod_name} in {pod_namespace} namespace, while trying to find Pod's Job owner",
     ))]
     JobPodOwnerNotFound {
         pod_name: String,
@@ -104,9 +91,7 @@ pub(crate) enum Error {
 
     /// Error for when the number of ownerReferences for this Pod is more than 1.
     #[snafu(display(
-        "Pod {} in {} namespace has too many owners, while trying to find Pod's Job owner",
-        pod_name,
-        pod_namespace
+        "Pod {pod_name} in {pod_namespace} namespace has too many owners, while trying to find Pod's Job owner",
     ))]
     JobPodHasTooManyOwners {
         pod_name: String,
@@ -115,9 +100,7 @@ pub(crate) enum Error {
 
     /// Error for when the owner of this Pod is not a Job.
     #[snafu(display(
-        "Pod {} in {} namespace has an owner which is not a Job, while trying to find Pod's Job owner",
-        pod_name,
-        pod_namespace
+        "Pod {pod_name} in {pod_namespace} namespace has an owner which is not a Job, while trying to find Pod's Job owner",
     ))]
     JobPodOwnerIsNotJob {
         pod_name: String,
@@ -125,30 +108,27 @@ pub(crate) enum Error {
     },
 
     /// Error for when yaml could not be parsed from a slice.
-    #[snafu(display("Failed to parse YAML {}: {}", input_yaml, source))]
+    #[snafu(display("Failed to parse YAML {input_yaml}: {source}"))]
     YamlParseFromSlice {
         source: serde_yaml::Error,
         input_yaml: String,
     },
 
     /// Error for when yaml could not be parsed from a file (Reader).
-    #[snafu(display("Failed to parse YAML at {}: {}", filepath.display(), source))]
+    #[snafu(display("Failed to parse YAML at {}: {source}", filepath.display()))]
     YamlParseFromFile {
         source: serde_yaml::Error,
         filepath: PathBuf,
     },
 
     /// Error for when yaml could not be parsed from bytes.
-    #[snafu(display("Failed to parse unsupported versions yaml: {}", source))]
+    #[snafu(display("Failed to parse unsupported versions yaml: {source}"))]
     YamlParseBufferForUnsupportedVersion { source: serde_yaml::Error },
 
     /// Error for when the Helm chart installed in the cluster is not of the umbrella or core
     /// variant.
     #[snafu(display(
-        "Helm chart release {} in Namespace {} has an unsupported chart variant: {}",
-        release_name,
-        namespace,
-        chart_name
+        "Helm chart release {release_name} in Namespace {namespace} has an unsupported chart variant: {chart_name}",
     ))]
     DetermineChartVariant {
         release_name: String,
@@ -157,14 +137,14 @@ pub(crate) enum Error {
     },
 
     /// Error for when the path to a directory cannot be validated.
-    #[snafu(display("Failed to validate directory path {}: {}", path.display(), source))]
+    #[snafu(display("Failed to validate directory path {}: {source}", path.display()))]
     ValidateDirPath {
         source: std::io::Error,
         path: PathBuf,
     },
 
     /// Error for when the path to a file cannot be validated.
-    #[snafu(display("Failed to validate filepath {}: {}", path.display(), source))]
+    #[snafu(display("Failed to validate filepath {}: {source}", path.display()))]
     ValidateFilePath {
         source: std::io::Error,
         path: PathBuf,
@@ -179,7 +159,7 @@ pub(crate) enum Error {
     NotAFile { path: PathBuf },
 
     /// Error when reading a file.
-    #[snafu(display("Failed to read from file {}: {}", filepath.display(), source))]
+    #[snafu(display("Failed to read from file {}: {source}", filepath.display()))]
     ReadingFile {
         source: std::io::Error,
         filepath: PathBuf,
@@ -191,10 +171,7 @@ pub(crate) enum Error {
 
     /// Error for when a Kubernetes API request for GET-ing a Pod fails.
     #[snafu(display(
-        "Failed to GET Kubernetes Pod {} in namespace {}: {}",
-        pod_name,
-        pod_namespace,
-        source
+        "Failed to GET Kubernetes Pod {pod_name} in namespace {pod_namespace}: {source}",
     ))]
     GetPod {
         source: kube::Error,
@@ -202,19 +179,10 @@ pub(crate) enum Error {
         pod_namespace: String,
     },
 
-    /// Error for when a Kubernetes API request for GET-ing a list of Nodes filtered by label(s)
-    /// fails.
-    #[snafu(display("Failed to list Nodes with label {}: {}", label, source))]
-    ListNodesWithLabel { source: kube::Error, label: String },
-
     /// Error for when a Kubernetes API request for GET-ing a list of Pods filtered by label(s)
     /// and field(s) fails.
     #[snafu(display(
-        "Failed to list Pods with label '{}', and field '{}' in namespace {}: {}",
-        label,
-        field,
-        namespace,
-        source
+        "Failed to list Pods with label '{label}', and field '{field}' in namespace {namespace}: {source}",
     ))]
     ListPodsWithLabelAndField {
         source: kube::Error,
@@ -223,35 +191,50 @@ pub(crate) enum Error {
         namespace: String,
     },
 
+    /// Error for when a Kubernetes API request for GET-ing a list of ControllerRevisions
+    /// filtered by label(s) and field(s) fails.
+    #[snafu(display(
+        "Failed to list ControllerRevisions with label '{label}', and field '{field}' in namespace {namespace}: {source}",
+    ))]
+    ListCtrlRevsWithLabelAndField {
+        source: kube::Error,
+        label: String,
+        field: String,
+        namespace: String,
+    },
+
+    /// Error for when a Kubernetes API request for GET-ing a list of Nodes filtered by label(s)
+    /// and field(s) fails.
+    #[snafu(display(
+        "Failed to list Kubernetes Nodes with label '{label}', and field '{field}': {source}",
+    ))]
+    ListNodesWithLabelAndField {
+        source: kube::Error,
+        label: String,
+        field: String,
+    },
+
     /// Error for when a Pod does not have a PodSpec struct member.
-    #[snafu(display("Failed get .spec from Pod {} in Namespace {}", name, namespace))]
+    #[snafu(display("Failed get .spec from Pod {name} in Namespace {namespace}"))]
     EmptyPodSpec { name: String, namespace: String },
 
     /// Error for when the spec.nodeName of a Pod is empty.
-    #[snafu(display(
-        "Failed get .spec.nodeName from Pod {} in Namespace {}",
-        name,
-        namespace
-    ))]
+    #[snafu(display("Failed get .spec.nodeName from Pod {name} in Namespace {namespace}",))]
     EmptyPodNodeName { name: String, namespace: String },
 
     /// Error for when the metadata.uid of a Pod is empty.
-    #[snafu(display(
-        "Failed to get .metadata.uid from Pod {} in Namespace {}",
-        name,
-        namespace
-    ))]
+    #[snafu(display("Failed to get .metadata.uid from Pod {name} in Namespace {namespace}",))]
     EmptyPodUid { name: String, namespace: String },
 
     /// Error for when an uncordon request for a storage node fails.
-    #[snafu(display("Failed to uncordon {} Node {}: {}", product_train(), node_id, source))]
+    #[snafu(display("Failed to uncordon {} Node {node_id}: {source}", product_train()))]
     StorageNodeUncordon {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
         node_id: String,
     },
 
     /// Error for when an Pod-delete Kubernetes API request fails.
-    #[snafu(display("Failed get delete Pod {} from Node {}: {}", name, node, source))]
+    #[snafu(display("Failed get delete Pod {name} from Node {node}: {source}"))]
     PodDelete {
         source: kube::Error,
         name: String,
@@ -259,60 +242,64 @@ pub(crate) enum Error {
     },
 
     /// Error for when listing storage nodes fails.
-    #[snafu(display("Failed to list {} Nodes: {}", product_train(), source))]
+    #[snafu(display("Failed to list {} Nodes: {source}", product_train()))]
     ListStorageNodes {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
     },
 
     /// Error for when GET-ing a storage node fails.
-    #[snafu(display("Failed to list {} Node {}: {}", product_train(), node_id, source))]
+    #[snafu(display("Failed to list {} Node {node_id}: {source}", product_train()))]
     GetStorageNode {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
         node_id: String,
     },
 
     /// Error for when the storage node's Spec is empty.
-    #[snafu(display("Failed to get {} Node {}", product_train(), node_id))]
+    #[snafu(display("Failed to get {} Node {node_id}", product_train()))]
     EmptyStorageNodeSpec { node_id: String },
 
     /// Error for when a GET request for a list of storage volumes fails.
-    #[snafu(display("Failed to list {} Volumes: {}", product_train(), source))]
+    #[snafu(display("Failed to list {} Volumes: {source}", product_train()))]
     ListStorageVolumes {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
     },
 
     /// Error for when a storage node drain request fails.
-    #[snafu(display("Failed to drain {} Node {}: {}", product_train(), node_id, source))]
+    #[snafu(display("Failed to drain {} Node {node_id}: {source}", product_train()))]
     DrainStorageNode {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
         node_id: String,
     },
 
     /// Error for when a storage node cordon request fails.
-    #[snafu(display("Failed to cordon {} Node {}: {}", product_train(), node_id, source))]
+    #[snafu(display("Failed to cordon {} Node {node_id}: {source}", product_train()))]
     CordonStorageNode {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
         node_id: String,
     },
 
     /// Error for when the requested YAML key is invalid.
-    #[snafu(display("Failed to parse YAML path {}", yaml_path))]
+    #[snafu(display("Failed to parse YAML path {yaml_path}"))]
     YamlStructure { yaml_path: String },
 
     /// Error for use when converting Vec<> to String.
-    #[snafu(display("Failed to convert Vec<u8> to UTF-8 formatted String: {}", source))]
+    #[snafu(display("Failed to convert Vec<u8> to UTF-8 formatted String: {source}"))]
     U8VectorToString { source: std::str::Utf8Error },
 
     /// Error when publishing kube-events for the Job object.
-    #[snafu(display("Failed to publish Event: {}", source))]
+    #[snafu(display("Failed to publish Event: {source}"))]
     EventPublish { source: kube_client::Error },
+
+    /// Error for when the 'chart' member of a crate::helm::client::HelmReleaseElement cannot be
+    /// split at the first occurrence of '-', e.g. <chart-name>-2.1.0-rc8.
+    #[snafu(display(
+        "Failed to split helm chart name '{chart_name}', at the first occurrence of '{delimiter}'",
+    ))]
+    HelmChartNameSplit { chart_name: String, delimiter: char },
 
     /// Error for when a Helm list command execution succeeds, but with an error.
     #[snafu(display(
-        "`helm list` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-        command,
-        args,
-        std_err,
+        "`helm list` command return an error,\ncommand: {command},\nargs: {args:?},\nstd_err: {std_err}",
     ))]
     HelmListCommand {
         command: String,
@@ -322,10 +309,7 @@ pub(crate) enum Error {
 
     /// Error for when a Helm version command execution succeeds, but with an error.
     #[snafu(display(
-        "`helm version` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-        command,
-        args,
-        std_err,
+        "`helm version` command return an error,\ncommand: {command},\nargs: {args:?},\nstd_err: {std_err}",
     ))]
     HelmVersionCommand {
         command: String,
@@ -335,10 +319,7 @@ pub(crate) enum Error {
 
     /// Error for when a Helm upgrade command execution succeeds, but with an error.
     #[snafu(display(
-        "`helm upgrade` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-        command,
-        args,
-        std_err,
+        "`helm upgrade` command return an error,\ncommand: {command},\nargs: {args:?},\nstd_err: {std_err}",
     ))]
     HelmUpgradeCommand {
         command: String,
@@ -348,10 +329,7 @@ pub(crate) enum Error {
 
     /// Error for when a Helm get values command execution succeeds, but with an error.
     #[snafu(display(
-        "`helm get values` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-        command,
-        args,
-        std_err,
+        "`helm get values` command return an error,\ncommand: {command},\nargs: {args:?},\nstd_err: {std_err}",
     ))]
     HelmGetValuesCommand {
         command: String,
@@ -361,12 +339,8 @@ pub(crate) enum Error {
 
     /// Error for when detected helm chart name is not known helm chart.
     #[snafu(display(
-        "'{}' is not a known {} helm chart, only helm charts '{}-<version-tag>' and '{}-<version-tag>' \
-        are supported",
-        chart_name,
+        "'{chart_name}' is not a known {} helm chart, only helm charts '{CORE_CHART_NAME}-<version-tag>' and '{UMBRELLA_CHART_NAME}-<version-tag>' are supported",
         product_train(),
-        CORE_CHART_NAME,
-        UMBRELLA_CHART_NAME
     ))]
     NotAKnownHelmChart { chart_name: String },
 
@@ -393,7 +367,7 @@ pub(crate) enum Error {
     HelmUpgradeOptionNamespaceAbsent,
 
     /// Error for failures in generating semver::Value from a &str input.
-    #[snafu(display("Failed to parse {} as a valid semver: {}", version_string, source))]
+    #[snafu(display("Failed to parse {version_string} as a valid semver: {source}"))]
     SemverParse {
         source: semver::Error,
         version_string: String,
@@ -404,7 +378,7 @@ pub(crate) enum Error {
     InvalidUpgradePath,
 
     /// Error in serializing crate::event::event_recorder::EventNote to JSON string.
-    #[snafu(display("Failed to serialize event note {:?}: {}", note, source))]
+    #[snafu(display("Failed to serialize event note {note:?}: {source}"))]
     SerializeEventNote {
         source: serde_json::Error,
         note: EventNote,
@@ -412,9 +386,7 @@ pub(crate) enum Error {
 
     /// Error in serializing a helm::chart::PromtailConfigClient to a JSON string.
     #[snafu(display(
-        "Failed to serialize .loki-stack.promtail.config.client {:?}: {}",
-        object,
-        source
+        "Failed to serialize .loki-stack.promtail.config.client {object:?}: {source}",
     ))]
     SerializePromtailConfigClientToJson {
         source: serde_json::Error,
@@ -423,9 +395,7 @@ pub(crate) enum Error {
 
     /// Error in serializing a k8s_openapi::api::core::v1::Container to a JSON string.
     #[snafu(display(
-        "Failed to serialize .loki-stack.promtail.initContainer {:?}: {}",
-        object,
-        source
+        "Failed to serialize .loki-stack.promtail.initContainer {object:?}: {source}",
     ))]
     SerializePromtailInitContainerToJson {
         source: serde_json::Error,
@@ -435,9 +405,7 @@ pub(crate) enum Error {
     /// Error in deserializing a promtail helm chart's deprecated extraClientConfig to a
     /// serde_json::Value.
     #[snafu(display(
-        "Failed to deserialize .loki-stack.promtail.config.snippets.extraClientConfig to a serde_json::Value {}: {}",
-        config,
-        source
+        "Failed to deserialize .loki-stack.promtail.config.snippets.extraClientConfig to a serde_json::Value {config}: {source}",
     ))]
     DeserializePromtailExtraConfig {
         source: serde_yaml::Error,
@@ -446,7 +414,7 @@ pub(crate) enum Error {
 
     /// Error in serializing a promtail helm chart's deprecated extraClientConfig, in a
     /// serde_json::Value, to JSON.
-    #[snafu(display("Failed to serialize to JSON {:?}: {}", config, source))]
+    #[snafu(display("Failed to serialize to JSON {config:?}: {source}"))]
     SerializePromtailExtraConfigToJson {
         source: serde_json::Error,
         config: serde_json::Value,
@@ -454,18 +422,14 @@ pub(crate) enum Error {
 
     /// Error in serializing the deprecated config.snippets.extraClientConfig from the promtail
     /// helm chart v3.11.0.
-    #[snafu(display(
-        "Failed to serialize object to a serde_json::Value {}: {}",
-        object,
-        source
-    ))]
+    #[snafu(display("Failed to serialize object to a serde_json::Value {object}: {source}",))]
     SerializePromtailExtraClientConfigToJson {
         source: serde_json::Error,
         object: String,
     },
 
     /// Error for when there are too many io-engine Pods in one single node;
-    #[snafu(display("Too many io-engine Pods in Node '{}'", node_name))]
+    #[snafu(display("Too many io-engine Pods in Node '{node_name}'"))]
     TooManyIoEnginePods { node_name: String },
 
     /// Error for when the thin-provisioning options are absent, but still tried to fetch it.
@@ -479,62 +443,15 @@ pub(crate) enum Error {
 
     /// Error for the Umbrella chart is not upgraded.
     #[snafu(display(
-        "The {} helm chart is not upgraded to version {}: Upgrade for helm chart {} is not \
-        supported, refer to the instructions at {} to upgrade your release of the {} helm \
-        chart to version {}",
-        UMBRELLA_CHART_NAME,
-        TO_UMBRELLA_SEMVER,
-        UMBRELLA_CHART_NAME,
-        UMBRELLA_CHART_UPGRADE_DOCS_URL,
-        UMBRELLA_CHART_NAME,
-        TO_UMBRELLA_SEMVER,
+        "The {UMBRELLA_CHART_NAME} helm chart is not upgraded to version {TO_UMBRELLA_SEMVER}: Upgrade for helm chart {UMBRELLA_CHART_NAME} is not supported, refer to the instructions at {UMBRELLA_CHART_UPGRADE_DOCS_URL} to upgrade your release of the {UMBRELLA_CHART_NAME} helm chart to version {TO_UMBRELLA_SEMVER}",
     ))]
     UmbrellaChartNotUpgraded,
 
     /// Error for when the helm upgrade for the Core chart does not have a chart directory.
     #[snafu(display(
-        "The {} helm chart could not be upgraded as input chart directory is absent",
-        CORE_CHART_NAME
+        "The {CORE_CHART_NAME} helm chart could not be upgraded as input chart directory is absent",
     ))]
     CoreChartUpgradeNoneChartDir,
-
-    /// Error for when the Storage REST API Deployment is absent.
-    #[snafu(display(
-        "Found no {} REST API Deployments in the namespace {} with labelSelector {}",
-        product_train(),
-        namespace,
-        label_selector
-    ))]
-    NoRestDeployment {
-        namespace: String,
-        label_selector: String,
-    },
-
-    /// Error for when the CHART_VERSION_LABEL_KEY is missing amongst the labels in a Deployment.
-    #[snafu(display(
-        "A label with the key {} was not found for Deployment {} in namespace {}",
-        helm_release_version_key(),
-        deployment_name,
-        namespace
-    ))]
-    NoVersionLabelInDeployment {
-        deployment_name: String,
-        namespace: String,
-    },
-
-    /// Error for when a Kubernetes API request for GET-ing a list of Deployments filtered by
-    /// label(s) fails.
-    #[snafu(display(
-        "Failed to list Deployments with label {} in namespace {}: {}",
-        label_selector,
-        namespace,
-        source
-    ))]
-    ListDeploymentsWithLabel {
-        source: kube::Error,
-        namespace: String,
-        label_selector: String,
-    },
 
     /// Error for when the helm upgrade run is that of an invalid chart configuration.
     #[snafu(display("Invalid helm upgrade request"))]
@@ -542,9 +459,7 @@ pub(crate) enum Error {
 
     /// Error for when the helm upgrade's target version is lower the source version.
     #[snafu(display(
-        "Failed to upgrade from {} to {}: upgrade to an earlier-released version is forbidden",
-        source_version,
-        target_version
+        "Failed to upgrade from {source_version} to {target_version}: upgrade to an earlier-released version is forbidden",
     ))]
     RollbackForbidden {
         source_version: String,
@@ -553,10 +468,7 @@ pub(crate) enum Error {
 
     /// Error for when yq command execution fails.
     #[snafu(display(
-        "Failed to run yq command,\ncommand: {},\nargs: {:?},\ncommand_error: {}",
-        command,
-        args,
-        source
+        "Failed to run yq command,\ncommand: {command},\nargs: {args:?},\ncommand_error: {source}",
     ))]
     YqCommandExec {
         source: std::io::Error,
@@ -566,10 +478,7 @@ pub(crate) enum Error {
 
     /// Error for when the `yq -V` command returns an error.
     #[snafu(display(
-        "`yq -V` command return an error,\ncommand: {},\narg: {},\nstd_err: {}",
-        command,
-        arg,
-        std_err,
+        "`yq -V` command return an error,\ncommand: {command},\narg: {arg},\nstd_err: {std_err}",
     ))]
     YqVersionCommand {
         command: String,
@@ -579,10 +488,7 @@ pub(crate) enum Error {
 
     /// Error for when the `yq eq` command returns an error.
     #[snafu(display(
-        "`yq ea` command return an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-        command,
-        args,
-        std_err,
+        "`yq ea` command return an error,\ncommand: {command},\nargs: {args:?},\nstd_err: {std_err}",
     ))]
     YqMergeCommand {
         command: String,
@@ -595,26 +501,23 @@ pub(crate) enum Error {
     NotYqV4,
 
     /// Error for when temporary file creation fails.
-    #[snafu(display("Failed to create temporary file: {}", source))]
+    #[snafu(display("Failed to create temporary file: {source}"))]
     TempFileCreation { source: std::io::Error },
 
     /// Error for when we fail to write to a temporary file.
-    #[snafu(display("Failed to write to temporary file {}: {}", filepath.display(), source))]
+    #[snafu(display("Failed to write to temporary file {}: {source}", filepath.display()))]
     WriteToTempFile {
         source: std::io::Error,
         filepath: PathBuf,
     },
 
     /// Error for when the input yaml key for a string value isn't a valid one.
-    #[snafu(display("{} is not a valid yaml key for a string value", key))]
+    #[snafu(display("{key} is not a valid yaml key for a string value"))]
     NotAValidYamlKeyForStringValue { key: String },
 
     /// Error for when the yq command to update the value of a yaml field returns an error.
     #[snafu(display(
-        "`yq` set-value-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-        command,
-        args,
-        std_err,
+        "`yq` set-value-command returned an error,\ncommand: {command},\nargs: {args:?},\nstd_err: {std_err}",
     ))]
     YqSetCommand {
         command: String,
@@ -624,10 +527,7 @@ pub(crate) enum Error {
 
     /// Error for when the yq command to delete an object path returns an error.
     #[snafu(display(
-        "`yq` delete-object-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-        command,
-        args,
-        std_err,
+        "`yq` delete-object-command returned an error,\ncommand: {command},\nargs: {args:?},\nstd_err: {std_err}",
     ))]
     YqDeleteObjectCommand {
         command: String,
@@ -637,10 +537,7 @@ pub(crate) enum Error {
 
     /// Error for when the yq command to append to an array returns an error.
     #[snafu(display(
-        "`yq` append-to-array-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-        command,
-        args,
-        std_err,
+        "`yq` append-to-array-command returned an error,\ncommand: {command},\nargs: {args:?},\nstd_err: {std_err}",
     ))]
     YqAppendToArrayCommand {
         command: String,
@@ -650,10 +547,7 @@ pub(crate) enum Error {
 
     /// Error for when the yq command to append to an object returns an error.
     #[snafu(display(
-        "`yq` append-to-object-command returned an error,\ncommand: {},\nargs: {:?},\nstd_err: {}",
-        command,
-        args,
-        std_err,
+        "`yq` append-to-object-command returned an error,\ncommand: {command},\nargs: {args:?},\nstd_err: {std_err}",
     ))]
     YqAppendToObjectCommand {
         command: String,
@@ -669,6 +563,27 @@ pub(crate) enum Error {
         chart_name: String,
         lower_extent: String,
         upper_extent: String,
+    },
+
+    /// Error for when the list of ControllerRevisions for a controller's resource is empty.
+    #[snafu(display(
+        "No ControllerRevisions found in namespace '{namespace}' with label selector '{label_selector}' and field selector '{field_selector}'"
+    ))]
+    ControllerRevisionListEmpty {
+        namespace: String,
+        label_selector: String,
+        field_selector: String,
+    },
+
+    /// Error for when a ControllerRevision doesn't have a label key containing the controller
+    /// revision hash.
+    #[snafu(display(
+        "ControllerRevisions '{name}' in namespace '{namespace}' doesn't have label key '{hash_label_key}'"
+    ))]
+    ControllerRevisionDoesntHaveHashLabel {
+        name: String,
+        namespace: String,
+        hash_label_key: String,
     },
 }
 
