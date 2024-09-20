@@ -191,8 +191,8 @@ output_yaml()
 {
   newChartVersion=$1
   newChartAppVersion=$2
-  imageTag=$3
-  imagePullPolicy=$4
+  imageTag=${3:-}
+  imagePullPolicy=${4:-}
 
   echo "NEW_CHART_VERSION: $newChartVersion"
   echo "NEW_CHART_APP_VERSION: $newChartAppVersion"
@@ -204,8 +204,12 @@ output_yaml()
     sed -i "s/^version:.*/version: $newChartVersion/" "$CRDS_SUBCHART_CHART_FILE"
     yq_ibl "(.dependencies[] | select(.name == \"crds\").version) |= \"$newChartVersion\"" "$CHART_FILE"
 
-    yq_ibl ".image.tag |= \"$imageTag\"" "$CHART_VALUES"
-    yq_ibl ".image.pullPolicy |= \"$imagePullPolicy\"" "$CHART_VALUES"
+    if [ -n "$imageTag" ]; then
+      yq_ibl ".image.tag |= \"$imageTag\"" "$CHART_VALUES"
+    fi
+    if [ -n "$imagePullPolicy" ]; then
+      yq_ibl ".image.pullPolicy |= \"$imagePullPolicy\"" "$CHART_VALUES"
+    fi
     yq_ibl ".chart.version |= \"$newChartVersion\"" "$CHART_DOC"
   fi
 }
@@ -219,6 +223,7 @@ Options:
   -h, --help                                       Display this text.
   --check-chart           <branch>                 Check if the chart version/app version is correct for the branch.
   --develop-to-release                             Also upgrade the chart to the release version matching the branch.
+  --released              <released-tag>           Bumps the future chart version after releasing the given tag.
   --helm-testing          <branch>                 Upgrade the chart to the appropriate branch chart version.
   --app-tag               <tag>                    The appVersion tag.
   --override-index        <latest_version>         Override the latest chart version from the published chart's index.
@@ -258,6 +263,7 @@ INDEX_BRANCH_FILE="index.yaml"
 INDEX_FILE=
 DRY_RUN=
 DEVELOP_TO_REL=
+UPDATE_REL=
 HELM_TESTING=
 DATE_TIME_FMT="%Y-%m-%d-%H-%M-%S"
 DATE_TIME=
@@ -287,6 +293,11 @@ while [ "$#" -gt 0 ]; do
       ;;
     --develop-to-release)
       DEVELOP_TO_REL=1
+      shift
+      ;;
+    --released)
+      shift
+      UPDATE_REL=$1
       shift
       ;;
     --helm-testing)
@@ -362,6 +373,12 @@ if [ -n "$CHECK_BRANCH" ]; then
   fi
   APP_TAG=$(branch_chart_version "$CHECK_BRANCH")
 else
+  if [ -n "$UPDATE_REL" ]; then
+    if [ -n "$APP_TAG" ]; then
+      die "Cannot specify --update-release and --app-tag together"
+    fi
+    APP_TAG=$(semver bump "patch" "$UPDATE_REL")
+  fi
   if [ -z "$APP_TAG" ]; then
     die "--app-tag not specified"
   fi
@@ -398,6 +415,24 @@ if [ -n "$CHECK_BRANCH" ]; then
     elif [ "$CHART_VERSION" != "$APP_TAG" ]; then
       die "ERROR: Already on $CHART_VERSION which does not match $APP_TAG"
     fi
+    exit 0
+  fi
+fi
+
+if [ -n "$UPDATE_REL" ]; then
+  if [ "$CHART_VERSION" == "0.0.0" ]; then
+    die "Must be used on a release branch only but \$CHART_VERSION $CHART_VERSION "
+  elif [ "$CHART_VERSION" != "$APP_TAG" ]; then
+    if [ "$(semver compare "$CHART_VERSION" "$APP_TAG")" == "1" ]; then
+      die "Future version can't possibly be older than the current"
+    fi
+    # TODO: if we're on a release/3 branch, then we may allow minor updates
+    # however, this doesn't seem likely to happen anytime soon, so, defer until then...
+    if [ "$(semver diff "$CHART_VERSION" "$APP_TAG")" != "patch" ]; then
+      die "Only future patch releases are allowed!"
+    fi
+  else
+    # Nothing to do here...
     exit 0
   fi
 fi
@@ -445,6 +480,13 @@ if [ -z "$IGNORE_INDEX_CHECK" ]; then
     if [ "$(semver get prerel "$INDEX_LT_VERSION")" == "" ]; then
       die "A stable chart version $INDEX_LT_VERSION is already in the index. What should I do?"
     fi
+  fi
+fi
+
+if [ -n "$UPDATE_REL" ]; then
+  if [ "$CHART_VERSION" != "$APP_TAG" ]; then
+    output_yaml "$APP_TAG" "$APP_TAG"
+    exit 0
   fi
 fi
 
