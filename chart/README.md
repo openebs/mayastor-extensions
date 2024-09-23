@@ -2,7 +2,7 @@
 
 Mayastor Helm chart for Kubernetes
 
-![Version: 2.7.0](https://img.shields.io/badge/Version-2.7.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2.7.0](https://img.shields.io/badge/AppVersion-2.7.0-informational?style=flat-square)
+![Version: 2.7.2](https://img.shields.io/badge/Version-2.7.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2.7.2](https://img.shields.io/badge/AppVersion-2.7.2-informational?style=flat-square)
 
 ## Installation Guide
 
@@ -54,7 +54,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 
 | Repository | Name | Version |
 |------------|------|---------|
-|  | crds | 2.7.0 |
+|  | crds | 2.7.2 |
 | https://charts.bitnami.com/bitnami | etcd | 8.6.0 |
 | https://grafana.github.io/helm-charts | loki-stack | 2.9.11 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.50.1 |
