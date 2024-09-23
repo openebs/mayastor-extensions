@@ -25,6 +25,8 @@ CHECK_BRANCH=
 DATE_TIME=
 # Upgrade from develop to release/x.y*
 DEVELOP_TO_REL=
+# Update the release version after release
+RELEASED=
 # Upgrade from develop to helm-testing
 HELM_TESTING=
 # Tag that has been pushed
@@ -78,6 +80,9 @@ CHART_APP_VERSION: $CHART_APP_VERSION
 EOF
     fi
   else
+    if [ -n "$RELEASED" ]; then
+      APP_TAG=$NEW_CHART_VERSION
+    fi
     cat <<EOF
 APP_TAG: $APP_TAG
 CHART_VERSION: $CHART_VERSION
@@ -120,8 +125,14 @@ call_script()
       fi
     fi
   else
-    ARGS="--app-tag $APP_TAG $ARGS"
+    if [ -n "$RELEASED" ]; then
+      ARGS="--released $RELEASED $ARGS"
+    fi
+    if [ -n "$APP_TAG" ]; then
+      ARGS="--app-tag $APP_TAG $ARGS"
+    fi
   fi
+
   if [ -n "$DATE_TIME" ]; then
       ARGS="--date-time $DATE_TIME $ARGS"
   fi
@@ -169,6 +180,7 @@ test_one()
   CHECK_BRANCH=
   DATE_TIME=
   DEVELOP_TO_REL=
+  RELEASED=
   HELM_TESTING=
   APP_TAG=
   CHART_VERSION=
@@ -370,6 +382,47 @@ INDEX_CHART_VERSIONS=(2.0.1 2.0.0-a.0)
 NEW_CHART_VERSION=2.0.0
 NEW_CHART_APP_VERSION=2.0.0
 test_one "A more stable version is already published, but the app tag stable is new"
+
+RELEASED=2.0.0
+CHART_VERSION=2.0.0
+CHART_APP_VERSION=2.0.0
+NEW_CHART_VERSION=2.0.1
+NEW_CHART_APP_VERSION=2.0.1
+test_one "After release 2.0.0, the next one is 2.0.1"
+
+RELEASED=2.0.0
+CHART_VERSION=2.0.0
+CHART_APP_VERSION=2.0.0
+INDEX_CHART_VERSIONS=(2.0.1 2.0.0-a.0)
+EXPECT_FAIL=1
+test_one "We've actually already release 2.0.1, so the next one is 2.0.2"
+
+RELEASED=2.0.1
+CHART_VERSION=2.0.0
+CHART_APP_VERSION=2.0.0
+INDEX_CHART_VERSIONS=(2.0.1 2.0.0-a.0)
+NEW_CHART_VERSION=2.0.2
+NEW_CHART_APP_VERSION=2.0.2
+test_one "We've actually already release 2.0.1, so the next one is 2.0.2"
+
+RELEASED=2.2.0
+CHART_VERSION=2.0.0
+CHART_APP_VERSION=2.0.0
+EXPECT_FAIL=1
+test_one "Can't bump beyond patch!"
+
+RELEASED=1.2.0
+CHART_VERSION=2.0.0
+CHART_APP_VERSION=2.0.0
+EXPECT_FAIL=1
+test_one "Can't bump to an older version!"
+
+RELEASED=1.2.0
+APP_TAG=1.2.0
+CHART_VERSION=2.0.0
+CHART_APP_VERSION=2.0.0
+EXPECT_FAIL=1
+test_one "Can't specify both!"
 
 echo "Done"
 
