@@ -24,15 +24,67 @@ jobs:
             # Publish the Chart.yaml locally
             # Note this does not commit the Chart.yaml changes this the branch
             nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag "$tag"" ./scripts/helm/shell.nix
-            echo "PUBLISH_CHART=1" >> $GITHUB_ENV
           else
             branch="${{ github.ref_name }}"
             nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch"" ./scripts/helm/shell.nix
           fi
+          nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
       - name: Publish Mayastor Helm chart
         uses: stefanprodan/helm-gh-pages@v1.7.0
-        if: ${{ env.PUBLISH_CHART }}
+        if: ${{ github.ref_type == 'tag' }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           charts_dir: .
 
+  update-chart:
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_type == 'tag' }}
+    needs:
+      - release-chart
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v22
+      - name: Pre-populate nix-shell
+        run: |
+          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+          nix-shell --pure --run "echo" ./scripts/helm/shell.nix
+      - name: Publish locally in the workspace
+        run: |
+          tag="${{ github.ref_name }}"
+          nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --released "$tag"" ./scripts/helm/shell.nix
+          nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: "chore(ci): update future helm chart versions"
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          title: Bump future helm chart version on the release branch
+          labels: |
+            update-release-branch
+            automated-pr
+          draft: false
+          signoff: true
+          token: ${{ secrets.ORG_CI_GITHUB }}
+      - name: Approve Pull Request by CI Bot
+        if: ${{ steps.cpr.outputs.pull-request-number }}
+        run: |
+          gh pr review ${{ steps.cpr.outputs.pull-request-number }} --approve
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Approve Pull Request by CI User
+        if: ${{ steps.cpr.outputs.pull-request-number }}
+        run: |
+          gh pr review ${{ steps.cpr.outputs.pull-request-number }} --approve
+        env:
+          GH_TOKEN: ${{ secrets.ORG_CI_GITHUB_2 }}
+      - name: Bors Merge Pull Request
+        if: ${{ steps.cpr.outputs.pull-request-number }}
+        run: |
+          gh pr comment ${{ steps.cpr.outputs.pull-request-number }} --body "bors merge"
+        env:
+          GH_TOKEN: ${{ secrets.ORG_CI_GITHUB }}

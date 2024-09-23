@@ -21,6 +21,6 @@
 .idea/
 *.tmproj
 .vscode/
-*.md
+README.md.tmpl
 # Nix Shell
 *.nix
