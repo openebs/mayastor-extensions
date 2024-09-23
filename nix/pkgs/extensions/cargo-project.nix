@@ -65,6 +65,7 @@ let
     "constants"
     "dependencies/control-plane/openapi/Cargo.toml"
     "dependencies/control-plane/openapi/build.rs"
+    "dependencies/control-plane/openapi/src/lib.rs"
     "dependencies/control-plane/control-plane/plugin"
     "dependencies/control-plane/control-plane/rest/openapi-specs"
     "dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh"
