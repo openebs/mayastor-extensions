@@ -28,6 +28,7 @@ jobs:
             branch="${{ github.ref_name }}"
             nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch"" ./scripts/helm/shell.nix
           fi
+          nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
       - name: Publish Mayastor Helm chart
         uses: stefanprodan/helm-gh-pages@v1.7.0
         if: ${{ github.ref_type == 'tag' }}
