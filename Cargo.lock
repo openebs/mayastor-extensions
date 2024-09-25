@@ -581,9 +581,9 @@ dependencies = [
  "chrono",
  "clap",
  "constants",
- "convert_case",
  "events-api",
  "futures",
+ "heck",
  "humantime",
  "jsonpath_lib",
  "k8s-openapi",
@@ -705,7 +705,7 @@ checksum = "28c122c3980598d243d63d9a704629a2d748d101f278052ff068be5a4423ab6f"
 name = "constants"
 version = "0.1.0"
 dependencies = [
- "convert_case",
+ "heck",
  "utils",
 ]
 
