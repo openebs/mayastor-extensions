@@ -1,4 +1,4 @@
-use convert_case::{Case::Train, Casing};
+use heck::ToTrainCase;
 use std::{
     env,
     path::{Path, PathBuf},
@@ -13,7 +13,7 @@ pub fn product() -> String {
     env::var(CALLHOME_PRODUCT_NAME_ENV)
         .ok()
         .filter(|v| !v.is_empty())
-        .map(|v| v.to_case(Train))
+        .map(|v| v.to_train_case())
         .unwrap_or(::constants::product_train())
 }
 
@@ -153,6 +153,9 @@ mod tests {
     fn test_product() {
         use crate::common::constants::{product, CALLHOME_PRODUCT_NAME_ENV};
         use std::env::{remove_var as unset, set_var as set};
+
+        set(CALLHOME_PRODUCT_NAME_ENV, "ma8");
+        assert_eq!(product(), "Ma8".to_string());
 
         set(CALLHOME_PRODUCT_NAME_ENV, "foo bar");
         assert_eq!(product(), "Foo-Bar".to_string());
