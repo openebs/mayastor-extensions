@@ -1,10 +1,10 @@
-use convert_case::Casing;
+use heck::ToTrainCase;
 use utils::constants::PRODUCT_DOMAIN_NAME;
 pub use utils::PRODUCT_NAME;
 
 /// Name of the product.
 pub fn product_train() -> String {
-    PRODUCT_NAME.to_case(convert_case::Case::Train)
+    PRODUCT_NAME.to_train_case()
 }
 
 /// Helm release name label's key.
