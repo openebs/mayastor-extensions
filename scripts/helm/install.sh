@@ -99,4 +99,4 @@ else
   set +x
 fi
 
-kubectl get pods -n mayastor -o wide
+kubectl get pods -n "$K8S_NAMESPACE" -o wide

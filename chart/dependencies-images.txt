@@ -1,0 +1,3 @@
+# localpv-provisioner
+# todo: we need a way to fetch this from the dependencies
+docker.io/openebs/linux-utils:4.1.0

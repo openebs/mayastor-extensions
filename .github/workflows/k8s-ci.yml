@@ -19,10 +19,17 @@ jobs:
           nix-shell ./scripts/k8s/shell.nix --run "echo"
       - name: BootStrap k8s cluster
         run: |
-          nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
+          nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label --dump-kind-images"
+
       - name: Install Helm Chart
         run: |
           nix-shell ./scripts/k8s/shell.nix --run "./scripts/helm/install.sh --dep-update --wait"
+
+      - name: Container Image List
+        run: |
+          # Verifies if the list of images is accurate
+          nix-shell ./scripts/k8s/shell.nix --run "./scripts/helm/verify-kind-images.sh"
+
       - name: The job has failed
         if: ${{ failure() }}
         run: |
