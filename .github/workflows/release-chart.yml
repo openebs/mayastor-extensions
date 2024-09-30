@@ -80,14 +80,14 @@ jobs:
           delete-branch: true
           branch-suffix: "random"
           base: ${{ env.BASE_BRANCH }}
-          token: ${{ secrets.ORG_CI_GITHUB }}
-      - name: Approve Pull Request by CI Bot
+          token: ${{ github.token }}
+      - name: Approve Pull Request by CI User 1
         if: ${{ steps.cpr.outputs.pull-request-number }}
         run: |
           gh pr review ${{ steps.cpr.outputs.pull-request-number }} --approve
         env:
-          GH_TOKEN: ${{ github.token }}
-      - name: Approve Pull Request by CI User
+          GH_TOKEN: ${{ secrets.ORG_CI_GITHUB }}
+      - name: Approve Pull Request by CI User 2
         if: ${{ steps.cpr.outputs.pull-request-number }}
         run: |
           gh pr review ${{ steps.cpr.outputs.pull-request-number }} --approve

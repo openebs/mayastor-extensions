@@ -4,7 +4,7 @@ on:
 
 jobs:
   k8s-ci:
-    runs-on: ubuntu-latest-16-cores
+    runs-on: ubuntu-latest-8-cores
     steps:
       - name: Bind mount /dev/sda1 to /nix
         run: |
@@ -63,7 +63,7 @@ jobs:
           title: Test results
 
   k8s-ci-vm:
-    runs-on: ubuntu-latest-16-cores
+    runs-on: ubuntu-latest-8-cores
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v11
