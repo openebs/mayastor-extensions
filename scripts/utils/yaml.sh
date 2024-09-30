@@ -5,7 +5,7 @@
 yq_ibl()
 {
   error=0
-  diff_out=$(diff -B <(yq '.' "$2") <(yq "$1" "$2")) || error=$?
+  diff_out=$(diff -B <(cat "$2") <(yq "$1" "$2")) || error=$?
   if [ "$error" != "0" ] && [ "$error" != "1" ]; then
     exit "$error"
   fi
