@@ -11,5 +11,6 @@ pkgs.mkShell {
     kubernetes-helm-wrapped
     semver-tool
     yq-go
+    jq
   ];
 }

@@ -24,6 +24,7 @@ TIMEOUT="5m"
 WAIT=
 DRY_RUN=
 HELM_DRY_RUN=""
+HELM_ARGS=
 SCRIPT_DIR="$(dirname "$0")"
 CHART_DIR="$SCRIPT_DIR"/../../chart
 CHART_SOURCE=$CHART_DIR
@@ -51,8 +52,9 @@ Options:
   --dep-update                   Run helm dependency update.
   --fail-if-installed            Fail with a status code 1 if the helm release '$RELEASE_NAME' already exists in the $K8S_NAMESPACE namespace.
   --hosted-chart                 Install a hosted chart instead of the local chart.
-  --version  <version>           Set the version/version-range for the chart. Works only when used with the '--hosted' option.
+  --version   <version>          Set the version/version-range for the chart. Works only when used with the '--hosted' option.
   --registry  <registry-url>     Set the registry URL for the hosted chart. Works only when used with the '--hosted' option. (Default: $DEFAULT_REGISTRY)
+  --helm      <stringArray>      Pass Helm Args directly to the install/upgrade commands.
 
 Examples:
   $(basename "$0")
@@ -118,6 +120,11 @@ while [ "$#" -gt 0 ]; do
         REGISTRY="${1#*=}"
       fi
       shift;;
+    --helm)
+      shift
+      test $# -lt 1 && die "Missing helm args"
+      HELM_ARGS="${HELM_ARGS:-} $1"
+      shift;;
     *)
       die "Unknown argument $1!"
       shift;;
@@ -157,8 +164,8 @@ else
   $HELM install "$RELEASE_NAME" "$CHART_SOURCE" -n "$K8S_NAMESPACE" --create-namespace \
        --set="etcd.livenessProbe.initialDelaySeconds=5,etcd.readinessProbe.initialDelaySeconds=5,etcd.replicaCount=1" \
        --set="obs.callhome.enabled=true,obs.callhome.sendReport=false,localpv-provisioner.analytics.enabled=false" \
-       --set="eventing.enabled=false" \
-       $HELM_DRY_RUN $WAIT_ARG $DEP_UPDATE_ARG $VERSION_ARG
+       --set="eventing.enabled=true,nats.cluster.enabled=false,nats.cluster.replicas=1" \
+       $HELM_DRY_RUN $WAIT_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
   set +x
 fi
 
