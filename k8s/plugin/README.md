@@ -110,7 +110,7 @@ Options:
 7. Pool Labelling
 ```
 ❯ kubectl mayastor label pool pool-1-kworker1 zone-us=east-1
-Pool pool pool-1-kworker1 labelled successfully. Current labels: {"openebs.io/created-by": "operator-diskpool", "zone-us": "east-1"}
+Pool pool pool-1-kworker1 labelled successfully. Current labels: {"zone-us": "east-1"}
  ```
 
 8. Show pool labels.
@@ -134,7 +134,7 @@ pool-1-kworker1   aio:///dev/vdb?uuid=d8a36b4b-0435-4fee-bf76-f2aef980b833  true
 10. Pool Unlabelling
 ```
 ❯ kubectl mayastor label pool pool-1-kworker1 zone-us-
-Pool pool-1-kworker1 labelled successfully. Current labels: {"openebs.io/created-by": "operator-diskpool"}
+Pool pool-1-kworker1 labelled successfully. Current labels: { }
  ```
 
 11. Get Nodes
