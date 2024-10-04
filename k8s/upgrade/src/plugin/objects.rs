@@ -17,7 +17,7 @@ use k8s_openapi::api::{
     },
     rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject},
 };
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, env};
 
 use kube::core::ObjectMeta;
 use maplit::btreemap;
@@ -336,6 +336,12 @@ pub(crate) fn upgrade_job(
                                     }),
                                     ..Default::default()
                                 }),
+                                ..Default::default()
+                            },
+                            EnvVar {
+                                // Ref: https://github.com/helm/helm/blob/main/cmd/helm/helm.go#L76
+                                name: "HELM_DRIVER".to_string(),
+                                value: Some(env::var("HELM_DRIVER").unwrap_or_default()),
                                 ..Default::default()
                             },
                         ]),
