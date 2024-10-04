@@ -50,12 +50,16 @@ pub(crate) struct CliArgs {
     helm_args_set_file: String,
 
     /// Formatting style to be used while logging.
-    #[clap(default_value = FmtStyle::Pretty.as_ref(), short, long)]
+    #[arg(default_value = FmtStyle::Pretty.as_ref(), short, long)]
     fmt_style: FmtStyle,
 
     /// Use ANSI colors for the logs.
-    #[clap(long)]
+    #[arg(long)]
     ansi_colors: bool,
+
+    /// This is the helm storage driver, e.g. secret, configmap, memory, etc.
+    #[arg(env = "HELM_DRIVER", default_value = "")]
+    helm_storage_driver: String,
 }
 
 impl CliArgs {
@@ -113,5 +117,10 @@ impl CliArgs {
     /// This returns the set file passed during upgrade.
     pub(crate) fn helm_args_set_file(&self) -> String {
         self.helm_args_set_file.clone()
+    }
+
+    /// This is the helm storage driver, e.g.: secret, secrets, configmap, configmaps, memory, sql.
+    pub(crate) fn helm_storage_driver(&self) -> String {
+        self.helm_storage_driver.clone()
     }
 }
