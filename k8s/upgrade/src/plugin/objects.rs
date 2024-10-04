@@ -76,7 +76,14 @@ pub(crate) fn upgrade_job_cluster_role(
             PolicyRule {
                 api_groups: Some(vec!["apps"].into_vec()),
                 resources: Some(
-                    vec!["daemonsets", "replicasets", "statefulsets", "deployments"].into_vec(),
+                    vec![
+                        "controllerrevisions",
+                        "daemonsets",
+                        "replicasets",
+                        "statefulsets",
+                        "deployments",
+                    ]
+                    .into_vec(),
                 ),
                 verbs: vec!["create", "delete", "get", "list", "patch"].into_vec(),
                 ..Default::default()
