@@ -10,7 +10,7 @@ use crate::{
             SerializePromtailInitContainerToJson,
         },
         file::write_to_tempfile,
-        kube_client as KubeClient,
+        kube::client as KubeClient,
     },
     helm::{
         chart::{CoreValues, PromtailConfigClient},

@@ -1,9 +1,12 @@
 use crate::{
-    common::error::{
-        HelmChartNameSplit, ReadingFile, Result, SemverParse, YamlParseBufferForUnsupportedVersion,
-        YamlParseFromFile,
+    common::{
+        constants::CORE_CHART_NAME,
+        error::{
+            HelmChartNameSplit, InvalidDependencyVersionInHelmReleaseData, ReadingFile, Result,
+            SemverParse, YamlParseBufferForUnsupportedVersion, YamlParseFromFile,
+        },
     },
-    helm::chart::Chart,
+    helm::{chart::Chart, client::HelmReleaseClient},
 };
 use semver::Version;
 use serde::Deserialize;
@@ -33,7 +36,7 @@ pub(crate) fn version_from_chart_yaml_file(path: PathBuf) -> Result<Version> {
 
 /// Generate a semver::Version from the 'chart' member of the Helm chart's ReleaseElement.
 /// The output of `helm ls -n <namespace> -o yaml` is a list of ReleaseElements.
-pub(crate) fn version_from_release_chart(chart_name: &str) -> Result<Version> {
+pub(crate) fn version_from_core_chart_release(chart_name: &str) -> Result<Version> {
     let delimiter: char = '-';
     // e.g. <chart>-1.2.3-rc.5 -- here the 2nd chunk is the version
     let (_, version) = chart_name.split_once(delimiter).ok_or(
@@ -47,6 +50,23 @@ pub(crate) fn version_from_release_chart(chart_name: &str) -> Result<Version> {
     Version::parse(version).context(SemverParse {
         version_string: version.to_string(),
     })
+}
+
+pub(crate) async fn core_version_from_umbrella_release(
+    client: &HelmReleaseClient,
+    release_name: &str,
+) -> Result<Version> {
+    let deps = client.get_dependencies(release_name).await?;
+    deps.into_iter()
+        .find_map(|dep| {
+            dep.name()
+                .eq(CORE_CHART_NAME)
+                .then_some(dep.version())
+                .flatten()
+                // Parse the String into a semver::Version.
+                .and_then(|version| Version::parse(version.as_str()).ok())
+        })
+        .ok_or(InvalidDependencyVersionInHelmReleaseData.build())
 }
 
 /// Struct to deserialize the unsupported version yaml.

@@ -7,7 +7,7 @@ use crate::{
             DrainStorageNode, EmptyPodNodeName, EmptyPodSpec, EmptyStorageNodeSpec, GetStorageNode,
             ListStorageNodes, PodDelete, Result, StorageNodeUncordon, TooManyIoEnginePods,
         },
-        kube_client as KubeClient,
+        kube::client as KubeClient,
         rest_client::RestClientSet,
     },
     upgrade::utils::{

@@ -26,9 +26,6 @@ pub fn cordon_ana_check() -> String {
     format!("{CORE_CHART_NAME}-upgrade-nvme-ana-check")
 }
 
-/// This is the allowed upgrade to-version/to-version-range for the Umbrella chart.
-pub(crate) const TO_UMBRELLA_SEMVER: &str = "4.0.1";
-
 /// This is the user docs URL for the Umbrella chart.
 pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str = constants::UMBRELLA_CHART_UPGRADE_DOCS_URL;
 

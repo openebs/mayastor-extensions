@@ -7,7 +7,7 @@ use crate::{
             RegexCompile, Result, U8VectorToString, ValidateDirPath, ValidateFilePath,
             YamlParseFromFile,
         },
-        kube_client as KubeClient,
+        kube::client as KubeClient,
         rest_client::RestClientSet,
     },
     helm::chart::Chart,
