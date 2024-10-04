@@ -54,7 +54,7 @@ pub(crate) struct CliArgs {
     fmt_style: FmtStyle,
 
     /// Use ANSI colors for the logs.
-    #[arg(long)]
+    #[arg(long, default_value_t = true)]
     ansi_colors: bool,
 
     /// This is the helm storage driver, e.g. secret, configmap, memory, etc.
