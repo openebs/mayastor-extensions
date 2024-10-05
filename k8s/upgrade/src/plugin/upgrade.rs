@@ -121,6 +121,10 @@ pub struct UpgradeArgs {
     /// (can specify multiple or separate values with commas: key1=path1,key2=path2).
     #[clap(global = true, long)]
     pub set_file: Vec<String>,
+
+    /// Use helm's --reset-then-reuse-values option.
+    #[arg(long, default_value_t = false)]
+    pub reset_then_reuse_values: bool,
 }
 
 impl Default for UpgradeArgs {
@@ -143,6 +147,7 @@ impl UpgradeArgs {
             skip_upgrade_path_validation_for_unsupported_version: false,
             set: Default::default(),
             set_file: Default::default(),
+            reset_then_reuse_values: false,
         }
     }
     ///  Upgrade the resources.

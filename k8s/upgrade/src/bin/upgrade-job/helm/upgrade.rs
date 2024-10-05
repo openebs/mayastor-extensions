@@ -56,6 +56,8 @@ pub(crate) struct HelmUpgraderBuilder {
     helm_args_set: Option<String>,
     helm_args_set_file: Option<String>,
     helm_storage_driver: Option<String>,
+    // Defaults to false, which is what we want for the time being.
+    helm_reset_then_reuse_values: bool,
 }
 
 impl HelmUpgraderBuilder {
@@ -118,6 +120,12 @@ impl HelmUpgraderBuilder {
     #[must_use]
     pub(crate) fn with_helm_storage_driver(mut self, driver: String) -> Self {
         self.helm_storage_driver = Some(driver);
+        self
+    }
+
+    /// This is a builder option to enable the use of the helm --reset-then-reuse-values flag.
+    pub(crate) fn with_helm_reset_then_reuse_values(mut self, use_it: bool) -> Self {
+        self.helm_reset_then_reuse_values = use_it;
         self
     }
 
@@ -250,16 +258,22 @@ impl HelmUpgraderBuilder {
             )
             .await?;
 
-            // helm upgrade .. -f <values-yaml> --set <a> --set-file <args> --atomic
-            let helm_upgrade_extra_args = vec_to_strings![
-                "-f",
-                upgrade_values_file.path().to_string_lossy(),
+            let mut helm_upgrade_extra_args: Vec<String>;
+            if self.helm_reset_then_reuse_values {
+                // helm upgrade .. --reset-then-reuse-values --set <a> --set-file <args> --atomic
+                helm_upgrade_extra_args = vec_to_strings!["--reset-then-reuse-values"];
+            } else {
+                // helm upgrade .. -f <values-yaml> --set <a> --set-file <args> --atomic
+                helm_upgrade_extra_args =
+                    vec_to_strings!["-f", upgrade_values_file.path().to_string_lossy()];
+            }
+            helm_upgrade_extra_args.extend(vec_to_strings![
                 "--set",
                 helm_args_set,
                 "--set-file",
                 helm_args_set_file,
                 "--atomic"
-            ];
+            ]);
 
             Ok(Box::new(CoreHelmUpgrader {
                 chart_dir,

@@ -14,7 +14,7 @@ mkShell {
     coreutils
     git
     helm-docs
-    kubernetes-helm-wrapped
+    kubernetes-helm
     semver-tool
     yq-go
   ];

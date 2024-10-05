@@ -301,6 +301,9 @@ pub(crate) fn upgrade_job(
     if args.skip_upgrade_path_validation_for_unsupported_version {
         job_args.push("--skip-upgrade-path-validation".to_string());
     }
+    if args.reset_then_reuse_values {
+        job_args.push("--helm-reset-then-reuse-values".to_string());
+    }
 
     Job {
         metadata: ObjectMeta {
