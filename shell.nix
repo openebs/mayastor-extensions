@@ -27,7 +27,7 @@ mkShell {
     cowsay
     git
     helm-docs
-    kubernetes-helm-wrapped
+    kubernetes-helm
     llvmPackages.libclang
     niv
     nixpkgs-fmt

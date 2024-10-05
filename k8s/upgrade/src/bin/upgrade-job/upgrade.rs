@@ -53,6 +53,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
         .with_helm_args_set(opts.helm_args_set())
         .with_helm_args_set_file(opts.helm_args_set_file())
         .with_helm_storage_driver(opts.helm_storage_driver())
+        .with_helm_reset_then_reuse_values(opts.helm_reset_then_reuse_values())
         .build()
         .await?;
 
