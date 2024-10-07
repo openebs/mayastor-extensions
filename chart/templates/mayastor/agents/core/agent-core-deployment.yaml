@@ -50,7 +50,7 @@ spec:
             - "--request-timeout={{ .Values.base.default_req_timeout }}"
             - "--cache-period={{ .Values.base.cache_poll_period }}"{{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ include "jaeger_url" . }}"{{ end }}
-            - "--grpc-server-addr=0.0.0.0:50051"
+            - "--grpc-server-addr=[::]:50051"
             - "--pool-commitment={{ .Values.agents.core.capacity.thin.poolCommitment }}"
             - "--snapshot-commitment={{ .Values.agents.core.capacity.thin.snapshotCommitment }}"
             - "--volume-commitment-initial={{ .Values.agents.core.capacity.thin.volumeCommitmentInitial }}"
@@ -94,7 +94,7 @@ spec:
           image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-agent-ha-cluster:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
-            - "-g=0.0.0.0:50052"
+            - "-g=[::]:50052"
             - "--store=http://{{ include "etcdUrl" . }}"
             - "--core-grpc=https://{{ .Release.Name }}-agent-core:50051"{{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ include "jaeger_url" . }}"{{ end }}{{ if .Values.eventing.enabled }}

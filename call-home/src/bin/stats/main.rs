@@ -44,7 +44,7 @@ struct Cli {
     release_name: String,
 
     /// TCP address where events stats are exposed.
-    #[clap(long, short, default_value = "0.0.0.0:9090")]
+    #[clap(long, short, default_value = "[::]:9090")]
     metrics_endpoint: SocketAddr,
 
     /// Interval to update the config map.
