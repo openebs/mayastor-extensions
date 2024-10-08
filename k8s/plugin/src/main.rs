@@ -1,7 +1,7 @@
 use clap::Parser;
 use openapi::tower::client::Url;
 use plugin::{rest_wrapper::RestClient, ExecuteOperation};
-use resources::Operations;
+use resources::{Error, Operations};
 
 use std::{env, ops::Deref};
 
@@ -10,7 +10,7 @@ mod resources;
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
 #[group(skip)]
-struct CliArgs {
+pub struct CliArgs {
     /// The rest endpoint to connect to.
     #[clap(global = true, long, short)]
     rest: Option<Url>,
@@ -89,30 +89,5 @@ async fn init_rest(cli_args: &CliArgs) -> Result<(), Error> {
             RestClient::init_with_config(config)?;
             Ok(())
         }
-    }
-}
-
-pub enum Error {
-    Upgrade(upgrade::error::Error),
-    RestPlugin(plugin::resources::error::Error),
-    RestClient(anyhow::Error),
-    Generic(anyhow::Error),
-}
-
-impl From<upgrade::error::Error> for Error {
-    fn from(e: upgrade::error::Error) -> Self {
-        Error::Upgrade(e)
-    }
-}
-
-impl From<plugin::resources::error::Error> for Error {
-    fn from(e: plugin::resources::error::Error) -> Self {
-        Error::RestPlugin(e)
-    }
-}
-
-impl From<anyhow::Error> for Error {
-    fn from(e: anyhow::Error) -> Self {
-        Error::Generic(e)
     }
 }

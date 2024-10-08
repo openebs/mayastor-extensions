@@ -8,6 +8,10 @@ edition = "2021"
 name = "kubectl-mayastor"
 path = "src/main.rs"
 
+[lib]
+name = "plugin"
+path = "./src/lib.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]

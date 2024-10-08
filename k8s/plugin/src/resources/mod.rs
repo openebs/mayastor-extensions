@@ -1,4 +1,3 @@
-use crate::Error;
 use clap::Parser;
 use plugin::{
     resources::{
@@ -122,5 +121,30 @@ impl ExecuteOperation for Operations {
             },
         }
         Ok(())
+    }
+}
+
+pub enum Error {
+    Upgrade(upgrade::error::Error),
+    RestPlugin(plugin::resources::error::Error),
+    RestClient(anyhow::Error),
+    Generic(anyhow::Error),
+}
+
+impl From<upgrade::error::Error> for Error {
+    fn from(e: upgrade::error::Error) -> Self {
+        Error::Upgrade(e)
+    }
+}
+
+impl From<plugin::resources::error::Error> for Error {
+    fn from(e: plugin::resources::error::Error) -> Self {
+        Error::RestPlugin(e)
+    }
+}
+
+impl From<anyhow::Error> for Error {
+    fn from(e: anyhow::Error) -> Self {
+        Error::Generic(e)
     }
 }
