@@ -18,6 +18,7 @@ in
 mkShell {
   name = "extensions-shell";
   buildInputs = [
+    black
     cacert
     cargo-expand
     cargo-udeps
