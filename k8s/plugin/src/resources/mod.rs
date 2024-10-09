@@ -18,14 +18,14 @@ use upgrade::{
 pub struct CliArgs {
     /// Path to kubeconfig file.
     #[clap(global = true, long, short = 'k')]
-    pub(super) kube_config_path: Option<PathBuf>,
+    pub kube_config_path: Option<PathBuf>,
 
     /// Kubernetes namespace of mayastor service
     #[clap(global = true, long, short = 'n', default_value = "mayastor")]
-    pub(super) namespace: String,
+    pub namespace: String,
 
     #[clap(flatten)]
-    cli_args: plugin::CliArgs,
+    pub cli_args: plugin::CliArgs,
 }
 impl Deref for CliArgs {
     type Target = plugin::CliArgs;
