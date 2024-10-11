@@ -30,7 +30,7 @@ pub(crate) enum Error {
 
     /// Error for when Kubernetes API client generation fails.
     #[snafu(display("Failed to generate kubernetes client: {source}"))]
-    K8sClientGeneration { source: kube_client::Error },
+    K8sClientGeneration { source: kube::Error },
 
     /// Error for a Kubernetes API GET request for a namespace resource fails.
     #[snafu(display("Failed to GET Kubernetes namespace {namespace}: {source}"))]
@@ -288,7 +288,7 @@ pub(crate) enum Error {
 
     /// Error when publishing kube-events for the Job object.
     #[snafu(display("Failed to publish Event: {source}"))]
-    EventPublish { source: kube_client::Error },
+    EventPublish { source: kube::Error },
 
     /// Error for when the 'chart' member of a crate::helm::client::HelmReleaseElement cannot be
     /// split at the first occurrence of '-', e.g. <chart-name>-2.1.0-rc8.
