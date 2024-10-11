@@ -40,7 +40,7 @@ http = "0.2.9"
 hyper = { version = "0.14.27", features = [ "client", "http1", "http2", "tcp", "stream" ] }
 tower = { version = "0.4.13", features = [ "timeout", "util" ] }
 
-k8s-operators = { path = "../../dependencies/control-plane/k8s/operators" }
+k8s-operators = { path = "../../dependencies/control-plane/k8s/operators", default-features = false }
 pstor = { path = "../../dependencies/control-plane/utils/pstor" }
 platform = { path = "../../dependencies/control-plane/utils/platform" }
 openapi = { path = "../../dependencies/control-plane/openapi", default-features = false, features = [ "tower-client", "tower-trace" ] }

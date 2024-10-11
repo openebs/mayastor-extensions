@@ -1689,21 +1689,11 @@ dependencies = [
 name = "k8s-operators"
 version = "1.0.0"
 dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "futures",
- "humantime",
  "k8s-openapi",
  "kube",
- "openapi",
  "schemars",
  "serde",
  "serde_json",
- "snafu",
- "tokio",
- "tracing",
- "utils",
 ]
 
 [[package]]
