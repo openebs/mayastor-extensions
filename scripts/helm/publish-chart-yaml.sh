@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+SCRIPTDIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
+ROOTDIR="$SCRIPTDIR/../.."
+
+source "$ROOTDIR/scripts/utils/yaml.sh"
+
 # On a new appTag, update the Chart.yaml which is used to publish the chart to the appropriate
 # version and appVersion.
 # For this first iteration version and appVersion in the Chart.yaml *MUST* point to the stable
@@ -203,22 +208,6 @@ index_yaml()
   fi
 }
 
-# yq-go eats up blank lines
-# this function gets around that using diff with --ignore-blank-lines
-yq_ibl()
-{
-  set +e
-  diff_out=$(diff -B <(yq '.' "$2") <(yq "$1" "$2"))
-  error=$?
-  if [ "$error" != "0" ] && [ "$error" != "1" ]; then
-    exit "$error"
-  fi
-  if [ -n "$diff_out" ]; then
-    echo "$diff_out" | patch --quiet --no-backup-if-mismatch "$2" -
-  fi
-  set -euo pipefail
-}
-
 output_yaml()
 {
   newChartVersion=$1
@@ -272,8 +261,6 @@ Examples:
 EOF
 }
 
-SCRIPTDIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
-ROOTDIR="$SCRIPTDIR/../.."
 CHART_FILE=${CHART_FILE:-"$ROOTDIR/chart/Chart.yaml"}
 CHART_VALUES=${CHART_VALUES:-"$ROOTDIR/chart/values.yaml"}
 CHART_DOC=${CHART_DOC:-"$ROOTDIR/chart/doc.yaml"}
