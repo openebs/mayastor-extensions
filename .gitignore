@@ -22,9 +22,5 @@ __pycache__
 /kubectl-plugin
 
 # Pytest assets
+/test-bin-*
 tests/bdd/venv
-
-# Minikube assets
-tests/bdd/minikube/.cleanup_config.yaml
-tests/bdd/minikube/.cleanup_config.yaml.lock
-tests/bdd/minikube/bin
