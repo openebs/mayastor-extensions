@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+SCRIPTDIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
+ROOTDIR="$SCRIPTDIR/../.."
+
+source "$ROOTDIR/scripts/utils/yaml.sh"
+source "$ROOTDIR/scripts/utils/repo.sh"
+
 # On a new appTag, update the Chart.yaml which is used to publish the chart to the appropriate
 # version and appVersion.
 # For this first iteration version and appVersion in the Chart.yaml *MUST* point to the stable
@@ -24,46 +30,12 @@ die()
 
 set -euo pipefail
 
-# This uses the existing remote refs for the openebs/mayastor-extensions repo to find the latest 'release/x.y' branch.
-# Requires a 'git fetch origin' (origin being the remote entry for openebs/mayastor-extensions) or equivalent, if not
-# done already.
-latest_release_branch() {
-  if [ -n "$LATEST_RELEASE_BRANCH" ]; then
-    echo "$LATEST_RELEASE_BRANCH"
-    return 0
-  fi
-
-  cd "$ROOTDIR"
-
-  # The latest release branch name is required for generating the helm chart version/appVersion
-  # for the 'main' branch only.
-  # The 'git branch' command in the below lines checks remote refs for release/x.y branch entries.
-  # Because the 'main' branch is not a significant branch for a user/contributor, this approach towards
-  # finding the latest release branch assumes that this script is used when the 'openebs/mayastor-extensions'
-  # repo is present amongst git remote refs. This happens automatically when the 'openebs/mayastor-extensions'
-  # repo is cloned, and not a user/contributor's fork.
-  local latest_release_branch=$(git branch \
-    --all \
-    --list "origin/release/*.*" \
-    --format '%(refname:short)' \
-    --sort 'refname' \
-    | tail -n 1)
-
-  if [ "$latest_release_branch" == "" ]; then
-    latest_release_branch="origin/release/0.0"
-  fi
-
-  cd - >/dev/null
-
-  echo "${latest_release_branch#*origin/}"
-}
-
 helm_testing_branch_version() {
   local release_branch=$1
   local helm_kind=""
 
   if [[ "$check_branch" == "helm-testing/develop" ]]; then
-    release_branch=$(latest_release_branch)
+    release_branch=$(latest_release_branch "origin")
     helm_kind="main"
   elif [[ "$check_branch" =~ ^helm-testing\/release\/[0-9.]+$ ]]; then
     release_branch="${check_branch#helm-testing/}"
@@ -203,22 +175,6 @@ index_yaml()
   fi
 }
 
-# yq-go eats up blank lines
-# this function gets around that using diff with --ignore-blank-lines
-yq_ibl()
-{
-  set +e
-  diff_out=$(diff -B <(yq '.' "$2") <(yq "$1" "$2"))
-  error=$?
-  if [ "$error" != "0" ] && [ "$error" != "1" ]; then
-    exit "$error"
-  fi
-  if [ -n "$diff_out" ]; then
-    echo "$diff_out" | patch --quiet --no-backup-if-mismatch "$2" -
-  fi
-  set -euo pipefail
-}
-
 output_yaml()
 {
   newChartVersion=$1
@@ -272,8 +228,6 @@ Examples:
 EOF
 }
 
-SCRIPTDIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
-ROOTDIR="$SCRIPTDIR/../.."
 CHART_FILE=${CHART_FILE:-"$ROOTDIR/chart/Chart.yaml"}
 CHART_VALUES=${CHART_VALUES:-"$ROOTDIR/chart/values.yaml"}
 CHART_DOC=${CHART_DOC:-"$ROOTDIR/chart/doc.yaml"}

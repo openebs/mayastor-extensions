@@ -27,6 +27,7 @@ mkShell {
     cowsay
     git
     helm-docs
+    kubectl
     kubernetes-helm-wrapped
     llvmPackages.libclang
     niv
@@ -38,6 +39,7 @@ mkShell {
     python3
     semver-tool
     utillinux
+    virtualenv
     which
     yq-go
     kind

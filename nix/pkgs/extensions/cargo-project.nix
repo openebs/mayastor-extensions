@@ -27,6 +27,7 @@
   # for development and not for CI
 , incremental ? false
 , static ? false
+, rustFlags
 }:
 let
   stable_channel = {
@@ -105,6 +106,12 @@ let
     doCheck = false;
   };
   release_build = { "release" = true; "debug" = false; };
+  flags =
+    if builtins.stringLength rustFlags > 0
+    then builtins.split " " rustFlags
+    else if static
+    then [ "-C" "target-feature=+crt-static" ]
+    else [ ];
 in
 let
   build_with_naersk = { buildType, cargoBuildFlags }:
@@ -133,7 +140,7 @@ let
         export OPENSSL_LIB_DIR=${static_ssl.out}/lib
         export OPENSSL_INCLUDE_DIR=${static_ssl.dev}/include
       '';
-      ${if static then "RUSTFLAGS" else null} = [ "-C" "target-feature=+crt-static" ];
+      ${if flags == [ ] then null else "RUSTFLAGS"} = flags;
       cargoLock = {
         lockFile = ../../../Cargo.lock;
       };
@@ -151,7 +158,7 @@ in
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if buildAllInOne then
-      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p metrics-exporter" "-p call-home" "-p upgrade" ]; }
+      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p metrics-exporter" "-p call-home" "-p upgrade" "-p kubectl-plugin" ]; }
     else
       builder { inherit buildType cargoBuildFlags; };
 }

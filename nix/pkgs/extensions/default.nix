@@ -1,4 +1,4 @@
-{ stdenv, git, lib, pkgs, allInOne, incremental, static, sourcer, tag ? "" }:
+{ stdenv, git, lib, pkgs, allInOne, incremental, static, sourcer, tag ? "", rustFlags }:
 let
   versionDrv = import ../../lib/version.nix { inherit sourcer lib stdenv git tag; };
   version = builtins.readFile "${versionDrv}";
@@ -8,7 +8,9 @@ let
     "tag_or_long" = builtins.readFile "${versionDrv.tag_or_long}";
   };
   project-builder =
-    pkgs.callPackage ../extensions/cargo-project.nix { inherit sourcer gitVersions allInOne incremental static; };
+    pkgs.callPackage ../extensions/cargo-project.nix {
+      inherit sourcer gitVersions allInOne incremental static rustFlags;
+    };
   installer = { pname, src, suffix ? "" }:
     stdenv.mkDerivation rec {
       inherit pname src;
@@ -70,12 +72,18 @@ let
         pname = "obs-callhome-stats";
       };
     };
-    kubectl-plugin = installer {
-      src = builder.build {
-        inherit buildType;
-        cargoBuildFlags = [ "--bin kubectl-mayastor" ];
+    kubectl-plugin = rec {
+      recurseForDerivations = true;
+      plugin_builder = { buildType, builder, cargoBuildFlags ? [ "-p kubectl-plugin" ] }: builder.build { inherit buildType cargoBuildFlags; };
+      plugin_installer = { pname, src }: installer { inherit pname src; };
+      plugin = plugin_installer {
+        src =
+          if allInOne then
+            plugin_builder { inherit buildType builder; cargoBuildFlags = [ "-p kubectl-plugin" ]; }
+          else
+            plugin_builder { inherit buildType builder; cargoBuildFlags = [ "--bin kubectl-mayastor" ]; };
+        pname = "kubectl-mayastor";
       };
-      pname = "kubectl-mayastor";
     };
   };
 in
