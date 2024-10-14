@@ -142,11 +142,43 @@ branch_chart_version()
       echo "$RELEASE_V"
     elif [ "$(semver validate "$RELEASE_V.0")" == "valid" ]; then
       echo "$RELEASE_V.0"
+    elif [ "$(semver validate "$RELEASE_V.0.0")" == "valid" ]; then
+      echo "$RELEASE_V.0.0"
     else
       die "Cannot determine Chart version from branch: $check_branch"
     fi
   else
     die "Cannot determine Chart version from branch: $check_branch"
+  fi
+}
+
+branch_allowed_version()
+{
+  local release_branch=$1
+  local version=$2
+
+  if ! [[ "$release_branch" =~ ^release\/[0-9.]+$ ]]; then
+    die "'$release_branch' is not a valid release branch"
+  fi
+
+  local allowed_diff=""
+  local branch_version="${release_branch#release/}"
+  if [[ "$branch_version" =~ ^[0-9]+$ ]]; then
+    branch_version=${branch_version}.0.0
+    allowed_diff=("" "minor" "patch" "prerelease")
+  elif [[ "$branch_version" =~ ^[0-9]+.[0-9]+$ ]]; then
+    branch_version=${branch_version}.0
+    allowed_diff=("" "patch" "prerelease")
+  elif [[ "$branch_version" =~ ^[0-9]+.[0-9]+.[0-9]+$ ]]; then
+    branch_version=${branch_version}
+    allowed_diff=("" "prerelease")
+  else
+    die "'$branch_version' is not a supported release"
+  fi
+
+  diff="$(semver diff "$branch_version" "$version")"
+  if ! [[ " ${allowed_diff[*]} " =~ " $diff " ]]; then
+    die "Difference($diff) between branch_version($branch_version) and version($version) not allowed!"
   fi
 }
 
@@ -413,7 +445,7 @@ if [ -n "$CHECK_BRANCH" ]; then
     if [ "$CHART_VERSION" == "0.0.0" ]; then
       output_yaml "$APP_TAG" "$APP_TAG" "${CHECK_BRANCH////-}" "Always"
     elif [ "$CHART_VERSION" != "$APP_TAG" ]; then
-      die "ERROR: Already on $CHART_VERSION which does not match $APP_TAG"
+      branch_allowed_version "$CHECK_BRANCH" "$CHART_VERSION"
     fi
     exit 0
   fi

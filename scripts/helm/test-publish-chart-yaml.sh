@@ -294,6 +294,20 @@ CHART_VERSION=2.0.1
 CHART_APP_VERSION=2.0.1
 test_one "Already on release, no new version"
 
+CHECK_BRANCH=release/2.0
+DEVELOP_TO_REL=1
+APP_TAG=2.0.0
+CHART_VERSION=2.0.1
+CHART_APP_VERSION=2.0.1
+test_one "Already on compatible release, no new version"
+
+CHECK_BRANCH=release/2
+DEVELOP_TO_REL=1
+APP_TAG=2.0.0
+CHART_VERSION=2.2.1
+CHART_APP_VERSION=2.2.1
+test_one "Already on compatible release, no new version"
+
 APP_TAG=2.0.0-a.0
 CHART_VERSION=2.0.0
 CHART_APP_VERSION=2.0.0
