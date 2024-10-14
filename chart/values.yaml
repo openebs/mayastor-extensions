@@ -372,7 +372,16 @@ io_engine:
   api: "v1"
   target:
     nvmf:
+      # -- Enable RDMA
+      # Capability of Mayastor nvmf target to take RDMA connections if the cluster nodes have RDMA device(s)
+      # configured from RNIC.
+      rdma:
+        enabled: false
       # -- NVMF target interface (ip, mac, name or subnet)
+      # If RDMA is enabled, please set iface to an RDMA
+      # capable netdev name from host network. Example, if an rdma device mlx5_0 is
+      # available on a netdev eth0 on RNIC, as can be seen from `rdma link` command output,
+      # then this field should be set to eth0.
       iface: ""
       # -- Reservations Persist Through Power Loss State
       ptpl: true

@@ -170,8 +170,9 @@ This removes all the Kubernetes components associated with the chart and deletes
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;hugepages2Mi | Hugepage size available on the nodes | `"2Gi"` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for the io-engine | `"1Gi"` |
 | io_engine.&ZeroWidthSpace;runtimeClassName | Runtime class to use. Defaults to cluster standard | `""` |
-| io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;iface | NVMF target interface (ip, mac, name or subnet) | `""` |
+| io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;iface | NVMF target interface (ip, mac, name or subnet) If RDMA is enabled, please set iface to an RDMA capable netdev name from host network. Example, if an rdma device mlx5_0 is available on a netdev eth0 on RNIC, as can be seen from `rdma link` command output, then this field should be set to eth0. | `""` |
 | io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;ptpl | Reservations Persist Through Power Loss State | `true` |
+| io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;rdma | Enable RDMA Capability of Mayastor nvmf target to take RDMA connections if the cluster nodes have RDMA device(s) configured from RNIC. | <pre>{<br>"enabled":false<br>}</pre> |
 | io_engine.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
 | localpv-provisioner.&ZeroWidthSpace;enabled | Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki-stack storage class accordingly. | `true` |
 | localpv-provisioner.&ZeroWidthSpace;hostpathClass.&ZeroWidthSpace;enabled | Enable default hostpath localpv StorageClass. | `false` |
