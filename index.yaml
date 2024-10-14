@@ -439,7 +439,7 @@ entries:
     version: 2.0.0-rc.1
   - apiVersion: v2
     appVersion: 0.0.0
-    created: "2024-10-07T15:18:49.627781086Z"
+    created: "2024-10-14T10:20:32.367381986Z"
     dependencies:
     - condition: crds.enabled
       name: crds
@@ -466,7 +466,7 @@ entries:
       repository: https://openebs.github.io/dynamic-localpv-provisioner
       version: 4.1.0
     description: Mayastor Helm chart for Kubernetes
-    digest: fef5143d933abf5e584576960b15d0ce8b76295dda673202710647e09c81d140
+    digest: d2a69b1e44b86855dae4c19dd9073f3407b49617c62fb1e2ca0c90499b617334
     name: mayastor
     type: application
     urls:
@@ -502,4 +502,4 @@ entries:
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2024-10-07T15:18:49.606835141Z"
+generated: "2024-10-14T10:20:32.345059356Z"
