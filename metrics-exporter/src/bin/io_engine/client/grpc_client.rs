@@ -7,7 +7,7 @@ use crate::client::{
     replica_stat::{ReplicaIoStat, ReplicaIoStats},
 };
 use actix_web::http::Uri;
-use std::time::Duration;
+use std::{net::SocketAddr, time::Duration};
 use tokio::time::sleep;
 use tonic::transport::Channel;
 use tracing::error;
@@ -112,7 +112,7 @@ pub(crate) async fn init_client() -> Result<GrpcClient, ExporterError> {
     let _ = get_node_name()?;
     let endpoint = Uri::builder()
         .scheme("https")
-        .authority(format!("{pod_ip}:10124"))
+        .authority(SocketAddr::new(pod_ip, 10124).to_string())
         .path_and_query("")
         .build()
         .map_err(|error| ExporterError::InvalidURI(error.to_string()))?;
