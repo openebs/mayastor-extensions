@@ -1,7 +1,6 @@
 use clap::Parser;
-use openapi::tower::client::Url;
-use plugin::{rest_wrapper::RestClient, ExecuteOperation};
-use resources::{Error, Operations};
+use plugin::ExecuteOperation;
+use resources::{init_rest, Error, Operations};
 
 use std::{env, ops::Deref};
 
@@ -10,7 +9,7 @@ mod resources;
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
 #[group(skip)]
-pub struct CliArgs {
+struct CliArgs {
     /// The operation to be performed.
     #[clap(subcommand)]
     operations: Operations,
@@ -56,6 +55,9 @@ async fn main() {
 
 impl CliArgs {
     async fn execute(self) -> Result<(), Error> {
+        // Initialise the REST client.
+        init_rest(&self.args).await?;
+
         tokio::select! {
             shutdown = shutdown::Shutdown::wait_sig() => {
                 Err(anyhow::anyhow!("Interrupted by {shutdown:?}").into())
