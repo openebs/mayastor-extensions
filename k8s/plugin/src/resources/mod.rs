@@ -16,6 +16,10 @@ use upgrade::{
 #[derive(Parser, Debug)]
 #[group(skip)]
 pub struct CliArgs {
+    /// The rest endpoint to connect to.
+    #[clap(global = true, long, short)]
+    rest: Option<Url>,
+
     /// Path to kubeconfig file.
     #[clap(global = true, long, short = 'k')]
     pub kube_config_path: Option<PathBuf>,
@@ -81,6 +85,8 @@ impl ExecuteOperation for Operations {
     type Args = CliArgs;
     type Error = Error;
     async fn execute(&self, cli_args: &CliArgs) -> Result<(), Error> {
+        // Initialise the REST client.
+        init_rest(&self).await?;
         match self {
             Operations::Get(resource) => match resource {
                 GetResourcesK8s::Rest(resource) => resource.execute(cli_args).await?,
@@ -146,5 +152,23 @@ impl From<plugin::resources::error::Error> for Error {
 impl From<anyhow::Error> for Error {
     fn from(e: anyhow::Error) -> Self {
         Error::Generic(e)
+    }
+}
+
+/// Initialise the REST client.
+async fn init_rest(cli_args: &CliArgs) -> Result<(), Error> {
+    // Use the supplied URL if there is one otherwise obtain one from the kubeconfig file.
+    match cli_args.rest.clone() {
+        Some(url) => RestClient::init(url, *cli_args.timeout).map_err(Error::RestClient),
+        None => {
+            let config = kube_proxy::ConfigBuilder::default_api_rest()
+                .with_kube_config(cli_args.kube_config_path.clone())
+                .with_timeout(*cli_args.timeout)
+                .with_target_mod(|t| t.with_namespace(&cli_args.namespace))
+                .build()
+                .await?;
+            RestClient::init_with_config(config)?;
+            Ok(())
+        }
     }
 }

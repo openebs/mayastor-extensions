@@ -11,10 +11,6 @@ mod resources;
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
 #[group(skip)]
 pub struct CliArgs {
-    /// The rest endpoint to connect to.
-    #[clap(global = true, long, short)]
-    rest: Option<Url>,
-
     /// The operation to be performed.
     #[clap(subcommand)]
     operations: Operations,
@@ -60,9 +56,6 @@ async fn main() {
 
 impl CliArgs {
     async fn execute(self) -> Result<(), Error> {
-        // Initialise the REST client.
-        init_rest(&self).await?;
-
         tokio::select! {
             shutdown = shutdown::Shutdown::wait_sig() => {
                 Err(anyhow::anyhow!("Interrupted by {shutdown:?}").into())
@@ -70,24 +63,6 @@ impl CliArgs {
             done = self.operations.execute(&self.args) => {
                 done
             }
-        }
-    }
-}
-
-/// Initialise the REST client.
-async fn init_rest(cli_args: &CliArgs) -> Result<(), Error> {
-    // Use the supplied URL if there is one otherwise obtain one from the kubeconfig file.
-    match cli_args.rest.clone() {
-        Some(url) => RestClient::init(url, *cli_args.timeout).map_err(Error::RestClient),
-        None => {
-            let config = kube_proxy::ConfigBuilder::default_api_rest()
-                .with_kube_config(cli_args.args.kube_config_path.clone())
-                .with_timeout(*cli_args.timeout)
-                .with_target_mod(|t| t.with_namespace(&cli_args.args.namespace))
-                .build()
-                .await?;
-            RestClient::init_with_config(config)?;
-            Ok(())
         }
     }
 }
