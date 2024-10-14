@@ -1,9 +1,11 @@
 use clap::Parser;
+use openapi::tower::client::Url;
 use plugin::{
     resources::{
         CordonResources, DrainResources, GetResources, LabelResources, ScaleResources,
         SetPropertyResources, UnCordonResources,
     },
+    rest_wrapper::RestClient,
     ExecuteOperation,
 };
 use std::{ops::Deref, path::PathBuf};
@@ -86,7 +88,7 @@ impl ExecuteOperation for Operations {
     type Error = Error;
     async fn execute(&self, cli_args: &CliArgs) -> Result<(), Error> {
         // Initialise the REST client.
-        init_rest(&self).await?;
+        init_rest(cli_args).await?;
         match self {
             Operations::Get(resource) => match resource {
                 GetResourcesK8s::Rest(resource) => resource.execute(cli_args).await?,

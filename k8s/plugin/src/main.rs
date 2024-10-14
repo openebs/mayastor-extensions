@@ -1,6 +1,5 @@
 use clap::Parser;
-use openapi::tower::client::Url;
-use plugin::{rest_wrapper::RestClient, ExecuteOperation};
+use plugin::ExecuteOperation;
 use resources::{Error, Operations};
 
 use std::{env, ops::Deref};
