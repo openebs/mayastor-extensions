@@ -17,6 +17,8 @@ DOCKER="docker"
 HUGE_PAGES=1800
 LABEL=
 SUDO=${SUDO:-"sudo"}
+DUMP_KIND_IMG=
+KIND_IMAGES="kind-images.txt"
 
 help() {
   cat <<EOF
@@ -31,6 +33,7 @@ Options:
   --dry-run                         Don't do anything, just output steps.
   --hugepages     <num>             Add <num> 2MiB hugepages (Default: $HUGE_PAGES).
   --label                           Label worker nodes with the io-engine selector.
+  --dump-kind-images                Dump the used images on the worker nodes to $TMP_KIND/$node-name/kind-images.txt
 
 Command:
   start                             Start the k8s cluster.
@@ -95,6 +98,9 @@ while [ "$#" -gt 0 ]; do
           test $# -lt 1 && die "Missing hugepage number"
           HUGE_PAGES=$1
           shift;;
+        --dump-kind-images)
+          DUMP_KIND_IMG="true"
+          shift;;
         --dry-run)
           if [ -z "$DRY_RUN" ]; then
             DRY_RUN="--dry-run"
@@ -106,6 +112,7 @@ while [ "$#" -gt 0 ]; do
           fi
           shift;;
         *)
+          die "Unknown cli argument: $1"
           shift;;
       esac
   esac
@@ -188,6 +195,10 @@ echo "HostIP: $host_ip"
 
 for node in ${nodes[@]}; do
   $DOCKER exec $node mount -o remount,rw /sys
+
+  if [ "$DUMP_KIND_IMG" = "true" ] && [ -z "$DRY_RUN" ]; then
+    $DOCKER exec $node crictl image | tail -n+2 | awk '{ print $1 ":" $2 }' > "$TMP_KIND/$node/$KIND_IMAGES"
+  fi
 
   # Note: this will go away if the node restarts...
   $DOCKER exec $node bash -c 'printf "'$host_ip' kvmhost\n" >> /etc/hosts'
