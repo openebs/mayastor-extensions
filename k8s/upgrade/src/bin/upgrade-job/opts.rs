@@ -32,7 +32,7 @@ pub(crate) struct CliArgs {
     skip_data_plane_restart: bool,
 
     /// If set then this skips the upgrade path validation.
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = false, hide = true)]
     skip_upgrade_path_validation: bool,
 
     /// The name of the Kubernetes Job Pod. The Job object will be used to post upgrade event.
@@ -41,21 +41,29 @@ pub(crate) struct CliArgs {
 
     /// The set values specified by the user for upgrade
     /// (can specify multiple or separate values with commas: key1=val1,key2=val2).
-    #[arg(long)]
+    #[arg(long, default_value = "")]
     helm_args_set: String,
 
     /// The set file values specified by the user for upgrade
     /// (can specify multiple or separate values with commas: key1=path1,key2=path2).
-    #[arg(long)]
+    #[arg(long, default_value = "")]
     helm_args_set_file: String,
 
     /// Formatting style to be used while logging.
-    #[clap(default_value = FmtStyle::Pretty.as_ref(), short, long)]
+    #[arg(default_value = FmtStyle::Pretty.as_ref(), short, long)]
     fmt_style: FmtStyle,
 
     /// Use ANSI colors for the logs.
-    #[clap(long)]
+    #[arg(long, default_value_t = true)]
     ansi_colors: bool,
+
+    /// This is the helm storage driver, e.g. secret, configmap, memory, etc.
+    #[arg(env = "HELM_DRIVER", default_value = "")]
+    helm_storage_driver: String,
+
+    /// Use helm's --reset-then-reuse-values option instead of using yq to derive the helm values.
+    #[arg(long, default_value_t = false)]
+    helm_reset_then_reuse_values: bool,
 }
 
 impl CliArgs {
@@ -113,5 +121,15 @@ impl CliArgs {
     /// This returns the set file passed during upgrade.
     pub(crate) fn helm_args_set_file(&self) -> String {
         self.helm_args_set_file.clone()
+    }
+
+    /// This is the helm storage driver, e.g.: secret, secrets, configmap, configmaps, memory, sql.
+    pub(crate) fn helm_storage_driver(&self) -> String {
+        self.helm_storage_driver.clone()
+    }
+
+    /// Return true if the --helm-reset-then-reuse-values has been specified.
+    pub(crate) fn helm_reset_then_reuse_values(&self) -> bool {
+        self.helm_reset_then_reuse_values
     }
 }

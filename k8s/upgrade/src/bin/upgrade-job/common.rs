@@ -4,8 +4,8 @@ pub(crate) mod constants;
 /// Contains the error handling tooling.
 pub(crate) mod error;
 
-/// Contains tools to create Kubernetes API clients.
-pub(crate) mod kube_client;
+/// Contains tools to work with Kubernetes APIs.
+pub(crate) mod kube;
 
 /// Contains macros.
 pub(crate) mod macros;
