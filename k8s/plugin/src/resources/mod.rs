@@ -1,10 +1,11 @@
-use crate::Error;
 use clap::Parser;
+use openapi::tower::client::Url;
 use plugin::{
     resources::{
         CordonResources, DrainResources, GetResources, LabelResources, ScaleResources,
         SetPropertyResources, UnCordonResources,
     },
+    rest_wrapper::RestClient,
     ExecuteOperation,
 };
 use std::{ops::Deref, path::PathBuf};
@@ -17,16 +18,20 @@ use upgrade::{
 #[derive(Parser, Debug)]
 #[group(skip)]
 pub struct CliArgs {
+    /// The rest endpoint to connect to.
+    #[clap(global = true, long, short)]
+    rest: Option<Url>,
+
     /// Path to kubeconfig file.
     #[clap(global = true, long, short = 'k')]
-    pub(super) kube_config_path: Option<PathBuf>,
+    pub kube_config_path: Option<PathBuf>,
 
     /// Kubernetes namespace of mayastor service
     #[clap(global = true, long, short = 'n', default_value = "mayastor")]
-    pub(super) namespace: String,
+    pub namespace: String,
 
     #[clap(flatten)]
-    cli_args: plugin::CliArgs,
+    pub cli_args: plugin::CliArgs,
 }
 impl Deref for CliArgs {
     type Target = plugin::CliArgs;
@@ -82,6 +87,8 @@ impl ExecuteOperation for Operations {
     type Args = CliArgs;
     type Error = Error;
     async fn execute(&self, cli_args: &CliArgs) -> Result<(), Error> {
+        // Initialise the REST client.
+        init_rest(cli_args).await?;
         match self {
             Operations::Get(resource) => match resource {
                 GetResourcesK8s::Rest(resource) => resource.execute(cli_args).await?,
@@ -122,5 +129,48 @@ impl ExecuteOperation for Operations {
             },
         }
         Ok(())
+    }
+}
+
+pub enum Error {
+    Upgrade(upgrade::error::Error),
+    RestPlugin(plugin::resources::error::Error),
+    RestClient(anyhow::Error),
+    Generic(anyhow::Error),
+}
+
+impl From<upgrade::error::Error> for Error {
+    fn from(e: upgrade::error::Error) -> Self {
+        Error::Upgrade(e)
+    }
+}
+
+impl From<plugin::resources::error::Error> for Error {
+    fn from(e: plugin::resources::error::Error) -> Self {
+        Error::RestPlugin(e)
+    }
+}
+
+impl From<anyhow::Error> for Error {
+    fn from(e: anyhow::Error) -> Self {
+        Error::Generic(e)
+    }
+}
+
+/// Initialise the REST client.
+async fn init_rest(cli_args: &CliArgs) -> Result<(), Error> {
+    // Use the supplied URL if there is one otherwise obtain one from the kubeconfig file.
+    match cli_args.rest.clone() {
+        Some(url) => RestClient::init(url, *cli_args.timeout).map_err(Error::RestClient),
+        None => {
+            let config = kube_proxy::ConfigBuilder::default_api_rest()
+                .with_kube_config(cli_args.kube_config_path.clone())
+                .with_timeout(*cli_args.timeout)
+                .with_target_mod(|t| t.with_namespace(&cli_args.namespace))
+                .build()
+                .await?;
+            RestClient::init_with_config(config)?;
+            Ok(())
+        }
     }
 }
