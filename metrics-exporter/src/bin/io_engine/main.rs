@@ -6,7 +6,10 @@ use crate::{
 use actix_web::{middleware, HttpServer};
 use clap::Parser;
 use once_cell::sync::OnceCell;
-use std::{env, net::SocketAddr};
+use std::{
+    env,
+    net::{IpAddr, SocketAddr},
+};
 use utils::tracing_telemetry::{FmtLayer, FmtStyle};
 
 /// Cache module for exporter.
@@ -26,8 +29,11 @@ async fn initialize_cache() {
 }
 
 /// Get pod ip from env.
-fn get_pod_ip() -> Result<String, ExporterError> {
-    env::var("MY_POD_IP").map_err(|_| ExporterError::PodIPError("Unable to get pod ip".to_string()))
+fn get_pod_ip() -> Result<IpAddr, ExporterError> {
+    let ip = env::var("MY_POD_IP")
+        .map_err(|_| ExporterError::PodIPError("Unable to get pod ip".to_string()))?;
+    ip.parse::<IpAddr>()
+        .map_err(|_| ExporterError::PodIPError("Invalid pod ip".to_string()))
 }
 
 /// Get node name from env.
