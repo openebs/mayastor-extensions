@@ -98,7 +98,7 @@ spec:
         # For example -l 1,2,10-20 means use core 1, 2, 10 to 20.
         # Note: Ensure that the CPU resources are updated accordingly.
         #       If you use 2 CPUs, the CPU: field should also read 2.
-        - "-g$(MY_POD_IP)"
+        - "--grpc-ip=$(MY_POD_IP)"
         - "-N$(MY_NODE_NAME)"
         - "-Rhttps://{{ .Release.Name }}-agent-core:50051"
         - "-y/var/local/{{ .Release.Name }}/io-engine/config.yaml"
