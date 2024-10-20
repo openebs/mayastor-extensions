@@ -70,12 +70,18 @@ let
         pname = "obs-callhome-stats";
       };
     };
-    kubectl-plugin = installer {
-      src = builder.build {
-        inherit buildType;
-        cargoBuildFlags = [ "--bin kubectl-mayastor" ];
+    kubectl-plugin = rec {
+      recurseForDerivations = true;
+      plugin_builder = { buildType, builder, cargoBuildFlags ? [ "-p kubectl-plugin" ] }: builder.build { inherit buildType cargoBuildFlags; };
+      plugin_installer = { pname, src }: installer { inherit pname src; };
+      plugin = plugin_installer {
+        src =
+          if allInOne then
+            plugin_builder { inherit buildType builder; cargoBuildFlags = [ "-p kubectl-plugin" ]; }
+          else
+            plugin_builder { inherit buildType builder; cargoBuildFlags = [ "--bin kubectl-mayastor" ]; };
+        pname = "kubectl-mayastor";
       };
-      pname = "kubectl-mayastor";
     };
   };
 in

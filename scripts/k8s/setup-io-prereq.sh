@@ -57,7 +57,7 @@ install_kernel_modules() {
   DISTRO="$(distro)"
   case "$DISTRO" in
     Ubuntu)
-      $SUDO apt-get install linux-modules-extra-$(uname -r)
+      $SUDO apt-get update && $SUDO apt-get install -y linux-modules-extra-$(uname -r)
       ;;
     NixOS | *)
       install_kernel_modules_nsup "$DISTRO"

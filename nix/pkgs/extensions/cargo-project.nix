@@ -133,7 +133,11 @@ let
         export OPENSSL_LIB_DIR=${static_ssl.out}/lib
         export OPENSSL_INCLUDE_DIR=${static_ssl.dev}/include
       '';
-      ${if static then "RUSTFLAGS" else null} = [ "-C" "target-feature=+crt-static" ];
+      RUSTFLAGS =
+        if static then
+          [ "-C" "target-feature=+crt-static" ]
+        else
+          [ "-C" "strip=debuginfo" "-C" "debuginfo=0" ];
       cargoLock = {
         lockFile = ../../../Cargo.lock;
       };
@@ -151,7 +155,7 @@ in
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if buildAllInOne then
-      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p metrics-exporter" "-p call-home" "-p upgrade" ]; }
+      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p metrics-exporter" "-p call-home" "-p upgrade" "-p kubectl-plugin" ]; }
     else
       builder { inherit buildType cargoBuildFlags; };
 }
