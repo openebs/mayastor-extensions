@@ -8,7 +8,7 @@ in
 pkgs.mkShell {
   name = "k8s-cluster-shell";
   buildInputs = with pkgs; [
-    kubernetes-helm-wrapped
+    kubernetes-helm
     kubectl
     kind
     jq

@@ -1,2 +1,4 @@
 pytest-bdd==6.0.0
 kubernetes==28.1.0
+gitpython==3.1.43
+semver==3.0.2

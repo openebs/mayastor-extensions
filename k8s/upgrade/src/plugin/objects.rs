@@ -17,7 +17,7 @@ use k8s_openapi::api::{
     },
     rbac::v1::{ClusterRole, ClusterRoleBinding, PolicyRule, RoleRef, Subject},
 };
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, env};
 
 use kube::core::ObjectMeta;
 use maplit::btreemap;
@@ -76,7 +76,14 @@ pub(crate) fn upgrade_job_cluster_role(
             PolicyRule {
                 api_groups: Some(vec!["apps"].into_vec()),
                 resources: Some(
-                    vec!["daemonsets", "replicasets", "statefulsets", "deployments"].into_vec(),
+                    vec![
+                        "controllerrevisions",
+                        "daemonsets",
+                        "replicasets",
+                        "statefulsets",
+                        "deployments",
+                    ]
+                    .into_vec(),
                 ),
                 verbs: vec!["create", "delete", "get", "list", "patch"].into_vec(),
                 ..Default::default()
@@ -294,6 +301,9 @@ pub(crate) fn upgrade_job(
     if args.skip_upgrade_path_validation_for_unsupported_version {
         job_args.push("--skip-upgrade-path-validation".to_string());
     }
+    if args.reset_then_reuse_values {
+        job_args.push("--helm-reset-then-reuse-values".to_string());
+    }
 
     Job {
         metadata: ObjectMeta {
@@ -324,7 +334,7 @@ pub(crate) fn upgrade_job(
                         env: Some(vec![
                             EnvVar {
                                 name: "RUST_LOG".to_string(),
-                                value: Some("info".to_string()),
+                                value: Some(env::var("RUST_LOG").unwrap_or("info".to_string())),
                                 ..Default::default()
                             },
                             EnvVar {
@@ -336,6 +346,12 @@ pub(crate) fn upgrade_job(
                                     }),
                                     ..Default::default()
                                 }),
+                                ..Default::default()
+                            },
+                            EnvVar {
+                                // Ref: https://github.com/helm/helm/blob/main/cmd/helm/helm.go#L76
+                                name: "HELM_DRIVER".to_string(),
+                                value: Some(env::var("HELM_DRIVER").unwrap_or_default()),
                                 ..Default::default()
                             },
                         ]),

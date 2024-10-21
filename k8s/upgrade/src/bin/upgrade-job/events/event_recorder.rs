@@ -4,7 +4,7 @@ use crate::common::{
         EventChannelSend, EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
         JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result, SerializeEventNote,
     },
-    kube_client as KubeClient,
+    kube::client as KubeClient,
 };
 use k8s_openapi::{api::core::v1::ObjectReference, serde_json};
 use kube::runtime::events::{Event, EventType, Recorder};
