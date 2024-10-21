@@ -17,9 +17,10 @@ use k8s_openapi::{
 use kube::{
     api::{Api, ListParams},
     core::PartialObjectMeta,
-    Client, ResourceExt,
+    Client, Resource, ResourceExt,
 };
-use snafu::{ensure, ResultExt};
+use serde::de::DeserializeOwned;
+use snafu::{ensure, ErrorCompat, IntoError, ResultExt};
 
 /// Generate a new kube::Client.
 pub(crate) async fn client() -> Result<Client> {
@@ -76,30 +77,15 @@ pub(crate) async fn list_pods(
         list_params = list_params.fields(fields);
     }
 
+    let pods_api = pods_api(namespace.as_str()).await?;
+
     let list_pods_error_ctx = ListPodsWithLabelAndField {
         label: label_selector.unwrap_or_default(),
         field: field_selector.unwrap_or_default(),
         namespace: namespace.clone(),
     };
 
-    loop {
-        let pod_list = pods_api(namespace.as_str())
-            .await?
-            .list(&list_params)
-            .await
-            .context(list_pods_error_ctx.clone())?;
-
-        let continue_ = pod_list.metadata.continue_.clone();
-
-        pods.extend(pod_list);
-
-        match continue_ {
-            Some(token) => {
-                list_params = list_params.continue_token(token.as_str());
-            }
-            None => break,
-        }
-    }
+    paginated_list(pods_api, &mut pods, Some(list_params), list_pods_error_ctx).await?;
 
     Ok(pods)
 }
@@ -119,29 +105,20 @@ pub(crate) async fn list_nodes_metadata(
         list_params = list_params.fields(fields);
     }
 
+    let nodes_api = nodes_api().await?;
+
     let list_nodes_error_ctx = ListNodesWithLabelAndField {
         label: label_selector.unwrap_or_default(),
         field: field_selector.unwrap_or_default(),
     };
 
-    loop {
-        let nodes_list = nodes_api()
-            .await?
-            .list_metadata(&list_params)
-            .await
-            .context(list_nodes_error_ctx.clone())?;
-
-        let maybe_token = nodes_list.metadata.continue_.clone();
-
-        nodes.extend(nodes_list);
-
-        match maybe_token {
-            Some(ref token) => {
-                list_params = list_params.continue_token(token);
-            }
-            None => break,
-        }
-    }
+    paginated_list_metadata(
+        nodes_api,
+        &mut nodes,
+        Some(list_params),
+        list_nodes_error_ctx,
+    )
+    .await?;
 
     Ok(nodes)
 }
@@ -162,30 +139,21 @@ pub(crate) async fn list_controller_revisions(
         list_params = list_params.fields(fields);
     }
 
+    let controller_revisions_api = controller_revisions_api(namespace.as_str()).await?;
+
     let list_ctrl_revs_error_ctx = ListCtrlRevsWithLabelAndField {
         label: label_selector.unwrap_or_default(),
         field: field_selector.unwrap_or_default(),
         namespace: namespace.clone(),
     };
 
-    loop {
-        let ctrl_revs_list = controller_revisions_api(namespace.as_str())
-            .await?
-            .list(&list_params)
-            .await
-            .context(list_ctrl_revs_error_ctx.clone())?;
-
-        let maybe_token = ctrl_revs_list.metadata.continue_.clone();
-
-        ctrl_revs.extend(ctrl_revs_list);
-
-        match maybe_token {
-            Some(ref token) => {
-                list_params = list_params.continue_token(token);
-            }
-            None => break,
-        }
-    }
+    paginated_list(
+        controller_revisions_api,
+        &mut ctrl_revs,
+        Some(list_params),
+        list_ctrl_revs_error_ctx,
+    )
+    .await?;
 
     Ok(ctrl_revs)
 }
@@ -246,30 +214,21 @@ pub(crate) async fn list_secrets(
         list_params = list_params.fields(fields);
     }
 
+    let secrets_api = secrets_api(namespace.as_str()).await?;
+
     let list_secrets_error = ListSecretsWithLabelAndField {
         label: label_selector.unwrap_or_default(),
         field: field_selector.unwrap_or_default(),
         namespace: namespace.clone(),
     };
 
-    loop {
-        let secrets_list = secrets_api(namespace.as_str())
-            .await?
-            .list(&list_params)
-            .await
-            .context(list_secrets_error.clone())?;
-
-        let maybe_token = secrets_list.metadata.continue_.clone();
-
-        secrets.extend(secrets_list);
-
-        match maybe_token {
-            Some(ref token) => {
-                list_params = list_params.continue_token(token);
-            }
-            None => break,
-        }
-    }
+    paginated_list(
+        secrets_api,
+        &mut secrets,
+        Some(list_params),
+        list_secrets_error,
+    )
+    .await?;
 
     Ok(secrets)
 }
@@ -291,30 +250,21 @@ pub(crate) async fn list_configmaps(
         list_params = list_params.fields(fields);
     }
 
+    let configmaps_api = configmaps_api(namespace.as_str()).await?;
+
     let list_configmaps_error = ListConfigMapsWithLabelAndField {
         label: label_selector.unwrap_or_default(),
         field: field_selector.unwrap_or_default(),
         namespace: namespace.clone(),
     };
 
-    loop {
-        let configmaps_list = configmaps_api(namespace.as_str())
-            .await?
-            .list(&list_params)
-            .await
-            .context(list_configmaps_error.clone())?;
-
-        let maybe_token = configmaps_list.metadata.continue_.clone();
-
-        configmaps.extend(configmaps_list);
-
-        match maybe_token {
-            Some(ref token) => {
-                list_params = list_params.continue_token(token);
-            }
-            None => break,
-        }
-    }
+    paginated_list(
+        configmaps_api,
+        &mut configmaps,
+        Some(list_params),
+        list_configmaps_error,
+    )
+    .await?;
 
     Ok(configmaps)
 }
@@ -326,7 +276,7 @@ pub(crate) async fn get_helm_release_secret(
 ) -> Result<Secret> {
     let secrets = list_secrets(
         namespace.clone(),
-        Some(format!("name={}", release_name.as_str())),
+        Some(format!("name={release_name},status=deployed")),
         Some("type=helm.sh/release.v1".to_string()),
     )
     .await?;
@@ -350,7 +300,7 @@ pub(crate) async fn get_helm_release_configmap(
 ) -> Result<ConfigMap> {
     let cms = list_configmaps(
         namespace.clone(),
-        Some(format!("name={},owner=helm", release_name.as_str())),
+        Some(format!("name={release_name},owner=helm,status=deployed")),
         None,
     )
     .await?;
@@ -362,4 +312,74 @@ pub(crate) async fn get_helm_release_configmap(
     ensure!(cms.len() == 1, wrong_no_of_cms.clone());
 
     cms.into_iter().next().ok_or(wrong_no_of_cms.build())
+}
+
+async fn paginated_list<K, C, E2>(
+    resource_api: Api<K>,
+    resources: &mut Vec<K>,
+    list_params: Option<ListParams>,
+    list_err_ctx: C,
+) -> Result<()>
+where
+    K: Resource + Clone + DeserializeOwned + std::fmt::Debug,
+    C: IntoError<E2, Source = kube::Error> + Clone,
+    E2: std::error::Error + ErrorCompat,
+    crate::common::error::Error: From<E2>,
+{
+    let mut list_params = list_params.unwrap_or_default().limit(KUBE_API_PAGE_SIZE);
+
+    loop {
+        let resource_list = resource_api
+            .list(&list_params)
+            .await
+            .context(list_err_ctx.clone())?;
+
+        let maybe_token = resource_list.metadata.continue_.clone();
+
+        resources.extend(resource_list);
+
+        match maybe_token {
+            Some(ref token) => {
+                list_params = list_params.continue_token(token);
+            }
+            None => break,
+        }
+    }
+
+    Ok(())
+}
+
+async fn paginated_list_metadata<K, C, E2>(
+    resource_api: Api<K>,
+    resources: &mut Vec<PartialObjectMeta<K>>,
+    list_params: Option<ListParams>,
+    list_err_ctx: C,
+) -> Result<()>
+where
+    K: Resource + Clone + DeserializeOwned + std::fmt::Debug,
+    C: IntoError<E2, Source = kube::Error> + Clone,
+    E2: std::error::Error + ErrorCompat,
+    crate::common::error::Error: From<E2>,
+{
+    let mut list_params = list_params.unwrap_or_default().limit(KUBE_API_PAGE_SIZE);
+
+    loop {
+        let resource_list = resource_api
+            .list_metadata(&list_params)
+            .await
+            .context(list_err_ctx.clone())?;
+
+        let maybe_token = resource_list.metadata.continue_.clone();
+
+        resources.extend(resource_list);
+
+        match maybe_token {
+            Some(ref token) => {
+                list_params = list_params.continue_token(token);
+            }
+            None => break,
+        }
+    }
+
+    Ok(())
 }
