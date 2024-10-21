@@ -19,6 +19,7 @@ use snafu::{ensure, ResultExt};
 use std::{io::Read, path::Path, process::Command, str};
 use tracing::debug;
 
+/// This is used to pick out the .data field from a kubernetes secret or a configmap.
 macro_rules! extract_data {
     ($source:ident) => {{
         let driver = kind(&$source);
@@ -31,21 +32,25 @@ macro_rules! extract_data {
     }};
 }
 
+/// This is used to deserialize the JSON data in a helm storage resource (secret or configmap).
 #[derive(Debug, Deserialize)]
 pub(crate) struct HelmChartRelease {
     chart: Option<HelmChartReleaseChart>,
 }
 
+/// This is used to deserialize release.chart.
 #[derive(Debug, Deserialize)]
 pub(crate) struct HelmChartReleaseChart {
     metadata: HelmChartReleaseChartMetadata,
 }
 
+/// This is used to deserialize release.chart.metadata.
 #[derive(Debug, Deserialize)]
 pub(crate) struct HelmChartReleaseChartMetadata {
     dependencies: Option<Vec<HelmChartReleaseChartMetadataDependency>>,
 }
 
+/// This is used to deserialize release.chart.metadata.dependency[].
 #[derive(Debug, Deserialize)]
 pub(crate) struct HelmChartReleaseChartMetadataDependency {
     name: String,
@@ -58,11 +63,13 @@ impl HelmChartReleaseChartMetadataDependency {
         self.name.as_str()
     }
 
+    /// Returns the version of the dependency chart.
     pub(crate) fn version(self) -> Option<String> {
         self.version
     }
 }
 
+/// This performs a base64 decode and Gzip Decode for the data extracted from the helm storage.
 fn decode_decompress_data(data: impl AsRef<[u8]>) -> Result<Vec<u8>> {
     let data_compressed =
         base64_engine::decode(&STANDARD, data).context(Base64DecodeHelmStorage)?;
@@ -156,6 +163,8 @@ impl HelmReleaseClientBuilder {
 #[derive(Clone)]
 pub(crate) struct HelmReleaseClient {
     pub(crate) namespace: String,
+    /// This is the information that Helm stores on the cluster about the state of a helm release.
+    /// Ref: https://github.com/helm/helm/blob/v3.15.0/pkg/action/action.go#L383
     pub(crate) storage_driver: String,
 }
 
@@ -268,6 +277,8 @@ impl HelmReleaseClient {
             input_yaml: stdout_str.to_string(),
         })
     }
+
+    /// Reads from the helm storage driver and returns a type with info. about dependencies.
     pub(crate) async fn get_dependencies(
         &self,
         release_name: &str,

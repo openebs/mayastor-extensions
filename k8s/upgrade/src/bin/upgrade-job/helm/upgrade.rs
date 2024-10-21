@@ -24,7 +24,7 @@ use semver::Version;
 use snafu::ensure;
 use std::{future::Future, path::PathBuf, pin::Pin, str};
 use tempfile::NamedTempFile as TempFile;
-use tracing::{debug, info};
+use tracing::info;
 
 /// HelmUpgradeRunner is returned after an upgrade is validated and dry-run-ed. Running
 /// it carries out helm upgrade.
@@ -197,7 +197,7 @@ impl HelmUpgraderBuilder {
             // installed in the cluster.
             let source_version =
                 core_version_from_umbrella_release(&client, helm_release.name()).await?;
-            debug!(version=%source_version, "Found version of dependent chart {CORE_CHART_NAME}");
+            info!(version=%source_version, "Found version of dependency chart {CORE_CHART_NAME}");
 
             // Check if already upgraded.
             let already_upgraded = target_version.eq(&source_version);
@@ -220,6 +220,7 @@ impl HelmUpgraderBuilder {
             // The version of the Core helm chart (installed as the parent chart)
             // which is installed in the cluster.
             let source_version = version_from_core_chart_release(chart)?;
+            info!(version=%source_version, "Found version of chart {CORE_CHART_NAME}");
 
             // Skip upgrade-path validation and allow all upgrades for the Core helm chart, if
             // the flag is set.

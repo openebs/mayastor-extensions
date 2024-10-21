@@ -334,7 +334,7 @@ pub(crate) fn upgrade_job(
                         env: Some(vec![
                             EnvVar {
                                 name: "RUST_LOG".to_string(),
-                                value: Some("info".to_string()),
+                                value: Some(env::var("RUST_LOG").unwrap_or("info".to_string())),
                                 ..Default::default()
                             },
                             EnvVar {

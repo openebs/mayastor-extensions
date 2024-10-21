@@ -650,12 +650,16 @@ pub(crate) enum Error {
     #[snafu(display("Failed to copy gzip decompressed data to byte buffer: {source}"))]
     GzipDecoderReadToEnd { source: std::io::Error },
 
+    /// Error for when Deserializing the JSON stored in a helm storage driver (secret or cm) fails.
     #[snafu(display("Failed to deserialize helm storage data from JSON: {source}"))]
     DeserializaHelmStorageData { source: serde_json::Error },
 
+    /// Error for when an expected JSON member in the helm storage data is missing.
     #[snafu(display("Couldn't find '{member}' in helm storage data"))]
     MissingMemberInHelmStorageData { member: &'static str },
 
+    /// Error for when helm dependency data in a helm storage driver contains an invalid/missing
+    /// entry for the CORE_CHART version.
     #[snafu(display("Helm release data doesn't have chart version or contains an invalid version for dependency chart '{CORE_CHART_NAME}'"))]
     InvalidDependencyVersionInHelmReleaseData,
 }
