@@ -33,7 +33,7 @@ pkgs.nixosTest {
         ];
       };
       environment.systemPackages = with pkgs; [
-        kubernetes-helm
+        kubernetes-helm-wrapped
         kubectl
         kind
         docker

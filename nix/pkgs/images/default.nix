@@ -2,7 +2,7 @@
 # avoid dependency on docker tool chain. Though the maturity of OCI
 # builder in nixpkgs is questionable which is why we postpone this step.
 
-{ pkgs, dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm, semver-tool, yq-go, runCommand, sourcer, img_tag ? "", img_org ? "", img_prefix }:
+{ pkgs, dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, runCommand, sourcer, img_tag ? "", img_org ? "", img_prefix }:
 let
   repo-org = if img_org != "" then img_org else "${builtins.readFile (pkgs.runCommand "repo_org" {
     buildInputs = with pkgs; [ git ];
@@ -39,7 +39,7 @@ let
   };
   tagged_helm_chart = runCommand "tagged_helm_chart"
     {
-      nativeBuildInputs = [ kubernetes-helm helm_chart semver-tool yq-go ];
+      nativeBuildInputs = [ kubernetes-helm-wrapped helm_chart semver-tool yq-go ];
     } ''
     mkdir -p build && cp -drf ${helm_chart}/* build
 
@@ -74,7 +74,7 @@ let
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.upgrade.${name};
-      copyToRoot = [ kubernetes-helm busybox tagged_helm_chart yq-go ];
+      copyToRoot = [ kubernetes-helm-wrapped busybox tagged_helm_chart yq-go ];
       pname = package.pname;
       config = {
         Env = [ "CORE_CHART_DIR=/chart" ];
