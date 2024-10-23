@@ -90,7 +90,8 @@ spec:
         - "--node-name=$(MY_NODE_NAME)"
         - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"
         - "--enable-registration"
-        - "--grpc-endpoint=$(MY_POD_IP):10199"{{ if .Values.csi.node.nvme.io_timeout }}
+        - "--grpc-ip=$(MY_POD_IP)"
+        - "--grpc-port=10199"{{ if .Values.csi.node.nvme.io_timeout }}
         - "--nvme-io-timeout={{ .Values.csi.node.nvme.io_timeout }}"
         - "--nvme-core-io-timeout={{ .Values.csi.node.nvme.io_timeout }}"{{ else }}
         - "--nvme-io-timeout={{ .Values.io_engine.nvme.ioTimeout }}10s"
