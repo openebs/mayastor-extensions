@@ -19,3 +19,7 @@ log_fatal() {
   log_error "$1"
   exit "${_return}"
 }
+
+log() {
+  echo -e "${1}"
+}

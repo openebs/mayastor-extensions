@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: DeterminateSystems/nix-installer-action@v11
         with:
           kvm: true
@@ -17,12 +19,22 @@ jobs:
           export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
           echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
           nix-shell ./scripts/k8s/shell.nix --run "echo"
+      - name: Build binaries and images
+        id: build
+        run: |
+          TAG=$(nix-shell ./shell.nix --run './scripts/python/generate-test-tag.sh')
+          BIN=$(mktemp -p . -d -t test-bin-XXXXXX)
+          nix-shell ./shell.nix --run "./scripts/python/tag-chart.sh $TAG"
+          RUSTFLAGS="-C debuginfo=0 -C strip=debuginfo" ./scripts/release.sh --tag $TAG --build-bins --build-binary-out $BIN --no-static-linking --skip-publish --debug
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "bin=$BIN" >> $GITHUB_OUTPUT
       - name: BootStrap k8s cluster
         run: |
           nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
-      - name: Install Helm Chart
-        run: |
-          nix-shell ./scripts/k8s/shell.nix --run "./scripts/helm/install.sh --dep-update --wait"
+      - name: Load images to Kind cluster
+        run: nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/load-images-to-kind.sh --tag ${{ steps.build.outputs.tag }} --trim-debug-suffix"
+      - name: Run Pytests
+        run: nix-shell ./shell.nix --run './scripts/python/test.sh'
       - name: The job has failed
         if: ${{ failure() }}
         run: |
