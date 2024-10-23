@@ -1,7 +1,6 @@
 use crate::{
     common::constants::{
-        product_train, CORE_CHART_NAME, TO_UMBRELLA_SEMVER, UMBRELLA_CHART_NAME,
-        UMBRELLA_CHART_UPGRADE_DOCS_URL,
+        product_train, CORE_CHART_NAME, UMBRELLA_CHART_NAME, UMBRELLA_CHART_UPGRADE_DOCS_URL,
     },
     events::event_recorder::EventNote,
     helm::chart::PromtailConfigClient,
@@ -33,7 +32,7 @@ pub(crate) enum Error {
     K8sClientGeneration { source: kube::Error },
 
     /// Error for a Kubernetes API GET request for a namespace resource fails.
-    #[snafu(display("Failed to GET Kubernetes namespace {namespace}: {source}"))]
+    #[snafu(display("Failed to GET Kubernetes namespace '{namespace}': {source}"))]
     GetNamespace {
         source: kube::Error,
         namespace: String,
@@ -41,7 +40,7 @@ pub(crate) enum Error {
 
     /// Error for when REST API configuration fails.
     #[snafu(display(
-        "Failed to configure {} REST API client with endpoint {rest_endpoint}: {source:?}",
+        "Failed to configure {} REST API client with endpoint '{rest_endpoint}': {source:?}",
         product_train(),
     ))]
     RestClientConfiguration {
@@ -72,8 +71,44 @@ pub(crate) enum Error {
     HelmVersion { version: String },
 
     /// Error for when input Helm release is not found in the input namespace.
-    #[snafu(display("'deployed' Helm release {name} not found in Namespace {namespace}",))]
+    #[snafu(display("'deployed' Helm release {name} not found in Namespace '{namespace}'"))]
     HelmRelease { name: String, namespace: String },
+
+    /// Error for when no value for helm storage driver is set.
+    #[snafu(display("No helm storage driver specified"))]
+    NoHelmStorageDriver,
+
+    /// Error for when there's too few or too many helm secrets for a release in a namespace.
+    #[snafu(display(
+        "'{count}' is an invalid no. of helm Secrets for release '{release_name}' in namespace '{namespace}'"
+    ))]
+    InvalidNoOfHelmSecrets {
+        release_name: String,
+        namespace: String,
+        count: usize,
+    },
+
+    /// Error for when there's too few or too many helm configmaps for a release in a namespace.
+    #[snafu(display(
+        "'{count}' is an invalid no. of helm ConfigMaps for release '{release_name}' in namespace '{namespace}'"
+    ))]
+    InvalidNoOfHelmConfigMaps {
+        release_name: String,
+        namespace: String,
+        count: usize,
+    },
+
+    /// Error for when there's no data in helm storage driver.
+    #[snafu(display("No data in helm {driver}"))]
+    HelmStorageNoData { driver: &'static str },
+
+    /// Error for when there's no value for the release key in helm storage data.
+    #[snafu(display("No value mapped to the 'release' key in helm {driver}"))]
+    HelmStorageNoReleaseValue { driver: &'static str },
+
+    /// Error for when the helm storage driver is not supported.
+    #[snafu(display("'{driver}' is not a supported helm storage driver"))]
+    UnsupportedStorageDriver { driver: String },
 
     /// Error for when there is a lack of valid input for the Helm chart directory for the chart to
     /// be upgraded to.
@@ -82,7 +117,7 @@ pub(crate) enum Error {
 
     /// Error for when the input Pod's owner does not exists.
     #[snafu(display(
-        ".metadata.ownerReferences empty for Pod {pod_name} in {pod_namespace} namespace, while trying to find Pod's Job owner",
+        ".metadata.ownerReferences empty for Pod '{pod_name}' in '{pod_namespace}' namespace, while trying to find Pod's Job owner",
     ))]
     JobPodOwnerNotFound {
         pod_name: String,
@@ -91,7 +126,7 @@ pub(crate) enum Error {
 
     /// Error for when the number of ownerReferences for this Pod is more than 1.
     #[snafu(display(
-        "Pod {pod_name} in {pod_namespace} namespace has too many owners, while trying to find Pod's Job owner",
+        "Pod '{pod_name}' in '{pod_namespace}' namespace has too many owners, while trying to find Pod's Job owner",
     ))]
     JobPodHasTooManyOwners {
         pod_name: String,
@@ -100,7 +135,7 @@ pub(crate) enum Error {
 
     /// Error for when the owner of this Pod is not a Job.
     #[snafu(display(
-        "Pod {pod_name} in {pod_namespace} namespace has an owner which is not a Job, while trying to find Pod's Job owner",
+        "Pod '{pod_name}' in '{pod_namespace}' namespace has an owner which is not a Job, while trying to find Pod's Job owner",
     ))]
     JobPodOwnerIsNotJob {
         pod_name: String,
@@ -128,7 +163,7 @@ pub(crate) enum Error {
     /// Error for when the Helm chart installed in the cluster is not of the umbrella or core
     /// variant.
     #[snafu(display(
-        "Helm chart release {release_name} in Namespace {namespace} has an unsupported chart variant: {chart_name}",
+        "Helm chart release {release_name} in Namespace '{namespace}' has an unsupported chart variant: {chart_name}",
     ))]
     DetermineChartVariant {
         release_name: String,
@@ -171,7 +206,7 @@ pub(crate) enum Error {
 
     /// Error for when a Kubernetes API request for GET-ing a Pod fails.
     #[snafu(display(
-        "Failed to GET Kubernetes Pod {pod_name} in namespace {pod_namespace}: {source}",
+        "Failed to GET Kubernetes Pod '{pod_name}' in namespace '{pod_namespace}': {source}",
     ))]
     GetPod {
         source: kube::Error,
@@ -182,9 +217,30 @@ pub(crate) enum Error {
     /// Error for when a Kubernetes API request for GET-ing a list of Pods filtered by label(s)
     /// and field(s) fails.
     #[snafu(display(
-        "Failed to list Pods with label '{label}', and field '{field}' in namespace {namespace}: {source}",
+        "Failed to list Pods with label '{label}', and field '{field}' in namespace '{namespace}': {source}",
     ))]
     ListPodsWithLabelAndField {
+        source: kube::Error,
+        label: String,
+        field: String,
+        namespace: String,
+    },
+
+    /// Error for when listing Kubernetes Secrets from a the kubeapi fails.
+    #[snafu(display(
+        "Failed to list Secrets with label '{label}', and field '{field}' in namespace '{namespace}': {source}",
+    ))]
+    ListSecretsWithLabelAndField {
+        source: kube::Error,
+        label: String,
+        field: String,
+        namespace: String,
+    },
+
+    #[snafu(display(
+        "Failed to list ConfigMaps with label '{label}', and field '{field}' in namespace '{namespace}': {source}",
+    ))]
+    ListConfigMapsWithLabelAndField {
         source: kube::Error,
         label: String,
         field: String,
@@ -194,7 +250,7 @@ pub(crate) enum Error {
     /// Error for when a Kubernetes API request for GET-ing a list of ControllerRevisions
     /// filtered by label(s) and field(s) fails.
     #[snafu(display(
-        "Failed to list ControllerRevisions with label '{label}', and field '{field}' in namespace {namespace}: {source}",
+        "Failed to list ControllerRevisions with label '{label}', and field '{field}' in Namespace '{namespace}': {source}",
     ))]
     ListCtrlRevsWithLabelAndField {
         source: kube::Error,
@@ -215,15 +271,15 @@ pub(crate) enum Error {
     },
 
     /// Error for when a Pod does not have a PodSpec struct member.
-    #[snafu(display("Failed get .spec from Pod {name} in Namespace {namespace}"))]
+    #[snafu(display("Failed get .spec from Pod {name} in Namespace '{namespace}'"))]
     EmptyPodSpec { name: String, namespace: String },
 
     /// Error for when the spec.nodeName of a Pod is empty.
-    #[snafu(display("Failed get .spec.nodeName from Pod {name} in Namespace {namespace}",))]
+    #[snafu(display("Failed get .spec.nodeName from Pod {name} in Namespace '{namespace}'",))]
     EmptyPodNodeName { name: String, namespace: String },
 
     /// Error for when the metadata.uid of a Pod is empty.
-    #[snafu(display("Failed to get .metadata.uid from Pod {name} in Namespace {namespace}",))]
+    #[snafu(display("Failed to get .metadata.uid from Pod {name} in Namespace '{namespace}'",))]
     EmptyPodUid { name: String, namespace: String },
 
     /// Error for when an uncordon request for a storage node fails.
@@ -443,9 +499,9 @@ pub(crate) enum Error {
 
     /// Error for the Umbrella chart is not upgraded.
     #[snafu(display(
-        "The {UMBRELLA_CHART_NAME} helm chart is not upgraded to version {TO_UMBRELLA_SEMVER}: Upgrade for helm chart {UMBRELLA_CHART_NAME} is not supported, refer to the instructions at {UMBRELLA_CHART_UPGRADE_DOCS_URL} to upgrade your release of the {UMBRELLA_CHART_NAME} helm chart to version {TO_UMBRELLA_SEMVER}",
+        "The '{UMBRELLA_CHART_NAME}' helm chart is not upgraded to a version with '{CORE_CHART_NAME}' dependency helm chart version '{target_version}': Upgrade for helm chart {UMBRELLA_CHART_NAME} is not supported, refer to the instructions at {UMBRELLA_CHART_UPGRADE_DOCS_URL} to upgrade your release of the '{UMBRELLA_CHART_NAME}' helm chart.",
     ))]
-    UmbrellaChartNotUpgraded,
+    UmbrellaChartNotUpgraded { target_version: String },
 
     /// Error for when the helm upgrade for the Core chart does not have a chart directory.
     #[snafu(display(
@@ -585,6 +641,27 @@ pub(crate) enum Error {
         namespace: String,
         hash_label_key: String,
     },
+
+    /// Error for when base64 decode fails for helm storage data.
+    #[snafu(display("Failed to decode helm storage data"))]
+    Base64DecodeHelmStorage { source: base64::DecodeError },
+
+    /// Error for when Gzip decompressed data fails copy to byte buffer.
+    #[snafu(display("Failed to copy gzip decompressed data to byte buffer: {source}"))]
+    GzipDecoderReadToEnd { source: std::io::Error },
+
+    /// Error for when Deserializing the JSON stored in a helm storage driver (secret or cm) fails.
+    #[snafu(display("Failed to deserialize helm storage data from JSON: {source}"))]
+    DeserializaHelmStorageData { source: serde_json::Error },
+
+    /// Error for when an expected JSON member in the helm storage data is missing.
+    #[snafu(display("Couldn't find '{member}' in helm storage data"))]
+    MissingMemberInHelmStorageData { member: &'static str },
+
+    /// Error for when helm dependency data in a helm storage driver contains an invalid/missing
+    /// entry for the CORE_CHART version.
+    #[snafu(display("Helm release data doesn't have chart version or contains an invalid version for dependency chart '{CORE_CHART_NAME}'"))]
+    InvalidDependencyVersionInHelmReleaseData,
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.

@@ -4,7 +4,7 @@ use crate::{
             product_train, CORE_CHART_NAME, IO_ENGINE_LABEL, PARTIAL_REBUILD_DISABLE_EXTENTS,
         },
         error::{PartialRebuildNotAllowed, Result},
-        kube_client as KubeClient,
+        kube::client as KubeClient,
     },
     events::event_recorder::{EventAction, EventRecorder},
     helm::upgrade::{HelmUpgradeRunner, HelmUpgraderBuilder},
@@ -52,6 +52,8 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
         .with_skip_upgrade_path_validation(opts.skip_upgrade_path_validation())
         .with_helm_args_set(opts.helm_args_set())
         .with_helm_args_set_file(opts.helm_args_set_file())
+        .with_helm_storage_driver(opts.helm_storage_driver())
+        .with_helm_reset_then_reuse_values(opts.helm_reset_then_reuse_values())
         .build()
         .await?;
 

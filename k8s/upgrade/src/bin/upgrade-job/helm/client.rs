@@ -1,24 +1,115 @@
 use crate::{
-    common::error::{
-        HelmClientNs, HelmCommand, HelmGetValuesCommand, HelmListCommand, HelmRelease,
-        HelmUpgradeCommand, Result, U8VectorToString, YamlParseFromSlice,
+    common::{
+        error::{
+            Base64DecodeHelmStorage, DeserializaHelmStorageData, GzipDecoderReadToEnd,
+            HelmClientNs, HelmCommand, HelmGetValuesCommand, HelmListCommand, HelmRelease,
+            HelmStorageNoData, HelmStorageNoReleaseValue, HelmUpgradeCommand,
+            MissingMemberInHelmStorageData, NoHelmStorageDriver, Result, U8VectorToString,
+            UnsupportedStorageDriver, YamlParseFromSlice,
+        },
+        kube::client as KubeClient,
     },
     vec_to_strings,
 };
-use k8s_openapi::serde;
+use base64::engine::{general_purpose::STANDARD, Engine as base64_engine};
+use flate2::read::GzDecoder;
+use k8s_openapi::kind;
 use serde::Deserialize;
 use snafu::{ensure, ResultExt};
-use std::{path::Path, process::Command, str};
+use std::{io::Read, path::Path, process::Command, str};
 use tracing::debug;
+
+/// This is used to pick out the .data field from a kubernetes secret or a configmap.
+macro_rules! extract_data {
+    ($source:ident) => {{
+        let driver = kind(&$source);
+        $source
+            .data
+            .ok_or(HelmStorageNoData { driver }.build())?
+            .into_iter()
+            .find_map(|(k, v)| k.eq("release").then_some(v))
+            .ok_or(HelmStorageNoReleaseValue { driver }.build())
+    }};
+}
+
+/// This is used to deserialize the JSON data in a helm storage resource (secret or configmap).
+#[derive(Debug, Deserialize)]
+pub(crate) struct HelmChartRelease {
+    chart: Option<HelmChartReleaseChart>,
+}
+
+/// This is used to deserialize release.chart.
+#[derive(Debug, Deserialize)]
+pub(crate) struct HelmChartReleaseChart {
+    metadata: HelmChartReleaseChartMetadata,
+}
+
+/// This is used to deserialize release.chart.metadata.
+#[derive(Debug, Deserialize)]
+pub(crate) struct HelmChartReleaseChartMetadata {
+    dependencies: Option<Vec<HelmChartReleaseChartMetadataDependency>>,
+}
+
+/// This is used to deserialize release.chart.metadata.dependency[].
+#[derive(Debug, Deserialize)]
+pub(crate) struct HelmChartReleaseChartMetadataDependency {
+    name: String,
+    version: Option<String>,
+}
+
+impl HelmChartReleaseChartMetadataDependency {
+    /// Returns the name of the dependency chart.
+    pub(crate) fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    /// Returns the version of the dependency chart.
+    pub(crate) fn version(self) -> Option<String> {
+        self.version
+    }
+}
+
+/// This performs a base64 decode and Gzip Decode for the data extracted from the helm storage.
+fn decode_decompress_data(data: impl AsRef<[u8]>) -> Result<Vec<u8>> {
+    let data_compressed =
+        base64_engine::decode(&STANDARD, data).context(Base64DecodeHelmStorage)?;
+
+    let mut gzip_decoder = GzDecoder::new(&data_compressed[..]);
+    let mut data: Vec<u8> = Vec::new();
+    gzip_decoder
+        .read_to_end(&mut data)
+        .context(GzipDecoderReadToEnd)?;
+
+    Ok(data)
+}
+
+/// Extract list of dependencies from a chart's release_data or fail.
+fn dependencies_from_release_data(
+    data: Vec<u8>,
+) -> Result<Vec<HelmChartReleaseChartMetadataDependency>> {
+    let release: HelmChartRelease =
+        serde_json::from_slice(data.as_slice()).context(DeserializaHelmStorageData)?;
+
+    let missing_member_err = |member: &'static str| -> crate::common::error::Error {
+        MissingMemberInHelmStorageData { member }.build()
+    };
+
+    release
+        .chart
+        .ok_or(missing_member_err(".chart"))?
+        .metadata
+        .dependencies
+        .ok_or(missing_member_err(".chart.metadata.dependencies"))
+}
 
 /// This struct is used to deserialize the output of `helm list -n <namespace> --deployed -o yaml`.
 #[derive(Clone, Deserialize)]
-pub(crate) struct HelmReleaseElement {
+pub(crate) struct HelmListReleaseElement {
     name: String,
     chart: String,
 }
 
-impl HelmReleaseElement {
+impl HelmListReleaseElement {
     /// This is a getter function for the name of the release.
     pub(crate) fn name(&self) -> &str {
         self.name.as_str()
@@ -34,6 +125,7 @@ impl HelmReleaseElement {
 #[derive(Default)]
 pub(crate) struct HelmReleaseClientBuilder {
     namespace: Option<String>,
+    storage_driver: Option<String>,
 }
 
 impl HelmReleaseClientBuilder {
@@ -48,10 +140,21 @@ impl HelmReleaseClientBuilder {
         self
     }
 
+    /// Set the storage driver to use with helm commands.
+    #[must_use]
+    pub(crate) fn with_storage_driver(mut self, driver: String) -> Self {
+        self.storage_driver = Some(driver);
+        self
+    }
+
     /// Build the HelmReleaseClient.
     pub(crate) fn build(self) -> Result<HelmReleaseClient> {
-        let ns = self.namespace.ok_or(HelmClientNs.build())?;
-        Ok(HelmReleaseClient { namespace: ns })
+        let namespace = self.namespace.ok_or(HelmClientNs.build())?;
+        let storage_driver = self.storage_driver.ok_or(NoHelmStorageDriver.build())?;
+        Ok(HelmReleaseClient {
+            namespace,
+            storage_driver,
+        })
     }
 }
 
@@ -60,6 +163,9 @@ impl HelmReleaseClientBuilder {
 #[derive(Clone)]
 pub(crate) struct HelmReleaseClient {
     pub(crate) namespace: String,
+    /// This is the information that Helm stores on the cluster about the state of a helm release.
+    /// Ref: https://github.com/helm/helm/blob/v3.15.0/pkg/action/action.go#L383
+    pub(crate) storage_driver: String,
 }
 
 impl HelmReleaseClient {
@@ -100,6 +206,7 @@ impl HelmReleaseClient {
         debug!(%command, ?args, "Helm get values command");
 
         let output = Command::new(command)
+            .env("HELM_DRIVER", self.storage_driver.as_str())
             .args(args.clone())
             .output()
             .context(HelmCommand {
@@ -125,7 +232,7 @@ impl HelmReleaseClient {
     pub(crate) fn list_as_yaml<A>(
         &self,
         maybe_extra_args: Option<Vec<A>>,
-    ) -> Result<Vec<HelmReleaseElement>>
+    ) -> Result<Vec<HelmListReleaseElement>>
     where
         A: ToString,
     {
@@ -145,6 +252,7 @@ impl HelmReleaseClient {
         debug!(%command, ?args, "Helm list command");
 
         let output = Command::new(command)
+            .env("HELM_DRIVER", self.storage_driver.as_str())
             .args(args.clone())
             .output()
             .context(HelmCommand {
@@ -168,6 +276,48 @@ impl HelmReleaseClient {
         serde_yaml::from_slice(output.stdout.as_slice()).context(YamlParseFromSlice {
             input_yaml: stdout_str.to_string(),
         })
+    }
+
+    /// Reads from the helm storage driver and returns a type with info. about dependencies.
+    pub(crate) async fn get_dependencies(
+        &self,
+        release_name: &str,
+    ) -> Result<Vec<HelmChartReleaseChartMetadataDependency>> {
+        match self.storage_driver.as_str() {
+            "" | "secret" | "secrets" => {
+                debug!("Using helm secret as helm storage");
+                let secret = KubeClient::get_helm_release_secret(
+                    release_name.to_string(),
+                    self.namespace.clone(),
+                )
+                .await?;
+
+                let release_data = extract_data!(secret)?;
+                let decoded_data = decode_decompress_data(release_data.0)?;
+                let dependencies = dependencies_from_release_data(decoded_data)?;
+                debug!(data=?dependencies, "Found helm chart release chart metadata dependency in helm secret");
+
+                Ok(dependencies)
+            }
+            "configmap" | "configmaps" => {
+                debug!("Using helm configmap as helm storage");
+                let cm = KubeClient::get_helm_release_configmap(
+                    release_name.to_string(),
+                    self.namespace.clone(),
+                )
+                .await?;
+                let release_data = extract_data!(cm)?;
+                let decoded_data = decode_decompress_data(release_data)?;
+                let dependencies = dependencies_from_release_data(decoded_data)?;
+                debug!(data=?dependencies, "Found helm chart release chart metadata dependency in helm configmap");
+
+                Ok(dependencies)
+            }
+            unsupported_driver => UnsupportedStorageDriver {
+                driver: unsupported_driver.to_string(),
+            }
+            .fail(),
+        }
     }
 
     /// Runs command `helm upgrade -n <namespace> <release_name> <chart_dir>`.
@@ -200,6 +350,7 @@ impl HelmReleaseClient {
 
         debug!(%command, ?args, "Helm upgrade command");
         let output = Command::new(command)
+            .env("HELM_DRIVER", self.storage_driver.as_str())
             .args(args.clone())
             .output()
             .context(HelmCommand {
@@ -224,7 +375,7 @@ impl HelmReleaseClient {
     }
 
     /// Fetches info about a Helm release in the Namespace, if it exists.
-    pub(crate) fn release_info<A>(&self, release_name: A) -> Result<HelmReleaseElement>
+    pub(crate) fn release_info<A>(&self, release_name: A) -> Result<HelmListReleaseElement>
     where
         A: ToString,
     {

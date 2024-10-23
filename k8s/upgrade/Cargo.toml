@@ -39,3 +39,5 @@ tokio = { version = "1.33.0", features = ["full"] }
 tempfile = "3.8.0"
 # Tracing
 tracing = "0.1.37"
+base64 = "0.21.5"
+flate2 = "1.0.27"
