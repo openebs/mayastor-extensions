@@ -1,4 +1,4 @@
-{ norust ? false, devrustup ? true, rust-profile ? "nightly" }:
+{ norust ? false, devrustup ? true, rust-profile ? "stable" }:
 let
   sources = import ./nix/sources.nix;
   pkgs = import sources.nixpkgs {
@@ -46,7 +46,7 @@ mkShell {
     which
     yq-go
     kind
-  ] ++ pkgs.lib.optional (!norust) channel.default_src.nightly
+  ] ++ pkgs.lib.optional (!norust) rust
   ++ pkgs.lib.optional (system == "aarch64-darwin") darwin.apple_sdk.frameworks.Security;
 
   PROTOC = "${protobuf}/bin/protoc";
