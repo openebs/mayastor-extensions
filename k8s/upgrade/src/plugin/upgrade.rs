@@ -162,7 +162,7 @@ impl UpgradeArgs {
         // Create resources for upgrade
         UpgradeResources::create_upgrade_resources(namespace, self).await?;
 
-        for _i in 0 .. MAX_RETRY_ATTEMPTS {
+        for _i in 0..MAX_RETRY_ATTEMPTS {
             // wait for 10 seconds for the upgrade event to be published
             tokio::time::sleep(Duration::from_secs(10)).await;
             match upgrade_event_client

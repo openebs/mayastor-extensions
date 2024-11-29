@@ -50,7 +50,7 @@ pub(crate) async fn rebuild_result(
             if volume_over_nodes.contains(node_name) {
                 match replica_rebuild_count(volume) {
                     0 => {
-                        for _i in 0 .. 11 {
+                        for _i in 0..11 {
                             // wait for a minute for any rebuild to start
                             tokio::time::sleep(Duration::from_secs(60_u64)).await;
                             let count = replica_rebuild_count(volume);
