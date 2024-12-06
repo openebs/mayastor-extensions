@@ -27,10 +27,14 @@ DATE_TIME=
 DEVELOP_TO_REL=
 # Update the release version after release
 RELEASED=
+# The release branch being updated
+RELEASED_BRANCH=
 # Upgrade from develop to helm-testing
 HELM_TESTING=
 # Tag that has been pushed
 APP_TAG=
+# Expected output of APP_TAG
+OUT_APP_TAG=
 # Version from the Chart.yaml
 CHART_VERSION=
 # AppVersion from the Chart.yaml
@@ -82,14 +86,21 @@ EOF
   else
     if [ -n "$RELEASED" ]; then
       APP_TAG=$NEW_CHART_VERSION
+      if [ -n "$OUT_APP_TAG" ]; then
+        APP_TAG=$OUT_APP_TAG
+      fi
     fi
     cat <<EOF
 APP_TAG: $APP_TAG
 CHART_VERSION: $CHART_VERSION
 CHART_APP_VERSION: $CHART_APP_VERSION
+EOF
+    if [ -n "$NEW_CHART_VERSION" ]; then
+    cat <<EOF
 NEW_CHART_VERSION: $NEW_CHART_VERSION
 NEW_CHART_APP_VERSION: $NEW_CHART_APP_VERSION
 EOF
+    fi
   fi
 }
 
@@ -181,6 +192,8 @@ test_one()
   DATE_TIME=
   DEVELOP_TO_REL=
   RELEASED=
+  RELEASED_BRANCH=
+  OUT_APP_TAG=
   HELM_TESTING=
   APP_TAG=
   CHART_VERSION=
@@ -399,10 +412,41 @@ test_one "A more stable version is already published, but the app tag stable is 
 
 RELEASED=2.0.0
 CHART_VERSION=2.0.0
+RELEASED_BRANCH=release/2.0
 CHART_APP_VERSION=2.0.0
 NEW_CHART_VERSION=2.0.1
 NEW_CHART_APP_VERSION=2.0.1
 test_one "After release 2.0.0, the next one is 2.0.1"
+
+RELEASED=2.0.0-rc.1
+CHART_VERSION=2.0.1
+RELEASED_BRANCH=release/2.0
+CHART_APP_VERSION=2.0.1
+EXPECT_FAIL=1
+test_one "Can't pre-release what's already released"
+
+RELEASED=2.0.0-rc.1
+CHART_VERSION=2.0.0
+RELEASED_BRANCH=release/2.0
+CHART_APP_VERSION=2.0.0
+OUT_APP_TAG=2.0.0
+test_one "Just a pre-release"
+
+RELEASED=2.2.0-rc.1
+CHART_VERSION=2.0.0
+RELEASED_BRANCH=release/2.0
+CHART_APP_VERSION=2.0.0
+EXPECT_FAIL=1
+test_one "A prerelease too far away"
+
+RELEASED=2.0.0
+CHART_VERSION=2.0.0
+RELEASED_BRANCH=release/2.1
+CHART_APP_VERSION=2.0.0
+NEW_CHART_VERSION=2.0.1
+NEW_CHART_APP_VERSION=2.0.1
+EXPECT_FAIL=1
+test_one "Branch does not match"
 
 RELEASED=2.0.0
 CHART_VERSION=2.0.0
@@ -412,6 +456,7 @@ EXPECT_FAIL=1
 test_one "We've actually already release 2.0.1, so the next one is 2.0.2"
 
 RELEASED=2.0.1
+RELEASED_BRANCH=release/2.0
 CHART_VERSION=2.0.0
 CHART_APP_VERSION=2.0.0
 INDEX_CHART_VERSIONS=(2.0.1 2.0.0-a.0)
