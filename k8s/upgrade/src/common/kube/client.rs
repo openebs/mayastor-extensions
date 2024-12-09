@@ -23,46 +23,46 @@ use serde::de::DeserializeOwned;
 use snafu::{ensure, ErrorCompat, IntoError, ResultExt};
 
 /// Generate a new kube::Client.
-pub(crate) async fn client() -> Result<Client> {
+pub async fn client() -> Result<Client> {
     Client::try_default().await.context(K8sClientGeneration)
 }
 
 /// Generate the Node api client.
-pub(crate) async fn nodes_api() -> Result<Api<Node>> {
+pub async fn nodes_api() -> Result<Api<Node>> {
     Ok(Api::all(client().await?))
 }
 
 /// Generate the Namespace api client.
-pub(crate) async fn namespaces_api() -> Result<Api<Namespace>> {
+pub async fn namespaces_api() -> Result<Api<Namespace>> {
     Ok(Api::all(client().await?))
 }
 
 /// Generate the CustomResourceDefinition api client.
-pub(crate) async fn crds_api() -> Result<Api<CustomResourceDefinition>> {
+pub async fn crds_api() -> Result<Api<CustomResourceDefinition>> {
     Ok(Api::all(client().await?))
 }
 
 /// Generate ControllerRevision api client.
-pub(crate) async fn controller_revisions_api(namespace: &str) -> Result<Api<ControllerRevision>> {
+pub async fn controller_revisions_api(namespace: &str) -> Result<Api<ControllerRevision>> {
     Ok(Api::namespaced(client().await?, namespace))
 }
 
 /// Generate the Pod api client.
-pub(crate) async fn pods_api(namespace: &str) -> Result<Api<Pod>> {
+pub async fn pods_api(namespace: &str) -> Result<Api<Pod>> {
     Ok(Api::namespaced(client().await?, namespace))
 }
 
 /// Generate the Secret api client.
-pub(crate) async fn secrets_api(namespace: &str) -> Result<Api<Secret>> {
+pub async fn secrets_api(namespace: &str) -> Result<Api<Secret>> {
     Ok(Api::namespaced(client().await?, namespace))
 }
 
 /// Generate the Configmap api client.
-pub(crate) async fn configmaps_api(namespace: &str) -> Result<Api<ConfigMap>> {
+pub async fn configmaps_api(namespace: &str) -> Result<Api<ConfigMap>> {
     Ok(Api::namespaced(client().await?, namespace))
 }
 
-pub(crate) async fn list_pods(
+pub async fn list_pods(
     namespace: String,
     label_selector: Option<String>,
     field_selector: Option<String>,
@@ -91,7 +91,7 @@ pub(crate) async fn list_pods(
 }
 
 /// List Nodes metadata in the kubernetes cluster.
-pub(crate) async fn list_nodes_metadata(
+pub async fn list_nodes_metadata(
     label_selector: Option<String>,
     field_selector: Option<String>,
 ) -> Result<Vec<PartialObjectMeta<Node>>> {
@@ -124,7 +124,7 @@ pub(crate) async fn list_nodes_metadata(
 }
 
 /// List ControllerRevisions in a Kubernetes namespace.
-pub(crate) async fn list_controller_revisions(
+pub async fn list_controller_revisions(
     namespace: String,
     label_selector: Option<String>,
     field_selector: Option<String>,
@@ -159,7 +159,7 @@ pub(crate) async fn list_controller_revisions(
 }
 
 /// Returns the controller-revision-hash of the latest revision of a resource's ControllerRevisions.
-pub(crate) async fn latest_controller_revision_hash(
+pub async fn latest_controller_revision_hash(
     namespace: String,
     label_selector: Option<String>,
     field_selector: Option<String>,
@@ -199,7 +199,7 @@ pub(crate) async fn latest_controller_revision_hash(
 }
 
 /// This returns a list of Secrets based on filtering criteria. Returns all if criteria is absent.
-pub(crate) async fn list_secrets(
+pub async fn list_secrets(
     namespace: String,
     label_selector: Option<String>,
     field_selector: Option<String>,
@@ -235,7 +235,7 @@ pub(crate) async fn list_secrets(
 
 /// This returns a list of ConfigMaps based on filtering criteria. Returns all if criteria is
 /// absent.
-pub(crate) async fn list_configmaps(
+pub async fn list_configmaps(
     namespace: String,
     label_selector: Option<String>,
     field_selector: Option<String>,
@@ -270,10 +270,7 @@ pub(crate) async fn list_configmaps(
 }
 
 /// GET the helm release secret for a helm release in a namespace.
-pub(crate) async fn get_helm_release_secret(
-    release_name: String,
-    namespace: String,
-) -> Result<Secret> {
+pub async fn get_helm_release_secret(release_name: String, namespace: String) -> Result<Secret> {
     let secrets = list_secrets(
         namespace.clone(),
         Some(format!("name={release_name},status=deployed")),
@@ -294,7 +291,7 @@ pub(crate) async fn get_helm_release_secret(
 }
 
 /// GET the helm release configmap for a helm release in a namespace.
-pub(crate) async fn get_helm_release_configmap(
+pub async fn get_helm_release_configmap(
     release_name: String,
     namespace: String,
 ) -> Result<ConfigMap> {

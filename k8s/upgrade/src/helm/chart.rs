@@ -7,7 +7,7 @@ use std::{fs::read, path::Path, str};
 
 /// This struct is used to deserialize helm charts' Chart.yaml file.
 #[derive(Deserialize)]
-pub(crate) struct Chart {
+pub struct Chart {
     /// This is the name of the helm chart.
     name: String,
     /// This is the version of the helm chart.
@@ -16,19 +16,19 @@ pub(crate) struct Chart {
 
 impl Chart {
     /// This is a getter for the helm chart name.
-    pub(crate) fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         self.name.as_str()
     }
 
     /// This is a getter for the helm chart version.
-    pub(crate) fn version(&self) -> &Version {
+    pub fn version(&self) -> &Version {
         &self.version
     }
 }
 
 /// This is a set of tools for types whose instances are created
 /// by deserializing a helm chart's values.yaml files.
-pub(crate) trait HelmValuesCollection {
+pub trait HelmValuesCollection {
     /// This is a getter for state of the 'ha' feature (enabled/disabled).
     fn ha_is_enabled(&self) -> bool;
     /// This is a getter for the partial-rebuild toggle value.
@@ -299,6 +299,8 @@ impl CoreValues {
         self.base.deprecated_log_silence_level()
     }
 
+    /// Retrieves the image tag of the Jaeger operator.
+    /// Useful when updating the Jaeger operator dependency chart to ensure the new chart uses the updated image tag.
     pub(crate) fn jaeger_operator_image_tag(&self) -> &str {
         self.jaeger_operator.image_tag()
     }
@@ -317,6 +319,7 @@ impl Agents {
         self.ha.enabled()
     }
 
+    /// Returns true if partial rebuild is enabled.
     fn partial_rebuild_is_enabled(&self) -> bool {
         self.core.partial_rebuild_is_enabled()
     }
@@ -325,6 +328,7 @@ impl Agents {
 /// This is used to deserialize the yaml object base.
 #[derive(Deserialize)]
 struct Base {
+    /// This is the older helm value.yaml key for configuring log silence level.
     #[serde(default, rename(deserialize = "logSilenceLevel"))]
     deprecated_log_silence_level: String,
 }
@@ -344,6 +348,7 @@ struct Core {
 }
 
 impl Core {
+    /// Returns true if partial rebuild is enabled.
     fn partial_rebuild_is_enabled(&self) -> bool {
         self.rebuild.partial_is_enabled()
     }
@@ -356,6 +361,7 @@ struct Rebuild {
 }
 
 impl Rebuild {
+    /// Returns true if partial rebuild is enabled.
     fn partial_is_enabled(&self) -> bool {
         self.partial.enabled()
     }
@@ -373,9 +379,6 @@ impl Default for RebuildPartial {
     /// assuming that partial rebuild is enabled, if the YAML object for Rebuild is missing.
     /// The Rebuild type will be deserialized with a default value if it's absent from the
     /// helm values.
-    ///
-    ///     #[serde(default)]
-    ///     rebuild: Rebuild,
     fn default() -> Self {
         Self { enabled: true }
     }
@@ -872,6 +875,7 @@ struct PrometheusAlertmanager {
 }
 
 impl PrometheusAlertmanager {
+    /// This is the prometheus alert manager container image tag.
     fn image_tag(&self) -> &str {
         self.image.tag()
     }
@@ -885,6 +889,7 @@ struct PrometheusNodeExporter {
 }
 
 impl PrometheusNodeExporter {
+    /// This is the Prometheus Node Exporter container image tag.
     fn image_tag(&self) -> &str {
         self.image.tag()
     }
@@ -898,6 +903,7 @@ struct PrometheusPushgateway {
 }
 
 impl PrometheusPushgateway {
+    /// This is the Prometheus Push gateway container image tag.
     fn image_tag(&self) -> &str {
         self.image.tag()
     }
@@ -911,6 +917,7 @@ struct PrometheusServer {
 }
 
 impl PrometheusServer {
+    /// This is the Prometheus Server image tag.
     fn image_tag(&self) -> &str {
         self.image.tag()
     }
@@ -941,10 +948,13 @@ impl Promtail {
         self.config.deprecated_extra_client_configs()
     }
 
+    /// This is the deprecated field for the loki address in an older loki-stack helm chart.
     fn deprecated_loki_address(&self) -> &str {
         self.config.deprecated_loki_address()
     }
 
+    /// This returns the promtail init container configuration from both the older deprecated
+    /// loki-stack chart and the newer loki-stack chart.
     fn init_container(&self) -> Vec<Container> {
         match &self.init_container {
             PromtailInitContainer::DeprecatedInitContainer {} => Vec::<Container>::default(),
@@ -952,6 +962,7 @@ impl Promtail {
         }
     }
 
+    /// This returns the readiness probe http get path for the loki-stack promtail.
     fn readiness_probe_http_get_path(&self) -> String {
         self.readiness_probe
             .http_get
@@ -1031,7 +1042,7 @@ impl Default for PromtailInitContainer {
 /// This is used to serialize the config.clients yaml object in promtail chart v6.13.1
 /// when migrating from promtail v3.11.0 to v6.13.1.
 #[derive(Debug, Serialize)]
-pub(crate) struct PromtailConfigClient {
+pub struct PromtailConfigClient {
     url: String,
 }
 

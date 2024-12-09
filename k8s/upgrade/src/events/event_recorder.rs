@@ -19,7 +19,7 @@ use tracing::error;
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all(serialize = "camelCase"))]
-pub(crate) struct EventNote {
+pub struct EventNote {
     from_version: String,
     to_version: String,
     message: String,
@@ -44,7 +44,7 @@ impl EventNote {
 
 /// A builder for the Kubernetes event publisher.
 #[derive(Default)]
-pub(crate) struct EventRecorderBuilder {
+pub struct EventRecorderBuilder {
     pod_name: Option<String>,
     namespace: Option<String>,
     source_version: Option<String>,
@@ -55,7 +55,7 @@ impl EventRecorderBuilder {
     /// This is a builder option to set the namespace of the object
     /// which will become the 'involvedObject' for the Event.
     #[must_use]
-    pub(crate) fn with_namespace<T>(mut self, namespace: T) -> Self
+    pub fn with_namespace<T>(mut self, namespace: T) -> Self
     where
         T: ToString,
     {
@@ -66,7 +66,7 @@ impl EventRecorderBuilder {
     /// This is a builder option to add the name of this Pod. The owner Job of this Pod
     /// will be the object whose events the publisher will create.
     #[must_use]
-    pub(crate) fn with_pod_name<T>(mut self, pod_name: T) -> Self
+    pub fn with_pod_name<T>(mut self, pod_name: T) -> Self
     where
         T: ToString,
     {
@@ -77,7 +77,7 @@ impl EventRecorderBuilder {
     // TODO: Make the builder option validations error out at compile-time, using std::compile_error
     // or something similar.
     /// This builds the EventRecorder. This fails if Kubernetes API requests fail.
-    pub(crate) async fn build(&self) -> Result<EventRecorder> {
+    pub async fn build(&self) -> Result<EventRecorder> {
         ensure!(
             self.pod_name.is_some() && self.namespace.is_some(),
             EventRecorderOptionsAbsent
@@ -175,7 +175,7 @@ impl EventRecorderBuilder {
 }
 
 /// This is a wrapper around a kube::runtime::events::Recorder.
-pub(crate) struct EventRecorder {
+pub struct EventRecorder {
     event_sender: Option<mpsc::UnboundedSender<Event>>,
     event_loop_handle: tokio::task::JoinHandle<()>,
     source_version: String,
@@ -184,7 +184,7 @@ pub(crate) struct EventRecorder {
 
 impl EventRecorder {
     /// Creates an empty builder.
-    pub(crate) fn builder() -> EventRecorderBuilder {
+    pub fn builder() -> EventRecorderBuilder {
         EventRecorderBuilder::default()
     }
 
@@ -199,7 +199,7 @@ impl EventRecorder {
 
     /// This is a helper method with calls the publish method above and fills out the boilerplate
     /// Event fields. type is set to publish a Normal event.
-    pub(crate) async fn publish_normal<J, K>(&self, note: J, action: K) -> Result<()>
+    pub async fn publish_normal<J, K>(&self, note: J, action: K) -> Result<()>
     where
         J: ToString,
         K: ToString,
@@ -218,7 +218,7 @@ impl EventRecorder {
 
     /// This is a helper method with calls the publish method above and fills out the boilerplate
     /// Event fields. type is set to publish a Warning event.
-    pub(crate) async fn publish_warning<J, K>(&self, note: J, action: K) -> Result<()>
+    pub async fn publish_warning<J, K>(&self, note: J, action: K) -> Result<()>
     where
         J: ToString,
         K: ToString,
@@ -236,7 +236,7 @@ impl EventRecorder {
     }
 
     /// This method is intended for use when upgrade fails.
-    pub(crate) async fn publish_unrecoverable<Error>(&self, err: &Error, validation_error: bool)
+    pub async fn publish_unrecoverable<Error>(&self, err: &Error, validation_error: bool)
     where
         Error: Display,
     {
@@ -252,7 +252,7 @@ impl EventRecorder {
     }
 
     /// Shuts down the event channel which makes the event loop worker exit its loop and return.
-    pub(crate) async fn shutdown_worker(mut self) {
+    pub async fn shutdown_worker(mut self) {
         // Dropping the sender, to signify no more channel messages.
         let _ = self.event_sender.take();
 
@@ -260,13 +260,13 @@ impl EventRecorder {
         let _ = self.event_loop_handle.await;
     }
 
-    /// Updates the EventRecorder's source_version memeber with a new value.
-    pub(crate) fn set_source_version(&mut self, version: String) {
+    /// Updates the EventRecorder's source_version member with a new value.
+    pub fn set_source_version(&mut self, version: String) {
         self.source_version = version
     }
 
-    /// Updates the EventRecorder's target_version memeber with a new value.
-    pub(crate) fn set_target_version(&mut self, version: String) {
+    /// Updates the EventRecorder's target_version member with a new value.
+    pub fn set_target_version(&mut self, version: String) {
         self.target_version = version
     }
 }

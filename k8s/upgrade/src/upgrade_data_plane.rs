@@ -10,7 +10,7 @@ use crate::{
         kube::client as KubeClient,
         rest_client::RestClientSet,
     },
-    upgrade::utils::{
+    upgrade_utils::{
         all_pods_are_ready, cordon_storage_node, list_all_volumes, rebuild_result,
         uncordon_storage_node, RebuildResult,
     },
@@ -26,7 +26,7 @@ use tracing::info;
 use utils::{csi_node_nvme_ana, API_REST_LABEL, ETCD_LABEL};
 
 /// Upgrade data plane by controlled restart of io-engine pods
-pub(crate) async fn upgrade_data_plane(
+pub async fn upgrade_data_plane(
     namespace: String,
     rest_endpoint: String,
     latest_io_engine_ctrl_rev_hash: String,
