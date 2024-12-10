@@ -254,6 +254,31 @@ apis:
   rest:
     # -- Log level for the rest service
     logLevel: info
+    healthProbes:
+      readiness:
+        # -- Toggle readiness probe.
+        enabled: true
+        # -- Frequency for the agent-core liveness probe.
+        agentCoreProbeFreq: "20s"
+        # -- No. of failures the readiness probe will tolerate.
+        failureThreshold: 2
+        # -- No. of seconds of delay before checking the readiness status.
+        initialDelaySeconds: 0
+        # -- No. of seconds between readiness probe checks.
+        periodSeconds: 20
+        # -- No. of seconds of timeout tolerance.
+        timeoutSeconds: 5
+      liveness:
+        # -- Toggle liveness probe.
+        enabled: true
+        # -- No. of failures the liveness probe will tolerate.
+        failureThreshold: 1
+        # -- No. of seconds of delay before checking the liveness status.
+        initialDelaySeconds: 0
+        # -- No. of seconds between liveness probe checks.
+        periodSeconds: 30
+        # -- No. of seconds of timeout tolerance.
+        timeoutSeconds: 5
     # -- Number of replicas of rest
     replicaCount: 1
     resources:

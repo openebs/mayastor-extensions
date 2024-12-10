@@ -53,6 +53,9 @@ spec:
             - "--core-grpc=https://{{ .Release.Name }}-agent-core:50051"
             - "--ansi-colors={{ .Values.base.logging.color }}"
             - "--fmt-style={{ include "logFormat" . }}"
+            {{- if .Values.apis.rest.healthProbes.readiness.enabled }}
+            - "--core-health-freq={{ .Values.apis.rest.healthProbes.readiness.agentCoreProbeFreq }}"
+            {{- end }}
           ports:
             - containerPort: 8080
             - containerPort: 8081
@@ -63,3 +66,23 @@ spec:
             - name: RUST_LOG_SILENCE
               value: {{ default .Values.base.logging.silenceLevel .Values.apis.rest.logSilenceLevel }}
             {{- end }}
+          {{- if .Values.apis.rest.healthProbes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8081
+            failureThreshold: {{ .Values.apis.rest.healthProbes.readiness.failureThreshold }}
+            initialDelaySeconds: {{ .Values.apis.rest.healthProbes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.apis.rest.healthProbes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.apis.rest.healthProbes.readiness.timeoutSeconds }}
+          {{- end }}
+          {{- if .Values.apis.rest.healthProbes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 8081
+            failureThreshold: {{ .Values.apis.rest.healthProbes.liveness.failureThreshold }}
+            initialDelaySeconds: {{ .Values.apis.rest.healthProbes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.apis.rest.healthProbes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.apis.rest.healthProbes.liveness.timeoutSeconds }}
+          {{- end }}
