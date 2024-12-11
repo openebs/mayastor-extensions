@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # On a new appTag, update the Chart.yaml which is used to publish the chart to the appropriate
 # version and appVersion.
 # For this first iteration version and appVersion in the Chart.yaml *MUST* point to the stable
@@ -78,9 +77,9 @@ helm_testing_branch_version() {
 
   local latest_version="${release_branch#*release/}"
   if [[ "$latest_version" =~ ^[0-9]+$ ]]; then
-    latest_version=${latest_version}.0.0
+    latest_version=${latest_version}.$(semver get minor ${CHART_VERSION}).$(semver get patch ${CHART_VERSION})
   elif [[ "$latest_version" =~ ^[0-9]+.[0-9]+$ ]]; then
-    latest_version=${latest_version}.0
+      latest_version=${latest_version}.$(semver get patch ${CHART_VERSION})
   elif [[ "$latest_version" =~ ^[0-9]+.[0-9]+.[0-9]+$ ]]; then
     latest_version=${latest_version}
   else
