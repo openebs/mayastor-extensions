@@ -88,7 +88,8 @@ spec:
         args:
         - "--csi-socket={{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--node-name=$(MY_NODE_NAME)"
-        - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"
+        - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"{{ if .Values.csi.node.restClient.enabled }}
+        - "--enable-rest"{{ end }}
         - "--enable-registration"
         - "--grpc-ip=$(MY_POD_IP)"
         - "--grpc-port=10199"{{ if .Values.csi.node.nvme.io_timeout }}

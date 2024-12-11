@@ -388,6 +388,8 @@ csi:
     # Additional arguments when creating filesystems
     mkfs_args:
       xfs: ""
+    restClient:
+      enabled: true
     # -- Set tolerations, overrides global
     tolerations: []
     # -- Set PriorityClass, overrides global
