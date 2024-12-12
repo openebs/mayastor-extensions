@@ -63,6 +63,7 @@ spec:
           image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-attacher:{{ .Values.csi.image.attacherTag }}"
           args:
             - "--v=2"
+            - "--timeout=36s"
             - "--csi-address=$(ADDRESS)"
           env:
             - name: ADDRESS
