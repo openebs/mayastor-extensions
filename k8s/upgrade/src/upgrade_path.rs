@@ -16,14 +16,14 @@ use std::{fs, path::PathBuf};
 /// Validates the upgrade path from 'from' Version to 'to' Version for the Core helm chart.
 pub(crate) fn is_valid_for_core_chart(from: &Version) -> Result<bool> {
     let unsupported_version_buf =
-        &include_bytes!("../../../../../upgrade/config/unsupported_versions.yaml")[..];
+        &include_bytes!("../../upgrade/config/unsupported_versions.yaml")[..];
     let unsupported_versions = UnsupportedVersions::try_from(unsupported_version_buf)
         .context(YamlParseBufferForUnsupportedVersion)?;
     Ok(!unsupported_versions.contains(from))
 }
 
 /// Generate a semver::Version from the helm chart in local directory.
-pub(crate) fn version_from_chart_yaml_file(path: PathBuf) -> Result<Version> {
+pub fn version_from_chart_yaml_file(path: PathBuf) -> Result<Version> {
     let values_yaml = fs::read(path.as_path()).context(ReadingFile {
         filepath: path.clone(),
     })?;
@@ -36,7 +36,7 @@ pub(crate) fn version_from_chart_yaml_file(path: PathBuf) -> Result<Version> {
 
 /// Generate a semver::Version from the 'chart' member of the Helm chart's ReleaseElement.
 /// The output of `helm ls -n <namespace> -o yaml` is a list of ReleaseElements.
-pub(crate) fn version_from_core_chart_release(chart_name: &str) -> Result<Version> {
+pub fn version_from_chart_name(chart_name: &str) -> Result<Version> {
     let delimiter: char = '-';
     // e.g. <chart>-1.2.3-rc.5 -- here the 2nd chunk is the version
     let (_, version) = chart_name.split_once(delimiter).ok_or(
@@ -52,6 +52,9 @@ pub(crate) fn version_from_core_chart_release(chart_name: &str) -> Result<Versio
     })
 }
 
+/// Inspects the secret/configmap data of a Helm release to identify the chart's dependencies.
+/// Specifically, it attempts to determine the version of the CORE chart
+/// that serves as a dependency for the UMBRELLA chart.
 pub(crate) async fn core_version_from_umbrella_release(
     client: &HelmReleaseClient,
     release_name: &str,

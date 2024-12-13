@@ -14,10 +14,10 @@ use url::Url;
 /// defined withing the same scope and must return to the outer scope (calling scope) using
 /// the try operator -- '?'.
 #[derive(Debug, Snafu)]
-#[snafu(visibility(pub(crate)))]
+#[snafu(visibility(pub))]
 #[snafu(context(suffix(false)))]
 #[allow(unused)]
-pub(crate) enum Error {
+pub enum Error {
     /// Error for when the storage REST API URL is parsed.
     #[snafu(display(
         "Failed to parse {} REST API URL {rest_endpoint}: {source}",
@@ -666,4 +666,4 @@ pub(crate) enum Error {
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.
-pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
+pub type Result<T, E = Error> = std::result::Result<T, E>;

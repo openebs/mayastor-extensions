@@ -1,10 +1,10 @@
-use crate::{
-    common::error::{
+use crate::common::{
+    error::{
         NotAValidYamlKeyForStringValue, NotYqV4, RegexCompile, Result, U8VectorToString,
         YqAppendToArrayCommand, YqAppendToObjectCommand, YqCommandExec, YqDeleteObjectCommand,
         YqMergeCommand, YqSetCommand, YqVersionCommand,
     },
-    vec_to_strings,
+    macros::vec_to_strings,
 };
 use regex::Regex;
 use snafu::{ensure, ResultExt};
@@ -192,31 +192,34 @@ impl YqV4 {
     /// this function is the one called 'high_priority' and the other file is the 'low_priority'
     /// one.
     /// E.g:
-    ///       high_priority file:
-    ///       ===================
+    /// // high_priority_file:
+    /// ```yaml
     ///       foo:
     ///         bar: "foobar"
     ///         baz:
     ///           - "alpha"
     ///           - "beta"
+    /// ```
     ///
-    ///       low_priority file:
-    ///       ==================
+    /// // low_priority_file:
+    /// ```yaml
     ///       foo:
     ///         bar: "foobaz"
     ///         baz:
     ///           - "gamma"
     ///           - "delta"
-    ///       friend: "ferris"
+    ///         friend: "ferris"
+    /// ```
     ///
-    ///       result:
-    ///       =======
+    /// // result:
+    /// ```yaml
     ///       foo:
     ///         bar: "foobar"
     ///         baz:
     ///           - "alpha"
     ///           - "beta"
     ///         friend: "ferris"
+    /// ```
     ///
     /// Special case: When the default value has changed, and the user has not customised that
     /// option, special upgrade values yaml updates have to be added to single out specific cases

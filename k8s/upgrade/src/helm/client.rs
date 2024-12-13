@@ -1,15 +1,13 @@
-use crate::{
-    common::{
-        error::{
-            Base64DecodeHelmStorage, DeserializaHelmStorageData, GzipDecoderReadToEnd,
-            HelmClientNs, HelmCommand, HelmGetValuesCommand, HelmListCommand, HelmRelease,
-            HelmStorageNoData, HelmStorageNoReleaseValue, HelmUpgradeCommand,
-            MissingMemberInHelmStorageData, NoHelmStorageDriver, Result, U8VectorToString,
-            UnsupportedStorageDriver, YamlParseFromSlice,
-        },
-        kube::client as KubeClient,
+use crate::common::{
+    error::{
+        Base64DecodeHelmStorage, DeserializaHelmStorageData, GzipDecoderReadToEnd, HelmClientNs,
+        HelmCommand, HelmGetValuesCommand, HelmListCommand, HelmRelease, HelmStorageNoData,
+        HelmStorageNoReleaseValue, HelmUpgradeCommand, MissingMemberInHelmStorageData,
+        NoHelmStorageDriver, Result, U8VectorToString, UnsupportedStorageDriver,
+        YamlParseFromSlice,
     },
-    vec_to_strings,
+    kube::client as KubeClient,
+    macros::vec_to_strings,
 };
 use base64::engine::{general_purpose::STANDARD, Engine as base64_engine};
 use flate2::read::GzDecoder;
@@ -34,37 +32,37 @@ macro_rules! extract_data {
 
 /// This is used to deserialize the JSON data in a helm storage resource (secret or configmap).
 #[derive(Debug, Deserialize)]
-pub(crate) struct HelmChartRelease {
+pub struct HelmChartRelease {
     chart: Option<HelmChartReleaseChart>,
 }
 
 /// This is used to deserialize release.chart.
 #[derive(Debug, Deserialize)]
-pub(crate) struct HelmChartReleaseChart {
+pub struct HelmChartReleaseChart {
     metadata: HelmChartReleaseChartMetadata,
 }
 
 /// This is used to deserialize release.chart.metadata.
 #[derive(Debug, Deserialize)]
-pub(crate) struct HelmChartReleaseChartMetadata {
+pub struct HelmChartReleaseChartMetadata {
     dependencies: Option<Vec<HelmChartReleaseChartMetadataDependency>>,
 }
 
 /// This is used to deserialize release.chart.metadata.dependency[].
 #[derive(Debug, Deserialize)]
-pub(crate) struct HelmChartReleaseChartMetadataDependency {
+pub struct HelmChartReleaseChartMetadataDependency {
     name: String,
     version: Option<String>,
 }
 
 impl HelmChartReleaseChartMetadataDependency {
     /// Returns the name of the dependency chart.
-    pub(crate) fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         self.name.as_str()
     }
 
     /// Returns the version of the dependency chart.
-    pub(crate) fn version(self) -> Option<String> {
+    pub fn version(self) -> Option<String> {
         self.version
     }
 }
@@ -104,26 +102,26 @@ fn dependencies_from_release_data(
 
 /// This struct is used to deserialize the output of `helm list -n <namespace> --deployed -o yaml`.
 #[derive(Clone, Deserialize)]
-pub(crate) struct HelmListReleaseElement {
+pub struct HelmListReleaseElement {
     name: String,
     chart: String,
 }
 
 impl HelmListReleaseElement {
     /// This is a getter function for the name of the release.
-    pub(crate) fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         self.name.as_str()
     }
     /// This is a getter function for the chart_name of the release. This also containers the chart
     /// version.
-    pub(crate) fn chart(&self) -> &str {
+    pub fn chart(&self) -> &str {
         self.chart.as_str()
     }
 }
 
 /// This is a builder for HelmReleaseClient.
 #[derive(Default)]
-pub(crate) struct HelmReleaseClientBuilder {
+pub struct HelmReleaseClientBuilder {
     namespace: Option<String>,
     storage_driver: Option<String>,
 }
@@ -132,7 +130,7 @@ impl HelmReleaseClientBuilder {
     /// This is a builder option to add Namespace. This is mandatory,
     /// because all helm releases are tied to a Namespace.
     #[must_use]
-    pub(crate) fn with_namespace<J>(mut self, ns: J) -> Self
+    pub fn with_namespace<J>(mut self, ns: J) -> Self
     where
         J: ToString,
     {
@@ -142,13 +140,13 @@ impl HelmReleaseClientBuilder {
 
     /// Set the storage driver to use with helm commands.
     #[must_use]
-    pub(crate) fn with_storage_driver(mut self, driver: String) -> Self {
+    pub fn with_storage_driver(mut self, driver: String) -> Self {
         self.storage_driver = Some(driver);
         self
     }
 
     /// Build the HelmReleaseClient.
-    pub(crate) fn build(self) -> Result<HelmReleaseClient> {
+    pub fn build(self) -> Result<HelmReleaseClient> {
         let namespace = self.namespace.ok_or(HelmClientNs.build())?;
         let storage_driver = self.storage_driver.ok_or(NoHelmStorageDriver.build())?;
         Ok(HelmReleaseClient {
@@ -161,21 +159,21 @@ impl HelmReleaseClientBuilder {
 /// This type has functions which execute helm commands to fetch info about and modify helm
 /// releases.
 #[derive(Clone)]
-pub(crate) struct HelmReleaseClient {
-    pub(crate) namespace: String,
+pub struct HelmReleaseClient {
+    pub namespace: String,
     /// This is the information that Helm stores on the cluster about the state of a helm release.
     /// Ref: https://github.com/helm/helm/blob/v3.15.0/pkg/action/action.go#L383
-    pub(crate) storage_driver: String,
+    pub storage_driver: String,
 }
 
 impl HelmReleaseClient {
     /// This creates an empty builder.
-    pub(crate) fn builder() -> HelmReleaseClientBuilder {
+    pub fn builder() -> HelmReleaseClientBuilder {
         HelmReleaseClientBuilder::default()
     }
 
     /// Runs command `helm get values -n <namespace> <release_name> --all -o yaml`.
-    pub(crate) fn get_values_as_yaml<A, B>(
+    pub fn get_values_as_yaml<A, B>(
         &self,
         release_name: A,
         maybe_extra_args: Option<Vec<B>>,
@@ -229,7 +227,7 @@ impl HelmReleaseClient {
     }
 
     /// Runs command `helm list -n <namespace> --deployed -o yaml`.
-    pub(crate) fn list_as_yaml<A>(
+    pub fn list_as_yaml<A>(
         &self,
         maybe_extra_args: Option<Vec<A>>,
     ) -> Result<Vec<HelmListReleaseElement>>
@@ -279,7 +277,7 @@ impl HelmReleaseClient {
     }
 
     /// Reads from the helm storage driver and returns a type with info. about dependencies.
-    pub(crate) async fn get_dependencies(
+    pub async fn get_dependencies(
         &self,
         release_name: &str,
     ) -> Result<Vec<HelmChartReleaseChartMetadataDependency>> {
@@ -321,7 +319,7 @@ impl HelmReleaseClient {
     }
 
     /// Runs command `helm upgrade -n <namespace> <release_name> <chart_dir>`.
-    pub(crate) async fn upgrade<A, B, P>(
+    pub async fn upgrade<A, B, P>(
         &self,
         release_name: A,
         chart_dir: P,
@@ -375,7 +373,7 @@ impl HelmReleaseClient {
     }
 
     /// Fetches info about a Helm release in the Namespace, if it exists.
-    pub(crate) fn release_info<A>(&self, release_name: A) -> Result<HelmListReleaseElement>
+    pub fn release_info<A>(&self, release_name: A) -> Result<HelmListReleaseElement>
     where
         A: ToString,
     {

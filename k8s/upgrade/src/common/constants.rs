@@ -5,24 +5,24 @@ pub use constants::product_train;
 
 /// This is the name of the Helm chart which included the core chart as a sub-chart.
 /// Under the hood, this installs the Core Helm chart (see below).
-pub(crate) const UMBRELLA_CHART_NAME: &str = constants::UMBRELLA_CHART_NAME;
+pub const UMBRELLA_CHART_NAME: &str = constants::UMBRELLA_CHART_NAME;
 
 /// This is the name of the Helm chart of this project.
-pub(crate) const CORE_CHART_NAME: &str = constants::PRODUCT_NAME;
+pub const CORE_CHART_NAME: &str = constants::PRODUCT_NAME;
 
 /// This is the shared Pod label of the <helm-release>-io-engine DaemonSet.
-pub(crate) const IO_ENGINE_LABEL: &str = "app=io-engine";
+pub const IO_ENGINE_LABEL: &str = "app=io-engine";
 
 /// This is the shared Pod label of the <helm-release>-agent-core Deployment.
-pub(crate) const AGENT_CORE_LABEL: &str = "app=agent-core";
+pub const AGENT_CORE_LABEL: &str = "app=agent-core";
 
 /// This is the label set on a storage API Node resource when a 'Node Drain' is issued.
-pub fn drain_for_upgrade() -> String {
+pub(crate) fn drain_for_upgrade() -> String {
     format!("{CORE_CHART_NAME}-upgrade")
 }
 
 /// This is the label set on a storage API Node resource when a 'Node Drain' is issued.
-pub fn cordon_ana_check() -> String {
+pub(crate) fn cordon_ana_check() -> String {
     format!("{CORE_CHART_NAME}-upgrade-nvme-ana-check")
 }
 
@@ -34,7 +34,7 @@ pub(crate) const UMBRELLA_CHART_UPGRADE_DOCS_URL: &str = constants::UMBRELLA_CHA
 pub(crate) const KUBE_API_PAGE_SIZE: u32 = 500;
 
 /// The Core chart version limits for requiring partial rebuild to be disabled for upgrade.
-pub(crate) const PARTIAL_REBUILD_DISABLE_EXTENTS: (Version, Version) =
+pub const PARTIAL_REBUILD_DISABLE_EXTENTS: (Version, Version) =
     (Version::new(2, 2, 0), Version::new(2, 5, 0));
 
 /// Version value for the earliest possible 2.0 release.

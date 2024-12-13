@@ -3,3 +3,5 @@
 macro_rules! vec_to_strings {
     ($($x:expr),*) => (vec![$($x.to_string()),*]);
 }
+
+pub use vec_to_strings;

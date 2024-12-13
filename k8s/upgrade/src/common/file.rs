@@ -5,7 +5,7 @@ use tempfile::NamedTempFile as TempFile;
 
 /// Write buffer to an existing temporary file if a path is provided as an argument, else
 /// create a new temporary file and write to it. Returns the file handle.
-pub(crate) fn write_to_tempfile<P>(file_dir: Option<P>, buf: &[u8]) -> Result<TempFile>
+pub fn write_to_tempfile<P>(file_dir: Option<P>, buf: &[u8]) -> Result<TempFile>
 where
     P: AsRef<Path>,
 {

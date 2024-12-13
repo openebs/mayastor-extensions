@@ -6,6 +6,7 @@ use crate::{
             InvalidUpgradePath, NoHelmStorageDriver, NoInputHelmChartDir, NotAKnownHelmChart,
             Result, RollbackForbidden, UmbrellaChartNotUpgraded,
         },
+        macros::vec_to_strings,
         regex::Regex,
     },
     helm::{
@@ -13,11 +14,10 @@ use crate::{
         client::HelmReleaseClient,
         values::generate_values_yaml_file,
     },
-    upgrade::path::{
-        core_version_from_umbrella_release, is_valid_for_core_chart, version_from_chart_yaml_file,
-        version_from_core_chart_release,
+    upgrade_path::{
+        core_version_from_umbrella_release, is_valid_for_core_chart, version_from_chart_name,
+        version_from_chart_yaml_file,
     },
-    vec_to_strings,
 };
 use async_trait::async_trait;
 use semver::Version;
@@ -28,14 +28,13 @@ use tracing::info;
 
 /// HelmUpgradeRunner is returned after an upgrade is validated and dry-run-ed. Running
 /// it carries out helm upgrade.
-pub(crate) type HelmUpgradeRunner =
-    Pin<Box<dyn Future<Output = Result<Box<dyn HelmValuesCollection>>>>>;
+pub type HelmUpgradeRunner = Pin<Box<dyn Future<Output = Result<Box<dyn HelmValuesCollection>>>>>;
 
 /// A trait object of type HelmUpgrader is either CoreHelmUpgrader or an UmbrellaHelmUpgrader.
 /// They either deal with upgrading the Core helm chart or the Umbrella helm chart respectively.
 /// The Umbrella helm chart is not upgraded using this binary, as it is out of scope.
 #[async_trait]
-pub(crate) trait HelmUpgrader {
+pub trait HelmUpgrader {
     /// Returns a closure which runs the real upgrade, post-dry-run.
     async fn dry_run(self: Box<Self>) -> Result<HelmUpgradeRunner>;
 
@@ -48,7 +47,7 @@ pub(crate) trait HelmUpgrader {
 
 /// This is a builder for the Helm chart upgrade.
 #[derive(Default)]
-pub(crate) struct HelmUpgraderBuilder {
+pub struct HelmUpgraderBuilder {
     release_name: Option<String>,
     namespace: Option<String>,
     core_chart_dir: Option<PathBuf>,
@@ -63,7 +62,7 @@ pub(crate) struct HelmUpgraderBuilder {
 impl HelmUpgraderBuilder {
     /// This is a builder option to add the Namespace of the helm chart to be upgraded.
     #[must_use]
-    pub(crate) fn with_namespace<J>(mut self, ns: J) -> Self
+    pub fn with_namespace<J>(mut self, ns: J) -> Self
     where
         J: ToString,
     {
@@ -73,7 +72,7 @@ impl HelmUpgraderBuilder {
 
     /// This is a builder option to add the release name of the helm chart to be upgraded.
     #[must_use]
-    pub(crate) fn with_release_name<J>(mut self, release_name: J) -> Self
+    pub fn with_release_name<J>(mut self, release_name: J) -> Self
     where
         J: ToString,
     {
@@ -83,23 +82,20 @@ impl HelmUpgraderBuilder {
 
     /// This is a builder option to set the directory path of the Umbrella helm chart CLI option.
     #[must_use]
-    pub(crate) fn with_core_chart_dir(mut self, dir: PathBuf) -> Self {
+    pub fn with_core_chart_dir(mut self, dir: PathBuf) -> Self {
         self.core_chart_dir = Some(dir);
         self
     }
 
     /// This sets the flag to skip upgrade path validation.
     #[must_use]
-    pub(crate) fn with_skip_upgrade_path_validation(
-        mut self,
-        skip_upgrade_path_validation: bool,
-    ) -> Self {
+    pub fn with_skip_upgrade_path_validation(mut self, skip_upgrade_path_validation: bool) -> Self {
         self.skip_upgrade_path_validation = skip_upgrade_path_validation;
         self
     }
 
     /// This is a builder option to add set flags during helm upgrade.
-    pub(crate) fn with_helm_args_set<J>(mut self, helm_args_set: J) -> Self
+    pub fn with_helm_args_set<J>(mut self, helm_args_set: J) -> Self
     where
         J: ToString,
     {
@@ -108,7 +104,7 @@ impl HelmUpgraderBuilder {
     }
 
     /// This is a builder option to add set-file options during helm upgrade.
-    pub(crate) fn with_helm_args_set_file<J>(mut self, helm_args_set_file: J) -> Self
+    pub fn with_helm_args_set_file<J>(mut self, helm_args_set_file: J) -> Self
     where
         J: ToString,
     {
@@ -118,19 +114,19 @@ impl HelmUpgraderBuilder {
 
     /// This is a builder option to add the value of the helm storage driver.
     #[must_use]
-    pub(crate) fn with_helm_storage_driver(mut self, driver: String) -> Self {
+    pub fn with_helm_storage_driver(mut self, driver: String) -> Self {
         self.helm_storage_driver = Some(driver);
         self
     }
 
     /// This is a builder option to enable the use of the helm --reset-then-reuse-values flag.
-    pub(crate) fn with_helm_reset_then_reuse_values(mut self, use_it: bool) -> Self {
+    pub fn with_helm_reset_then_reuse_values(mut self, use_it: bool) -> Self {
         self.helm_reset_then_reuse_values = use_it;
         self
     }
 
     /// This builds the HelmUpgrade object.
-    pub(crate) async fn build(self) -> Result<Box<dyn HelmUpgrader>> {
+    pub async fn build(self) -> Result<Box<dyn HelmUpgrader>> {
         // Unwrapping builder inputs. Fails for mandatory inputs.
         let release_name = self
             .release_name
@@ -220,7 +216,7 @@ impl HelmUpgraderBuilder {
         } else if Regex::new(core_regex.as_str())?.is_match(chart) {
             // The version of the Core helm chart (installed as the parent chart)
             // which is installed in the cluster.
-            let source_version = version_from_core_chart_release(chart)?;
+            let source_version = version_from_chart_name(chart)?;
             info!(version=%source_version, "Found version of chart {CORE_CHART_NAME}");
 
             // Skip upgrade-path validation and allow all upgrades for the Core helm chart, if
