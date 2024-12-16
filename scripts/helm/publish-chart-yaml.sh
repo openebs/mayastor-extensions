@@ -50,9 +50,9 @@ helm_testing_branch_version() {
 
   local latest_version="${release_branch#*release/}"
   if [[ "$latest_version" =~ ^[0-9]+$ ]]; then
-    latest_version=${latest_version}.0.0
+    latest_version=${latest_version}.$(semver get minor ${CHART_VERSION}).$(semver get patch ${CHART_VERSION})
   elif [[ "$latest_version" =~ ^[0-9]+.[0-9]+$ ]]; then
-    latest_version=${latest_version}.0
+      latest_version=${latest_version}.$(semver get patch ${CHART_VERSION})
   elif [[ "$latest_version" =~ ^[0-9]+.[0-9]+.[0-9]+$ ]]; then
     latest_version=${latest_version}
   else
@@ -212,6 +212,7 @@ Options:
   --check-chart           <branch>                 Check if the chart version/app version is correct for the branch.
   --develop-to-release                             Also upgrade the chart to the release version matching the branch.
   --released              <released-tag>           Bumps the future chart version after releasing the given tag.
+  --released-branch       <branch_name>            The name of the current releasing branch.
   --helm-testing          <branch>                 Upgrade the chart to the appropriate branch chart version.
   --app-tag               <tag>                    The appVersion tag.
   --override-index        <latest_version>         Override the latest chart version from the published chart's index.
@@ -256,6 +257,7 @@ DATE_TIME=
 IGNORE_INDEX_CHECK=
 LATEST_RELEASE_BRANCH=
 BUMP_MAJOR_FOR_MAIN=
+BRANCH=
 
 # Check if all needed tools are installed
 semver --version >/dev/null
@@ -283,7 +285,12 @@ while [ "$#" -gt 0 ]; do
       ;;
     --released)
       shift
-      UPDATE_REL=$1
+      UPDATE_REL=${1#v}
+      shift
+      ;;
+    --released-branch)
+      shift
+      BRANCH=$1
       shift
       ;;
     --helm-testing)
@@ -363,7 +370,35 @@ else
     if [ -n "$APP_TAG" ]; then
       die "Cannot specify --update-release and --app-tag together"
     fi
-    APP_TAG=$(semver bump "patch" "$UPDATE_REL")
+    if [ "$(semver get build "$UPDATE_REL")" != "" ]; then
+      die "Build not supported"
+    fi
+    if [ -n "$BRANCH" ]; then
+      if ! [[ "$BRANCH" =~ ^release/[0-9]+.[0-9]+$ ]]; then
+        die "Updates on $BRANCH not supported"
+      fi
+      BRANCH_VERSION="${BRANCH#release/}.0"
+      allowed_diff=( "" "patch" )
+      diff="$(semver diff "$BRANCH_VERSION" "$CHART_APP_VERSION")"
+      if ! [[ "${allowed_diff[*]}" =~ $diff ]]; then
+        die "Branch $BRANCH is incompatible due to semver diff of $diff with current $CHART_APP_VERSION"
+      fi
+    fi
+    diff="$(semver diff "$UPDATE_REL" "$CHART_APP_VERSION")"
+    if [ "$diff" = "prerelease" ]; then
+      # It's a pre-release, nothing to do here
+      APP_TAG="$CHART_APP_VERSION"
+    else
+      APP_TAG=$(semver bump "patch" "$UPDATE_REL")
+
+      if [ "$(semver compare "$CHART_APP_VERSION" "$UPDATE_REL" )" == "1" ]; then
+        die "Future version can't possibly be older than the current next"
+      fi
+
+      if [ "$(semver get prerel "$UPDATE_REL")" != "" ]; then
+        die "$UPDATE_REL with $diff and preprelease change not allowed"
+      fi
+    fi
   fi
   if [ -z "$APP_TAG" ]; then
     die "--app-tag not specified"

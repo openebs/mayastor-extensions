@@ -54,7 +54,9 @@ jobs:
       - name: Publish locally in the workspace
         run: |
           tag="${{ github.ref_name }}"
-          nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --released "$tag"" ./scripts/helm/shell.nix
+          BASE_REF="${{ github.event.base_ref }}"
+          BRANCH="${BASE_REF#refs/heads/}"
+          nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --released "$tag" --released-branch "$BRANCH"" ./scripts/helm/shell.nix
           nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
       - name: Create Pull Request
         id: cpr
@@ -69,6 +71,9 @@ jobs:
             automated-pr
           draft: false
           signoff: true
+          delete-branch: true
+          branch-suffix: "random"
+          base: ${{ github.event.base_ref }}
           token: ${{ secrets.ORG_CI_GITHUB }}
       - name: Approve Pull Request by CI Bot
         if: ${{ steps.cpr.outputs.pull-request-number }}
