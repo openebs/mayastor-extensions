@@ -1,0 +1,32 @@
+name: Bors CI
+on:
+  workflow_call:
+  push:
+    branches:
+      - staging
+      - trying
+
+jobs:
+  lint-ci:
+    uses: ./.github/workflows/lint.yml
+  helm-ci:
+    uses: ./.github/workflows/helm-chart.yml
+  int-ci:
+    uses: ./.github/workflows/unit-int.yml
+  image-ci:
+    uses: ./.github/workflows/image-pr.yml
+  k8s-ci:
+    uses: ./.github/workflows/k8s-ci.yml
+  bors-ci:
+    if: ${{ success() }}
+    needs:
+      - lint-ci
+      - helm-ci
+      - int-ci
+      - image-ci
+      - k8s-ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: CI succeeded
+        run: exit 0
+

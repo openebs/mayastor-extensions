@@ -29,3 +29,4 @@ if [ -z "$OP" ] || [  "$OP" = "clippy" ]; then
 fi
 
 exit ${FMT_ERROR:-0}
+

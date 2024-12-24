@@ -1,0 +1,42 @@
+name: Integration CI
+on:
+  workflow_call:
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CI: 1
+
+jobs:
+  int-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: 'recursive'
+      - uses: DeterminateSystems/nix-installer-action@v14
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
+      - name: Pre-populate nix-shell
+        run: |
+          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+          nix-shell --run "echo" shell.nix
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ startsWith(github.ref_name, 'release/') || github.ref_name == 'develop' }}
+      - name: Build the binaries
+        run: nix-shell --run "cargo build --bins"
+      - name: Build the tests
+        run: nix-shell --run "./scripts/rust/test.sh --no-run"
+      - name: Run Tests
+        run: |
+          # includes both unit and integration tests
+          nix-shell --run "./scripts/rust/test.sh"
+# debugging
+      # - name: Setup tmate session
+      #   if: ${{ failure() }}
+      #   timeout-minutes: 120
+      #   uses: mxschmitt/action-tmate@v3
+
