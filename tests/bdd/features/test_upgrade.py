@@ -60,7 +60,10 @@ def _():
     if common.chart_vnext_skip():
         return
     chart = os.path.join(common.root_dir(), "./chart")
-    common.run("./scripts/python/upgrade-test-helper.sh", ["--build", "--chart-tag", "--chart", chart])
+    common.run(
+        "./scripts/python/upgrade-test-helper.sh",
+        ["--build", "--chart-tag", "--chart", chart],
+    )
 
 
 @given("the images are loadable from the cluster")
@@ -81,7 +84,7 @@ def a_kubectl_mayastor_upgrade_command_is_issued():
     "eventually the installed chart should be upgraded to the kubectl mayastor plugin's version"
 )
 def eventually_the_installed_chart_should_be_upgraded_to_the_kubectl_mayastor_plugins_version(
-        latest_chart_version,
+    latest_chart_version,
 ):
     """the installed chart should be upgraded to the kubectl mayastor plugin's version."""
 
@@ -190,7 +193,7 @@ def wait_rest_nodes_version(version, match=True):
     logger.info(f"Mayastor Nodes: {rest_nodes}")
 
     assert (
-            k8s_nodes == rest_io_engines
+        k8s_nodes == rest_io_engines
     ), f"Found {k8s_nodes} k8s nodes with the io-engine label, but only {rest_io_engines} nodes from kubectl-mayastor"
 
     assert all(

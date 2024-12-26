@@ -16,7 +16,8 @@ helm_bin = which("helm")
 
 def repo_ls():
     result = common.run(
-        helm_bin, ["repo", "ls", "-o", "json"],
+        helm_bin,
+        ["repo", "ls", "-o", "json"],
     )
     return json.loads(result)
 
@@ -29,12 +30,15 @@ def repo_add_mayastor():
                 return r["name"]
 
     repo_name = "mayastor"
-    common.run(helm_bin, [
-        "repo",
-        "add",
-        repo_name,
-        "https://openebs.github.io/mayastor-extensions",
-    ])
+    common.run(
+        helm_bin,
+        [
+            "repo",
+            "add",
+            repo_name,
+            "https://openebs.github.io/mayastor-extensions",
+        ],
+    )
 
     subprocess.run(
         [
@@ -46,10 +50,13 @@ def repo_add_mayastor():
         check=True,
         text=True,
     )
-    common.run(helm_bin, [
-        "repo",
-        "update",
-    ])
+    common.run(
+        helm_bin,
+        [
+            "repo",
+            "update",
+        ],
+    )
     return repo_name
 
 
@@ -73,7 +80,7 @@ def latest_chart_so_far(version=None):
             "<" + version,
             "-o",
             "json",
-        ]
+        ],
     )
     result_chart_info = json.loads(stdout)
     return result_chart_info[0]["version"]
@@ -145,7 +152,7 @@ class HelmReleaseClient:
                 f"Helm release 'mayastor' already exists in the 'mayastor' namespace @ v{current_version}."
             )
             assert (
-                    current_version == version
+                current_version == version
             ), f"Wanted to install {version}, but {current_version} already installed"
             return
 

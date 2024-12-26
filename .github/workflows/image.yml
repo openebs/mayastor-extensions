@@ -28,4 +28,3 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push the release images
         run: ./scripts/release.sh
-

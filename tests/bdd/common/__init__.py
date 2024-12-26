@@ -26,12 +26,12 @@ def chart_vnext_skip():
 
 
 def run(
-        command: str,
-        args: list[str] = None,
-        absolute=False,
-        capture_output=True,
-        log_run=True,
-        **kwargs,
+    command: str,
+    args: list[str] = None,
+    absolute=False,
+    capture_output=True,
+    log_run=True,
+    **kwargs,
 ):
     if absolute:
         command = [command]

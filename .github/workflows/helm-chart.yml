@@ -2,7 +2,7 @@ name: Helm Chart CI
 on:
   workflow_call:
   pull_request:
-    types: ['opened', 'edited', 'reopened', 'synchronize']
+    types: [ 'opened', 'edited', 'reopened', 'synchronize' ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -24,10 +24,8 @@ jobs:
           echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
           nix-shell --run "echo" ./scripts/helm/shell.nix
       - name: HelmChart publish test
-        run: |
-          nix-shell --pure --run "./scripts/helm/test-publish-chart-yaml.sh" ./scripts/helm/shell.nix
+        run: nix-shell --pure --run "./scripts/helm/test-publish-chart-yaml.sh" ./scripts/helm/shell.nix
       - name: HelmChart Readme
         run: nix-shell --run "./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
       - name: HelmChart Template
         run: nix-shell --pure --run "./scripts/helm/test-template.sh" ./scripts/helm/shell.nix
-
