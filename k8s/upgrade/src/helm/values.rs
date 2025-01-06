@@ -2,7 +2,7 @@ use crate::{
     common::{
         constants::{
             KUBE_API_PAGE_SIZE, TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE,
-            TWO_DOT_SEVENT_DOT_TWO, TWO_DOT_SIX, TWO_DOT_THREE,
+            TWO_DOT_SEVEN_DOT_THREE, TWO_DOT_SEVEN_DOT_TWO, TWO_DOT_SIX, TWO_DOT_THREE,
         },
         error::{
             DeserializePromtailExtraConfig, ListCrds, Result, SemverParse,
@@ -373,12 +373,23 @@ where
     }
 
     // Special-case values for 2.7.2.
-    let two_dot_seven_dot_two = Version::parse(TWO_DOT_SEVENT_DOT_TWO).context(SemverParse {
-        version_string: TWO_DOT_SEVENT_DOT_TWO.to_string(),
+    let two_dot_seven_dot_two = Version::parse(TWO_DOT_SEVEN_DOT_TWO).context(SemverParse {
+        version_string: TWO_DOT_SEVEN_DOT_TWO.to_string(),
     })?;
     if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_seven_dot_two) {
         yq.delete_object(
             YamlKey::try_from(".localpv-provisioner.release")?,
+            upgrade_values_file.path(),
+        )?;
+    }
+
+    // Special-case values for 2.7.3.
+    let two_dot_seven_dot_three = Version::parse(TWO_DOT_SEVEN_DOT_THREE).context(SemverParse {
+        version_string: TWO_DOT_SEVEN_DOT_THREE.to_string(),
+    })?;
+    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_seven_dot_three) {
+        yq.delete_object(
+            YamlKey::try_from(".etcd.initialClusterState")?,
             upgrade_values_file.path(),
         )?;
     }
