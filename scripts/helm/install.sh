@@ -137,7 +137,7 @@ if [ -n "$HOSTED" ]; then
   DEP_UPDATE_ARG=
 fi
 
-if [ "$(helm ls -n openebs -o yaml | yq "contains([{\"name\": \"$RELEASE_NAME\"}])")" = "true" ]; then
+if [ "$(helm ls -n "$K8S_NAMESPACE" -o yaml | yq "contains([{\"name\": \"$RELEASE_NAME\"}])")" = "true" ]; then
   already_exists_log= "Helm release $RELEASE_NAME already exists in namespace $K8S_NAMESPACE"
   if [ -n "$FAIL_IF_INSTALLED" ]; then
     die "ERROR: $already_exists_log" 1
@@ -154,4 +154,4 @@ else
   set +x
 fi
 
-kubectl get pods -n mayastor -o wide
+kubectl get pods -n "$K8S_NAMESPACE" -o wide

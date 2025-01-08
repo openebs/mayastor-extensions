@@ -1,0 +1,33 @@
+name: Helm Chart CI
+on:
+  workflow_call:
+  pull_request:
+    types: ['opened', 'edited', 'reopened', 'synchronize']
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CI: 1
+
+jobs:
+  helm-chart-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - uses: DeterminateSystems/nix-installer-action@v14
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
+      - name: Pre-populate nix-shell
+        run: |
+          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+          nix-shell --run "echo" ./scripts/helm/shell.nix
+      - name: HelmChart publish test
+        run: |
+          nix-shell --pure --run "./scripts/helm/test-publish-chart-yaml.sh" ./scripts/helm/shell.nix
+      - name: HelmChart Readme
+        run: nix-shell --run "./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
+      - name: HelmChart Template
+        run: nix-shell --pure --run "./scripts/helm/test-template.sh" ./scripts/helm/shell.nix
+

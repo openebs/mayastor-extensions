@@ -116,7 +116,9 @@ if [ -z "$COMMAND" ]; then
 fi
 
 if [ "$COMMAND" = "stop" ]; then
-  $SUDO nvme disconnect-all
+  if command -v nvme 2>dev/null; then
+    $SUDO nvme disconnect-all
+  fi
   $KIND delete cluster
   exit 0
 fi

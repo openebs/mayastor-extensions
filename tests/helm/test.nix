@@ -39,6 +39,7 @@ pkgs.nixosTest {
         docker
         util-linux
         jq
+        yq-go
         sudo
       ];
       virtualisation = {
@@ -52,9 +53,12 @@ pkgs.nixosTest {
 
   testScript = ''
     machine.wait_for_unit("default.target")
+    machine.succeed("echo ${test-src} > /test-src.txt")
 
-    machine.succeed("${test-src}/scripts/k8s/deployer.sh start --label")
-    machine.succeed("${test-src}/scripts/helm/install.sh --wait")
-    machine.succeed("kubectl get pods -A -o wide 1>&2")
+    machine.succeed("${test-src}/scripts/k8s/deployer.sh start --label --delay")
+    try:
+      machine.succeed("${test-src}/scripts/helm/install.sh --wait")
+    finally:
+      machine.succeed("kubectl get pods -A -o wide 1>&2")
   '';
 }
