@@ -126,12 +126,12 @@ def latest_chart_so_far(version=None):
 
 class ChartSource(Enum):
     HOSTED = [
-        "/bin/bash",
+        "bash",
         "-c",
         os.path.join(root_dir(), "scripts/helm/install.sh") + " --hosted-chart --wait",
     ]
     LOCAL = [
-        "/bin/bash",
+        "bash",
         "-c",
         os.path.join(root_dir(), "scripts/helm/install.sh") + " --dep-update --wait",
     ]
@@ -176,31 +176,33 @@ class HelmReleaseClient:
                 f"Error: command '{command}' failed with exit code {e.returncode}"
             )
             logger.error(f"Error Output: {e.stderr}")
-            return None
+            raise e
 
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
-            return None
+            raise e
 
-    def list(self):
+    def get_deployed(self, release: str):
         """
-        Lists the deployed Helm releases in the specified namespace.
+        Get the deployed Helm release in the specified namespace as json
 
         Executes the 'helm ls' command to retrieve a list of deployed releases.
 
         Returns:
             str: A newline-separated string of deployed release names, or None if an error occurs.
         """
+        args = [
+            helm_bin,
+            "ls",
+            "-n",
+            self.namespace,
+            "--deployed",
+            f"--filter=^{release}$",
+            "-o=json",
+        ]
         try:
             result = subprocess.run(
-                [
-                    helm_bin,
-                    "ls",
-                    "-n",
-                    self.namespace,
-                    "--deployed",
-                    "--short",
-                ],
+                args,
                 capture_output=True,
                 check=True,
                 text=True,
@@ -209,28 +211,23 @@ class HelmReleaseClient:
 
         except subprocess.CalledProcessError as e:
             logger.error(
-                f"Error: command 'helm ls -n {self.namespace} --deployed --short' failed with exit code {e.returncode}"
+                f"command '{args}' failed with exit code {e.returncode}"
             )
             logger.error(f"Error Output: {e.stderr}")
-            return None
+            raise e
 
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
-            return None
-
-    def release_is_deployed(self, release_name: str):
-        releases = self.list()
-        if releases is not None:
-            for release in releases:
-                if release == release_name:
-                    return True
-        return False
+            raise e
 
     def install_mayastor(self, source: ChartSource, version=None):
-        if self.release_is_deployed("mayastor"):
-            logger.error(
-                f"WARN: Helm release 'mayastor' already exists in the 'mayastor' namespace."
+        output_json = json.loads(self.get_deployed("mayastor"))
+        if len(output_json) == 1:
+            current_version = output_json[0]["app_version"]
+            logger.warning(
+                f"Helm release 'mayastor' already exists in the 'mayastor' namespace @ v{current_version}."
             )
+            assert current_version == version, f"Wanted to install {version}, but {current_version} already installed"
             return
 
         install_command = []
@@ -261,11 +258,11 @@ class HelmReleaseClient:
                 f"Error: command {install_command} failed with exit code {e.returncode}"
             )
             logger.error(f"Error Output: {e.stderr}")
-            return None
+            raise e
 
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
-            return None
+            raise e
 
 
 def generate_test_tag():

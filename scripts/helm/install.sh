@@ -23,7 +23,6 @@ repo_add() {
 TIMEOUT="5m"
 WAIT=
 DRY_RUN=""
-CHART=
 SCRIPT_DIR="$(dirname "$0")"
 CHART_DIR="$SCRIPT_DIR"/../../chart
 CHART_SOURCE=$CHART_DIR
@@ -138,7 +137,7 @@ if [ -n "$HOSTED" ]; then
 fi
 
 if [ "$(helm ls -n "$K8S_NAMESPACE" -o yaml | yq "contains([{\"name\": \"$RELEASE_NAME\"}])")" = "true" ]; then
-  already_exists_log= "Helm release $RELEASE_NAME already exists in namespace $K8S_NAMESPACE"
+  already_exists_log="Helm release $RELEASE_NAME already exists in namespace $K8S_NAMESPACE"
   if [ -n "$FAIL_IF_INSTALLED" ]; then
     die "ERROR: $already_exists_log" 1
   fi

@@ -41,8 +41,6 @@ while test $# -gt 0; do
     exit 0
     ;;
   *)
-    print_help
-    log_fatal "unexpected argument '$arg'" 1
     ;;
   esac
   shift
@@ -54,5 +52,5 @@ source $ROOT_DIR/tests/bdd/setup.sh
 if [ $# -eq 0 ]; then
   _pytest "${BDD_TEST_DIR:-$ROOT_DIR/tests/bdd}" --durations=20
 else
-  _pytest "$@"
+  _pytest "$@" --junit-xml="$REPORT"
 fi

@@ -11,9 +11,8 @@ def root_dir():
 
 
 def run_script(script: str):
-    script = os.path.join(root_dir(), script)
-    logger.info(f"Running script '{script}'")
-    command = ["/bin/bash", "-c", script]
+    command = os.path.join(root_dir(), script)
+    logger.info(f"Running script '{command}'")
     try:
         result = subprocess.run(
             command,
@@ -28,8 +27,8 @@ def run_script(script: str):
     except subprocess.CalledProcessError as e:
         logger.error(f"Error: command {command} failed with exit code {e.returncode}")
         logger.error(f"Error Output: {e.stderr}")
-        return None
+        raise e
 
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
-        return None
+        raise e
