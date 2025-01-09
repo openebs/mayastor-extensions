@@ -46,7 +46,8 @@ jobs:
         if: ${{ failure() }}
         run: |
           nix-shell ./scripts/k8s/shell.nix --run "kubectl get pods -A -o wide"
-          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -lopenebs.io/release=mayastor --all-containers=true"
+          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l openebs.io/release=mayastor --all-containers=true"
+          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l app=upgrade --all-containers=true"
 
   k8s-ci-vm:
     runs-on: ubuntu-latest
