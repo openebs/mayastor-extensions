@@ -4,7 +4,7 @@ on:
 
 jobs:
   k8s-ci:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-16-cores
     steps:
       - name: Bind mount /dev/sda1 to /nix
         run: |
@@ -23,12 +23,13 @@ jobs:
           export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
           echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
           nix-shell ./scripts/k8s/shell.nix --run "echo"
+          nix-shell ./scripts/helm/shell.nix --run "echo"
       - name: Build binaries and images
         id: build
         run: |
-          TAG=$(nix-shell ./shell.nix --run './scripts/python/generate-test-tag.sh')
+          TAG=$(nix-shell ./scripts/helm/shell.nix --run './scripts/python/generate-test-tag.sh')
           TEST_DIR=$(realpath $(mktemp -d ./test-dir-XXXXXX))
-          nix-shell ./shell.nix --run "./scripts/python/tag-chart.sh $TAG"
+          nix-shell ./scripts/helm/shell.nix --run "./scripts/python/tag-chart.sh $TAG"
           RUSTFLAGS="-C debuginfo=0 -C strip=debuginfo" ./scripts/release.sh --tag $TAG --build-binary-out $TEST_DIR --no-static-linking --skip-publish --debug
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "bin=$TEST_DIR" >> $GITHUB_OUTPUT
@@ -50,7 +51,7 @@ jobs:
           nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l app=upgrade --all-containers=true"
 
   k8s-ci-vm:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-16-cores
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v11
@@ -61,8 +62,8 @@ jobs:
         run: |
           export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
           echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
-          nix-shell ./scripts/k8s/shell.nix --run "echo"
+          nix-shell ./scripts/helm/shell.nix --run "echo"
       - name: Test on VM
         run: |
-          nix-shell ./scripts/k8s/shell.nix --run "cd chart; helm dependency update"
+          nix-shell ./scripts/helm/shell.nix --run "cd chart; helm dependency update"
           nix-build ./tests/helm/test.nix --option sandbox false
