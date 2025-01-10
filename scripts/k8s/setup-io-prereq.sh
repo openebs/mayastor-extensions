@@ -35,7 +35,13 @@ die() {
 }
 
 setup_hugepages() {
-  $SYSCTL -w vm.nr_hugepages="$1"
+  local wanted="$1"
+  $SYSCTL -w vm.nr_hugepages="$wanted"
+  local actual
+  actual=$($SYSCTL -b vm.nr_hugepages)
+  if [ "$actual" != "$wanted" ]; then
+    die "Wanted $wanted hugepages, but only allocated $actual hugepages"
+  fi
 }
 
 modprobe_nvme_tcp() {
@@ -99,7 +105,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 if [ -n "$HUGE_PAGES" ]; then
-  pages=$(sysctl -b vm.nr_hugepages)
+  pages=$($SYSCTL -b vm.nr_hugepages)
 
   if [ "$HUGE_PAGES" -gt "$pages" ]; then
     setup_hugepages "$HUGE_PAGES"
