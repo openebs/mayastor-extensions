@@ -55,7 +55,13 @@ jobs:
         run: |
           tag="${{ github.ref_name }}"
           BASE_REF="${{ github.event.base_ref }}"
-          BRANCH="${BASE_REF#refs/heads/}"
+          if [ -n "$BASE_REF" ]; then
+            BRANCH="${BASE_REF#refs/heads/}"
+          else
+            BRANCH="$(nix-shell --pure --run "./scripts/helm/find-released-branch.sh "$tag"" ./scripts/helm/shell.nix)"
+          fi
+          echo "BASE_BRANCH=$BRANCH" >> $GITHUB_ENV
+
           nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --released "$tag" --released-branch "$BRANCH"" ./scripts/helm/shell.nix
           nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
       - name: Create Pull Request
@@ -73,7 +79,7 @@ jobs:
           signoff: true
           delete-branch: true
           branch-suffix: "random"
-          base: ${{ github.event.base_ref }}
+          base: ${{ env.BASE_BRANCH }}
           token: ${{ secrets.ORG_CI_GITHUB }}
       - name: Approve Pull Request by CI Bot
         if: ${{ steps.cpr.outputs.pull-request-number }}
