@@ -101,6 +101,7 @@ spec:
         - "--nvme-keep-alive-tmo={{ .Values.csi.node.nvme.keep_alive_tmo }}"{{ end }}
         - "--nvme-nr-io-queues={{ include "coreCount" . }}"
         - "--nvme-connect-fallback={{ .Values.csi.node.nvme.tcpFallback }}"
+        - "--kubelet-path={{ .Values.csi.node.kubeletDir }}"
         {{- range $key, $val := .Values.csi.node.topology.segments }}
         - "--node-selector={{ $key }}={{ $val }}"
         {{- end }}
