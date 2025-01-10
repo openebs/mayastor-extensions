@@ -4,7 +4,7 @@ import os
 logger = logging.getLogger(__name__)
 
 
-def get_env(variable: str, warn=True):
+def get_env(variable: str, warn=False):
     value = os.getenv(variable)
     if value is None:
         if warn:

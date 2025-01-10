@@ -32,15 +32,14 @@ def kubectl_mayastor(args: list[str]):
             check=True,
             text=True,
         )
-        logger.info(f"kubectl-mayastor command succeeded")
-        logger.error(f"Error Output: {result.stderr}\nOut Output: {result.stdout}")
+        logger.debug(f"Error Output: {result.stderr}\nOut Output: {result.stdout}")
         return result.stdout.strip()
 
     except subprocess.CalledProcessError as e:
-        logger.error(f"Error: command '{command}' failed with exit code {e.returncode}")
-        logger.error(f"Error Output: {e.stderr}\nOut Output: {e.stdout}")
+        logger.error(
+            f"Error: command '{command}' failed with exit code {e.returncode}\nError Output: {e.stderr}\nOut Output: {e.stdout}")
         raise e
 
     except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+        logger.error(f"An unexpected error occurred whilst running kubectl-mayastor: {e}")
         raise e
