@@ -259,11 +259,6 @@ impl CoreValues {
         self.loki_stack.grafana_sidecar_image_tag()
     }
 
-    /// This is a getter for the localpv-provisioner sub-chart's release version.
-    pub(crate) fn localpv_release_version(&self) -> &str {
-        self.localpv_provisioner.release_version()
-    }
-
     /// This is a getter for the container image tag of the hostpath localpv provisioner.
     pub(crate) fn localpv_provisioner_image_tag(&self) -> &str {
         self.localpv_provisioner.provisioner_image_tag()
@@ -1063,17 +1058,11 @@ impl PromtailConfigClient {
 #[derive(Default, Deserialize)]
 #[serde(default, rename_all(deserialize = "camelCase"))]
 struct LocalpvProvisioner {
-    release: LocalpvProvisionerRelease,
     localpv: LocalpvProvisionerLocalpv,
     helper_pod: LocalpvProvisionerHelperPod,
 }
 
 impl LocalpvProvisioner {
-    /// This is a getter for the localpv-provisioner helm chart's release version.
-    fn release_version(&self) -> &str {
-        self.release.version()
-    }
-
     /// This is a getter for the container image tag of the provisioner-localpv container.
     fn provisioner_image_tag(&self) -> &str {
         self.localpv.image_tag()
@@ -1082,22 +1071,6 @@ impl LocalpvProvisioner {
     /// This is a getter for the linux-utils helper container's image tag.
     fn helper_image_tag(&self) -> &str {
         self.helper_pod.image_tag()
-    }
-}
-
-/// This is used to deserialize the 'release.version' yaml object in the localpv-provisioner helm
-/// chart.
-#[derive(Default, Deserialize)]
-struct LocalpvProvisionerRelease {
-    #[serde(default)]
-    version: String,
-}
-
-impl LocalpvProvisionerRelease {
-    /// This is a getter for the release version for the localpv-provisioner helm chart.
-    /// This value is set as the value of the 'openebs.io/version' label.
-    fn version(&self) -> &str {
-        self.version.as_str()
     }
 }
 
