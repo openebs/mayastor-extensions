@@ -1,0 +1,1 @@
+../../tests/bdd/shell.nix
