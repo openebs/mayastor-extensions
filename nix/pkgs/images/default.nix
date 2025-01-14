@@ -26,7 +26,7 @@ let
       } // config;
     };
   build-exporter-image = { buildType }: {
-    io-engine = build-extensions-image rec{
+    io-engine = build-extensions-image rec {
       inherit buildType;
       package = extensions.${buildType}.metrics.exporter.io-engine;
       pname = package.pname;
@@ -49,6 +49,9 @@ let
     patchShebangs build/scripts/helm/publish-chart-yaml.sh
     patchShebangs build/scripts/helm/generate-consolidated-values.sh
     patchShebangs build/scripts/utils/log.sh
+    if [ -L build/chart/kubectl-plugin ]; then
+      rm build/chart/kubectl-plugin
+    fi
 
     # if tag is not semver just keep whatever is checked-in
     # todo: handle this properly?

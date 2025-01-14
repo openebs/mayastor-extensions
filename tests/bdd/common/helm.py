@@ -5,8 +5,9 @@ import subprocess
 from enum import Enum
 from shutil import which
 
+import common
+from common import root_dir, run
 from common.environment import get_env
-from common.repo import root_dir, run_script
 
 logger = logging.getLogger(__name__)
 
@@ -14,25 +15,10 @@ helm_bin = which("helm")
 
 
 def repo_ls():
-    try:
-        result = subprocess.run(
-            [helm_bin, "repo", "ls", "-o", "json"],
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-        return json.loads(result.stdout.strip())
-
-    except subprocess.CalledProcessError as e:
-        logger.error(
-            f"Error: command 'helm repo ls -o json' failed with exit code {e.returncode}"
-        )
-        logger.error(f"Error Output: {e.stderr}")
-        return None
-
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
-        return None
+    result = common.run(
+        helm_bin, ["repo", "ls", "-o", "json"],
+    )
+    return json.loads(result)
 
 
 def repo_add_mayastor():
@@ -42,43 +28,29 @@ def repo_add_mayastor():
             if r["url"] == "https://openebs.github.io/mayastor-extensions":
                 return r["name"]
 
-    try:
-        repo_name = "mayastor"
-        subprocess.run(
-            [
-                helm_bin,
-                "repo",
-                "add",
-                repo_name,
-                "https://openebs.github.io/mayastor-extensions",
-            ],
-            capture_output=True,
-            check=True,
-            text=True,
-        )
+    repo_name = "mayastor"
+    common.run(helm_bin, [
+        "repo",
+        "add",
+        repo_name,
+        "https://openebs.github.io/mayastor-extensions",
+    ])
 
-        subprocess.run(
-            [
-                helm_bin,
-                "repo",
-                "update",
-            ],
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-        return repo_name
-
-    except subprocess.CalledProcessError as e:
-        logger.error(
-            f"Error: command 'helm repo add mayastor https://openebs.github.io/mayastor-extensions' failed with exit code {e.returncode}"
-        )
-        logger.error(f"Error Output: {e.stderr}")
-        return None
-
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
-        return None
+    subprocess.run(
+        [
+            helm_bin,
+            "repo",
+            "update",
+        ],
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+    common.run(helm_bin, [
+        "repo",
+        "update",
+    ])
+    return repo_name
 
 
 def latest_chart_so_far(version=None):
@@ -90,38 +62,21 @@ def latest_chart_so_far(version=None):
             version = v
 
     repo_name = repo_add_mayastor()
-    assert repo_name is not None
 
-    helm_search_command = [
+    stdout = common.run(
         helm_bin,
-        "search",
-        "repo",
-        repo_name + "/mayastor",
-        "--version",
-        "<" + version,
-        "-o",
-        "json",
-    ]
-    try:
-        result = subprocess.run(
-            helm_search_command,
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-        result_chart_info = json.loads(result.stdout.strip())
-        return result_chart_info[0]["version"]
-
-    except subprocess.CalledProcessError as e:
-        logger.error(
-            f"Error: command {helm_search_command} failed with exit code {e.returncode}"
-        )
-        logger.error(f"Error Output: {e.stderr}")
-        return None
-
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
-        return None
+        [
+            "search",
+            "repo",
+            repo_name + "/mayastor",
+            "--version",
+            "<" + version,
+            "-o",
+            "json",
+        ]
+    )
+    result_chart_info = json.loads(stdout)
+    return result_chart_info[0]["version"]
 
 
 class ChartSource(Enum):
@@ -152,8 +107,7 @@ class HelmReleaseClient:
         self.namespace = "mayastor"
 
     def get_metadata_mayastor(self):
-        command = [
-            helm_bin,
+        args = [
             "get",
             "metadata",
             "mayastor",
@@ -162,25 +116,7 @@ class HelmReleaseClient:
             "-o",
             "json",
         ]
-        try:
-            result = subprocess.run(
-                command,
-                capture_output=True,
-                check=True,
-                text=True,
-            )
-            return json.loads(result.stdout.strip())
-
-        except subprocess.CalledProcessError as e:
-            logger.error(
-                f"Error: command '{command}' failed with exit code {e.returncode}"
-            )
-            logger.error(f"Error Output: {e.stderr}")
-            raise e
-
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-            raise e
+        return json.loads(common.run(helm_bin, args, log_run=False))
 
     def get_deployed(self, release: str):
         """
@@ -192,7 +128,6 @@ class HelmReleaseClient:
             str: A newline-separated string of deployed release names, or None if an error occurs.
         """
         args = [
-            helm_bin,
             "ls",
             "-n",
             self.namespace,
@@ -200,25 +135,7 @@ class HelmReleaseClient:
             f"--filter=^{release}$",
             "-o=json",
         ]
-        try:
-            result = subprocess.run(
-                args,
-                capture_output=True,
-                check=True,
-                text=True,
-            )
-            return result.stdout.strip()
-
-        except subprocess.CalledProcessError as e:
-            logger.error(
-                f"command '{args}' failed with exit code {e.returncode}"
-            )
-            logger.error(f"Error Output: {e.stderr}")
-            raise e
-
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-            raise e
+        return common.run(helm_bin, args)
 
     def install_mayastor(self, source: ChartSource, version=None):
         output_json = json.loads(self.get_deployed("mayastor"))
@@ -227,7 +144,9 @@ class HelmReleaseClient:
             logger.warning(
                 f"Helm release 'mayastor' already exists in the 'mayastor' namespace @ v{current_version}."
             )
-            assert current_version == version, f"Wanted to install {version}, but {current_version} already installed"
+            assert (
+                    current_version == version
+            ), f"Wanted to install {version}, but {current_version} already installed"
             return
 
         install_command = []
@@ -266,4 +185,4 @@ class HelmReleaseClient:
 
 
 def generate_test_tag():
-    return run_script("scripts/python/generate-test-tag.sh")
+    return run("scripts/python/generate-test-tag.sh")

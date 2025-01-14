@@ -16,6 +16,7 @@ KUBECTL="kubectl"
 DOCKER="docker"
 HUGE_PAGES=1800
 LABEL=
+CLEANUP="false"
 SUDO=${SUDO:-"sudo"}
 
 help() {
@@ -31,6 +32,7 @@ Options:
   --dry-run                         Don't do anything, just output steps.
   --hugepages     <num>             Add <num> 2MiB hugepages (Default: $HUGE_PAGES).
   --label                           Label worker nodes with the io-engine selector.
+  --cleanup                         Prior to starting, stops the running instance of the deployer.
 
 Command:
   start                             Start the k8s cluster.
@@ -90,6 +92,9 @@ while [ "$#" -gt 0 ]; do
         --label)
           LABEL="true"
           shift;;
+        --cleanup)
+          CLEANUP="true"
+          shift;;
         --hugepages)
           shift
           test $# -lt 1 && die "Missing hugepage number"
@@ -115,12 +120,14 @@ if [ -z "$COMMAND" ]; then
   die "No command specified!"
 fi
 
-if [ "$COMMAND" = "stop" ]; then
-  if command -v nvme 2>dev/null; then
+if [ "$COMMAND" = "stop" ] || [ "$CLEANUP" = "true" ]; then
+  if command -v nvme &>/dev/null; then
     $SUDO nvme disconnect-all
   fi
   $KIND delete cluster
-  exit 0
+  if [ "$COMMAND" = "stop" ]; then
+    exit 0
+  fi
 fi
 
 "$SCRIPT_DIR"/setup-io-prereq.sh --hugepages "$HUGE_PAGES" --nvme-tcp $DRY_RUN

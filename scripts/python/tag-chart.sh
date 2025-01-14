@@ -15,7 +15,7 @@ fi
 
 CHART_VERSION=${1#v}
 IMAGE_TAG="v$CHART_VERSION"
-CHART_DIR="$ROOT_DIR/chart"
+CHART_DIR=${CHART_DIR:-"$ROOT_DIR/chart"}
 # TODO: tests should work with its own copy of the chart. Shouldn't modify the chart.
 # chart/Chart.yaml
 yq_ibl "

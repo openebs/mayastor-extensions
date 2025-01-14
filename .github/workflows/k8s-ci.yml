@@ -28,24 +28,16 @@ jobs:
         run: nix-shell ./scripts/helm/shell.nix --run "echo"
       - name: Pre-populate pytest nix-shell
         run: nix-shell ./scripts/python/shell.nix --run "echo"
-      - name: Build binaries and images
-        id: build
-        run: |
-          TAG=$(nix-shell ./scripts/helm/shell.nix --run './scripts/python/generate-test-tag.sh')
-          TEST_DIR=$(realpath $(mktemp -d ./test-dir-XXXXXX))
-          nix-shell ./scripts/helm/shell.nix --run "./scripts/python/tag-chart.sh $TAG"
-          RUSTFLAGS="-C debuginfo=0 -C strip=debuginfo" ./scripts/release.sh --tag $TAG --build-binary-out $TEST_DIR --no-static-linking --skip-publish --debug
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "bin=$TEST_DIR" >> $GITHUB_OUTPUT
       - name: BootStrap k8s cluster
-        run: |
-          nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
-      - name: Load images to Kind cluster
-        run: nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/load-images-to-kind.sh --tag ${{ steps.build.outputs.tag }} --trim-debug-suffix"
+        run: nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
+      - name: Prepare vnext images and binary
+        run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --build --chart-tag --chart ./chart"
+      - name: Load images to kind cluster
+        run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --load"
       - name: Run Pytests
         run: |
-          export UPGRADE_TARGET_VERSION=${{ steps.build.outputs.tag }}
-          export TEST_DIR=${{ steps.build.outputs.bin }}
+          export REUSE_CLUSTER=1
+          export CHART_VNEXT_SKIP=1
           nix-shell ./scripts/python/shell.nix --run "./scripts/python/test.sh"
       - name: The job has failed
         if: ${{ failure() }}

@@ -1,12 +1,15 @@
 """Upgrade feature tests."""
+
 import json
 import logging
+import os
 
+import common
 import pytest
-
+from common import k8s_deployer
 from common.environment import get_env
 from common.helm import ChartSource, HelmReleaseClient, latest_chart_so_far
-from common.kubectl_mayastor import kubectl_mayastor
+from common.kubectl_mayastor import upgrade_vnext
 from common.repo import run_script
 from kubernetes import client, config
 from pytest_bdd import given, scenario, then, when
@@ -22,26 +25,64 @@ def test_upgrade_to_vnext():
     """Upgrading to the local chart as v-next."""
 
 
+@given("a 2-worker node kind kubernetes cluster")
+def _():
+    """a 2-worker node kind kubernetes cluster."""
+    k8s_deployer.start(workers=2)
+    yield
+    k8s_deployer.stop()
+
+
 @given("the latest mayastor helm chart is installed")
 def the_latest_mayastor_is_installed(latest_chart_version):
     """the latest mayastor helm chart is installed."""
     helm.install_mayastor(ChartSource.HOSTED, latest_chart_version)
 
 
-@when("a kubectl mayastor upgrade command is issued")
-def a_kubectl_mayastor_upgrade_command_is_issued():
-    """a kubectl mayastor upgrade command is issued."""
-    kubectl_mayastor(["upgrade"])
-
-
-@then("all io-engine nodes shall be listed by kubectl-mayastor")
+@given("all io-engine nodes shall be listed by kubectl-mayastor")
 def all_io_engine_nodes_shall_be_listed(latest_chart_version):
     """all io-engine nodes shall be listed by kubectl-mayastor."""
     wait_rest_nodes_version(latest_chart_version)
 
 
-@then("eventually the installed chart should be upgraded to the kubectl mayastor plugin's version")
-def eventually_the_installed_chart_should_be_upgraded_to_the_kubectl_mayastor_plugins_version(latest_chart_version):
+@given("a v-next chart is prepared")
+def _():
+    """a v-next chart is prepared."""
+    if common.chart_vnext_skip():
+        return
+    # todo: fork once build system supports alternate chart path
+    #  common.run("./scripts/python/upgrade-test-helper.sh", ["--fork", "--tag"])
+
+
+@given("the images and plugin are built for v-next")
+def _():
+    """the images and plugin are built for v-next."""
+    if common.chart_vnext_skip():
+        return
+    chart = os.path.join(common.root_dir(), "./chart")
+    common.run("./scripts/python/upgrade-test-helper.sh", ["--build", "--chart-tag", "--chart", chart])
+
+
+@given("the images are loadable from the cluster")
+def _():
+    """the images are loadable from the cluster."""
+    if common.chart_vnext_skip():
+        return
+    common.run("./scripts/python/upgrade-test-helper.sh", ["--load"])
+
+
+@when("a kubectl mayastor upgrade command is issued")
+def a_kubectl_mayastor_upgrade_command_is_issued():
+    """a kubectl mayastor upgrade command is issued."""
+    upgrade_vnext()
+
+
+@then(
+    "eventually the installed chart should be upgraded to the kubectl mayastor plugin's version"
+)
+def eventually_the_installed_chart_should_be_upgraded_to_the_kubectl_mayastor_plugins_version(
+        latest_chart_version,
+):
     """the installed chart should be upgraded to the kubectl mayastor plugin's version."""
 
     upgrade_target_version = get_env("UPGRADE_TARGET_VERSION")
@@ -56,7 +97,7 @@ def eventually_the_installed_chart_should_be_upgraded_to_the_kubectl_mayastor_pl
         return log
 
     @retry(
-        stop_max_attempt_number=450,
+        stop_max_attempt_number=60,
         wait_fixed=2000,
     )
     def helm_upgrade_succeeded():
@@ -87,8 +128,10 @@ def eventually_the_installed_chart_should_be_upgraded_to_the_kubectl_mayastor_pl
         )
         io_engines = list(
             filter(
-                lambda pod: any(container.name == 'io-engine' for container in pod.spec.containers),
-                pods.items
+                lambda pod: any(
+                    container.name == "io-engine" for container in pod.spec.containers
+                ),
+                pods.items,
             )
         )
         if len(io_engines) == 0:
@@ -137,22 +180,35 @@ def latest_chart_version():
 )
 def wait_rest_nodes_version(version, match=True):
     config.load_kube_config()
-    nodes = client.CoreV1Api().list_node(
-        label_selector="openebs.io/engine=mayastor"
-    )
+    nodes = client.CoreV1Api().list_node(label_selector="openebs.io/engine=mayastor")
     k8s_nodes = len(nodes.items)
 
-    rest_nodes = json.loads(kubectl_mayastor(["get", "nodes", "-o=json"]))
+    rest_nodes = json.loads(
+        common.kubectl_mayastor.run(["get", "nodes", "-o=json"], log_run=True)
+    )
     rest_io_engines = len(rest_nodes)
+    logger.info(f"Mayastor Nodes: {rest_nodes}")
 
-    assert k8s_nodes == rest_io_engines, f"Found {k8s_nodes} k8s nodes with the io-engine label, but only {rest_io_engines} nodes from kubectl-mayastor"
+    assert (
+            k8s_nodes == rest_io_engines
+    ), f"Found {k8s_nodes} k8s nodes with the io-engine label, but only {rest_io_engines} nodes from kubectl-mayastor"
 
-    assert all(node["spec"]["version"] == node["state"]["version"] for node in rest_nodes)
+    assert all(
+        node["spec"]["version"] == node["state"]["version"] for node in rest_nodes
+    )
 
     version_stripped = version.strip("v")
     if match:
-        all_on_version = all(node["spec"]["version"].strip("v") == version_stripped for node in rest_nodes)
+        all_on_version = all(
+            node["spec"]["version"].strip("v") == version_stripped
+            for node in rest_nodes
+        )
         assert all_on_version, f"Not all nodes on the version v{version_stripped}"
     else:
-        all_not_on_version = all(node["spec"]["version"].strip("v") != version_stripped for node in rest_nodes)
-        assert all_not_on_version, f"Some of the nodes are still on the version v{version_stripped}"
+        all_not_on_version = all(
+            node["spec"]["version"].strip("v") != version_stripped
+            for node in rest_nodes
+        )
+        assert (
+            all_not_on_version
+        ), f"Some of the nodes are still on the version v{version_stripped}"
