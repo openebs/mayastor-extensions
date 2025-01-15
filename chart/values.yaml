@@ -364,7 +364,7 @@ csi:
       enabled: false
       containers:
         - name: nvme-tcp-probe
-          command: ['sh', '-c', 'trap "exit 1" TERM; until $(lsmod | grep nvme_tcp &>/dev/null); do [ -z "$WARNED" ] && echo "nvme_tcp module not loaded..."; WARNED=1; sleep 60; done;']
+          command: ['sh', '-c', 'trap "exit 1" TERM; until [ -d /sys/module/nvme_tcp ]; do [ -z "$WARNED" ] && echo "nvme_tcp module not loaded..."; WARNED=1; sleep 60; done;']
 
 io_engine:
   # -- Log level for the io-engine service

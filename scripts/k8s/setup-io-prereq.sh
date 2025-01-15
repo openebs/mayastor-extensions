@@ -114,7 +114,7 @@ if [ -n "$HUGE_PAGES" ]; then
 fi
 
 if [ -n "$NVME_TCP" ]; then
-  if ! lsmod | grep "nvme_tcp" >/dev/null; then
+  if ! [ -d "/sys/module/nvme_tcp" ] >/dev/null; then
     if ! modprobe_nvme_tcp >/dev/null; then
       install_kernel_modules
       if ! modprobe_nvme_tcp; then
