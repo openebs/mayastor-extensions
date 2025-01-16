@@ -4,8 +4,8 @@ let
   pkgs = import sources.nixpkgs {
     overlays = [ (_: _: { inherit sources; }) (import ./nix/overlay.nix { }) (import sources.rust-overlay) ];
   };
+  lib = pkgs.lib;
 in
-with pkgs;
 let
   norust_moth =
     "You have requested an environment without rust, you should provide it!";
@@ -14,12 +14,10 @@ let
   channel = import ./nix/lib/rust.nix { inherit pkgs; };
   rust_chan = channel.default_src;
   rust = rust_chan.${rust-profile};
-in
-mkShell {
-  name = "extensions-shell";
-  buildInputs = [
-    autoflake
-    black
+  k8sShellAttrs = import ./scripts/k8s/shell.nix { inherit pkgs; };
+  helmShellAttrs = import ./chart/shell.nix { inherit pkgs; };
+  bddShellAttrs = import ./tests/bdd/shell.nix { inherit pkgs; };
+  buildInputs = with pkgs; [
     cacert
     cargo-expand
     cargo-udeps
@@ -28,10 +26,6 @@ mkShell {
     coreutils
     cowsay
     git
-    helm-docs
-    isort
-    kubectl
-    kubernetes-helm-wrapped
     llvmPackages.libclang
     niv
     nixpkgs-fmt
@@ -39,19 +33,18 @@ mkShell {
     openssl
     pkg-config
     pre-commit
-    python3
-    semver-tool
     utillinux
-    virtualenv
-    which
-    yq-go
-    kind
-  ] ++ pkgs.lib.optional (!norust) rust
-  ++ pkgs.lib.optional (system == "aarch64-darwin") darwin.apple_sdk.frameworks.Security;
+  ];
+in
+pkgs.mkShell {
+  name = "extensions-shell";
+  buildInputs = buildInputs ++ pkgs.lib.optional (!norust) rust
+    ++ k8sShellAttrs.buildInputs ++ helmShellAttrs.buildInputs ++ bddShellAttrs.buildInputs
+    ++ pkgs.lib.optional (pkgs.system == "aarch64-darwin") pkgs.darwin.apple_sdk.frameworks.Security;
 
-  PROTOC = "${protobuf}/bin/protoc";
-  PROTOC_INCLUDE = "${protobuf}/include";
-  NODE_PATH = "${nodePackages."@commitlint/config-conventional"}/lib/node_modules";
+  PROTOC = "${pkgs.protobuf}/bin/protoc";
+  PROTOC_INCLUDE = "${pkgs.protobuf}/include";
+  NODE_PATH = "${pkgs.nodePackages."@commitlint/config-conventional"}/lib/node_modules";
 
   # using the nix rust toolchain
   USE_NIX_RUST = "${toString (!norust)}";
@@ -71,8 +64,8 @@ mkShell {
     export CTRL_SRC="$EXTENSIONS_SRC"/dependencies/control-plane
     export PATH="$PATH:$(pwd)/target/debug"
 
-    ${pkgs.lib.optionalString (norust) "cowsay ${norust_moth}"}
-    ${pkgs.lib.optionalString (norust) "echo"}
+    ${lib.optionalString (norust) "cowsay ${norust_moth}"}
+    ${lib.optionalString (norust) "echo"}
 
     rust_version="${rust.version}" rustup_channel="${lib.strings.concatMapStringsSep "-" (x: x) (lib.lists.drop 1 (lib.strings.splitString "-" rust.version))}" \
     dev_rustup="${toString (devrustup)}" devrustup_moth="${devrustup_moth}" . "$CTRL_SRC"/scripts/rust/env-setup.sh

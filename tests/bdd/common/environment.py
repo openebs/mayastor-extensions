@@ -4,14 +4,17 @@ import os
 logger = logging.getLogger(__name__)
 
 
-def get_env(variable: str):
-    try:
-        value = os.getenv(variable)
-        if len(value) == 0:
-            raise ValueError("Env {variable} is empty")
-        logger.info(f"Found env {variable}={value}")
-        return value
-
-    except Exception as e:
-        logger.error(f"Failed to get env {variable}: {e}")
+def get_env(variable: str, warn=False):
+    value = os.getenv(variable)
+    if value is None:
+        if warn:
+            logger.warning(f"The env {variable} does not exist")
         return None
+
+    if len(value) == 0:
+        if warn:
+            logger.warning(f"The env {variable} is an empty string")
+        return None
+
+    logger.info(f"Found env {variable}={value}")
+    return value

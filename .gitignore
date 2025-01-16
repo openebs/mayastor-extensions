@@ -25,3 +25,5 @@ __pycache__
 /test-dir-*
 tests/bdd/venv
 pytest.log
+#/tests/bdd/chart-vnext/
+/chart/kubectl-plugin

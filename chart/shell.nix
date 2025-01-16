@@ -1,16 +1,10 @@
-{}:
-let
-  sources = import ../nix/sources.nix;
-  pkgs = import sources.nixpkgs {
-    overlays = [ (_: _: { inherit sources; }) (import ../nix/overlay.nix { }) ];
-  };
-in
-with pkgs;
-let
-in
-mkShell {
+{ pkgs ? import (import ../nix/sources.nix).nixpkgs {
+    overlays = [ (_: _: { inherit (import ../nix/sources.nix); }) (import ../nix/overlay.nix { }) ];
+  }
+}:
+pkgs.mkShell {
   name = "helm-scripts-shell";
-  buildInputs = [
+  buildInputs = with pkgs; [
     coreutils
     git
     helm-docs

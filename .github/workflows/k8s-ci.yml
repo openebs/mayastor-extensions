@@ -4,7 +4,7 @@ on:
 
 jobs:
   k8s-ci:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-16-cores
     steps:
       - name: Bind mount /dev/sda1 to /nix
         run: |
@@ -18,39 +18,52 @@ jobs:
         with:
           kvm: true
       - uses: DeterminateSystems/magic-nix-cache-action@v6
-      - name: Pre-populate nix-shell
+      - name: Setup Nix Path
         run: |
           export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
           echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
-          nix-shell ./scripts/k8s/shell.nix --run "echo"
-      - name: Build binaries and images
-        id: build
-        run: |
-          TAG=$(nix-shell ./shell.nix --run './scripts/python/generate-test-tag.sh')
-          TEST_DIR=$(realpath $(mktemp -d ./test-dir-XXXXXX))
-          nix-shell ./shell.nix --run "./scripts/python/tag-chart.sh $TAG"
-          RUSTFLAGS="-C debuginfo=0 -C strip=debuginfo" ./scripts/release.sh --tag $TAG --build-binary-out $TEST_DIR --no-static-linking --skip-publish --debug
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "bin=$TEST_DIR" >> $GITHUB_OUTPUT
+      - name: Pre-populate K8s nix-shell
+        run: nix-shell ./scripts/k8s/shell.nix --run "echo"
+      - name: Pre-populate helm nix-shell
+        run: nix-shell ./scripts/helm/shell.nix --run "echo"
+      - name: Pre-populate pytest nix-shell
+        run: nix-shell ./scripts/python/shell.nix --run "echo"
       - name: BootStrap k8s cluster
+        run: nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
+      - name: Prepare v-next images and binary
+        run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --build --chart-tag --chart ./chart"
+      - name: Load images to kind cluster
+        run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --load"
+      - name: Run pytest
         run: |
-          nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
-      - name: Load images to Kind cluster
-        run: nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/load-images-to-kind.sh --tag ${{ steps.build.outputs.tag }} --trim-debug-suffix"
-      - name: Run Pytests
-        run: |
-          export UPGRADE_TARGET_VERSION=${{ steps.build.outputs.tag }}
-          export TEST_DIR=${{ steps.build.outputs.bin }}
-          nix-shell ./shell.nix --run "./scripts/python/test.sh"
-      - name: The job has failed
+          export REUSE_CLUSTER=1
+          export CHART_VNEXT_SKIP=1
+          export CLEAN=0
+          nix-shell ./scripts/python/shell.nix --run "./scripts/python/test.sh"
+      - name: Collect logs
         if: ${{ failure() }}
         run: |
           nix-shell ./scripts/k8s/shell.nix --run "kubectl get pods -A -o wide"
           nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l openebs.io/release=mayastor --all-containers=true"
           nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l app=upgrade --all-containers=true"
+      - name: Upload pytest logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest.log
+          path: pytest.log
+      - name: Report pytest results
+        if: always()
+        uses: pmeier/pytest-results-action@main
+        with:
+          path: report.xml
+          summary: true
+          display-options: a
+          fail-on-empty: true
+          title: Test results
 
   k8s-ci-vm:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-16-cores
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v11
@@ -61,8 +74,8 @@ jobs:
         run: |
           export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
           echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
-          nix-shell ./scripts/k8s/shell.nix --run "echo"
+          nix-shell ./scripts/helm/shell.nix --run "echo"
       - name: Test on VM
         run: |
-          nix-shell ./scripts/k8s/shell.nix --run "cd chart; helm dependency update"
+          nix-shell ./scripts/helm/shell.nix --run "cd chart; helm dependency update"
           nix-build ./tests/helm/test.nix --option sandbox false

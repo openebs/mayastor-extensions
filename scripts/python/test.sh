@@ -2,19 +2,12 @@
 
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
 ROOT_DIR="$SCRIPT_DIR/../.."
+REPORT="$ROOT_DIR/report.xml"
+
 # Imports
 source "$ROOT_DIR/scripts/utils/log.sh"
 
 set -e
-
-_pytest() {
-  pytest "$1" || pytest_return=$?
-  # Exit code 5 denotes no tests were run, which is something we're ok with.
-  if [ "$pytest_return" = 5 ]; then
-    exit 0
-  fi
-  exit $pytest_return
-}
 
 # Print usage options for this script.
 print_help() {
@@ -32,6 +25,7 @@ Examples:
 EOF
 }
 
+ARGS=
 # Parse args.
 while test $# -gt 0; do
   arg="$1"
@@ -41,18 +35,21 @@ while test $# -gt 0; do
     exit 0
     ;;
   *)
-    print_help
-    log_fatal "unexpected argument '$arg'" 1
+    if [ -z "$ARGS" ]; then
+      ARGS="$1"
+    else
+      ARGS="$ARGS $1"
+    fi
     ;;
   esac
   shift
 done
 
 # virtualenv setup.
-source $ROOT_DIR/tests/bdd/setup.sh
+source "$ROOT_DIR"/tests/bdd/setup.sh
 
-if [ $# -eq 0 ]; then
-  _pytest "${BDD_TEST_DIR:-$ROOT_DIR/tests/bdd}" --durations=20
+if [ -z "$ARGS" ]; then
+  pytest "${BDD_TEST_DIR:-$ROOT_DIR/tests/bdd}" --junit-xml="$REPORT" --durations=20
 else
-  _pytest "$@"
+  pytest "$ARGS --junit-xml=$REPORT"
 fi

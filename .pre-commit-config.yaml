@@ -24,6 +24,13 @@ repos:
         pass_filenames: false
         types: [file, rust]
         language: system
+    -   id: python-fmt
+        name: Python fmt
+        description: Run python fmt on files included in the commit.
+        entry: nix-shell --pure --run './scripts/python/fmt.sh'
+        pass_filenames: false
+        types: [file, python]
+        language: system
     -   id: commit-lint
         name: Commit Lint
         description: Runs commitlint against the commit message.
