@@ -294,6 +294,31 @@ impl CoreValues {
         self.base.deprecated_log_silence_level()
     }
 
+    /// This is the array of containers associated with core initContainers.
+    pub(crate) fn base_init_core_containers(&self) -> &[Container] {
+        self.base.init_core_containers()
+    }
+
+    /// This is the array of containers associated with ha node initContainers.
+    pub(crate) fn base_init_ha_node_containers(&self) -> &[Container] {
+        self.base.init_ha_node_containers()
+    }
+
+    /// This is the array of containers associated with rest api initContainer.
+    pub(crate) fn base_init_rest_container(&self) -> &[Container] {
+        self.base.init_rest_container()
+    }
+
+    /// This is the array of containers associated with default initContainers.
+    pub(crate) fn base_init_containers(&self) -> &[Container] {
+        self.base.init_containers()
+    }
+
+    /// This is the array of containers associated with jaeger agent initContainers.
+    pub(crate) fn base_jaeger_agent_init_container(&self) -> &[Container] {
+        self.base.jaeger_agent_init_container()
+    }
+
     /// Retrieves the image tag of the Jaeger operator.
     /// Useful when updating the Jaeger operator dependency chart to ensure the new chart uses the updated image tag.
     pub(crate) fn jaeger_operator_image_tag(&self) -> &str {
@@ -322,16 +347,74 @@ impl Agents {
 
 /// This is used to deserialize the yaml object base.
 #[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
 struct Base {
     /// This is the older helm value.yaml key for configuring log silence level.
     #[serde(default, rename(deserialize = "logSilenceLevel"))]
     deprecated_log_silence_level: String,
+    init_containers: GenericContainers,
+    init_core_containers: GenericContainers,
+    init_ha_node_containers: GenericContainers,
+    init_rest_container: InitRestContainer,
+    jaeger: Jaeger,
 }
 
 impl Base {
     /// This returns the value for the removed base.logSilenceLevel YAML key.
     fn deprecated_log_silence_level(&self) -> &str {
         self.deprecated_log_silence_level.as_str()
+    }
+
+    /// This returns the array of kubernetes initContainer objects.
+    fn init_containers(&self) -> &[Container] {
+        self.init_containers.containers()
+    }
+
+    /// This returns the array of kubernetes initContainer objects for core.
+    fn init_core_containers(&self) -> &[Container] {
+        self.init_core_containers.containers()
+    }
+
+    /// This returns the array of kubernetes initContainer objects for ha node.
+    fn init_ha_node_containers(&self) -> &[Container] {
+        self.init_ha_node_containers.containers()
+    }
+
+    /// This returns the array of kubernetes initContainer objects for rest.
+    fn init_rest_container(&self) -> &[Container] {
+        self.init_rest_container.init_container()
+    }
+
+    /// This returns the array of kubernetes initContainer objects for jaeger agent.
+    fn jaeger_agent_init_container(&self) -> &[Container] {
+        self.jaeger.agent_init_container()
+    }
+}
+
+/// This is used to deserialize the .base.initRestContainer object.
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct InitRestContainer {
+    init_container: Vec<Container>,
+}
+
+impl InitRestContainer {
+    fn init_container(&self) -> &[Container] {
+        self.init_container.as_slice()
+    }
+}
+
+/// This is used to deserialize various 'containers' yaml objects.
+#[derive(Deserialize)]
+struct GenericContainers {
+    /// Container config.
+    containers: Vec<Container>,
+}
+
+impl GenericContainers {
+    /// Returns container config.
+    fn containers(&self) -> &[Container] {
+        self.containers.as_slice()
     }
 }
 
@@ -1113,6 +1196,33 @@ impl LocalpvProvisionerHelperPod {
     /// This is getter for the openebs/linux-utils helper pod container's image tag.
     fn image_tag(&self) -> &str {
         self.image.tag()
+    }
+}
+
+/// This is used to deserialize the '.jaeger' yaml object.
+#[derive(Deserialize)]
+struct Jaeger {
+    agent: JaegerAgent,
+}
+
+impl Jaeger {
+    /// This returns the init containers from the base jaeger agent.
+    fn agent_init_container(&self) -> &[Container] {
+        self.agent.init_container()
+    }
+}
+
+/// This is used to deserialize the '.jaeger.agent' yaml object.
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct JaegerAgent {
+    init_container: Vec<Container>,
+}
+
+impl JaegerAgent {
+    /// This returns the init containers from the base jaeger agent.
+    fn init_container(&self) -> &[Container] {
+        self.init_container.as_slice()
     }
 }
 
