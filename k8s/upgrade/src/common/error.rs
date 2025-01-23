@@ -485,6 +485,47 @@ pub enum Error {
         object: String,
     },
 
+    /// Error in serializing base.initContainers.containers.
+    #[snafu(display("Failed to serialize .base.initContainers.containers {object:?}: {source}",))]
+    SerializeBaseInitContainersToJson {
+        source: serde_json::Error,
+        object: Container,
+    },
+
+    /// Error in serializing base.initCoreContainers.containers.
+    #[snafu(display(
+        "Failed to serialize .base.initCoreContainers.containers {object:?}: {source}",
+    ))]
+    SerializeBaseInitCoreContainersToJson {
+        source: serde_json::Error,
+        object: Container,
+    },
+
+    /// Error in serializing base.initHaNodeContainers.containers.
+    #[snafu(display(
+        "Failed to serialize .base.initHaNodeContainers.containers {object:?}: {source}",
+    ))]
+    SerializeBaseInitHaNodeContainersToJson {
+        source: serde_json::Error,
+        object: Container,
+    },
+
+    /// Error in serializing base.initRestContainer.initContainer.
+    #[snafu(display(
+        "Failed to serialize .base.initRestContainer.initContainer {object:?}: {source}",
+    ))]
+    SerializeBaseInitRestContainerToJson {
+        source: serde_json::Error,
+        object: Container,
+    },
+
+    /// Error in serializing base.jaeger.agent.initContainers.
+    #[snafu(display("Failed to serialize .base.jaeger.agent.initContainer {object:?}: {source}",))]
+    SerializeJaegerAgentInitContainerToJson {
+        source: serde_json::Error,
+        object: Container,
+    },
+
     /// Error for when there are too many io-engine Pods in one single node;
     #[snafu(display("Too many io-engine Pods in Node '{node_name}'"))]
     TooManyIoEnginePods { node_name: String },

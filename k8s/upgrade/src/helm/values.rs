@@ -2,12 +2,14 @@ use crate::{
     common::{
         constants::{
             KUBE_API_PAGE_SIZE, TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE,
-            TWO_DOT_SEVENT_DOT_TWO, TWO_DOT_SIX, TWO_DOT_THREE,
+            TWO_DOT_SEVEN_DOT_THREE, TWO_DOT_SEVEN_DOT_TWO, TWO_DOT_SIX, TWO_DOT_THREE,
         },
         error::{
             DeserializePromtailExtraConfig, ListCrds, Result, SemverParse,
-            SerializePromtailConfigClientToJson, SerializePromtailExtraConfigToJson,
-            SerializePromtailInitContainerToJson,
+            SerializeBaseInitContainersToJson, SerializeBaseInitCoreContainersToJson,
+            SerializeBaseInitHaNodeContainersToJson, SerializeBaseInitRestContainerToJson,
+            SerializeJaegerAgentInitContainerToJson, SerializePromtailConfigClientToJson,
+            SerializePromtailExtraConfigToJson, SerializePromtailInitContainerToJson,
         },
         file::write_to_tempfile,
         kube::client as KubeClient,
@@ -218,35 +220,20 @@ where
         version_string: TWO_DOT_SIX.to_string(),
     })?;
     if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_six) {
-        // Update localpv-provisioner helm chart.
-        // This change is meant for versions from 2.0.0 to 2.4.0. However, this code wasn't checked
-        // into 2.5.0, and likely users of upgrade-job 2.5.0 are using the localpv image tag
-        // from 2.4.0 (i.e. 3.4.0) with the 3.5.0 localpv helm chart. So these options should
-        // also be set for source version 2.5.0.
-        let localpv_version_to_replace = "3.4.0";
-        if source_values
-            .localpv_release_version()
-            .eq(localpv_version_to_replace)
-            && target_values
-                .localpv_release_version()
-                .ne(localpv_version_to_replace)
-        {
-            yq.set_literal_value(
-                YamlKey::try_from(".localpv-provisioner.release.version")?,
-                target_values.localpv_release_version(),
-                upgrade_values_file.path(),
-            )?;
-            yq.set_literal_value(
-                YamlKey::try_from(".localpv-provisioner.localpv.image.tag")?,
-                target_values.localpv_provisioner_image_tag(),
-                upgrade_values_file.path(),
-            )?;
-            yq.set_literal_value(
-                YamlKey::try_from(".localpv-provisioner.helperPod.image.tag")?,
-                target_values.localpv_helper_image_tag(),
-                upgrade_values_file.path(),
-            )?;
-        }
+        // LocalPV Device mode was removed in OpenEBS/Dynamic LocalPV v4.0.0.
+        // Mayastor 2.6 uses Dynamic LocalPV v4.0.0 as a dependency.
+        yq.delete_object(
+            YamlKey::try_from(".localpv-provisioner.deviceClass")?,
+            upgrade_values_file.path(),
+        )?;
+        yq.delete_object(
+            YamlKey::try_from(".localpv-provisioner.localpv.waitForBDBindTimeoutRetryCount")?,
+            upgrade_values_file.path(),
+        )?;
+        yq.delete_object(
+            YamlKey::try_from(".localpv-provisioner.openebsNDM")?,
+            upgrade_values_file.path(),
+        )?;
 
         // Switch out image tag for the latest one.
         yq.set_literal_value(
@@ -373,12 +360,164 @@ where
     }
 
     // Special-case values for 2.7.2.
-    let two_dot_seven_dot_two = Version::parse(TWO_DOT_SEVENT_DOT_TWO).context(SemverParse {
-        version_string: TWO_DOT_SEVENT_DOT_TWO.to_string(),
+    let two_dot_seven_dot_two = Version::parse(TWO_DOT_SEVEN_DOT_TWO).context(SemverParse {
+        version_string: TWO_DOT_SEVEN_DOT_TWO.to_string(),
     })?;
     if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_seven_dot_two) {
         yq.delete_object(
             YamlKey::try_from(".localpv-provisioner.release")?,
+            upgrade_values_file.path(),
+        )?;
+
+        let image_tag_to_remove = String::from("busybox:latest");
+        // if base.initContainers.containers elements contain the image key
+        if source_values
+            .base_init_containers()
+            .iter()
+            .filter_map(|container| container.image.clone())
+            .collect::<Vec<_>>()
+            .contains(&image_tag_to_remove)
+        {
+            let init_containers_key = YamlKey::try_from(".base.initContainers.containers")?;
+
+            yq.delete_object(init_containers_key.clone(), upgrade_values_file.path())?;
+
+            for container in target_values.base_init_containers() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeBaseInitContainersToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    init_containers_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        // if base.initCoreContainers.containers elements contain the image key
+        if source_values
+            .base_init_core_containers()
+            .iter()
+            .filter_map(|container| container.image.clone())
+            .collect::<Vec<_>>()
+            .contains(&image_tag_to_remove)
+        {
+            let init_core_containers_key =
+                YamlKey::try_from(".base.initCoreContainers.containers")?;
+
+            yq.delete_object(init_core_containers_key.clone(), upgrade_values_file.path())?;
+
+            for container in target_values.base_init_core_containers() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeBaseInitCoreContainersToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    init_core_containers_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        // if base.initHaNodeContainers.containers elements contain the image key
+        if source_values
+            .base_init_ha_node_containers()
+            .iter()
+            .filter_map(|container| container.image.clone())
+            .collect::<Vec<_>>()
+            .contains(&image_tag_to_remove)
+        {
+            let init_ha_node_containers_key =
+                YamlKey::try_from(".base.initHaNodeContainers.containers")?;
+
+            yq.delete_object(
+                init_ha_node_containers_key.clone(),
+                upgrade_values_file.path(),
+            )?;
+
+            for container in target_values.base_init_ha_node_containers() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeBaseInitHaNodeContainersToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    init_ha_node_containers_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        // if base.initRestContainer.initContainer elements contain the image key
+        if source_values
+            .base_init_rest_container()
+            .iter()
+            .filter_map(|container| container.image.clone())
+            .collect::<Vec<_>>()
+            .contains(&image_tag_to_remove)
+        {
+            let init_rest_container_key =
+                YamlKey::try_from(".base.initRestContainer.initContainer")?;
+
+            yq.delete_object(init_rest_container_key.clone(), upgrade_values_file.path())?;
+
+            for container in target_values.base_init_rest_container() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeBaseInitRestContainerToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    init_rest_container_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        // if the base.jaeger.agent.initContainer index contain the image key
+        if source_values
+            .base_jaeger_agent_init_container()
+            .iter()
+            .filter_map(|container| container.image.clone())
+            .collect::<Vec<_>>()
+            .contains(&image_tag_to_remove)
+        {
+            let jaeger_agent_init_container_key =
+                YamlKey::try_from(".base.jaeger.agent.initContainer")?;
+
+            yq.delete_object(
+                jaeger_agent_init_container_key.clone(),
+                upgrade_values_file.path(),
+            )?;
+
+            for container in target_values.base_jaeger_agent_init_container() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeJaegerAgentInitContainerToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    jaeger_agent_init_container_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+    }
+
+    // Special-case values for 2.7.3.
+    let two_dot_seven_dot_three = Version::parse(TWO_DOT_SEVEN_DOT_THREE).context(SemverParse {
+        version_string: TWO_DOT_SEVEN_DOT_THREE.to_string(),
+    })?;
+    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_seven_dot_three) {
+        yq.delete_object(
+            YamlKey::try_from(".etcd.initialClusterState")?,
             upgrade_values_file.path(),
         )?;
     }
@@ -421,6 +560,16 @@ where
     yq.set_literal_value(
         YamlKey::try_from(".csi.image.resizerTag")?,
         target_values.csi_resizer_image_tag(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_literal_value(
+        YamlKey::try_from(".localpv-provisioner.localpv.image.tag")?,
+        target_values.localpv_provisioner_image_tag(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_literal_value(
+        YamlKey::try_from(".localpv-provisioner.helperPod.image.tag")?,
+        target_values.localpv_helper_image_tag(),
         upgrade_values_file.path(),
     )?;
 
