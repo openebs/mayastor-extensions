@@ -24,6 +24,8 @@ pub fn upgrade_job_container_name() -> String {
 pub fn upgrade_event_reason() -> String {
     format!("{}Upgrade", product_train())
 }
+/// Default namespace for plugin.
+pub const DEFAULT_PLUGIN_NAMESPACE: &str = "mayastor";
 /// Upgrade job container image repository.
 pub const UPGRADE_JOB_IMAGE_REPO: &str = "openebs";
 /// This is the user docs URL for the Umbrella chart.
