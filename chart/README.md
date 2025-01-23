@@ -59,7 +59,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | https://grafana.github.io/helm-charts | loki-stack | 2.9.11 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.50.1 |
 | https://nats-io.github.io/k8s/helm/charts/ | nats | 0.19.14 |
-| https://openebs.github.io/dynamic-localpv-provisioner | localpv-provisioner | 4.1.2 |
+| https://openebs.github.io/dynamic-localpv-provisioner | localpv-provisioner | 4.1.4 |
 
 ## Values
 
@@ -190,6 +190,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | io_engine.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
 | localpv-provisioner.&ZeroWidthSpace;enabled | Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki-stack storage class accordingly. | `true` |
 | localpv-provisioner.&ZeroWidthSpace;hostpathClass.&ZeroWidthSpace;enabled | Enable default hostpath localpv StorageClass. | `false` |
+| localpv-provisioner.&ZeroWidthSpace;localpv.&ZeroWidthSpace;priorityClassName | Set the PriorityClass for the LocalPV Hostpath provisioner Deployment. | `"{{ .Release.Name }}-cluster-critical"` |
 | loki-stack.&ZeroWidthSpace;enabled | Enable loki log collection for our components | `true` |
 | loki-stack.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;basePath | Host path where local etcd data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/loki"` |
 | loki-stack.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of loki's localpv hostpath storage class. | `"Delete"` |

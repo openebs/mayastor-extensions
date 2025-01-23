@@ -27,7 +27,7 @@ spec:
         {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
         {{ include "label_prefix" . }}/logging: "true"
     spec:
-      serviceAccount: {{ .Release.Name }}-service-account
+      serviceAccountName: {{ .Release.Name }}-service-account
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
