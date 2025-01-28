@@ -477,6 +477,8 @@ io_engine:
   priorityClassName: ""
   # -- Runtime class to use. Defaults to cluster standard
   runtimeClassName: ""
+  # -- Number of retries for pstor persistence before the volume target self shutdowns
+  pstorRetries: 300
 
 etcd:
   # -- Disable when using an external etcd cluster.

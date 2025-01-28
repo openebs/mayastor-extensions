@@ -112,6 +112,7 @@ spec:
         - "--reactor-freeze-detection"{{ end }}
         - "--tgt-crdt={{ .Values.io_engine.target.nvmf.hostCmdRetryDelay.crdt1 }}"{{ if .Values.eventing.enabled }}
         - "--events-url=nats://{{ .Release.Name }}-nats:4222"{{ end }}
+        - "--ps-retries={{ default 300 .Values.io_engine.pstorRetries }}"
         command:
         - io-engine
         securityContext:

@@ -107,8 +107,6 @@ spec:
         {{- end }}
         - "--fmt-style={{ include "logFormat" . }}"
         - "--ansi-colors={{ .Values.base.logging.color }}"
-        command:
-        - csi-node
         volumeMounts:
         - name: device
           mountPath: /dev
