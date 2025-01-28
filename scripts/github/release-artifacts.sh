@@ -9,6 +9,7 @@ Options:
   --tag           <tag>             The release tag.
   --workflow      <workflow>        The workflow which builds/archives the artifacts.
   --repo-org      <repo-org>        The repo's owner organization.
+  --repo          <repo>            The repo where binary is built. [default: mayastor-extensions]
   --upload        <repos>           Upload artifacts to the given repos.
 
 Command:
@@ -137,6 +138,7 @@ BINARY_WORFLOW=
 COMMAND=
 REPO_ORG=
 BINARY_ORG_REPO=
+REPO="mayastor-extensions"
 UPLOAD_TO=
 
 while [ "$#" -gt 0 ]; do
@@ -158,6 +160,11 @@ while [ "$#" -gt 0 ]; do
     --repo-org)
       shift
       REPO_ORG="$1"
+      shift
+      ;;
+      --repo)
+      shift
+      REPO="$1"
       shift
       ;;
     download)
@@ -189,7 +196,7 @@ if [ -z "$REPO_ORG" ]; then
   die "--repo-org parameter is required!"
 fi
 
-BINARY_ORG_REPO="$REPO_ORG/mayastor-extensions"
+BINARY_ORG_REPO="$REPO_ORG/$REPO"
 
 if [ "$COMMAND" == "download" ]; then
   if [ -z "$BINARY_WORKFLOW" ]; then
