@@ -33,15 +33,34 @@ pub trait HelmValuesCollection {
     fn ha_is_enabled(&self) -> bool;
     /// This is a getter for the partial-rebuild toggle value.
     fn partial_rebuild_is_enabled(&self) -> bool;
+
+    fn mayastor_is_enabled(&self) -> bool;
 }
 
 /// UmbrellaValues is used to deserialize the helm values.yaml for the Umbrella chart. The Core
 /// chart is a sub-chart for the Umbrella chart, so the Core chart values structure is embedded
 /// into the UmbrellaValues structure.
 #[derive(Deserialize)]
-pub(crate) struct UmbrellaValues {
+pub struct UmbrellaValues {
     #[serde(rename(deserialize = "mayastor"))]
     core: CoreValues,
+    #[serde(default)]
+    engines: UmbrellaEngines,
+}
+
+#[derive(Default, Deserialize)]
+pub(crate) struct UmbrellaEngines {
+    replicated: UmbrellaEnginesReplicated,
+}
+
+#[derive(Default, Deserialize)]
+pub(crate) struct UmbrellaEnginesReplicated {
+    mayastor: UmbrellaEnginesReplicatedMayastor,
+}
+
+#[derive(Default, Deserialize)]
+pub(crate) struct UmbrellaEnginesReplicatedMayastor {
+    enabled: bool,
 }
 
 impl TryFrom<&[u8]> for UmbrellaValues {
@@ -62,11 +81,17 @@ impl HelmValuesCollection for UmbrellaValues {
     fn partial_rebuild_is_enabled(&self) -> bool {
         self.core.partial_rebuild_is_enabled()
     }
+
+    fn mayastor_is_enabled(&self) -> bool {
+        self.engines.replicated.mayastor.enabled || self.core.enabled
+    }
 }
 
 /// This is used to deserialize the values.yaml of the Core chart.
 #[derive(Deserialize)]
 pub(crate) struct CoreValues {
+    #[serde(default)]
+    enabled: bool,
     /// This contains values for all the agents.
     agents: Agents,
     /// This contains values for all the base components.
@@ -123,6 +148,10 @@ impl HelmValuesCollection for CoreValues {
 
     fn partial_rebuild_is_enabled(&self) -> bool {
         self.agents.partial_rebuild_is_enabled()
+    }
+
+    fn mayastor_is_enabled(&self) -> bool {
+        true
     }
 }
 
