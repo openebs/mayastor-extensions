@@ -78,13 +78,11 @@ where
     // below comparisons because of this.
 
     // Specific special-case values for version 2.0.x.
-    let two_dot_o_rc_zero = Version::parse(TWO_DOT_O_RC_ONE).context(SemverParse {
+    let two_dot_o_rc_one = Version::parse(TWO_DOT_O_RC_ONE).context(SemverParse {
         version_string: TWO_DOT_O_RC_ONE.to_string(),
     })?;
-    let two_dot_one = Version::parse(TWO_DOT_ONE).context(SemverParse {
-        version_string: TWO_DOT_ONE.to_string(),
-    })?;
-    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_one) {
+
+    if source_version.ge(&two_dot_o_rc_one) && source_version.lt(&TWO_DOT_ONE) {
         let log_level_to_replace = "info,io_engine=info";
 
         if source_values.io_engine_log_level().eq(log_level_to_replace)
@@ -99,7 +97,7 @@ where
     }
 
     // Specific special-case values for to-version >=2.1.x.
-    if target_version.ge(&two_dot_one) {
+    if target_version.ge(&TWO_DOT_ONE) {
         // RepoTags fields will also be set to the values found in the target helm values file
         // (low_priority file). This is so integration tests which use specific repo commits can
         // upgrade to a custom helm chart.
@@ -121,14 +119,8 @@ where
     }
 
     // Specific special-case values for version 2.3.x.
-    let two_dot_three = Version::parse(TWO_DOT_THREE).context(SemverParse {
-        version_string: TWO_DOT_THREE.to_string(),
-    })?;
-    let two_dot_four = Version::parse(TWO_DOT_FOUR).context(SemverParse {
-        version_string: TWO_DOT_FOUR.to_string(),
-    })?;
-    if source_version.ge(&two_dot_three)
-        && source_version.lt(&two_dot_four)
+    if source_version.ge(&TWO_DOT_THREE)
+        && source_version.lt(&TWO_DOT_FOUR)
         && source_values
             .eventing_enabled()
             .ne(&target_values.eventing_enabled())
@@ -141,10 +133,7 @@ where
     }
 
     // Special-case values for 2.5.x.
-    let two_dot_five = Version::parse(TWO_DOT_FIVE).context(SemverParse {
-        version_string: TWO_DOT_FIVE.to_string(),
-    })?;
-    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_five) {
+    if source_version.ge(&two_dot_o_rc_one) && source_version.lt(&TWO_DOT_FIVE) {
         // promtail
         let scrape_configs_to_replace = r"- job_name: {{ .Release.Name }}-pods-name
   pipeline_stages:
@@ -216,10 +205,7 @@ where
     }
 
     // Special-case values for 2.6.x.
-    let two_dot_six = Version::parse(TWO_DOT_SIX).context(SemverParse {
-        version_string: TWO_DOT_SIX.to_string(),
-    })?;
-    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_six) {
+    if source_version.ge(&two_dot_o_rc_one) && source_version.lt(&TWO_DOT_SIX) {
         // LocalPV Device mode was removed in OpenEBS/Dynamic LocalPV v4.0.0.
         // Mayastor 2.6 uses Dynamic LocalPV v4.0.0 as a dependency.
         yq.delete_object(
@@ -360,10 +346,7 @@ where
     }
 
     // Special-case values for 2.7.2.
-    let two_dot_seven_dot_two = Version::parse(TWO_DOT_SEVEN_DOT_TWO).context(SemverParse {
-        version_string: TWO_DOT_SEVEN_DOT_TWO.to_string(),
-    })?;
-    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_seven_dot_two) {
+    if source_version.ge(&two_dot_o_rc_one) && source_version.lt(&TWO_DOT_SEVEN_DOT_TWO) {
         yq.delete_object(
             YamlKey::try_from(".localpv-provisioner.release")?,
             upgrade_values_file.path(),
@@ -512,10 +495,7 @@ where
     }
 
     // Special-case values for 2.7.3.
-    let two_dot_seven_dot_three = Version::parse(TWO_DOT_SEVEN_DOT_THREE).context(SemverParse {
-        version_string: TWO_DOT_SEVEN_DOT_THREE.to_string(),
-    })?;
-    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_seven_dot_three) {
+    if source_version.ge(&two_dot_o_rc_one) && source_version.lt(&TWO_DOT_SEVEN_DOT_THREE) {
         yq.delete_object(
             YamlKey::try_from(".etcd.initialClusterState")?,
             upgrade_values_file.path(),

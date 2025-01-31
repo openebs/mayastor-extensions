@@ -41,22 +41,22 @@ pub const PARTIAL_REBUILD_DISABLE_EXTENTS: (Version, Version) =
 pub(crate) const TWO_DOT_O_RC_ONE: &str = "2.0.0-rc.1";
 
 /// Version value for the earliest possible 2.1 release (there were no pre-releases).
-pub(crate) const TWO_DOT_ONE: &str = "2.1.0";
+pub(crate) const TWO_DOT_ONE: Version = Version::new(2, 1, 0);
 
 /// Version value for the earliest possible 2.3 release (there were no pre-releases).
-pub(crate) const TWO_DOT_THREE: &str = "2.3.0";
+pub(crate) const TWO_DOT_THREE: Version = Version::new(2, 3, 0);
 
 /// Version value for the earliest possible 2.4 release (there were no pre-releases).
-pub(crate) const TWO_DOT_FOUR: &str = "2.4.0";
+pub(crate) const TWO_DOT_FOUR: Version = Version::new(2, 4, 0);
 
 /// Version value for the earliest possible 2.5 release.
-pub(crate) const TWO_DOT_FIVE: &str = "2.5.0";
+pub(crate) const TWO_DOT_FIVE: Version = Version::new(2, 5, 0);
 
 /// Version value for the earliest possible 2.6 release.
-pub(crate) const TWO_DOT_SIX: &str = "2.6.0";
+pub(crate) const TWO_DOT_SIX: Version = Version::new(2, 6, 0);
 
 /// Version value for 2.7.2 release.
-pub(crate) const TWO_DOT_SEVEN_DOT_TWO: &str = "2.7.2";
+pub(crate) const TWO_DOT_SEVEN_DOT_TWO: Version = Version::new(2, 7, 2);
 
 /// Version value for 2.7.3.
-pub(crate) const TWO_DOT_SEVEN_DOT_THREE: &str = "2.7.3";
+pub(crate) const TWO_DOT_SEVEN_DOT_THREE: Version = Version::new(2, 7, 3);
