@@ -6,8 +6,10 @@ use crate::{
         },
         error::{
             DeserializePromtailExtraConfig, ListCrds, Result, SemverParse,
-            SerializePromtailConfigClientToJson, SerializePromtailExtraConfigToJson,
-            SerializePromtailInitContainerToJson,
+            SerializeBaseInitContainersToJson, SerializeBaseInitCoreContainersToJson,
+            SerializeBaseInitHaNodeContainersToJson, SerializeBaseInitRestContainerToJson,
+            SerializeJaegerAgentInitContainerToJson, SerializePromtailConfigClientToJson,
+            SerializePromtailExtraConfigToJson, SerializePromtailInitContainerToJson,
         },
         file::write_to_tempfile,
         kube::client as KubeClient,
@@ -366,6 +368,147 @@ where
             YamlKey::try_from(".localpv-provisioner.release")?,
             upgrade_values_file.path(),
         )?;
+
+        let image_tag_to_remove = String::from("busybox:latest");
+        // if base.initContainers.containers elements contain the image key
+        if source_values
+            .base_init_containers()
+            .iter()
+            .filter_map(|container| container.image.clone())
+            .collect::<Vec<_>>()
+            .contains(&image_tag_to_remove)
+        {
+            let init_containers_key = YamlKey::try_from(".base.initContainers.containers")?;
+
+            yq.delete_object(init_containers_key.clone(), upgrade_values_file.path())?;
+
+            for container in target_values.base_init_containers() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeBaseInitContainersToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    init_containers_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        // if base.initCoreContainers.containers elements contain the image key
+        if source_values
+            .base_init_core_containers()
+            .iter()
+            .filter_map(|container| container.image.clone())
+            .collect::<Vec<_>>()
+            .contains(&image_tag_to_remove)
+        {
+            let init_core_containers_key =
+                YamlKey::try_from(".base.initCoreContainers.containers")?;
+
+            yq.delete_object(init_core_containers_key.clone(), upgrade_values_file.path())?;
+
+            for container in target_values.base_init_core_containers() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeBaseInitCoreContainersToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    init_core_containers_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        // if base.initHaNodeContainers.containers elements contain the image key
+        if source_values
+            .base_init_ha_node_containers()
+            .iter()
+            .filter_map(|container| container.image.clone())
+            .collect::<Vec<_>>()
+            .contains(&image_tag_to_remove)
+        {
+            let init_ha_node_containers_key =
+                YamlKey::try_from(".base.initHaNodeContainers.containers")?;
+
+            yq.delete_object(
+                init_ha_node_containers_key.clone(),
+                upgrade_values_file.path(),
+            )?;
+
+            for container in target_values.base_init_ha_node_containers() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeBaseInitHaNodeContainersToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    init_ha_node_containers_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        // if base.initRestContainer.initContainer elements contain the image key
+        if source_values
+            .base_init_rest_container()
+            .iter()
+            .filter_map(|container| container.image.clone())
+            .collect::<Vec<_>>()
+            .contains(&image_tag_to_remove)
+        {
+            let init_rest_container_key =
+                YamlKey::try_from(".base.initRestContainer.initContainer")?;
+
+            yq.delete_object(init_rest_container_key.clone(), upgrade_values_file.path())?;
+
+            for container in target_values.base_init_rest_container() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeBaseInitRestContainerToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    init_rest_container_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        // if the base.jaeger.agent.initContainer index contain the image key
+        if source_values
+            .base_jaeger_agent_init_container()
+            .iter()
+            .filter_map(|container| container.image.clone())
+            .collect::<Vec<_>>()
+            .contains(&image_tag_to_remove)
+        {
+            let jaeger_agent_init_container_key =
+                YamlKey::try_from(".base.jaeger.agent.initContainer")?;
+
+            yq.delete_object(
+                jaeger_agent_init_container_key.clone(),
+                upgrade_values_file.path(),
+            )?;
+
+            for container in target_values.base_jaeger_agent_init_container() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeJaegerAgentInitContainerToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    jaeger_agent_init_container_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
     }
 
     // Special-case values for 2.7.3.
