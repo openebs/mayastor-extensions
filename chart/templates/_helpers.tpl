@@ -182,9 +182,9 @@ Usage:
 {{/*
 Creates the tolerations based on the global and component wise tolerations, with early eviction
 Usage:
-{{ include "tolerations_with_early_eviction" (dict "template" . "localTolerations" .Values.path.to.local.tolerations) }}
+{{ include "_tolerations_with_early_eviction" (dict "template" . "localTolerations" .Values.path.to.local.tolerations) }}
 */}}
-{{- define "tolerations_with_early_eviction" -}}
+{{- define "_tolerations_with_early_eviction" -}}
 {{- toYaml .template.Values.earlyEvictionTolerations | nindent 8 }}
 {{- if .localTolerations }}
     {{- toYaml .localTolerations | nindent 8 }}
