@@ -1,15 +1,18 @@
 use crate::{
     common::{
         constants::{
-            KUBE_API_PAGE_SIZE, TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE,
-            TWO_DOT_SEVEN_DOT_THREE, TWO_DOT_SEVEN_DOT_TWO, TWO_DOT_SIX, TWO_DOT_THREE,
+            KUBE_API_PAGE_SIZE, TWO_DOT_EIGHT, TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE,
+            TWO_DOT_O_RC_ONE, TWO_DOT_SEVEN_DOT_THREE, TWO_DOT_SEVEN_DOT_TWO, TWO_DOT_SIX,
+            TWO_DOT_THREE,
         },
         error::{
             DeserializePromtailExtraConfig, ListCrds, Result, SemverParse,
             SerializeBaseInitContainersToJson, SerializeBaseInitCoreContainersToJson,
             SerializeBaseInitHaNodeContainersToJson, SerializeBaseInitRestContainerToJson,
-            SerializeJaegerAgentInitContainerToJson, SerializePromtailConfigClientToJson,
-            SerializePromtailExtraConfigToJson, SerializePromtailInitContainerToJson,
+            SerializeCsiNodeInitContainersToJson, SerializeJaegerAgentInitContainerToJson,
+            SerializeJaegerCollectorInitContainerToJson, SerializeLokiInitContainersToJson,
+            SerializePromtailConfigClientToJson, SerializePromtailExtraConfigToJson,
+            SerializePromtailInitContainerToJson,
         },
         file::write_to_tempfile,
         kube::client as KubeClient,
@@ -500,6 +503,89 @@ where
             YamlKey::try_from(".etcd.initialClusterState")?,
             upgrade_values_file.path(),
         )?;
+    }
+
+    // Special-case values for 2.8.0.
+    if source_version.ge(&two_dot_o_rc_one) && source_version.lt(&TWO_DOT_EIGHT) {
+        let image_tag_to_remove = String::from("busybox:latest");
+        // if base.jaeger.collector.initContainer elements contain the image key
+        if source_values
+            .base_jaeger_collector_init_container()
+            .iter()
+            .filter_map(|container| container.image.clone())
+            .collect::<Vec<_>>()
+            .contains(&image_tag_to_remove)
+        {
+            let jaeger_collector_init_container_key =
+                YamlKey::try_from(".base.jaeger.collector.initContainer")?;
+
+            yq.delete_object(
+                jaeger_collector_init_container_key.clone(),
+                upgrade_values_file.path(),
+            )?;
+
+            for container in target_values.base_jaeger_collector_init_container() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeJaegerCollectorInitContainerToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    jaeger_collector_init_container_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        let container_to_replace = String::from("nvme-tcp-probe");
+        if source_values
+            .csi_node_init_containers()
+            .iter()
+            .map(|container| container.name.clone())
+            .collect::<Vec<_>>()
+            .contains(&container_to_replace)
+        {
+            let csi_node_init_containers_key =
+                YamlKey::try_from(".csi.node.initContainers.containers")?;
+
+            yq.delete_object(
+                csi_node_init_containers_key.clone(),
+                upgrade_values_file.path(),
+            )?;
+
+            for container in target_values.csi_node_init_containers() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeCsiNodeInitContainersToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    csi_node_init_containers_key.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        {
+            let loki_init_containers = YamlKey::try_from(".loki-stack.loki.initContainers")?;
+
+            yq.delete_object(loki_init_containers.clone(), upgrade_values_file.path())?;
+
+            for container in target_values.loki_stack_loki_init_containers() {
+                let container_val = serde_json::to_string(container).context(
+                    SerializeLokiInitContainersToJson {
+                        object: container.clone(),
+                    },
+                )?;
+                yq.append_to_array(
+                    loki_init_containers.clone(),
+                    container_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
     }
 
     // Default options.

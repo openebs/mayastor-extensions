@@ -221,6 +221,10 @@ impl CoreValues {
         self.csi.node_nvme_io_timeout()
     }
 
+    pub(crate) fn csi_node_init_containers(&self) -> &[Container] {
+        self.csi.csi_node_init_containers()
+    }
+
     /// This returns the value of the removed key for CSI socket mount path.
     pub(crate) fn deprecated_node_csi_mount_path(&self) -> &str {
         self.csi.deprecated_node_csi_mount_path()
@@ -229,6 +233,10 @@ impl CoreValues {
     /// This is a getter for the grafana/loki container image tag.
     pub(crate) fn loki_stack_loki_image_tag(&self) -> &str {
         self.loki_stack.loki_image_tag()
+    }
+
+    pub(crate) fn loki_stack_loki_init_containers(&self) -> &[Container] {
+        self.loki_stack.loki_init_containers()
     }
 
     /// This is a getter for the promtail scrapeConfigs.
@@ -348,6 +356,11 @@ impl CoreValues {
         self.base.jaeger_agent_init_container()
     }
 
+    /// This is the array of containers associated with jaeger collector initContainers.
+    pub(crate) fn base_jaeger_collector_init_container(&self) -> &[Container] {
+        self.base.jaeger_collector_init_container()
+    }
+
     /// Retrieves the image tag of the Jaeger operator.
     /// Useful when updating the Jaeger operator dependency chart to ensure the new chart uses the updated image tag.
     pub(crate) fn jaeger_operator_image_tag(&self) -> &str {
@@ -418,6 +431,11 @@ impl Base {
     fn jaeger_agent_init_container(&self) -> &[Container] {
         self.jaeger.agent_init_container()
     }
+
+    /// This returns the array of kubernetes initContainer objects for jaeger collector.
+    fn jaeger_collector_init_container(&self) -> &[Container] {
+        self.jaeger.collector_init_container()
+    }
 }
 
 /// This is used to deserialize the .base.initRestContainer object.
@@ -434,7 +452,7 @@ impl InitRestContainer {
 }
 
 /// This is used to deserialize various 'containers' yaml objects.
-#[derive(Deserialize)]
+#[derive(Default, Deserialize)]
 struct GenericContainers {
     /// Container config.
     containers: Vec<Container>,
@@ -444,6 +462,21 @@ impl GenericContainers {
     /// Returns container config.
     fn containers(&self) -> &[Container] {
         self.containers.as_slice()
+    }
+}
+
+/// This is used to deserialize various 'initContainer' yaml objects.
+#[derive(Default, Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct GenericInitContainer {
+    /// InitContainer config.
+    init_container: Vec<Container>,
+}
+
+impl GenericInitContainer {
+    /// This returns the init containers from the '.initContainer' item.
+    fn init_container(&self) -> &[Container] {
+        self.init_container.as_slice()
     }
 }
 
@@ -664,6 +697,10 @@ impl Csi {
     fn deprecated_node_csi_mount_path(&self) -> &str {
         self.node.deprecated_plugin_mount_path()
     }
+
+    fn csi_node_init_containers(&self) -> &[Container] {
+        self.node.init_containers()
+    }
 }
 
 /// This contains the image tags for the CSI sidecar containers.
@@ -721,10 +758,13 @@ impl CsiImage {
 
 /// This is used to deserialize the yaml object 'csi.node'.
 #[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
 struct CsiNode {
     nvme: CsiNodeNvme,
     #[serde(default, rename(deserialize = "pluginMounthPath"))]
     deprecated_plugin_mount_path: String,
+    #[serde(default)]
+    init_containers: GenericContainers,
 }
 
 impl CsiNode {
@@ -736,6 +776,10 @@ impl CsiNode {
     /// This returns the csi node mount path key's value. The key had a typo, it's been removed.
     fn deprecated_plugin_mount_path(&self) -> &str {
         self.deprecated_plugin_mount_path.as_str()
+    }
+
+    fn init_containers(&self) -> &[Container] {
+        self.init_containers.containers()
     }
 }
 
@@ -788,6 +832,10 @@ impl LokiStack {
     /// This is a getter for the loki/loki container's image tag.
     fn loki_image_tag(&self) -> &str {
         self.loki.image_tag()
+    }
+
+    fn loki_init_containers(&self) -> &[Container] {
+        self.loki.init_containers()
     }
 
     /// This is a getter for the initContainer array from promtail chart v6.13.1.
@@ -931,14 +979,19 @@ impl Logstash {
 
 /// This is used to deserialize the YAML object 'loki-stack.loki'.
 #[derive(Default, Deserialize)]
-#[serde(default)]
+#[serde(default, rename_all(deserialize = "camelCase"))]
 struct Loki {
     image: GenericImage,
+    init_containers: Vec<Container>,
 }
 
 impl Loki {
     fn image_tag(&self) -> &str {
         self.image.tag()
+    }
+
+    fn init_containers(&self) -> &[Container] {
+        self.init_containers.as_slice()
     }
 }
 
@@ -1231,7 +1284,9 @@ impl LocalpvProvisionerHelperPod {
 /// This is used to deserialize the '.jaeger' yaml object.
 #[derive(Deserialize)]
 struct Jaeger {
-    agent: JaegerAgent,
+    agent: GenericInitContainer,
+    #[serde(default)]
+    collector: GenericInitContainer,
 }
 
 impl Jaeger {
@@ -1239,19 +1294,9 @@ impl Jaeger {
     fn agent_init_container(&self) -> &[Container] {
         self.agent.init_container()
     }
-}
 
-/// This is used to deserialize the '.jaeger.agent' yaml object.
-#[derive(Deserialize)]
-#[serde(rename_all(deserialize = "camelCase"))]
-struct JaegerAgent {
-    init_container: Vec<Container>,
-}
-
-impl JaegerAgent {
-    /// This returns the init containers from the base jaeger agent.
-    fn init_container(&self) -> &[Container] {
-        self.init_container.as_slice()
+    fn collector_init_container(&self) -> &[Container] {
+        self.collector.init_container()
     }
 }
 
