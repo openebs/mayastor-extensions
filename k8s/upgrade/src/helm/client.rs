@@ -158,7 +158,7 @@ impl HelmReleaseClientBuilder {
 
 /// This type has functions which execute helm commands to fetch info about and modify helm
 /// releases.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HelmReleaseClient {
     pub namespace: String,
     /// This is the information that Helm stores on the cluster about the state of a helm release.
