@@ -56,6 +56,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 |------------|------|---------|
 |  | crds | 0.0.0 |
 | https://charts.bitnami.com/bitnami | etcd | 8.6.0 |
+| https://charts.jetstack.io | cert-manager(cert-manager) | v1.17.0 |
 | https://grafana.github.io/helm-charts | loki-stack | 2.9.11 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.50.1 |
 | https://nats-io.github.io/k8s/helm/charts/ | nats | 0.19.14 |
@@ -119,6 +120,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;format | Valid values for format are pretty, json and compact | `"pretty"` |
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;silenceLevel | Silence specific module components | `nil` |
 | base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;enabled | Enable the metrics exporter | `true` |
+| cert-manager.&ZeroWidthSpace;enabled | Enable cert-manager only if tls is enabled | `true` |
 | crds.&ZeroWidthSpace;csi.&ZeroWidthSpace;volumeSnapshots.&ZeroWidthSpace;enabled | Install Volume Snapshot CRDs | `true` |
 | crds.&ZeroWidthSpace;enabled | Disables the installation of all CRDs if set to false | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;logLevel | Log level for the csi controller | `"info"` |

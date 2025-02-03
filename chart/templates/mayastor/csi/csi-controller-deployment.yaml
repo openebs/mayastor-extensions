@@ -118,7 +118,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
-            - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"{{ if .Values.base.jaeger.enabled }}
+            {{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ include "jaeger_url" . }}"{{ end }}
             {{- range $key, $val := .Values.csi.node.topology.segments }}
             - "--node-selector={{ $key }}={{ $val }}"
@@ -126,6 +126,12 @@ spec:
             - "--ansi-colors={{ .Values.base.logging.color }}"
             - "--fmt-style={{ include "logFormat" . }}"
             - "--create-volume-limit={{ .Values.csi.controller.maxCreateVolume }}"
+            {{- if .Values.tls.enabled }}
+            - "--rest-endpoint=https://{{ .Release.Name }}-api-rest:8080"
+            - "--tls-client-ca-path=/etc/client_cert/ca.crt" # CA cert for client verification with rest
+            {{- else }}
+            - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"
+            {{- end }}
           env:
             - name: RUST_LOG
               value: {{ .Values.csi.controller.logLevel }}
@@ -136,6 +142,18 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+            {{- if .Values.tls.enabled }}
+            - name: ca-cert
+              mountPath: /etc/client_cert/ca.crt
+              subPath: ca.crt
+              readOnly: true
+            {{- end }}
       volumes:
         - name: socket-dir
           emptyDir:
+        {{- if .Values.tls.enabled }}
+        - name: ca-cert
+          secret:
+            defaultMode: 420
+            secretName: api-rest-tls
+        {{- end }}
