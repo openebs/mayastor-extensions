@@ -57,7 +57,7 @@ pkgs.nixosTest {
 
     machine.succeed("${test-src}/scripts/k8s/deployer.sh start --label --delay")
     try:
-      machine.succeed("${test-src}/scripts/helm/install.sh --wait")
+      machine.succeed('${test-src}/scripts/helm/install.sh --wait --helm "--set obs.callhome.enabled=false"')
     finally:
       machine.succeed("kubectl get pods -A -o wide 1>&2")
   '';
