@@ -520,8 +520,31 @@ pub enum Error {
     },
 
     /// Error in serializing base.jaeger.agent.initContainers.
-    #[snafu(display("Failed to serialize .base.jaeger.agent.initContainer {object:?}: {source}",))]
+    #[snafu(display("Failed to serialize .base.jaeger.agent.initContainer {object:?}: {source}"))]
     SerializeJaegerAgentInitContainerToJson {
+        source: serde_json::Error,
+        object: Container,
+    },
+
+    /// Error in serializing base.jaeger.collector.initContainers.
+    #[snafu(display(
+        "Failed to serialize .base.jaeger.collector.initContainer {object:?}: {source}",
+    ))]
+    SerializeJaegerCollectorInitContainerToJson {
+        source: serde_json::Error,
+        object: Container,
+    },
+
+    #[snafu(display(
+        "Failed to serialize .csi.node.initContainers.containers {object:?}: {source}"
+    ))]
+    SerializeCsiNodeInitContainersToJson {
+        source: serde_json::Error,
+        object: Container,
+    },
+
+    #[snafu(display("Failed to serialize .loki-stack.loki.initContainers {object:?}: {source}"))]
+    SerializeLokiInitContainersToJson {
         source: serde_json::Error,
         object: Container,
     },

@@ -236,15 +236,11 @@ impl EventRecorder {
     }
 
     /// This method is intended for use when upgrade fails.
-    pub async fn publish_unrecoverable<Error>(&self, err: &Error, validation_error: bool)
+    pub async fn publish_fatal<Error, K>(&self, err: &Error, action: K)
     where
         Error: Display,
+        K: ToString,
     {
-        let action = if validation_error {
-            EventAction::ValidationFailed
-        } else {
-            EventAction::Failed
-        };
         let _ = self
             .publish_warning(format!("Failed to upgrade: {err}"), action)
             .await

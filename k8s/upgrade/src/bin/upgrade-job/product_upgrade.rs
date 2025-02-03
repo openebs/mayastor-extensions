@@ -62,7 +62,9 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
     let dry_run_result: Result<HelmUpgradeRunner> = helm_upgrader.dry_run().await;
     let run_helm_upgrade = match dry_run_result {
         Err(error) => {
-            event.publish_unrecoverable(&error, true).await;
+            event
+                .publish_fatal(&error, EventAction::ValidationFailed)
+                .await;
             Err(error)
         }
         Ok(run_helm_upgrade) => Ok(run_helm_upgrade),
@@ -86,7 +88,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
     let final_values = match run_helm_upgrade.await {
         Ok(values) => values,
         Err(error) => {
-            event.publish_unrecoverable(&error, false).await;
+            event.publish_fatal(&error, EventAction::Failed).await;
             return Err(error);
         }
     };
@@ -139,7 +141,7 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
         )
         .await
         {
-            event.publish_unrecoverable(&error, false).await;
+            event.publish_fatal(&error, EventAction::Failed).await;
             return Err(error);
         }
 
