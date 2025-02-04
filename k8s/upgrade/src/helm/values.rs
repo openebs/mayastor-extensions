@@ -1,18 +1,16 @@
 use crate::{
     common::{
         constants::{
-            KUBE_API_PAGE_SIZE, TWO_DOT_EIGHT, TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE,
-            TWO_DOT_O_RC_ONE, TWO_DOT_SEVEN_DOT_THREE, TWO_DOT_SEVEN_DOT_TWO, TWO_DOT_SIX,
-            TWO_DOT_THREE,
+            TWO_DOT_EIGHT, TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE,
+            TWO_DOT_SEVEN_DOT_THREE, TWO_DOT_SEVEN_DOT_TWO, TWO_DOT_SIX, TWO_DOT_THREE,
         },
         error::{
-            DeserializePromtailExtraConfig, ListCrds, Result, SemverParse,
-            SerializeBaseInitContainersToJson, SerializeBaseInitCoreContainersToJson,
-            SerializeBaseInitHaNodeContainersToJson, SerializeBaseInitRestContainerToJson,
-            SerializeCsiNodeInitContainersToJson, SerializeJaegerAgentInitContainerToJson,
-            SerializeJaegerCollectorInitContainerToJson, SerializeLokiInitContainersToJson,
-            SerializePromtailConfigClientToJson, SerializePromtailExtraConfigToJson,
-            SerializePromtailInitContainerToJson,
+            DeserializePromtailExtraConfig, Result, SemverParse, SerializeBaseInitContainersToJson,
+            SerializeBaseInitCoreContainersToJson, SerializeBaseInitHaNodeContainersToJson,
+            SerializeBaseInitRestContainerToJson, SerializeCsiNodeInitContainersToJson,
+            SerializeJaegerAgentInitContainerToJson, SerializeJaegerCollectorInitContainerToJson,
+            SerializeLokiInitContainersToJson, SerializePromtailConfigClientToJson,
+            SerializePromtailExtraConfigToJson, SerializePromtailInitContainerToJson,
         },
         file::write_to_tempfile,
         kube::client as KubeClient,
@@ -22,7 +20,7 @@ use crate::{
         yaml::yq::{YamlKey, YqV4},
     },
 };
-use kube::{api::ListParams, ResourceExt};
+use kube::ResourceExt;
 use semver::Version;
 use snafu::ResultExt;
 use std::{collections::HashMap, path::Path};
@@ -731,28 +729,11 @@ async fn safe_crd_install(upgrade_values_filepath: &Path, yq: &YqV4) -> Result<(
         YamlKey::try_from(".crds.jaeger.enabled")?,
     );
 
-    let crds_api = KubeClient::crds_api().await?;
-    let mut all_crd_names: Vec<String> = Vec::with_capacity(KUBE_API_PAGE_SIZE as usize);
-    let mut list_params = ListParams::default().limit(KUBE_API_PAGE_SIZE);
-
-    loop {
-        let crd_list = crds_api
-            .list_metadata(&list_params)
-            .await
-            .context(ListCrds)?;
-
-        all_crd_names = all_crd_names
-            .into_iter()
-            .chain(crd_list.iter().map(|metadata| metadata.name_unchecked()))
-            .collect();
-
-        match crd_list.metadata.continue_ {
-            Some(token) => {
-                list_params = list_params.continue_token(token.as_str());
-            }
-            None => break,
-        }
-    }
+    let all_crd_names: Vec<String> = KubeClient::list_crds_metadata()
+        .await?
+        .into_iter()
+        .map(|crd| crd.name_unchecked())
+        .collect();
 
     for (crd_set, helm_toggle) in crd_set_to_helm_toggle.into_iter() {
         // Uses an OR logical check to disable set installation, i.e. disable if
