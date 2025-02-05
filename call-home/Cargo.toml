@@ -30,7 +30,7 @@ serde_yaml = "0.9.34"
 serde = { version = "1.0.214", features = ["derive"] }
 sha256 = "1.5.0"
 jsonpath_lib = "0.3.0"
-url = "2.5.2"
+url = "2.5.4"
 snafu = "0.8.5"
 anyhow = "1.0.92"
 tracing = "0.1.40"
