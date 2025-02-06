@@ -60,7 +60,7 @@ while [ "$#" -gt 0 ]; do
     -h|--help)
       help
       exit 0
-      shift;;
+      ;;
     start)
       COMMAND="start"
       DO_ARGS="y"
@@ -111,7 +111,8 @@ while [ "$#" -gt 0 ]; do
           fi
           shift;;
         *)
-          shift;;
+          die "Unknown cli argument: $1"
+          ;;
       esac
   esac
 done
@@ -147,13 +148,13 @@ EOF
 
 start_core=1
 nodes=()
-for node_index in $(seq 1 $WORKERS); do
+for node_index in $(seq 1 "$WORKERS"); do
   if [ "$node_index" == 1 ]; then
     node="kind-worker"
   else
     node="kind-worker$node_index"
   fi
-  nodes+=($node)
+  nodes+=("$node")
 
   host_path="$TMP_KIND/$node"
   cat <<EOF >> "$TMP_KIND_CONFIG"
@@ -175,12 +176,12 @@ EOF
     openebs.io/engine: mayastor
 EOF
   fi
-  mkdir -p $host_path/io-engine
+  mkdir -p "$host_path"/io-engine
   if [ -n "$POOL_SIZE" ]; then
-    $FALLOCATE -l $POOL_SIZE $host_path/io-engine/disk.io
+    $FALLOCATE -l "$POOL_SIZE" "$host_path"/io-engine/disk.io
   fi
   corelist=$(seq -s, $((start_core+((node_index-1)*CORES))) 1 $((start_core-1+((node_index)*CORES))))
-  printf "eal_opts:\n  core_list: $corelist\n  developer_delay: $DELAY\n" >$host_path/io-engine/config.yaml
+  printf "eal_opts:\n  core_list: %s\n  developer_delay: %s\n" "$corelist" "$DELAY" >"$host_path"/io-engine/config.yaml
 done
 
 if [ -n "$DRY_RUN" ]; then
@@ -191,13 +192,14 @@ $KIND create cluster --config "$TMP_KIND_CONFIG"
 
 $KUBECTL cluster-info --context kind-kind
 if [ -z "$DRY_RUN" ]; then
-  host_ip=$($DOCKER network inspect kind | jq '.[0].IPAM.Config[0].Gateway')
+  host_ip=$($DOCKER network inspect kind | jq -r 'first (.[0].IPAM.Config[].Gateway | select(.))')
 fi
 echo "HostIP: $host_ip"
 
+# shellcheck disable=SC2068
 for node in ${nodes[@]}; do
-  $DOCKER exec $node mount -o remount,rw /sys
+  $DOCKER exec "$node" mount -o remount,rw /sys
 
   # Note: this will go away if the node restarts...
-  $DOCKER exec $node bash -c 'printf "'$host_ip' kvmhost\n" >> /etc/hosts'
+  $DOCKER exec "$node" bash -c 'printf "'"$host_ip"' kvmhost\n" >> /etc/hosts'
 done

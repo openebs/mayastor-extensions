@@ -25,3 +25,5 @@ README.md.tmpl
 # Nix Shell
 *.nix
 kubectl-plugin/
+# Chart Metadata
+images.txt
