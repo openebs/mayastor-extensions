@@ -29,7 +29,10 @@ jobs:
       - name: Pre-populate pytest nix-shell
         run: nix-shell ./scripts/python/shell.nix --run "echo"
       - name: BootStrap k8s cluster
-        run: nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
+        run: |
+          sudo debconf-communicate <<< "set man-db/auto-update false" || true
+          sudo dpkg-reconfigure man-db || true
+          nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
       - name: Prepare v-next images and binary
         run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --build --chart-tag --chart ./chart"
       - name: Load images to kind cluster
