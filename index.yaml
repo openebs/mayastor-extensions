@@ -709,7 +709,7 @@ entries:
           image: registry.k8s.io/sig-storage/snapshot-controller:v6.3.3
     apiVersion: v2
     appVersion: 0.0.0
-    created: "2025-02-06T00:14:19.275591621Z"
+    created: "2025-02-13T10:36:21.816497119Z"
     dependencies:
     - condition: crds.enabled
       name: crds
@@ -736,7 +736,7 @@ entries:
       repository: https://openebs.github.io/dynamic-localpv-provisioner
       version: 4.2.0
     description: Mayastor Helm chart for Kubernetes
-    digest: ac28e5d5753a149a5e4453e51392a469c4b4c39ca788355f236040f878ad71ae
+    digest: bc9dfc1a74358b876c69c5a6e0b64bdad60fa59f623a33d7cc58aff5c8a29219
     name: mayastor
     type: application
     urls:
@@ -772,4 +772,4 @@ entries:
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2025-02-06T00:14:19.253432883Z"
+generated: "2025-02-13T10:36:21.794113018Z"
