@@ -3,8 +3,9 @@ use crate::common::{
     error::{
         ControllerRevisionDoesntHaveHashLabel, ControllerRevisionListEmpty,
         InvalidNoOfHelmConfigMaps, InvalidNoOfHelmSecrets, K8sClientGeneration,
-        ListConfigMapsWithLabelAndField, ListCtrlRevsWithLabelAndField, ListNodesWithLabelAndField,
-        ListPodsWithLabelAndField, ListSecretsWithLabelAndField, Result,
+        ListConfigMapsWithLabelAndField, ListCrds, ListCtrlRevsWithLabelAndField,
+        ListNodesWithLabelAndField, ListPodsWithLabelAndField, ListSecretsWithLabelAndField,
+        Result,
     },
 };
 use k8s_openapi::{
@@ -88,6 +89,16 @@ pub async fn list_pods(
     paginated_list(pods_api, &mut pods, Some(list_params), list_pods_error_ctx).await?;
 
     Ok(pods)
+}
+
+/// List the .metadata section of all CustomResourceDefinition resources in a paginated way.
+pub async fn list_crds_metadata() -> Result<Vec<PartialObjectMeta<CustomResourceDefinition>>> {
+    let mut crds: Vec<PartialObjectMeta<CustomResourceDefinition>> =
+        Vec::with_capacity(KUBE_API_PAGE_SIZE as usize);
+
+    paginated_list_metadata(crds_api().await?, &mut crds, None, ListCrds).await?;
+
+    Ok(crds)
 }
 
 /// List Nodes metadata in the kubernetes cluster.
@@ -311,7 +322,8 @@ pub async fn get_helm_release_configmap(
     cms.into_iter().next().ok_or(wrong_no_of_cms.build())
 }
 
-async fn paginated_list<K, C, E2>(
+/// List Kubernetes resource object with pagination.
+pub async fn paginated_list<K, C, E2>(
     resource_api: Api<K>,
     resources: &mut Vec<K>,
     list_params: Option<ListParams>,
@@ -346,7 +358,8 @@ where
     Ok(())
 }
 
-async fn paginated_list_metadata<K, C, E2>(
+/// Lists Kubernetes resource metadata section with pagination.
+pub async fn paginated_list_metadata<K, C, E2>(
     resource_api: Api<K>,
     resources: &mut Vec<PartialObjectMeta<K>>,
     list_params: Option<ListParams>,
