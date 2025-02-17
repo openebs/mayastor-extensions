@@ -29,3 +29,35 @@ jobs:
         run: nix-shell --run "./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
       - name: HelmChart Template
         run: nix-shell --pure --run "./scripts/helm/test-template.sh" ./scripts/helm/shell.nix
+
+  helm-images:
+    runs-on: ubuntu-latest-8-cores
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: DeterminateSystems/nix-installer-action@v11
+        with:
+          kvm: true
+      - uses: DeterminateSystems/magic-nix-cache-action@v6
+      - name: Setup Nix Path
+        run: |
+          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+      - name: Pre-populate K8s nix-shell
+        run: nix-shell ./scripts/k8s/shell.nix --run "echo"
+      - name: Pre-populate helm nix-shell
+        run: nix-shell ./scripts/helm/shell.nix --run "echo"
+      - name: Generate image list
+        run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh generate --dependency-update --exit-code"
+      - name: BootStrap k8s cluster
+        if: github.event_name != 'pull_request'
+        run: nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
+      - name: Install helm chart
+        if: github.event_name != 'pull_request'
+        run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/install.sh --wait"
+      - name: Verify image list
+        if: github.event_name != 'pull_request'
+        run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh verify"
+      - name: Patch chart/Chart.yaml
+        run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh patch --exit-code"

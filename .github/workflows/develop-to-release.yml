@@ -18,11 +18,16 @@ jobs:
         run: |
           branch="${{ github.ref_name }}"
           nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch" --develop-to-release" ./scripts/helm/shell.nix
-          nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
       - name: Check if the submodules are correct
         run: |
           branch="${{ github.ref_name }}"
           ./scripts/git/set-submodule-branches.sh --branch "$branch"
+      - name: Update the Chart Readme.md
+        run: nix-shell ./scripts/helm/shell.nix --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh"
+      - name: Update the Chart images
+        run: |
+          nix-shell ./scripts/helm/shell.nix --pure --run "./scripts/helm/images.sh generate --dependency-update"
+          nix-shell ./scripts/helm/shell.nix --pure --run "./scripts/helm/images.sh patch"
       - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@v5
@@ -36,14 +41,16 @@ jobs:
             automated-pr
           draft: false
           signoff: true
-          token: ${{ secrets.ORG_CI_GITHUB }}
-      - name: Approve Pull Request by CI Bot
+          delete-branch: true
+          branch-suffix: "random"
+          token: ${{ github.token }}
+      - name: Approve Pull Request by CI User 1
         if: ${{ steps.cpr.outputs.pull-request-number }}
         run: |
           gh pr review ${{ steps.cpr.outputs.pull-request-number }} --approve
         env:
-          GH_TOKEN: ${{ github.token }}
-      - name: Approve Pull Request by CI User
+          GH_TOKEN: ${{ secrets.ORG_CI_GITHUB }}
+      - name: Approve Pull Request by CI User 2
         if: ${{ steps.cpr.outputs.pull-request-number }}
         run: |
           gh pr review ${{ steps.cpr.outputs.pull-request-number }} --approve

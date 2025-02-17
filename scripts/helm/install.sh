@@ -164,7 +164,7 @@ else
   $HELM install "$RELEASE_NAME" "$CHART_SOURCE" -n "$K8S_NAMESPACE" --create-namespace \
        --set="etcd.livenessProbe.initialDelaySeconds=5,etcd.readinessProbe.initialDelaySeconds=5,etcd.replicaCount=1" \
        --set="obs.callhome.enabled=true,obs.callhome.sendReport=false,localpv-provisioner.analytics.enabled=false" \
-       --set="eventing.enabled=false" \
+       --set="eventing.enabled=true,nats.cluster.enabled=false,nats.cluster.replicas=1" \
        $HELM_DRY_RUN $WAIT_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
   set +x
 fi
