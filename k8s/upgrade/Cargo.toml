@@ -17,16 +17,11 @@ utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
 constants = { path = "../../constants" }
 kube-proxy = { path = "../../dependencies/control-plane/k8s/proxy" }
 console-logger = { path = "../../console-logger" }
-convert_case = "0.6.0"
-kube = { version = "0.87.0", default-features = true, features = ["derive", "runtime"] }
-anyhow = "1.0.92"
+kube = { version = "0.94.2", default-features = true, features = ["derive", "runtime"] }
 clap = { version = "4.5.20", features = ["derive", "env", "string", "color"] }
 humantime = "2.1.0"
 maplit = "1.0.2"
-k8s-openapi = { version = "0.20.0", features = ["v1_22"] }
-tower = { version = "0.5.1", features = ["timeout", "util"] }
-hyper = { version = "1.5.0", features = ["client", "http1", "http2"] }
-http = "1.1.0"
+k8s-openapi = { version = "0.22.0", features = ["v1_24"] }
 async-trait = "0.1.83"
 serde = "1.0.214"
 serde_json = "1.0.132"
