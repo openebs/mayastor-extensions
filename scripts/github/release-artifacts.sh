@@ -46,22 +46,22 @@ get_artifacts_id() {
     die "Invalid tag type: $type"
   fi
   local sha=$(echo $tag_ref | jq '.object.sha')
-  job=$(gh run list --branch "$tag" --workflow "$workflow" --repo "$repo" --json conclusion,headSha,databaseId --jq ".[] | select(.headSha == "$sha")")
+  job=$(gh run list --branch "$tag" --workflow "$workflow" --repo "$repo" --json conclusion,headSha,databaseId,createdAt --jq "[.[] | select(.headSha == "$sha")] | sort_by(.createdAt) | .[-1]")
   if [ -z "$job" ]; then
     echo "Job not found" >&2
     return 1
   fi
-  conclusion="$(echo "$job" | jq ".conclusion")"
+  conclusion="$(echo "$job" | jq -r ".conclusion")"
   id=$(echo "$job" | jq ".databaseId")
-  if [ "$conclusion" = "\"\"" ]; then
+  if [ "$conclusion" = "" ]; then
     echo "Job id=$id is still running" >&2
     return 2
   fi
-  if [ "$conclusion" = "\"failed\"" ]; then
+  if [ "$conclusion" = "failed" ]; then
     echo "Job id=$id has failed, please retry it..." >&2
     return 3
   fi
-  if [ "$conclusion" = "\"success\"" ]; then
+  if [ "$conclusion" = "success" ]; then
     echo "$id"
     return 0
   fi
