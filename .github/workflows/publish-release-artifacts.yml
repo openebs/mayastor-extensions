@@ -1,11 +1,21 @@
 name: Publish Release Artifacts
 on:
   release:
-    types: [published]
+    types: [ published ]
+
 jobs:
   publish-artifacts:
     runs-on: ubuntu-latest
     steps:
+      - name: Get Latest Release Tag
+        id: latest-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LATEST_VERSION=$(gh api repos/${{ github.repository_owner }}/mayastor-extensions/releases/latest | jq -r '.tag_name')
+          echo "Latest published version:$LATEST_VERSION"
+          echo "ShouldUpdateKrew:"${{ !github.event.release.prerelease && (steps.latest-release.outputs.latestTag == github.event.release.tag_name) }}
+          echo "latestTag=$LATEST_VERSION" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
       - name: Download Artifacts
         run: |
@@ -20,5 +30,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.ORG_CI_GITHUB }}
       - name: Update krew index
-        if: "!github.event.release.prerelease"
+        if: ${{ !github.event.release.prerelease && (steps.latest-release.outputs.latestTag == github.event.release.tag_name) }}
         uses: rajatjindal/krew-release-bot@v0.0.47
