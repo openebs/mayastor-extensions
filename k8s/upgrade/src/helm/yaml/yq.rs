@@ -18,7 +18,7 @@ use std::{
 
 /// This is a container for the String of an input yaml key.
 #[derive(Clone)]
-pub(crate) struct YamlKey(String);
+pub struct YamlKey(String);
 
 impl TryFrom<&str> for YamlKey {
     type Error = crate::common::error::Error;
@@ -54,14 +54,14 @@ impl Deref for YamlKey {
 }
 
 /// This type is for running `yq` v4.x.y commands.
-pub(crate) struct YqV4 {
+pub struct YqV4 {
     /// This is the name of the binary, for use when running `yq` Commands.
     command_name: String,
 }
 
 impl YqV4 {
     /// Run the `yq -V` command to check if yq exists and it's version is v4.x.y.
-    pub(crate) fn new() -> Result<Self> {
+    pub fn new() -> Result<Self> {
         let yq_v4 = Self {
             command_name: String::from("yq"),
         };
@@ -100,7 +100,7 @@ impl YqV4 {
     }
 
     /// Append objects to yaml arrays.
-    pub(crate) fn append_to_array<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
+    pub fn append_to_array<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
     where
         V: Display + Sized,
         P: AsRef<Path>,
@@ -127,7 +127,7 @@ impl YqV4 {
     }
 
     /// Append fields to yaml objects.
-    pub(crate) fn append_to_object<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
+    pub fn append_to_object<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
     where
         V: Display + Sized,
         P: AsRef<Path>,
@@ -154,7 +154,7 @@ impl YqV4 {
     }
 
     /// Use the yq 'del' operator to delete objects from a yaml file.
-    pub(crate) fn delete_object<P>(&self, key: YamlKey, filepath: P) -> Result<()>
+    pub fn delete_object<P>(&self, key: YamlKey, filepath: P) -> Result<()>
     where
         P: AsRef<Path>,
     {
@@ -226,7 +226,7 @@ impl YqV4 {
     /// and migrate the older default to the newer one. E.g.: the .io_engine.logLevel is set to
     /// 'info' deliberately if the upgrade source file is seen to contain the value
     /// 'info,io_engine=info' and the target yaml is seen to not contain it.
-    pub(crate) fn merge_files<P, Q>(&self, high_priority: P, low_priority: Q) -> Result<Vec<u8>>
+    pub fn merge_files<P, Q>(&self, high_priority: P, low_priority: Q) -> Result<Vec<u8>>
     where
         P: AsRef<Path>,
         Q: AsRef<Path>,
@@ -254,7 +254,7 @@ impl YqV4 {
     }
 
     /// This sets in-place yaml values in yaml files.
-    pub(crate) fn set_literal_value<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
+    pub fn set_literal_value<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
     where
         V: Display + Sized,
         P: AsRef<Path>,
