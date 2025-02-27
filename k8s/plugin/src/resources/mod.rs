@@ -24,8 +24,8 @@ pub struct CliArgs {
     pub rest: Option<Url>,
 
     /// Path to kubeconfig file.
-    #[clap(global = true, long, short = 'k')]
-    pub kube_config_path: Option<PathBuf>,
+    #[clap(skip)]
+    pub kubeconfig: Option<PathBuf>,
 
     /// Kubernetes namespace of mayastor service
     #[clap(skip)]
@@ -115,7 +115,7 @@ impl ExecuteOperation for Operations {
                 // todo: use generic execute trait
                 preflight_validations::preflight_check(
                     &cli_args.namespace,
-                    cli_args.kube_config_path.clone(),
+                    cli_args.kubeconfig.clone(),
                     cli_args.timeout,
                     resources,
                 )
@@ -180,7 +180,7 @@ pub async fn init_rest(cli_args: &CliArgs) -> Result<(), Error> {
         Some(url) => RestClient::init(url, false, *cli_args.timeout).map_err(Error::RestClient),
         None => {
             let config = kube_proxy::ConfigBuilder::default_api_rest()
-                .with_kube_config(cli_args.kube_config_path.clone())
+                .with_kube_config(cli_args.kubeconfig.clone())
                 .with_timeout(*cli_args.timeout)
                 .with_target_mod(|t| t.with_namespace(&cli_args.namespace))
                 .build()

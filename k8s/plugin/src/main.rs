@@ -3,7 +3,7 @@ use plugin::ExecuteOperation;
 use resources::{init_rest, Error, Operations};
 pub mod resources;
 
-use std::{env, ops::Deref};
+use std::{env, ops::Deref, path::PathBuf};
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
@@ -20,6 +20,10 @@ struct CliArgs {
     #[clap(flatten)]
     args: resources::CliArgs,
 
+    /// Path to kubeconfig file.
+    #[clap(global = true, long, short = 'k')]
+    kube_config_path: Option<PathBuf>,
+
     /// Use namespace from the current `kubeconfig` context.
     #[clap(global = true, long, hide = true, default_value = "false")]
     namespace_from_context: bool,
@@ -28,10 +32,11 @@ struct CliArgs {
 impl CliArgs {
     async fn args() -> Result<Self, anyhow::Error> {
         let mut args = CliArgs::parse();
+        args.args.kubeconfig = args.kube_config_path.clone();
         args.args.namespace = if let Some(namespace) = &args.namespace {
             namespace.to_string()
         } else if args.namespace_from_context {
-            let client = kube_proxy::client_from_kubeconfig(args.args.kube_config_path.clone())
+            let client = kube_proxy::client_from_kubeconfig(args.kube_config_path.clone())
                 .await
                 .map_err(|err| anyhow::anyhow!("{err}"))?;
             client.default_namespace().to_string()
