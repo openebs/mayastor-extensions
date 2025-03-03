@@ -75,17 +75,9 @@ spec:
               mountPath: /etc/client_cert/ca.crt
               subPath: ca.crt
               readOnly: true
-            # - name: agent-ca-cert
-            #   mountPath: /etc/client_cert/agent-ca.crt
-            #   subPath: agent-ca.crt
-            #   readOnly: true
       volumes:
         - name: ca-cert
           secret:
             defaultMode: 420
-            secretName: api-rest-tls
-        # - name: agent-ca-cert
-        #   secret:
-        #     defaultMode: 420
-        #     secretName: agent-core-server-cert
+            secretName: ca-root-cert
       {{- end}}

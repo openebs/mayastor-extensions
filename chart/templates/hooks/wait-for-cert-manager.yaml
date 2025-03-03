@@ -106,7 +106,45 @@ spec:
                 issuerRef:
                   name: ca-issuer
                   kind: Issuer
-                secretName: api-rest-tls
+                secretName: rest-api-server-cert
+              EOF
+              echo "Creating core-agent-server certificate..."
+              kubectl apply -f - <<EOF
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: agent-core-server
+                namespace: {{ .Release.Namespace }}
+              spec:
+                duration: 175200h
+                isCA: false
+                dnsNames:
+                  - {{ .Release.Name }}-agent-core.{{ .Release.Namespace }}.svc
+                  - {{ .Release.Name }}-agent-core.{{ .Release.Namespace }}.svc.cluster.local
+                  - {{ .Release.Name }}-agent-core
+                issuerRef:
+                  name: ca-issuer
+                  kind: Issuer
+                secretName: agent-core-server-cert
+              EOF
+              echo "Creating io-engine-server certificate..."
+              kubectl apply -f - <<EOF
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: io-engine-server
+                namespace: {{ .Release.Namespace }}
+              spec:
+                duration: 175200h
+                isCA: false
+                dnsNames:
+                  - {{ .Release.Name }}-io-engine.{{ .Release.Namespace }}.svc
+                  - {{ .Release.Name }}-io-engine.{{ .Release.Namespace }}.svc.cluster.local
+                  - {{ .Release.Name }}-io-engine
+                issuerRef:
+                  name: ca-issuer
+                  kind: Issuer
+                secretName: io-engine-server-cert
               EOF
       restartPolicy: OnFailure
 {{- end }}

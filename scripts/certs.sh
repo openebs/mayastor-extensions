@@ -3,7 +3,7 @@ set -eou pipefail
 
 NAMESPACE="openebs"
 APP_NAME="api-rest"
-CERT_SECRET_NAME="api-rest-tls"
+CERT_SECRET_NAME="rest-api-server-cert"
 CERT_DIR="$(dirname "$0")/certs"
 
 rm -rf "${CERT_DIR}"

@@ -155,5 +155,5 @@ spec:
         - name: ca-cert
           secret:
             defaultMode: 420
-            secretName: api-rest-tls
+            secretName: ca-root-cert
         {{- end }}

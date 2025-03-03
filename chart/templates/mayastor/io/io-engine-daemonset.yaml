@@ -100,7 +100,11 @@ spec:
         #       If you use 2 CPUs, the CPU: field should also read 2.
         - "--grpc-ip=$(MY_POD_IP)"
         - "-N$(MY_NODE_NAME)"
+        {{- if .Values.tls.enabled }}
         - "-Rhttps://{{ .Release.Name }}-agent-core:50051"
+        {{- else }}
+        - "-Rhttp://{{ .Release.Name }}-agent-core:50051"
+        {{- end }}
         - "-y/var/local/{{ .Release.Name }}/io-engine/config.yaml"
         - "-l{{ include "cpuFlag" . }}"
         - "-p={{ include "etcdUrl" . }}"{{ if .Values.io_engine.target.nvmf.ptpl }}
@@ -113,6 +117,11 @@ spec:
         - "--tgt-crdt={{ .Values.io_engine.target.nvmf.hostCmdRetryDelay.crdt1 }}"{{ if .Values.eventing.enabled }}
         - "--events-url=nats://{{ .Release.Name }}-nats:4222"{{ end }}
         - "--ps-retries={{ default 300 .Values.io_engine.pstorRetries }}"
+        {{- if .Values.tls.enabled }}
+        - "--tls-server-key-path=/etc/server_cert/tls.key"
+        - "--tls-server-cert-path=/etc/server_cert/tls.crt"
+        - "--tls-client-ca-path=/etc/cert/ca.crt"
+        {{- end }}
         command:
         - io-engine
         securityContext:
@@ -128,6 +137,14 @@ spec:
           mountPath: /var/local/{{ .Release.Name }}/io-engine/
         - name: hugepage
           mountPath: /dev/hugepages
+        {{- if .Values.tls.enabled }}
+        - name: io-engine-server-cert
+          mountPath: "/etc/server_cert/"
+          readOnly: true
+        - name: ca-cert
+          mountPath: "/etc/cert"
+          readOnly: true
+        {{- end }}
         resources:
           limits:
             cpu: {{ .Values.io_engine.resources.limits.cpu | default (include "coreCount" .) | quote }}
@@ -161,3 +178,11 @@ spec:
         hostPath:
           path: /var/local/{{ .Release.Name }}/io-engine/
           type: DirectoryOrCreate
+      {{- if .Values.tls.enabled }}
+      - name: io-engine-server-cert
+        secret:
+          secretName: io-engine-server-cert
+      - name: ca-cert
+        secret:
+          secretName: ca-root-cert
+      {{- end }}

@@ -107,10 +107,10 @@ spec:
         - "--fmt-style={{ include "logFormat" . }}"
         - "--ansi-colors={{ .Values.base.logging.color }}"
         {{- if .Values.tls.enabled }}
-        - "--endpoint=https://{{ .Release.Name }}-api-rest:8080"
+        - "--rest-endpoint=https://{{ .Release.Name }}-api-rest:8080"
         - "--tls-client-ca-path=/etc/client_cert/ca.crt" # CA cert for client verification with rest
         {{- else }}
-        - "--endpoint=http://{{ .Release.Name }}-api-rest:8081"
+        - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"
         {{- end }}
         command:
         - csi-node
@@ -191,5 +191,5 @@ spec:
       - name: ca-cert
         secret:
           defaultMode: 420
-          secretName: api-rest-tls
+          secretName: ca-root-cert
       {{- end }}

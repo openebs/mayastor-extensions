@@ -58,12 +58,12 @@ earlyEvictionTolerations:
 tolerations: []
 
 tls:
-    enabled: true
+    enabled: false
 
 cert-manager:
   # -- Enable cert-manager only if tls is enabled
-  enabled: true
-  installCRDs: true
+  enabled: false
+  installCRDs: false
   namespace: openebs
 
 base:

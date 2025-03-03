@@ -49,7 +49,11 @@ spec:
             - "--http=[::]:8081"
             - "--request-timeout={{ .Values.base.default_req_timeout }}"{{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ include "jaeger_url" . }}"{{ end }}
+            {{- if .Values.tls.enabled }}
             - "--core-grpc=https://{{ .Release.Name }}-agent-core:50051"
+            {{- else }}
+            - "--core-grpc=http://{{ .Release.Name }}-agent-core:50051"
+            {{- end }}
             - "--ansi-colors={{ .Values.base.logging.color }}"
             - "--fmt-style={{ include "logFormat" . }}"
             {{- if .Values.apis.rest.healthProbes.readiness.enabled }}
@@ -60,16 +64,11 @@ spec:
           {{- else }}
             - --cert-file=/etc/tls/tls.crt
             - --key-file=/etc/tls/tls.key
-            # - --tls-client-ca-path=/etc/client_cert/ca.crt # CA cert for client verification with core-agent
+            - --tls-client-ca-path=/etc/tls/ca.crt # CA cert for client verification with core-agent
           volumeMounts:
             - name: certs
               mountPath: /etc/tls
               readOnly: true
-            # - name: ca-cert
-            #   mountPath: /etc/client_cert/ca.crt
-            #   subPath: ca.crt
-            #   readOnly: true
-
           {{- end }}
           ports:
             - containerPort: 8080
@@ -105,9 +104,5 @@ spec:
       volumes:
         - name: certs
           secret:
-            secretName: api-rest-tls
-        # - name: ca-cert
-        #   secret:
-        #     defaultMode: 420
-        #     secretName: agent-core-server-cert
+            secretName: rest-api-server-cert
       {{- end }}
