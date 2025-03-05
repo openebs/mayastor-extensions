@@ -46,8 +46,8 @@ pub struct SupportArgs {
     namespace: String,
 
     /// Path to kubeconfig file.
-    #[clap(global = true, long, short = 'k')]
-    kube_config_path: Option<PathBuf>,
+    #[clap(skip)]
+    pub kubeconfig: Option<PathBuf>,
 }
 
 /// Supportability - collects state & log information of services and dumps it to a tar file.
@@ -57,7 +57,7 @@ pub struct SupportArgs {
 )]
 pub struct DumpArgs {
     #[clap(flatten)]
-    args: SupportArgs,
+    pub args: SupportArgs,
     #[clap(subcommand)]
     resource: Resource,
 }
@@ -78,7 +78,7 @@ impl ExecuteOperation for Resource {
 
     async fn execute(&self, cli_args: &Self::Args) -> Result<(), Self::Error> {
         let config = kube_proxy::ConfigBuilder::default_api_rest()
-            .with_kube_config(cli_args.kube_config_path.clone())
+            .with_kube_config(cli_args.kubeconfig.clone())
             .with_timeout(*cli_args.timeout)
             .with_target_mod(|t| t.with_namespace(&cli_args.namespace))
             .build()
@@ -89,7 +89,7 @@ impl ExecuteOperation for Resource {
         execute_resource_dump(
             cli_args.clone(),
             rest_client,
-            cli_args.kube_config_path.clone(),
+            cli_args.kubeconfig.clone(),
             self.clone(),
         )
         .await
