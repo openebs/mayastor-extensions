@@ -7,4 +7,4 @@ pub mod upgrade;
 /// Contains validation and logic to generate helm values options for the `helm upgrade` command.
 pub(crate) mod values;
 /// This contains tools for use with yaml files.
-pub(crate) mod yaml;
+pub mod yaml;
