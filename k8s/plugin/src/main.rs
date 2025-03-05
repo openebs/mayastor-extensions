@@ -32,7 +32,11 @@ struct CliArgs {
 impl CliArgs {
     async fn args() -> Result<Self, anyhow::Error> {
         let mut args = CliArgs::parse();
-        args.args.kubeconfig = args.kube_config_path.clone();
+        let path = args.kube_config_path.clone();
+        args.args.kubeconfig = path.clone();
+        if let Operations::Dump(ref mut dump_args) = args.operations {
+            dump_args.args.kubeconfig = path;
+        }
         args.args.namespace = if let Some(namespace) = &args.namespace {
             namespace.to_string()
         } else if args.namespace_from_context {
