@@ -459,8 +459,6 @@ kubectl mayastor dump system -d <output_directory> -n <mayastor_namespace>
           Display all the validations output but will not execute upgrade
   -r, --rest <REST>
           The rest endpoint to connect to
-  -k, --kube-config-path <KUBE_CONFIG_PATH>
-          Path to kubeconfig file
       --skip-data-plane-restart
           If set then upgrade will skip the io-engine pods restart
       --skip-single-replica-volume-validation
@@ -494,8 +492,6 @@ kubectl mayastor dump system -d <output_directory> -n <mayastor_namespace>
    Options:
    -r, --rest <REST>
         The rest endpoint to connect to
-   -k, --kube-config-path <KUBE_CONFIG_PATH>
-        Path to kubeconfig file
    -o, --output <OUTPUT>
         The Output, viz yaml, json [default: none]
    -j, --jaeger <JAEGER>
@@ -519,8 +515,6 @@ kubectl mayastor dump system -d <output_directory> -n <mayastor_namespace>
         If true, immediately remove upgrade resources bypass graceful deletion
   -r, --rest <REST>
         The rest endpoint to connect to
-  -k, --kube-config-path <KUBE_CONFIG_PATH>
-        Path to kubeconfig file
   -o, --output <OUTPUT>
         The Output, viz yaml, json [default: none]
   -j, --jaeger <JAEGER>
