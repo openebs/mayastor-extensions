@@ -46,7 +46,12 @@ spec:
           image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-operator-diskpool:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
+            {{- if .Values.tls.enabled }}
+            - --tls-client-ca-path=/etc/client_cert/ca.crt # CA cert for client verification with rest
+            - "-e https://{{ .Release.Name }}-api-rest:8080"
+            {{- else }}
             - "-e http://{{ .Release.Name }}-api-rest:8081"
+            {{- end }}
             - "-n{{ .Release.Namespace }}"
             - "--request-timeout={{ .Values.base.default_req_timeout }}"
             - "--interval={{ .Values.base.cache_poll_period }}"{{ if .Values.base.jaeger.enabled }}
@@ -64,3 +69,15 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+        {{- if .Values.tls.enabled }}
+          volumeMounts:
+            - name: ca-cert
+              mountPath: /etc/client_cert/ca.crt
+              subPath: ca.crt
+              readOnly: true
+      volumes:
+        - name: ca-cert
+          secret:
+            defaultMode: 420
+            secretName: ca-root-cert
+      {{- end}}

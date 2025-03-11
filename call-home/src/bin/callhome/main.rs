@@ -52,6 +52,10 @@ struct CliArgs {
     /// The endpoint to fetch events stats.
     #[clap(long, short)]
     aggregator_url: Option<Url>,
+
+    /// The path to the TLS CA certificate
+    #[clap(long, short)]
+    tls_client_ca_path: Option<String>,
 }
 impl CliArgs {
     fn args() -> Self {
@@ -107,12 +111,42 @@ async fn run(logs: Arc<Mutex<VecDeque<LogEntry>>>) -> anyhow::Result<()> {
             anyhow::anyhow!("failed to generate metrics receiver client: {:?}", error)
         })?;
 
+    let ca_certificate_path = args.tls_client_ca_path;
+    let cert = match ca_certificate_path {
+        Some(path) => {
+            let cert = std::fs::read(path).map_err(|error| {
+                anyhow::anyhow!("Failed to read certificate file, Error: '{:?}'", error)
+            })?;
+            Some(cert)
+        }
+        None => None,
+    };
+
     // Generate Mayastor REST client.
-    let config = Configuration::builder()
-        .with_timeout(Duration::from_secs(30))
-        .with_tracing(true)
-        .build_url(endpoint)
-        .map_err(|error| anyhow::anyhow!("failed to create openapi configuration: {:?}", error))?;
+    let config = match (endpoint.scheme(), cert.as_deref()) {
+        ("https", Some(cert)) => Configuration::builder()
+            .with_timeout(Duration::from_secs(30))
+            .with_tracing(true)
+            .with_certificate(cert)
+            .build_url(endpoint)
+            .map_err(|error| {
+                anyhow::anyhow!("failed to create openapi configuration: {:?}", error)
+            })?,
+        ("https", None) => {
+            anyhow::bail!("HTTPS endpoint requires a CA certificate path");
+        }
+        (_, Some(_path)) => {
+            anyhow::bail!("TLS certificate is only supported for HTTPS connection")
+        }
+        _ => Configuration::builder()
+            .with_timeout(Duration::from_secs(30))
+            .with_tracing(true)
+            .build_url(endpoint)
+            .map_err(|error| {
+                anyhow::anyhow!("failed to create openapi configuration: {:?}", error)
+            })?,
+    };
+
     let client = openapi::clients::tower::ApiClient::new(config);
 
     loop {

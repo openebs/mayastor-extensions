@@ -119,6 +119,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;format | Valid values for format are pretty, json and compact | `"pretty"` |
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;silenceLevel | Silence specific module components | `nil` |
 | base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;enabled | Enable the metrics exporter | `true` |
+| cert-manager.&ZeroWidthSpace;enabled | Enable cert-manager only if tls is enabled | `false` |
 | crds.&ZeroWidthSpace;csi.&ZeroWidthSpace;volumeSnapshots.&ZeroWidthSpace;enabled | Install Volume Snapshot CRDs | `true` |
 | crds.&ZeroWidthSpace;enabled | Disables the installation of all CRDs if set to false | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;logLevel | Log level for the csi controller | `"info"` |

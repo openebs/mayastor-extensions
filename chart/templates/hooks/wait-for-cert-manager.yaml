@@ -1,0 +1,150 @@
+{{- if .Values.tls.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cert-manager-job-sa
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cert-manager-job-role
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: ["cert-manager.io"]
+    resources: ["issuers", "certificates"]
+    verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cert-manager-job-rolebinding
+  namespace: {{ .Release.Namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: cert-manager-job-sa
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: cert-manager-job-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-certificates
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed
+spec:
+  template:
+    spec:
+      serviceAccountName: cert-manager-job-sa
+      containers:
+        - name: create-certificates
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for cert-manager-webhook to be available..."
+              kubectl wait --for=condition=Available=True Deployment/{{ .Release.Namespace }}-cert-manager-webhook -n {{ .Release.Namespace }} --timeout=120s
+              echo "Creating selfsigned-issuer..."
+              kubectl apply -f - <<EOF
+              apiVersion: cert-manager.io/v1
+              kind: Issuer
+              metadata:
+                name: selfsigned-issuer
+                namespace: {{ .Release.Namespace }}
+              spec:
+                selfSigned: {}
+              EOF
+              echo "Creating root-ca certificate..."
+              kubectl apply -f - <<EOF
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: root-ca
+                namespace: {{ .Release.Namespace }}
+              spec:
+                isCA: true
+                duration: 175200h # 20 years
+                commonName: root-ca
+                secretName: ca-root-cert
+                issuerRef:
+                  name: selfsigned-issuer
+                  kind: Issuer
+                  group: cert-manager.io
+              EOF
+              echo "Creating ca-issuer..."
+              kubectl apply -f - <<EOF
+              apiVersion: cert-manager.io/v1
+              kind: Issuer
+              metadata:
+                name: ca-issuer
+                namespace: {{ .Release.Namespace }}
+              spec:
+                ca:
+                  secretName: ca-root-cert
+              EOF
+              echo "Creating rest-api-server certificate..."
+              kubectl apply -f - <<EOF
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: rest-api-server
+                namespace: {{ .Release.Namespace }}
+              spec:
+                duration: 175200h
+                isCA: false
+                dnsNames:
+                  - {{ .Release.Name }}-api-rest.{{ .Release.Namespace }}.svc
+                  - {{ .Release.Name }}-api-rest.{{ .Release.Namespace }}.svc.cluster.local
+                  - {{ .Release.Name }}-api-rest
+                issuerRef:
+                  name: ca-issuer
+                  kind: Issuer
+                secretName: rest-api-server-cert
+              EOF
+              echo "Creating core-agent-server certificate..."
+              kubectl apply -f - <<EOF
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: agent-core-server
+                namespace: {{ .Release.Namespace }}
+              spec:
+                duration: 175200h
+                isCA: false
+                dnsNames:
+                  - {{ .Release.Name }}-agent-core.{{ .Release.Namespace }}.svc
+                  - {{ .Release.Name }}-agent-core.{{ .Release.Namespace }}.svc.cluster.local
+                  - {{ .Release.Name }}-agent-core
+                issuerRef:
+                  name: ca-issuer
+                  kind: Issuer
+                secretName: agent-core-server-cert
+              EOF
+              echo "Creating io-engine-server certificate..."
+              kubectl apply -f - <<EOF
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: io-engine-server
+                namespace: {{ .Release.Namespace }}
+              spec:
+                duration: 175200h
+                isCA: false
+                dnsNames:
+                  - {{ .Release.Name }}-io-engine.{{ .Release.Namespace }}.svc
+                  - {{ .Release.Name }}-io-engine.{{ .Release.Namespace }}.svc.cluster.local
+                  - {{ .Release.Name }}-io-engine
+                issuerRef:
+                  name: ca-issuer
+                  kind: Issuer
+                secretName: io-engine-server-cert
+              EOF
+      restartPolicy: OnFailure
+{{- end }}

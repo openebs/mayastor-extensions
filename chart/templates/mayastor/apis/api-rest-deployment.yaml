@@ -45,17 +45,31 @@ spec:
           image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-api-rest:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
-            - "--dummy-certificates"
             - "--no-auth"
             - "--http=[::]:8081"
             - "--request-timeout={{ .Values.base.default_req_timeout }}"{{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ include "jaeger_url" . }}"{{ end }}
+            {{- if .Values.tls.enabled }}
             - "--core-grpc=https://{{ .Release.Name }}-agent-core:50051"
+            {{- else }}
+            - "--core-grpc=http://{{ .Release.Name }}-agent-core:50051"
+            {{- end }}
             - "--ansi-colors={{ .Values.base.logging.color }}"
             - "--fmt-style={{ include "logFormat" . }}"
             {{- if .Values.apis.rest.healthProbes.readiness.enabled }}
             - "--core-health-freq={{ .Values.apis.rest.healthProbes.readiness.agentCoreProbeFreq }}"
             {{- end }}
+          {{- if not .Values.tls.enabled }}
+            - "--dummy-certificates"
+          {{- else }}
+            - --cert-file=/etc/tls/tls.crt
+            - --key-file=/etc/tls/tls.key
+            - --tls-client-ca-path=/etc/tls/ca.crt # CA cert for client verification with core-agent
+          volumeMounts:
+            - name: certs
+              mountPath: /etc/tls
+              readOnly: true
+          {{- end }}
           ports:
             - containerPort: 8080
             - containerPort: 8081
@@ -86,3 +100,9 @@ spec:
             periodSeconds: {{ .Values.apis.rest.healthProbes.liveness.periodSeconds }}
             timeoutSeconds: {{ .Values.apis.rest.healthProbes.liveness.timeoutSeconds }}
           {{- end }}
+      {{- if .Values.tls.enabled }}
+      volumes:
+        - name: certs
+          secret:
+            secretName: rest-api-server-cert
+      {{- end }}

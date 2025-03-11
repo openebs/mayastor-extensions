@@ -57,6 +57,15 @@ earlyEvictionTolerations:
 # For external components like etcd, jaeger and loki-stack, tolerations can only be set at component level.
 tolerations: []
 
+tls:
+    enabled: false
+
+cert-manager:
+  # -- Enable cert-manager only if tls is enabled
+  enabled: false
+  installCRDs: false
+  namespace: openebs
+
 base:
   # -- Request timeout for rest & core agents
   default_req_timeout: 5s
@@ -90,6 +99,7 @@ base:
     containers:
       - name: etcd-probe
         command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{.Values.etcd.service.port}}; do date; echo "Waiting for etcd..."; sleep 1; done;']
+
 
   metrics:
     # -- Enable the metrics exporter

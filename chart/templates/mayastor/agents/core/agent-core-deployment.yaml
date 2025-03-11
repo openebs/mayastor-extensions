@@ -69,6 +69,11 @@ spec:
             - "--max-rebuilds={{ .Values.agents.core.rebuild.maxConcurrent }}"{{ end }}
             {{- if eq ((.Values.agents.core.rebuild).partial).enabled false }}
             - "--disable-partial-rebuild"{{ end }}
+            {{- if .Values.tls.enabled }}
+            - --tls-server-cert-path=/etc/cert/tls.crt
+            - --tls-server-key-path=/etc/cert/tls.key
+            - --tls-client-ca-path=/etc/client_cert/ca.crt # CA cert for client verification with io-engine
+            {{- end }}
           ports:
             - containerPort: 50051
           env:
@@ -86,6 +91,16 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+          {{- if .Values.tls.enabled }}
+          volumeMounts:
+            - name: agent-core-server-cert
+              mountPath: /etc/cert
+              readOnly: true
+            - name: ca-cert
+              mountPath:  /etc/client_cert/ca.crt
+              subPath: ca.crt
+              readOnly: true
+          {{- end }}
         - name: agent-ha-cluster
           resources:
             limits:
@@ -99,7 +114,12 @@ spec:
           args:
             - "-g=[::]:50052"
             - "--store=http://{{ include "etcdUrl" . }}"
-            - "--core-grpc=https://{{ .Release.Name }}-agent-core:50051"{{ if .Values.base.jaeger.enabled }}
+            {{- if .Values.tls.enabled }}
+            - "--core-grpc=https://{{ .Release.Name }}-agent-core:50051"
+            {{- else }}
+            - "--core-grpc=http://{{ .Release.Name }}-agent-core:50051"
+            {{- end }}
+            {{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ include "jaeger_url" . }}"{{ end }}{{ if .Values.eventing.enabled }}
             - "--events-url=nats://{{ .Release.Name }}-nats:4222"{{ end }}
             - "--ansi-colors={{ .Values.base.logging.color }}"
@@ -121,3 +141,13 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+      {{- if .Values.tls.enabled }}
+      volumes:
+        - name: agent-core-server-cert
+          secret:
+            secretName: agent-core-server-cert
+        - name: ca-cert
+          secret:
+            defaultMode: 420
+            secretName: ca-root-cert
+      {{- end }}

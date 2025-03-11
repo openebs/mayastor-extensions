@@ -87,8 +87,7 @@ spec:
         {{- end }}
         args:
         - "--csi-socket={{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
-        - "--node-name=$(MY_NODE_NAME)"
-        - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"{{ if .Values.csi.node.restClient.enabled }}
+        - "--node-name=$(MY_NODE_NAME)"{{ if .Values.csi.node.restClient.enabled }}
         - "--enable-rest"{{ end }}
         - "--enable-registration"
         - "--grpc-ip=$(MY_POD_IP)"
@@ -107,6 +106,14 @@ spec:
         {{- end }}
         - "--fmt-style={{ include "logFormat" . }}"
         - "--ansi-colors={{ .Values.base.logging.color }}"
+        {{- if .Values.tls.enabled }}
+        - "--rest-endpoint=https://{{ .Release.Name }}-api-rest:8080"
+        - "--tls-client-ca-path=/etc/client_cert/ca.crt" # CA cert for client verification with rest
+        {{- else }}
+        - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"
+        {{- end }}
+        command:
+        - csi-node
         volumeMounts:
         - name: device
           mountPath: /dev
@@ -119,6 +126,12 @@ spec:
         - name: kubelet-dir
           mountPath: {{ .Values.csi.node.kubeletDir }}
           mountPropagation: "Bidirectional"
+        {{- if .Values.tls.enabled }}
+        - name: ca-cert
+          mountPath: /etc/client_cert/ca.crt
+          subPath: ca.crt
+          readOnly: true
+        {{- end }}
         resources:
           limits:
             cpu: {{ .Values.csi.node.resources.limits.cpu | quote }}
@@ -174,3 +187,9 @@ spec:
         hostPath:
           path: {{ .Values.csi.node.kubeletDir }}
           type: Directory
+      {{- if .Values.tls.enabled }}
+      - name: ca-cert
+        secret:
+          defaultMode: 420
+          secretName: ca-root-cert
+      {{- end }}
