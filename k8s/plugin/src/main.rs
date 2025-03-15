@@ -40,9 +40,7 @@ impl CliArgs {
         args.args.namespace = if let Some(namespace) = &args.namespace {
             namespace.to_string()
         } else if args.namespace_from_context {
-            let client = kube_proxy::client_from_kubeconfig(args.kube_config_path.clone())
-                .await
-                .map_err(|err| anyhow::anyhow!("{err}"))?;
+            let client = kube_proxy::client_from_kubeconfig(args.kube_config_path.clone()).await?;
             client.default_namespace().to_string()
         } else {
             constants::DEFAULT_PLUGIN_NAMESPACE.to_string()

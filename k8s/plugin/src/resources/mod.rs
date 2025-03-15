@@ -1,6 +1,8 @@
 use anyhow::anyhow;
 use clap::Parser;
+use k8s_openapi::api::core::v1 as core_v1;
 use openapi::tower::client::Url;
+use plugin::resources::VolumeId;
 use plugin::{
     resources::{
         CordonResources, DrainResources, GetResources, LabelResources, ScaleResources,
@@ -11,8 +13,9 @@ use plugin::{
 };
 use std::{ops::Deref, path::PathBuf};
 use supportability::DumpArgs;
+use upgrade::upgrade::DeleteUpgradeArgs;
 use upgrade::{
-    plugin::upgrade::{DeleteResources, GetUpgradeArgs, UpgradeArgs},
+    plugin::upgrade::{GetUpgradeArgs, UpgradeArgs},
     preflight_validations,
 };
 
@@ -33,6 +36,21 @@ pub struct CliArgs {
 
     #[clap(flatten)]
     pub cli_args: plugin::CliArgs,
+}
+
+impl CliArgs {
+    /// The kube client, with the correct install namespace.
+    pub async fn client(&self) -> anyhow::Result<kube::Client> {
+        let mut config = kube_proxy::config_from_kubeconfig(self.kubeconfig.clone()).await?;
+        // If taking namespace from context, we already know self.namespace has been set
+        // from the context.
+        config.default_namespace = self.namespace.clone();
+        Ok(kube::Client::try_from(config)?)
+    }
+    /// Get the [`core_v1::PersistentVolume`] api client for the client namespace.
+    pub async fn pv_api(&self) -> anyhow::Result<kube::Api<core_v1::PersistentVolume>> {
+        Ok(kube::Api::all(self.client().await?))
+    }
 }
 
 impl Deref for CliArgs {
@@ -80,8 +98,34 @@ pub enum Operations {
     /// `Upgrade` the deployment.
     Upgrade(UpgradeArgs),
     /// `Delete` the upgrade resources.
+    Delete(DeleteArgs),
+}
+
+/// Delete resources.
+#[derive(Debug, clap::Args)]
+pub struct DeleteArgs {
+    /// Ignore error if resource is not found.
+    #[clap(long, short, global = true)]
+    ignore_not_found: bool,
+
+    /// Automatically confirm and assume yes for all prompts.
+    #[clap(long, short, global = true)]
+    pub yes: bool,
+
     #[clap(subcommand)]
-    Delete(DeleteResources),
+    resource: DeleteResources,
+}
+
+/// The type of resources which support the delete operation.
+#[derive(clap::Subcommand, Debug)]
+pub enum DeleteResources {
+    /// Delete upgrade resources
+    Upgrade(DeleteUpgradeArgs),
+    /// Deletes the specified volume resource.
+    Volume {
+        /// The id of the volume to delete.
+        id: VolumeId,
+    },
 }
 
 #[async_trait::async_trait(?Send)]
@@ -122,10 +166,36 @@ impl ExecuteOperation for Operations {
                 .await?;
                 resources.execute(&cli_args.namespace).await?
             }
-            Operations::Delete(resource) => match resource {
-                // todo: use generic execute trait
-                DeleteResources::Upgrade(res) => res.delete(&cli_args.namespace).await?,
-            },
+            Operations::Delete(args) => {
+                match &args.resource {
+                    // todo: use generic execute trait
+                    DeleteResources::Upgrade(res) => res.delete(&cli_args.namespace).await?,
+                    DeleteResources::Volume { id } => {
+                        // 1. ensure PV is not present
+                        let pv_name = format!("pvc-{id}");
+                        let client = cli_args.pv_api().await?;
+                        let pv = client.get_opt(&pv_name).await.map_err(|error| {
+                            anyhow::anyhow!(
+                                "Failed to fetch PV {pv_name} from K8s api-server: {error}"
+                            )
+                        })?;
+                        if pv.is_some() {
+                            return Err(Error::Generic(anyhow::anyhow!(
+                                "The volume is still being referenced by PV {pv_name}"
+                            )));
+                        }
+
+                        // 2. delete volume
+                        plugin::resources::DeleteArgs {
+                            ignore_not_found: args.ignore_not_found,
+                            yes: args.yes,
+                            resource: plugin::resources::DeleteResources::Volume { id: *id },
+                        }
+                        .execute(cli_args)
+                        .await?
+                    }
+                }
+            }
         }
         Ok(())
     }
