@@ -352,6 +352,10 @@ csi:
     priorityClassName: ""
     # -- Prevent modifying the volume mode when creating a PVC from an existing VolumeSnapshot
     preventVolumeModeConversion: true
+    # Enable auto garbage collection of volume resources which were associated with `Retain` PV's.
+    # Before enabling this, make sure you're well aware of the dangerous downsides.
+    # For more information see: <https://kubernetes.io/docs/concepts/storage/persistent-volumes/#retain>.
+    enableDangerousRetainGC: false
   node:
     logLevel: info
     topology:
