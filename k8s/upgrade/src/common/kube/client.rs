@@ -2,10 +2,8 @@ use crate::common::{
     constants::KUBE_API_PAGE_SIZE,
     error::{
         ControllerRevisionDoesntHaveHashLabel, ControllerRevisionListEmpty,
-        InvalidNoOfHelmConfigMaps, InvalidNoOfHelmSecrets, K8sClientGeneration,
-        ListConfigMapsWithLabelAndField, ListCrds, ListCtrlRevsWithLabelAndField,
-        ListNodesWithLabelAndField, ListPodsWithLabelAndField, ListSecretsWithLabelAndField,
-        Result,
+        FailedToListMetadataPaginated, FailedToListPaginated, InvalidNoOfHelmConfigMaps,
+        InvalidNoOfHelmSecrets, K8sClientGeneration, Result,
     },
 };
 use k8s_openapi::{
@@ -21,7 +19,7 @@ use kube::{
     Client, Resource, ResourceExt,
 };
 use serde::de::DeserializeOwned;
-use snafu::{ensure, ErrorCompat, IntoError, ResultExt};
+use snafu::{ensure, ResultExt};
 
 /// Generate a new kube::Client.
 pub async fn client() -> Result<Client> {
@@ -80,13 +78,7 @@ pub async fn list_pods(
 
     let pods_api = pods_api(namespace.as_str()).await?;
 
-    let list_pods_error_ctx = ListPodsWithLabelAndField {
-        label: label_selector.unwrap_or_default(),
-        field: field_selector.unwrap_or_default(),
-        namespace: namespace.clone(),
-    };
-
-    paginated_list(pods_api, &mut pods, Some(list_params), list_pods_error_ctx).await?;
+    paginated_list(pods_api, &mut pods, Some(list_params)).await?;
 
     Ok(pods)
 }
@@ -96,7 +88,7 @@ pub async fn list_crds_metadata() -> Result<Vec<PartialObjectMeta<CustomResource
     let mut crds: Vec<PartialObjectMeta<CustomResourceDefinition>> =
         Vec::with_capacity(KUBE_API_PAGE_SIZE as usize);
 
-    paginated_list_metadata(crds_api().await?, &mut crds, None, ListCrds).await?;
+    paginated_list_metadata(crds_api().await?, &mut crds, None).await?;
 
     Ok(crds)
 }
@@ -118,18 +110,7 @@ pub async fn list_nodes_metadata(
 
     let nodes_api = nodes_api().await?;
 
-    let list_nodes_error_ctx = ListNodesWithLabelAndField {
-        label: label_selector.unwrap_or_default(),
-        field: field_selector.unwrap_or_default(),
-    };
-
-    paginated_list_metadata(
-        nodes_api,
-        &mut nodes,
-        Some(list_params),
-        list_nodes_error_ctx,
-    )
-    .await?;
+    paginated_list_metadata(nodes_api, &mut nodes, Some(list_params)).await?;
 
     Ok(nodes)
 }
@@ -152,19 +133,7 @@ pub async fn list_controller_revisions(
 
     let controller_revisions_api = controller_revisions_api(namespace.as_str()).await?;
 
-    let list_ctrl_revs_error_ctx = ListCtrlRevsWithLabelAndField {
-        label: label_selector.unwrap_or_default(),
-        field: field_selector.unwrap_or_default(),
-        namespace: namespace.clone(),
-    };
-
-    paginated_list(
-        controller_revisions_api,
-        &mut ctrl_revs,
-        Some(list_params),
-        list_ctrl_revs_error_ctx,
-    )
-    .await?;
+    paginated_list(controller_revisions_api, &mut ctrl_revs, Some(list_params)).await?;
 
     Ok(ctrl_revs)
 }
@@ -227,19 +196,7 @@ pub async fn list_secrets(
 
     let secrets_api = secrets_api(namespace.as_str()).await?;
 
-    let list_secrets_error = ListSecretsWithLabelAndField {
-        label: label_selector.unwrap_or_default(),
-        field: field_selector.unwrap_or_default(),
-        namespace: namespace.clone(),
-    };
-
-    paginated_list(
-        secrets_api,
-        &mut secrets,
-        Some(list_params),
-        list_secrets_error,
-    )
-    .await?;
+    paginated_list(secrets_api, &mut secrets, Some(list_params)).await?;
 
     Ok(secrets)
 }
@@ -263,19 +220,7 @@ pub async fn list_configmaps(
 
     let configmaps_api = configmaps_api(namespace.as_str()).await?;
 
-    let list_configmaps_error = ListConfigMapsWithLabelAndField {
-        label: label_selector.unwrap_or_default(),
-        field: field_selector.unwrap_or_default(),
-        namespace: namespace.clone(),
-    };
-
-    paginated_list(
-        configmaps_api,
-        &mut configmaps,
-        Some(list_params),
-        list_configmaps_error,
-    )
-    .await?;
+    paginated_list(configmaps_api, &mut configmaps, Some(list_params)).await?;
 
     Ok(configmaps)
 }
@@ -323,17 +268,13 @@ pub async fn get_helm_release_configmap(
 }
 
 /// List Kubernetes resource object with pagination.
-pub async fn paginated_list<K, C, E2>(
+pub async fn paginated_list<K>(
     resource_api: Api<K>,
     resources: &mut Vec<K>,
     list_params: Option<ListParams>,
-    list_err_ctx: C,
 ) -> Result<()>
 where
     K: Resource + Clone + DeserializeOwned + std::fmt::Debug,
-    C: IntoError<E2, Source = kube::Error> + Clone,
-    E2: std::error::Error + ErrorCompat,
-    crate::common::error::Error: From<E2>,
 {
     let mut list_params = list_params.unwrap_or_default().limit(KUBE_API_PAGE_SIZE);
 
@@ -341,7 +282,7 @@ where
         let resource_list = resource_api
             .list(&list_params)
             .await
-            .context(list_err_ctx.clone())?;
+            .context(FailedToListPaginated)?;
 
         let maybe_token = resource_list.metadata.continue_.clone();
 
@@ -359,17 +300,13 @@ where
 }
 
 /// Lists Kubernetes resource metadata section with pagination.
-pub async fn paginated_list_metadata<K, C, E2>(
+pub async fn paginated_list_metadata<K>(
     resource_api: Api<K>,
     resources: &mut Vec<PartialObjectMeta<K>>,
     list_params: Option<ListParams>,
-    list_err_ctx: C,
 ) -> Result<()>
 where
     K: Resource + Clone + DeserializeOwned + std::fmt::Debug,
-    C: IntoError<E2, Source = kube::Error> + Clone,
-    E2: std::error::Error + ErrorCompat,
-    crate::common::error::Error: From<E2>,
 {
     let mut list_params = list_params.unwrap_or_default().limit(KUBE_API_PAGE_SIZE);
 
@@ -377,7 +314,7 @@ where
         let resource_list = resource_api
             .list_metadata(&list_params)
             .await
-            .context(list_err_ctx.clone())?;
+            .context(FailedToListMetadataPaginated)?;
 
         let maybe_token = resource_list.metadata.continue_.clone();
 
