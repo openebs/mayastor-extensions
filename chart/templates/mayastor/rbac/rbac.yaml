@@ -108,6 +108,11 @@ rules:
 - apiGroups: [""]
   resources: ["namespaces"]
   verbs: ["get"]
+
+  # get secrets for encryption
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

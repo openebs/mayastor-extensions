@@ -22,6 +22,7 @@ spec:
         {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
         {{ include "label_prefix" . }}/logging: "true"
     spec:
+      serviceAccountName: {{ .Release.Name }}-service-account
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
       hostNetwork: true
