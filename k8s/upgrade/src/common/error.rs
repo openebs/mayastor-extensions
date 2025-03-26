@@ -215,62 +215,6 @@ pub enum Error {
         pod_namespace: String,
     },
 
-    /// Error for when a Kubernetes API request for GET-ing a list of Pods filtered by label(s)
-    /// and field(s) fails.
-    #[snafu(display(
-        "Failed to list Pods with label '{label}', and field '{field}' in namespace '{namespace}': {source}",
-    ))]
-    ListPodsWithLabelAndField {
-        source: kube::Error,
-        label: String,
-        field: String,
-        namespace: String,
-    },
-
-    /// Error for when listing Kubernetes Secrets from a the kubeapi fails.
-    #[snafu(display(
-        "Failed to list Secrets with label '{label}', and field '{field}' in namespace '{namespace}': {source}",
-    ))]
-    ListSecretsWithLabelAndField {
-        source: kube::Error,
-        label: String,
-        field: String,
-        namespace: String,
-    },
-
-    #[snafu(display(
-        "Failed to list ConfigMaps with label '{label}', and field '{field}' in namespace '{namespace}': {source}",
-    ))]
-    ListConfigMapsWithLabelAndField {
-        source: kube::Error,
-        label: String,
-        field: String,
-        namespace: String,
-    },
-
-    /// Error for when a Kubernetes API request for GET-ing a list of ControllerRevisions
-    /// filtered by label(s) and field(s) fails.
-    #[snafu(display(
-        "Failed to list ControllerRevisions with label '{label}', and field '{field}' in Namespace '{namespace}': {source}",
-    ))]
-    ListCtrlRevsWithLabelAndField {
-        source: kube::Error,
-        label: String,
-        field: String,
-        namespace: String,
-    },
-
-    /// Error for when a Kubernetes API request for GET-ing a list of Nodes filtered by label(s)
-    /// and field(s) fails.
-    #[snafu(display(
-        "Failed to list Kubernetes Nodes with label '{label}', and field '{field}': {source}",
-    ))]
-    ListNodesWithLabelAndField {
-        source: kube::Error,
-        label: String,
-        field: String,
-    },
-
     /// Error for when a Pod does not have a PodSpec struct member.
     #[snafu(display("Failed get .spec from Pod {name} in Namespace '{namespace}'"))]
     EmptyPodSpec { name: String, namespace: String },
@@ -676,9 +620,6 @@ pub enum Error {
         std_err: String,
     },
 
-    #[snafu(display("failed to list CustomResourceDefinitions: {source}"))]
-    ListCrds { source: kube::Error },
-
     #[snafu(display("Partial rebuild must be disabled for upgrades from {chart_name} chart versions >= {lower_extent}, <= {upper_extent}"))]
     PartialRebuildNotAllowed {
         chart_name: String,
@@ -727,6 +668,12 @@ pub enum Error {
     /// entry for the CORE_CHART version.
     #[snafu(display("Helm release data doesn't have chart version or contains an invalid version for dependency chart '{CORE_CHART_NAME}'"))]
     InvalidDependencyVersionInHelmReleaseData,
+
+    #[snafu(display("Failed to list resource in a paginated manner: {source}"))]
+    FailedToListPaginated { source: kube::Error },
+
+    #[snafu(display("Failed to list resource metadata in a paginated manner: {source}"))]
+    FailedToListMetadataPaginated { source: kube::Error },
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.
