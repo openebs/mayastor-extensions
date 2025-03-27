@@ -76,10 +76,10 @@ annotations:
       image: docker.io/openebs/mayastor-io-engine:v2.9.0-alpha.0
     - name: mayastor-metrics-exporter-io-engine
       image: docker.io/openebs/mayastor-metrics-exporter-io-engine:v2.9.0-alpha.0
-    - name: mayastor-obs-callhome
-      image: docker.io/openebs/mayastor-obs-callhome:v2.9.0-alpha.0
     - name: mayastor-obs-callhome-stats
       image: docker.io/openebs/mayastor-obs-callhome-stats:v2.9.0-alpha.0
+    - name: mayastor-obs-callhome
+      image: docker.io/openebs/mayastor-obs-callhome:v2.9.0-alpha.0
     - name: mayastor-operator-diskpool
       image: docker.io/openebs/mayastor-operator-diskpool:v2.9.0-alpha.0
     - name: loki
@@ -93,9 +93,9 @@ annotations:
     - name: prometheus-nats-exporter
       image: natsio/prometheus-nats-exporter:0.11.0
     - name: linux-utils
-      image: openebs/linux-utils:4.0.0
+      image: openebs/linux-utils:4.1.0
     - name: provisioner-localpv
-      image: openebs/provisioner-localpv:4.1.2
+      image: openebs/provisioner-localpv:4.2.0
     - name: csi-attacher
       image: registry.k8s.io/sig-storage/csi-attacher:v4.3.0
     - name: csi-node-driver-registrar
