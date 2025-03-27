@@ -85,7 +85,7 @@ let
     "dependencies/control-plane/utils/utils-lib"
     "dependencies/control-plane/utils/hyper-body"
     "dependencies/control-plane/utils/shutdown"
-    "dependencies/control-plane/utils/platform"
+    "dependencies/control-plane/utils/dependencies/platform"
     "dependencies/control-plane/utils/pstor"
     "dependencies/control-plane/rpc"
     "dependencies/control-plane/k8s/forward"
