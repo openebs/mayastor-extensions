@@ -126,6 +126,7 @@ spec:
             - "--ansi-colors={{ .Values.base.logging.color }}"
             - "--fmt-style={{ include "logFormat" . }}"
             - "--create-volume-limit={{ .Values.csi.controller.maxCreateVolume }}"
+            - "--enable-orphan-vol-gc={{- .Values.csi.controller.enableDangerousRetainGC | default false }}"
           env:
             - name: RUST_LOG
               value: {{ .Values.csi.controller.logLevel }}
