@@ -197,6 +197,8 @@ agents:
         waitPeriod: ""
     # The maximum number of concurrent create volume requests.
     maxCreateVolume: 10
+    # -- Enable extended volume health information, which helps generate the volume status more accurately.
+    volumeHealth: true
 
     resources:
       limits:
