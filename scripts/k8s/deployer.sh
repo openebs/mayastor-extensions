@@ -17,6 +17,7 @@ DOCKER="docker"
 HUGE_PAGES=1800
 LABEL=
 CLEANUP="false"
+IPFAM="ipv4"
 SUDO=${SUDO:-"sudo"}
 
 help() {
@@ -33,6 +34,7 @@ Options:
   --hugepages     <num>             Add <num> 2MiB hugepages (Default: $HUGE_PAGES).
   --label                           Label worker nodes with the io-engine selector.
   --cleanup                         Prior to starting, stops the running instance of the deployer.
+  --ip-family     <str>             KIND has support for IPv4, IPv6 and dual-stack clusters, with the default being ipv4.
 
 Command:
   start                             Start the k8s cluster.
@@ -100,6 +102,24 @@ while [ "$#" -gt 0 ]; do
           test $# -lt 1 && die "Missing hugepage number"
           HUGE_PAGES=$1
           shift;;
+        --ip-family)
+          shift
+          test $# -lt 1 && die "Missing Ip Family"
+          case $1 in
+            ipv4 | IPv4 | ip4 | 4)
+              IPFAM="ipv4"
+              shift;;
+            ipv6 | IPv6 | ip6 | 6)
+              IPFAM="ipv6"
+              shift;;
+            dual | dual-stack)
+              IPFAM="dual"
+              shift;;
+            *)
+              die "Invalid ip family: $1"
+              ;;
+          esac
+          ;;
         --dry-run)
           if [ -z "$DRY_RUN" ]; then
             DRY_RUN="--dry-run"
@@ -142,6 +162,8 @@ $SUDO rm -rf "$TMP_KIND"/*
 cat <<EOF > "$TMP_KIND_CONFIG"
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  ipFamily: $IPFAM
 nodes:
 - role: control-plane
 EOF
