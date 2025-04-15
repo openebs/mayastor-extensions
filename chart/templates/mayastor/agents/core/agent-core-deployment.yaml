@@ -69,6 +69,8 @@ spec:
             - "--max-rebuilds={{ .Values.agents.core.rebuild.maxConcurrent }}"{{ end }}
             {{- if eq ((.Values.agents.core.rebuild).partial).enabled false }}
             - "--disable-partial-rebuild"{{ end }}
+            {{- if not (default false .Values.agents.core.volumeHealth) }}
+            - "--no-volume-health"{{ end }}
           ports:
             - containerPort: 50051
           env:
