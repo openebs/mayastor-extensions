@@ -205,6 +205,10 @@ agents:
     # If both local and global are not set, the final deployment manifest has a mayastor custom critical priority class assigned to the pod by default.
     # Refer the `templates/_helpers.tpl` and `templates/mayastor/agents/core/agent-core-deployment.yaml` for more details.
     priorityClassName: ""
+    # -- Prefer encrypted pools for volume replicas.
+    # If a volume wasn't provisioned with a encryption storageclass, we try to place the replicas of such volume on best-effort basis onto encrypted pools, if this global is set.
+    # This is effective subject to volume spec already modified via plugin to request encryption.
+    encryptedPoolsSoftScheduling: false
   ha:
     enabled: true
     node:
