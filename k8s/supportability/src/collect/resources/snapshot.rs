@@ -1,20 +1,13 @@
 use crate::collect::{
     logs::create_directory_if_not_exist,
-    resources::{
-        traits::{ResourceInformation, Topologer},
-        utils, ResourceError, Resourcer,
-    },
+    resources::{traits::Topologer, utils, ResourceError, Resourcer},
     rest_wrapper::RestClient,
 };
-use async_trait::async_trait;
 use openapi::models::VolumeSnapshot;
+
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashSet,
-    fs::File,
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, io::Write, path::PathBuf};
 
 /// Holds topological information of volume snapshot resource.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -33,9 +26,9 @@ impl Topologer for VolumeSnapshotTopology {
         Ok((file_path, topology_as_pretty))
     }
 
-    fn dump_topology_info(&self, dir_path: String) -> Result<(), ResourceError> {
-        create_directory_if_not_exist(PathBuf::from(dir_path.clone()))?;
-        let file_path = Path::new(&dir_path).join(format!(
+    fn dump_topology_info(&self, dir_path: PathBuf) -> Result<(), ResourceError> {
+        create_directory_if_not_exist(dir_path.clone())?;
+        let file_path = dir_path.join(format!(
             "snapshot-{}-topology.json",
             self.snapshot.definition.spec.uuid
         ));
@@ -44,21 +37,6 @@ impl Topologer for VolumeSnapshotTopology {
         topo_file.write_all(topology_as_pretty.as_bytes())?;
         topo_file.flush()?;
         Ok(())
-    }
-
-    fn get_unhealthy_resource_info(&self) -> HashSet<ResourceInformation> {
-        // Not neeeded for snapshot topology.
-        unimplemented!()
-    }
-
-    fn get_all_resource_info(&self) -> HashSet<ResourceInformation> {
-        // Not neeeded for snapshot topology.
-        unimplemented!()
-    }
-
-    fn get_k8s_resource_names(&self) -> Vec<String> {
-        // Not neeeded for snapshot topology.
-        unimplemented!()
     }
 }
 

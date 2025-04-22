@@ -10,19 +10,13 @@ use crate::{
     },
     log,
 };
-use async_trait::async_trait;
 use openapi::models::{Nexus, RebuildHistory, Volume};
 use resources::ResourceError;
+use traits::{Resourcer, Topologer};
+
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashSet,
-    fs::File,
-    io::Write,
-    path::{Path, PathBuf},
-};
-use traits::{
-    ResourceInformation, Resourcer, Topologer, MAYASTOR_DAEMONSET_LABEL, RESOURCE_TO_CONTAINER_NAME,
-};
+use std::{fs::File, io::Write, path::PathBuf};
 
 /// Holds topological information of volume(like) --> {Replicas} --> {Pools} --> {Nodes}
 /// of Volume resource
@@ -42,54 +36,14 @@ impl Topologer for VolumeTopology {
         Ok((file_path, topology_as_pretty))
     }
 
-    fn dump_topology_info(&self, dir_path: String) -> Result<(), ResourceError> {
-        create_directory_if_not_exist(PathBuf::from(dir_path.clone()))?;
-        let file_path =
-            Path::new(&dir_path).join(format!("volume-{}-topology.json", self.volume.spec.uuid));
+    fn dump_topology_info(&self, dir_path: PathBuf) -> Result<(), ResourceError> {
+        create_directory_if_not_exist(dir_path.clone())?;
+        let file_path = dir_path.join(format!("volume-{}-topology.json", self.volume.spec.uuid));
         let mut topo_file = File::create(file_path)?;
         let topology_as_pretty = serde_json::to_string_pretty(self)?;
         topo_file.write_all(topology_as_pretty.as_bytes())?;
         topo_file.flush()?;
         Ok(())
-    }
-
-    fn get_unhealthy_resource_info(&self) -> HashSet<ResourceInformation> {
-        let mut resources = HashSet::new();
-        for r in self.replicas_topology.iter() {
-            resources.extend(r.get_unhealthy_resources());
-        }
-        if let Some(nexus) = &self.target {
-            if !matches!(nexus.state, openapi::models::NexusState::Online) {
-                let mut resource_info = ResourceInformation::default();
-                resource_info.set_container_name(RESOURCE_TO_CONTAINER_NAME["nexus"].to_string());
-                resource_info.set_host_name(nexus.node.clone());
-                resource_info.set_label_selector([MAYASTOR_DAEMONSET_LABEL.to_string()].to_vec());
-                resources.insert(resource_info);
-            }
-        }
-        resources
-    }
-
-    fn get_all_resource_info(&self) -> HashSet<ResourceInformation> {
-        let mut resources = HashSet::new();
-        for r in self.replicas_topology.iter() {
-            resources.extend(r.get_all_resources());
-        }
-        if let Some(nexus) = &self.target {
-            let mut resource_info = ResourceInformation::default();
-            resource_info.set_container_name(RESOURCE_TO_CONTAINER_NAME["nexus"].to_string());
-            resource_info.set_host_name(nexus.node.clone());
-            resource_info.set_label_selector([MAYASTOR_DAEMONSET_LABEL.to_string()].to_vec());
-        }
-        resources
-    }
-
-    fn get_k8s_resource_names(&self) -> Vec<String> {
-        self.replicas_topology
-            .clone()
-            .into_iter()
-            .flat_map(|r| r.get_k8s_resource_names())
-            .collect::<Vec<String>>()
     }
 }
 

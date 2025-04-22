@@ -1,6 +1,7 @@
 use super::k8s_operators::DiskPool;
 use crate::collect::k8s_resources::common::KUBERNETES_HOST_LABEL_KEY;
 
+use futures::future;
 use k8s_openapi::api::{
     apps::v1::{DaemonSet, Deployment, StatefulSet},
     core::v1::{Event, Node, Pod},
@@ -10,7 +11,8 @@ use kube::{
     discovery::{verbs, Scope},
     Api, Client, Discovery, Resource,
 };
-use std::{collections::HashMap, convert::TryFrom};
+use std::collections::HashSet;
+use std::convert::TryFrom;
 
 const SNAPSHOT_GROUP: &str = "snapshot.storage.k8s.io";
 const SNAPSHOT_VERSION: &str = "v1";
@@ -24,7 +26,7 @@ const SPEC: &str = "spec";
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
 #[allow(unused)]
-pub(crate) enum K8sResourceError {
+pub enum K8sResourceError {
     ClientConfigError(kube::config::KubeconfigError),
     InferConfigError(kube::config::InferConfigError),
     ClientError(kube::Error),
@@ -71,7 +73,7 @@ impl K8sResourceError {
 
 /// ClientSet is wrapper Kubernetes clientset and namespace of mayastor service
 #[derive(Clone)]
-pub(crate) struct ClientSet {
+pub struct ClientSet {
     client: kube::Client,
     namespace: String,
 }
@@ -95,16 +97,16 @@ impl ClientSet {
     }
 
     /// Get a clone of the inner `kube::Client`.
-    pub(crate) fn kube_client(&self) -> kube::Client {
+    pub fn kube_client(&self) -> kube::Client {
         self.client.clone()
     }
     /// Get a reference to the namespace.
-    pub(crate) fn namespace(&self) -> &str {
+    pub fn namespace(&self) -> &str {
         &self.namespace
     }
 
     /// Get a new api for a `dynamic_object` for the provided GVK.
-    pub(crate) async fn dynamic_object_api(
+    pub async fn dynamic_object_api(
         &self,
         namespace: Option<&str>,
         group_name: &str,
@@ -126,9 +128,9 @@ impl ClientSet {
                             Some(ns) if caps.scope == Scope::Namespaced => {
                                 Ok(Api::namespaced_with(self.kube_client(), ns, &ar))
                             }
-                            _ => Err(K8sResourceError::CustomError(format!(
-                                "DynamicObject Api not available for {kind} of {group_name}/{version}"
-                            ))),
+                            _ => Err(K8sResourceError::CustomError(
+                                "Invalid namespace, expected a valid namespace value".to_string(),
+                            )),
                         };
                         return result;
                     }
@@ -140,24 +142,44 @@ impl ClientSet {
         )))
     }
 
-    /// Fetch node objects from API-server then form and return map of node name to node object
-    pub(crate) async fn get_nodes_map(&self) -> Result<HashMap<String, Node>, K8sResourceError> {
-        let node_api: Api<Node> = Api::all(self.client.clone());
-        let nodes = node_api.list(&ListParams::default()).await?;
-        let mut node_map = HashMap::new();
-        for node in nodes.items {
-            node_map.insert(
-                node.metadata
-                    .name
-                    .as_ref()
-                    .ok_or_else(|| {
-                        K8sResourceError::CustomError("Unable to get node name".to_string())
-                    })?
-                    .clone(),
-                node,
-            );
+    /// Get pods when given a label selector that has multiple labels comma seperated.
+    pub(crate) async fn get_pods_for_multiple_labels(
+        &self,
+        label_selectors: &str,
+        field_selector: &str,
+    ) -> Result<Vec<Pod>, K8sResourceError> {
+        let selectors: Vec<&str> = label_selectors
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        let futs = selectors
+            .into_iter()
+            .map(|sel| self.get_pods(sel, field_selector));
+
+        let results = future::join_all(futs).await;
+
+        let mut all_pods = Vec::new();
+        let mut seen_ids = HashSet::new();
+
+        for res in results {
+            let pods = res?;
+            for pod in pods {
+                if let Some(key) = pod
+                    .metadata
+                    .uid
+                    .clone()
+                    .or_else(|| pod.metadata.name.clone())
+                {
+                    if seen_ids.insert(key) {
+                        all_pods.push(pod);
+                    }
+                }
+            }
         }
-        Ok(node_map)
+
+        Ok(all_pods)
     }
 
     /// Fetch list of pods associated to given label_selector & field_selector

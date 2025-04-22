@@ -2,17 +2,14 @@ use crate::collect::{
     resources,
     resources::{
         pool::{PoolClientWrapper, PoolTopology},
-        traits,
-        traits::Topologer,
         Resourcer,
     },
     rest_wrapper::RestClient,
 };
 use openapi::models::Replica;
 use resources::ResourceError;
+
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
-use traits::{ResourceInformation, MAYASTOR_DAEMONSET_LABEL, RESOURCE_TO_CONTAINER_NAME};
 
 /// ReplicaTopology represents information about
 /// mayastor volume replica and all it's descendants
@@ -20,46 +17,6 @@ use traits::{ResourceInformation, MAYASTOR_DAEMONSET_LABEL, RESOURCE_TO_CONTAINE
 pub(crate) struct ReplicaTopology {
     replica: Replica,
     pool_topology: PoolTopology,
-}
-
-impl ReplicaTopology {
-    /// fetch unhealthy replica resource information(where replica is hosted) and all it's
-    /// descendants(pool, node)
-    pub(crate) fn get_unhealthy_resources(&self) -> HashSet<ResourceInformation> {
-        let mut resources = HashSet::new();
-        resources.extend(self.pool_topology.get_unhealthy_resource_info());
-        if !resources.is_empty() {
-            return resources;
-        }
-        if !matches!(self.replica.state, openapi::models::ReplicaState::Online) {
-            let mut resource_info = ResourceInformation::default();
-            resource_info.set_container_name(RESOURCE_TO_CONTAINER_NAME["replica"].to_string());
-            resource_info.set_host_name(self.replica.node.clone());
-            resource_info.set_label_selector([MAYASTOR_DAEMONSET_LABEL.to_string()].to_vec());
-            resources.insert(resource_info);
-        }
-        resources
-    }
-
-    /// fetch replica resources information and all it's descendants will exist
-    /// in same mayastor node
-    pub fn get_all_resources(&self) -> HashSet<ResourceInformation> {
-        // Filling replica node alone is good enough since pool & node will be always on replica
-        // node
-        let mut resources = HashSet::new();
-        let mut resource_info = ResourceInformation::default();
-        resource_info.set_container_name(RESOURCE_TO_CONTAINER_NAME["replica"].to_string());
-        resource_info.set_host_name(self.replica.node.clone());
-        resource_info.set_label_selector([MAYASTOR_DAEMONSET_LABEL.to_string()].to_vec());
-        resources.insert(resource_info);
-
-        resources
-    }
-
-    /// fetch pool name of replica resource
-    pub fn get_k8s_resource_names(&self) -> Vec<String> {
-        self.pool_topology.get_k8s_resource_names()
-    }
 }
 
 // Wrapper around mayastor REST client
