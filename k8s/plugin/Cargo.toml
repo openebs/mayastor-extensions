@@ -21,7 +21,6 @@ openapi = { path = "../../dependencies/control-plane/openapi", default-features 
 utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
 constants = { path = "../../constants" }
 rest-plugin = { path = "../../dependencies/control-plane/control-plane/plugin", default-features = false }
-console-logger = { path = "../../console-logger" }
 supportability = { path = "../supportability" }
 upgrade = { path = "../upgrade" }
 kube = { version = "0.94.2", features = ["derive", "runtime"] }
@@ -30,6 +29,5 @@ kube-forward = { path = "../../dependencies/control-plane/k8s/forward" }
 tokio = { version = "1.41.0" }
 anyhow = "1.0.92"
 clap = { version = "4.5.20", features = ["color", "derive"] }
-humantime = "2.1.0"
 async-trait = "0.1.83"
 shutdown = { path = "../../dependencies/control-plane/utils/shutdown" }
