@@ -39,7 +39,7 @@ nodeSelector:
 # -- Pod scheduling priority.
 # Setting this value will apply to all components except the external Chart dependencies.
 # If any component has `priorityClassName` set, then this value would be overridden for that component.
-# For external components like etcd, jaeger or loki-stack, PriorityClass can only be set at component level.
+# For external components like etcd, jaeger or loki, PriorityClass can only be set at component level.
 priorityClassName: ""
 
 earlyEvictionTolerations:
@@ -54,7 +54,7 @@ earlyEvictionTolerations:
 
 # -- Tolerations to be applied to all components except external Chart dependencies.
 # If any component has tolerations set, then it would override this value.
-# For external components like etcd, jaeger and loki-stack, tolerations can only be set at component level.
+# For external components like etcd, jaeger and loki, tolerations can only be set at component level.
 tolerations: []
 
 base:
@@ -593,162 +593,251 @@ etcd:
   tolerations: []
   priorityClassName: ""
 
-loki-stack:
-  # -- Enable loki log collection for our components
+loki:
   enabled: true
   # Configuration for loki's localpv hostpath storage class.
   localpvScConfig:
-    enabled: true
-    # Name of loki's localpv hostpath storage class.
-    name: "mayastor-loki-localpv"
-    # -- Host path where local etcd data is stored in.
-    basePath: "/var/local/{{ .Release.Name }}/localpv-hostpath/loki"
-    # -- ReclaimPolicy of loki's localpv hostpath storage class.
-    reclaimPolicy: Delete
-    # -- VolumeBindingMode of loki's localpv hostpath storage class.
-    volumeBindingMode: WaitForFirstConsumer
+    loki:
+      # Name of loki's localpv hostpath storage class.
+      name: "mayastor-loki-localpv"
+      # -- Host path where local loki data is stored in.
+      basePath: "/var/local/{{ .Release.Name }}/localpv-hostpath/loki"
+      # -- ReclaimPolicy of loki's localpv hostpath storage class.
+      reclaimPolicy: Delete
+      # -- VolumeBindingMode of loki's localpv hostpath storage class.
+      volumeBindingMode: WaitForFirstConsumer
+    minio:
+      # Name of minio's localpv hostpath storage class.
+      name: "mayastor-minio-localpv"
+      # -- Host path where local minio data is stored in.
+      basePath: "/var/local/{{ .Release.Name }}/localpv-hostpath/minio"
+      # -- ReclaimPolicy of minio's localpv hostpath storage class.
+      reclaimPolicy: Delete
+      # -- VolumeBindingMode of minio's localpv hostpath storage class.
+      volumeBindingMode: WaitForFirstConsumer
+
   loki:
-    rbac:
-      # -- Create rbac roles for loki
-      create: true
-      pspEnabled: false
-    # -- Enable loki installation as part of loki-stack
-    enabled: true
-    # Install loki with persistence storage
-    persistence:
-      # -- Enable persistence storage for the logs
+    schemaConfig:
+      configs:
+        - from: 2024-04-01
+          store: tsdb
+          object_store: s3
+          schema: v13
+          index:
+            prefix: loki_index_
+            period: 24h
+    commonConfig:
+      replication_factor: 3
+    ingester:
+      chunk_encoding: snappy
+    tracing:
       enabled: true
-      # -- StorageClass for Loki's centralised log storage. Options:
-      # <p> - `"manual"` - Will provision a hostpath PV on the same node. <br>
-      # - `""` (empty) - Will use the default StorageClass on the cluster. </p>
-      storageClassName: "mayastor-loki-localpv"
-      # -- PVC's ReclaimPolicy, can be Delete or Retain
-      reclaimPolicy: "Delete"
-      # -- Size of Loki's persistence storage
-      size: 10Gi
-    # loki process run & file permissions, required if sc=manual
-    securityContext:
-      fsGroup: 1001
-      runAsGroup: 1001
-      runAsNonRoot: false
-      runAsUser: 1001
-    # initContainers to chown the static hostpath PV by 1001 user
-    initContainers:
-      - command: ["/bin/sh", "-ec", "chown -R 1001:1001 /data"]
-        image: docker.io/openebs/alpine-sh:4.1.0
-        imagePullPolicy: IfNotPresent
-        name: volume-permissions
-        securityContext:
-          runAsUser: 0
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        volumeMounts:
-          - mountPath: /data
-            name: storage
-    config:
-      # Compactor is a BoltDB(loki term) Shipper specific service that reduces the index
-      # size by deduping the index and merging all the files to a single file per table.
-      # Ref: https://grafana.com/docs/loki/latest/operations/storage/retention/
-      compactor:
-        # Dictates how often compaction and/or retention is applied. If the
-        # Compactor falls behind, compaction and/or retention occur as soon as possible.
-        compaction_interval: 20m
+    querier:
+      max_concurrent: 1
+    limits_config:
+      ingestion_burst_size_mb: 1000
+      ingestion_rate_mb: 10000
 
-        # If not enabled compactor will only compact table but they will not get
-        # deleted
-        retention_enabled: true
+  singleBinary:
+    replicas: 3
+    drivesPerNode: 1
+    persistence:
+      enabled: true
+      storageClass: "mayastor-loki-localpv"
+      accessModes:
+        - ReadWriteOnce
+      size: 2Gi
 
-        # The delay after which the compactor will delete marked chunks
-        retention_delete_delay: 1h
-
-        # Specifies the maximum quantity of goroutine workers instantiated to
-        # delete chunks
-        retention_delete_worker_count: 50
-
-      # Rentention period of logs is configured within the limits_config section
-      limits_config:
-        # configuring retention period for logs
-        retention_period: 168h
-
-    # Loki service parameters defines how the Loki service is exposed
-    service:
-      # K8s service type
-      type: ClusterIP
-      port: 3100
-      # Port where REST endpoints of Loki are accessible from outside cluster
-      nodePort: 31001
-    tolerations: []
-    priorityClassName: ""
-
-  # promtail configuration
-  promtail:
-    rbac:
-      # create rbac roles for promtail
-      create: true
-      pspEnabled: false
-    # -- Enables promtail for scraping logs from nodes
+  minio:
+    replicas: 3
+    drivesPerNode: 1
+    mode: distributed
     enabled: true
-    # -- Disallow promtail from running on the master node
-    tolerations: []
-    priorityClassName: ""
-    config:
-      clients:
-        # -- The Loki address to post logs to
-        - url: http://{{ .Release.Name }}-loki:3100/loki/api/v1/push
-      snippets:
-        # Promtail will export logs to loki only based on below
-        # configuration, below scrape config will export only our services
-        # which are labeled with openebs.io/logging=true
-        scrapeConfigs: |
-          - job_name: {{ .Release.Name }}-pods-name
-            pipeline_stages:
-              - docker: {}
-              - replace:
-                  expression: '(\n)'
-                  replace: ''
-              - multiline:
-                  firstline: '^  \x1b\[2m(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}).(\d{6})Z'
-                  max_wait_time: 3s
-              - multiline:
-                  firstline: '^  (\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2}).(\d{6})Z'
-                  max_wait_time: 3s
-            kubernetes_sd_configs:
-            - role: pod
-            relabel_configs:
-            - source_labels:
-              - __meta_kubernetes_pod_node_name
-              target_label: hostname
-              action: replace
-            - action: labelmap
-              regex: __meta_kubernetes_pod_label_(.+)
-            - action: keep
-              source_labels:
-              - __meta_kubernetes_pod_label_openebs_io_logging
-              regex: true
-              target_label: {{ .Release.Name }}_component
-            - action: replace
-              replacement: $1
-              separator: /
-              source_labels:
-              - __meta_kubernetes_namespace
-              target_label: job
-            - action: replace
-              source_labels:
-              - __meta_kubernetes_pod_name
-              target_label: pod
-            - action: replace
-              source_labels:
-              - __meta_kubernetes_pod_container_name
-              target_label: container
-            - replacement: /var/log/pods/*$1/*.log
-              separator: /
-              source_labels:
-              - __meta_kubernetes_pod_uid
-              - __meta_kubernetes_pod_container_name
-              target_label: __path__
-        # Ignore readiness check if no logs are found on nodes without Mayastor components.
-        extraServerConfigs: |-
-          health_check_target: false
+    persistence:
+      storageClass: "mayastor-loki-localpv"
+      size: 2Gi
+
+  deploymentMode: SingleBinary
+
+  lokiCanary:
+    enabled: false
+
+  chunksCache:
+    enabled: false
+
+  test:
+    enabled: false
+
+  gateway:
+    enabled: false
+
+  resultsCache:
+    enabled: false
+
+  backend:
+    replicas: 0
+  read:
+    replicas: 0
+  write:
+    replicas: 0
+
+  ingester:
+    replicas: 0
+  querier:
+    replicas: 0
+  queryFrontend:
+    replicas: 0
+  queryScheduler:
+    replicas: 0
+  distributor:
+    replicas: 0
+  compactor:
+    replicas: 0
+  indexGateway:
+    replicas: 0
+  bloomCompactor:
+    replicas: 0
+  bloomGateway:
+    replicas: 0
+
+alloy:
+  logging_config:
+    # -- Enable debugging on alloy components.
+    debugging: false
+    # -- Labels to enable scraping on, at-least one of these labels should be present.
+    labels:
+      openebs.io/logging: true
+    # -- X-Scope-OrgID to pe populated which pushing logs. Make sure the caller also uses the same.
+    tenant_id: openebs
+
+  enabled: true
+  alloy:
+    mounts:
+      varlog: true
+    configMap:
+      create: true
+      content: |
+        livedebugging {
+          enabled = {{ .Values.logging_config.debugging }}
+        }
+
+        discovery.kubernetes "{{ .Release.Name }}_pods_name" {
+          role = "pod"
+        }
+
+        discovery.relabel "{{ .Release.Name }}_pods_name" {
+          targets = discovery.kubernetes.{{ .Release.Name }}_pods_name.targets
+
+          {{- $labels := .Values.logging_config.labels }}
+          {{- if $labels }}
+          {{- $keys := (keys $labels | sortAlpha) }}
+
+          rule {
+            source_labels = [
+              {{- range $key := $keys }}
+              "__meta_kubernetes_pod_label_{{ $key | replace "." "_" | replace "/" "_" }}",
+              {{- end }}
+            ]
+            separator     = ";"
+            regex         = "^{{ include "regex_or" (dict "labels" $labels "keys" $keys) }}$"
+            action        = "keep"
+          }
+
+          {{- end }}
+
+          rule {
+            regex  = "__meta_kubernetes_pod_label_(.+)"
+            action = "labelmap"
+          }
+
+          rule {
+            regex  = "__meta_kubernetes_pod_label_(.+)"
+            action = "labelmap"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_namespace"]
+            separator     = "/"
+            target_label  = "job"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_name"]
+            target_label  = "pod"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_container_name"]
+            target_label  = "container"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_node_name"]
+            target_label  = "hostname"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+            separator     = "/"
+            target_label  = "__path__"
+            replacement   = "/var/log/pods/*$1/*.log"
+          }
+        }
+
+        local.file_match "{{ .Release.Name }}_pod_files" {
+          path_targets = discovery.relabel.{{ .Release.Name }}_pods_name.output
+        }
+
+        loki.source.file "{{ .Release.Name }}_pod_logs" {
+          targets    = local.file_match.{{ .Release.Name }}_pod_files.targets
+          forward_to = [loki.process.{{ .Release.Name }}_process_logs.receiver]
+        }
+
+        loki.process "{{ .Release.Name }}_process_logs" {
+          forward_to = [loki.write.default.receiver]
+
+          stage.docker { }
+
+          stage.replace {
+            expression = "(\\n)"
+            replace = ""
+          }
+
+          stage.multiline {
+            firstline = "^  \\x1b\\[2m(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2}).(\\d{6})Z"
+          }
+
+          stage.multiline {
+            firstline = "^  (\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2}).(\\d{6})Z"
+          }
+        }
+
+        loki.write "default" {
+            endpoint {
+            url       = "http://{{ .Release.Name }}-loki:3100/loki/api/v1/push"
+            tenant_id = "{{ .Values.logging_config.tenant_id }}"
+          }
+          external_labels = {}
+        }
+
+        {{- define "regex_or" -}}
+        {{- $labels := .labels -}}
+        {{- $keys := .keys -}}
+        {{- $numKeys := len $keys -}}
+        {{- $regexParts := list -}}
+        {{- range $i, $key := $keys -}}
+        {{- $part := list -}}
+        {{- range $j := until $numKeys -}}
+        {{- if eq $j $i -}}
+        {{- $part = append $part (get $labels $key) -}}
+        {{- else -}}
+        {{- $part = append $part ".*" -}}
+        {{- end -}}
+        {{- end -}}
+        {{- $regexParts = append $regexParts (join ";" $part) -}}
+        {{- end -}}
+        {{- join "|" $regexParts -}}
+        {{- end -}}
 
 # Eventing which enables or disables eventing-related components.
 eventing:
@@ -841,7 +930,7 @@ storageClass:
     repl: 1
 
 localpv-provisioner:
-  # -- Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki-stack storage class accordingly.
+  # -- Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki storage class accordingly.
   enabled: true
 
   localpv:

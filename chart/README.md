@@ -56,7 +56,8 @@ This removes all the Kubernetes components associated with the chart and deletes
 |------------|------|---------|
 |  | crds | 0.0.0 |
 | https://charts.bitnami.com/bitnami | etcd | 8.6.0 |
-| https://grafana.github.io/helm-charts | loki-stack | 2.9.11 |
+| https://grafana.github.io/helm-charts | alloy | 1.0.1 |
+| https://grafana.github.io/helm-charts | loki | 6.29.0 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.50.1 |
 | https://nats-io.github.io/k8s/helm/charts/ | nats | 0.19.14 |
 | https://openebs.github.io/dynamic-localpv-provisioner | localpv-provisioner | 4.2.0 |
@@ -94,6 +95,9 @@ This removes all the Kubernetes components associated with the chart and deletes
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for ha node agent | `"100m"` |
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for ha node agent | `"64Mi"` |
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
+| alloy.&ZeroWidthSpace;logging_config.&ZeroWidthSpace;debugging | Enable debugging on alloy components. | `false` |
+| alloy.&ZeroWidthSpace;logging_config.&ZeroWidthSpace;labels | Labels to enable scraping on, at-least one of these labels should be present. | <pre>{<br>"openebs.io/logging":true<br>}</pre> |
+| alloy.&ZeroWidthSpace;logging_config.&ZeroWidthSpace;tenant_id | X-Scope-OrgID to pe populated which pushing logs. Make sure the caller also uses the same. | `"openebs"` |
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;liveness.&ZeroWidthSpace;enabled | Toggle liveness probe. | `true` |
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;liveness.&ZeroWidthSpace;failureThreshold | No. of failures the liveness probe will tolerate. | `1` |
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;liveness.&ZeroWidthSpace;initialDelaySeconds | No. of seconds of delay before checking the liveness status. | `0` |
@@ -190,22 +194,15 @@ This removes all the Kubernetes components associated with the chart and deletes
 | io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;ptpl | Reservations Persist Through Power Loss State | `true` |
 | io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;rdma | Enable RDMA Capability of Mayastor nvmf target to take RDMA connections if the cluster nodes have RDMA device(s) configured from RNIC. | <pre>{<br>"enabled":false<br>}</pre> |
 | io_engine.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| localpv-provisioner.&ZeroWidthSpace;enabled | Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki-stack storage class accordingly. | `true` |
+| localpv-provisioner.&ZeroWidthSpace;enabled | Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki storage class accordingly. | `true` |
 | localpv-provisioner.&ZeroWidthSpace;hostpathClass.&ZeroWidthSpace;enabled | Enable default hostpath localpv StorageClass. | `false` |
 | localpv-provisioner.&ZeroWidthSpace;localpv.&ZeroWidthSpace;priorityClassName | Set the PriorityClass for the LocalPV Hostpath provisioner Deployment. | `"{{ .Release.Name }}-cluster-critical"` |
-| loki-stack.&ZeroWidthSpace;enabled | Enable loki log collection for our components | `true` |
-| loki-stack.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;basePath | Host path where local etcd data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/loki"` |
-| loki-stack.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of loki's localpv hostpath storage class. | `"Delete"` |
-| loki-stack.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;volumeBindingMode | VolumeBindingMode of loki's localpv hostpath storage class. | `"WaitForFirstConsumer"` |
-| loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;enabled | Enable loki installation as part of loki-stack | `true` |
-| loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;persistence.&ZeroWidthSpace;enabled | Enable persistence storage for the logs | `true` |
-| loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;persistence.&ZeroWidthSpace;reclaimPolicy | PVC's ReclaimPolicy, can be Delete or Retain | `"Delete"` |
-| loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;persistence.&ZeroWidthSpace;size | Size of Loki's persistence storage | `"10Gi"` |
-| loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;persistence.&ZeroWidthSpace;storageClassName | StorageClass for Loki's centralised log storage. Options: <p> - `"manual"` - Will provision a hostpath PV on the same node. <br> - `""` (empty) - Will use the default StorageClass on the cluster. </p> | `"mayastor-loki-localpv"` |
-| loki-stack.&ZeroWidthSpace;loki.&ZeroWidthSpace;rbac.&ZeroWidthSpace;create | Create rbac roles for loki | `true` |
-| loki-stack.&ZeroWidthSpace;promtail.&ZeroWidthSpace;config.&ZeroWidthSpace;clients[0] | The Loki address to post logs to | <pre>{<br>"url":"http://{<br>{<br> .Release.Name <br>}<br>}-loki:3100/loki/api/v1/push"<br>}</pre> |
-| loki-stack.&ZeroWidthSpace;promtail.&ZeroWidthSpace;enabled | Enables promtail for scraping logs from nodes | `true` |
-| loki-stack.&ZeroWidthSpace;promtail.&ZeroWidthSpace;tolerations | Disallow promtail from running on the master node | `[]` |
+| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;loki.&ZeroWidthSpace;basePath | Host path where local loki data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/loki"` |
+| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;loki.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of loki's localpv hostpath storage class. | `"Delete"` |
+| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;loki.&ZeroWidthSpace;volumeBindingMode | VolumeBindingMode of loki's localpv hostpath storage class. | `"WaitForFirstConsumer"` |
+| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;basePath | Host path where local minio data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/minio"` |
+| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of minio's localpv hostpath storage class. | `"Delete"` |
+| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;volumeBindingMode | VolumeBindingMode of minio's localpv hostpath storage class. | `"WaitForFirstConsumer"` |
 | nodeSelector | Node labels for pod assignment ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ Note that if multi-arch images support 'kubernetes.io/arch: amd64' should be removed and set 'nodeSelector' to empty '{}' as default value. | <pre>{<br>"kubernetes.io/arch":"amd64"<br>}</pre> |
 | obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;enabled | Enable callhome | `true` |
 | obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;logLevel | Log level for callhome | `"info"` |
@@ -228,7 +225,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for diskpool operator | `"50m"` |
 | operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for diskpool operator | `"16Mi"` |
 | operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| priorityClassName | Pod scheduling priority. Setting this value will apply to all components except the external Chart dependencies. If any component has `priorityClassName` set, then this value would be overridden for that component. For external components like etcd, jaeger or loki-stack, PriorityClass can only be set at component level. | `""` |
+| priorityClassName | Pod scheduling priority. Setting this value will apply to all components except the external Chart dependencies. If any component has `priorityClassName` set, then this value would be overridden for that component. For external components like etcd, jaeger or loki, PriorityClass can only be set at component level. | `""` |
 | storageClass.&ZeroWidthSpace;allowVolumeExpansion | Enable volume expansion for the default StorageClass. | `true` |
-| tolerations | Tolerations to be applied to all components except external Chart dependencies. If any component has tolerations set, then it would override this value. For external components like etcd, jaeger and loki-stack, tolerations can only be set at component level. | `[]` |
+| tolerations | Tolerations to be applied to all components except external Chart dependencies. If any component has tolerations set, then it would override this value. For external components like etcd, jaeger and loki, tolerations can only be set at component level. | `[]` |
 

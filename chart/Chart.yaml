@@ -36,10 +36,14 @@ dependencies:
     version: 2.50.1
     repository: https://jaegertracing.github.io/helm-charts
     condition: base.jaeger.enabled
-  - name: loki-stack
-    version: 2.9.11
+  - name: loki
+    version: 6.29.0
     repository: https://grafana.github.io/helm-charts
-    condition: loki-stack.enabled
+    condition: loki.enabled
+  - name: alloy
+    version: 1.0.1
+    repository: https://grafana.github.io/helm-charts
+    condition: alloy.enabled
   - name: nats
     version: 0.19.14
     repository: https://nats-io.github.io/k8s/helm/charts/
@@ -50,12 +54,12 @@ dependencies:
     condition: localpv-provisioner.enabled
 annotations:
   helm.sh/images: |
-    - name: bats
-      image: bats/bats:1.8.2
     - name: etcd
       image: docker.io/bitnami/etcd:3.5.6-debian-11-r10
-    - name: promtail
-      image: docker.io/grafana/promtail:2.8.3
+    - name: alloy
+      image: docker.io/grafana/alloy:v1.8.1
+    - name: loki
+      image: docker.io/grafana/loki:3.4.2
     - name: alpine-bash
       image: docker.io/openebs/alpine-bash:4.1.0
     - name: alpine-sh
@@ -76,14 +80,14 @@ annotations:
       image: docker.io/openebs/mayastor-io-engine:develop
     - name: mayastor-metrics-exporter-io-engine
       image: docker.io/openebs/mayastor-metrics-exporter-io-engine:develop
-    - name: mayastor-obs-callhome
-      image: docker.io/openebs/mayastor-obs-callhome:develop
     - name: mayastor-obs-callhome-stats
       image: docker.io/openebs/mayastor-obs-callhome-stats:develop
+    - name: mayastor-obs-callhome
+      image: docker.io/openebs/mayastor-obs-callhome:develop
     - name: mayastor-operator-diskpool
       image: docker.io/openebs/mayastor-operator-diskpool:develop
-    - name: loki
-      image: grafana/loki:2.6.1
+    - name: k8s-sidecar
+      image: kiwigrid/k8s-sidecar:1.30.2
     - name: nats
       image: nats:2.9.17-alpine
     - name: nats-box
@@ -93,9 +97,15 @@ annotations:
     - name: prometheus-nats-exporter
       image: natsio/prometheus-nats-exporter:0.11.0
     - name: linux-utils
-      image: openebs/linux-utils:4.0.0
+      image: openebs/linux-utils:4.1.0
     - name: provisioner-localpv
-      image: openebs/provisioner-localpv:4.1.2
+      image: openebs/provisioner-localpv:4.2.0
+    - name: mc
+      image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
+    - name: minio
+      image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+    - name: prometheus-config-reloader
+      image: quay.io/prometheus-operator/prometheus-config-reloader:v0.81.0
     - name: csi-attacher
       image: registry.k8s.io/sig-storage/csi-attacher:v4.3.0
     - name: csi-node-driver-registrar
