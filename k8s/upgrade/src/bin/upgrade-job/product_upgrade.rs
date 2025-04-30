@@ -22,6 +22,7 @@ pub(crate) async fn upgrade(opts: &CliArgs) -> Result<()> {
     let mut event = EventRecorder::builder()
         .with_pod_name(opts.pod_name())
         .with_namespace(opts.namespace())
+        .with_product_name(product_train())
         .build()
         .await?;
 

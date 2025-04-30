@@ -1,5 +1,4 @@
 use crate::common::{
-    constants::product_train,
     error::{
         EventChannelSend, EventPublish, EventRecorderOptionsAbsent, GetPod, JobPodHasTooManyOwners,
         JobPodOwnerIsNotJob, JobPodOwnerNotFound, Result, SerializeEventNote,
@@ -49,6 +48,7 @@ pub struct EventRecorderBuilder {
     namespace: Option<String>,
     source_version: Option<String>,
     target_version: Option<String>,
+    product_name: String,
 }
 
 impl EventRecorderBuilder {
@@ -74,10 +74,17 @@ impl EventRecorderBuilder {
         self
     }
 
+    /// Set the product name of the product which, this upgrade-job is tied to.
+    #[must_use]
+    pub fn with_product_name(mut self, product_name: String) -> Self {
+        self.product_name = product_name;
+        self
+    }
+
     // TODO: Make the builder option validations error out at compile-time, using std::compile_error
     // or something similar.
     /// This builds the EventRecorder. This fails if Kubernetes API requests fail.
-    pub async fn build(&self) -> Result<EventRecorder> {
+    pub async fn build(self) -> Result<EventRecorder> {
         ensure!(
             self.pod_name.is_some() && self.namespace.is_some(),
             EventRecorderOptionsAbsent
@@ -170,6 +177,7 @@ impl EventRecorderBuilder {
             event_loop_handle,
             source_version,
             target_version,
+            product_name: self.product_name,
         })
     }
 }
@@ -180,9 +188,16 @@ pub struct EventRecorder {
     event_loop_handle: tokio::task::JoinHandle<()>,
     source_version: String,
     target_version: String,
+    product_name: String,
 }
 
 impl EventRecorder {
+    /// Returns the reason that could be embedded on to the Kubernetes Event to identify
+    /// upgrade-job of a particular 'product'.
+    fn event_reason(&self) -> String {
+        format!("{product_name}Upgrade", product_name = self.product_name)
+    }
+
     /// Creates an empty builder.
     pub fn builder() -> EventRecorderBuilder {
         EventRecorderBuilder::default()
@@ -208,7 +223,7 @@ impl EventRecorder {
         let note_s = serde_json::to_string(&note).context(SerializeEventNote { note })?;
         self.publish(Event {
             type_: EventType::Normal,
-            reason: constants::upgrade_event_reason(),
+            reason: self.event_reason(),
             note: Some(note_s),
             action: action.to_string(),
             secondary: None,
@@ -227,7 +242,7 @@ impl EventRecorder {
         let note_s = serde_json::to_string(&note).context(SerializeEventNote { note })?;
         self.publish(Event {
             type_: EventType::Warning,
-            reason: constants::upgrade_event_reason(),
+            reason: self.event_reason(),
             note: Some(note_s),
             action: action.to_string(),
             secondary: None,
@@ -244,7 +259,7 @@ impl EventRecorder {
         let _ = self
             .publish_warning(format!("Failed to upgrade: {err}"), action)
             .await
-            .map_err(|error| error!(%error, "Failed to upgrade {}", product_train()));
+            .map_err(|error| error!(%error, "Failed to upgrade {name}", name = self.product_name));
     }
 
     /// Shuts down the event channel which makes the event loop worker exit its loop and return.
