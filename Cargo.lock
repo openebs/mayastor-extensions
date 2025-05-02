@@ -4520,6 +4520,7 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry-semantic-conventions",
  "opentelemetry_sdk",
+ "regex",
  "strum",
  "strum_macros",
  "tracing",
