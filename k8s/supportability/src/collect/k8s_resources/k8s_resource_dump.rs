@@ -1,3 +1,4 @@
+use super::k8s_operators::DiskPool;
 use crate::{
     collect::{
         k8s_resources::client::{ClientSet, K8sResourceError},
@@ -9,7 +10,6 @@ use k8s_openapi::{
     api::{apps::v1, core::v1::Event},
     apimachinery::pkg::apis::meta::v1::MicroTime,
 };
-use k8s_operators::diskpool::crd::DiskPool;
 use kube::Resource;
 use serde::Serialize;
 use std::{
