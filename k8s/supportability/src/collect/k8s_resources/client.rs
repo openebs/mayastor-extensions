@@ -1,5 +1,5 @@
+use super::k8s_operators::DiskPool;
 use crate::collect::k8s_resources::common::KUBERNETES_HOST_LABEL_KEY;
-use k8s_operators::diskpool::crd::DiskPool;
 
 use k8s_openapi::api::{
     apps::v1::{DaemonSet, Deployment, StatefulSet},
