@@ -95,7 +95,6 @@ This removes all the Kubernetes components associated with the chart and deletes
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for ha node agent | `"100m"` |
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for ha node agent | `"64Mi"` |
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| alloy.&ZeroWidthSpace;logging_config.&ZeroWidthSpace;debugging | Enable debugging on alloy components. | `false` |
 | alloy.&ZeroWidthSpace;logging_config.&ZeroWidthSpace;labels | Labels to enable scraping on, at-least one of these labels should be present. | <pre>{<br>"openebs.io/logging":true<br>}</pre> |
 | alloy.&ZeroWidthSpace;logging_config.&ZeroWidthSpace;tenant_id | X-Scope-OrgID to pe populated which pushing logs. Make sure the caller also uses the same. | `"openebs"` |
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;liveness.&ZeroWidthSpace;enabled | Toggle liveness probe. | `true` |
