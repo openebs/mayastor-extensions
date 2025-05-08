@@ -13,7 +13,7 @@ use events_api::{
 };
 use k8s_openapi::api::core::v1::ConfigMap;
 use obs::common::{
-    constants::{DEFAULT_MBUS_URL, DEFAULT_NAMESPACE, DEFAULT_RELEASE_NAME},
+    constants::{DEFAULT_NAMESPACE, DEFAULT_RELEASE_NAME},
     errors,
 };
 use prometheus::{Encoder, Registry};
@@ -31,9 +31,13 @@ mod store;
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
 struct Cli {
-    /// The url for mbus.
-    #[clap(long, default_value = DEFAULT_MBUS_URL)]
-    mbus_url: String,
+    /// Events message-bus endpoint url.
+    #[clap(long, short)]
+    events_url: url::Url,
+
+    /// Replication factor for the events jetstream.
+    #[clap(long)]
+    events_replicas: Option<usize>,
 
     /// The namespace we are supposed to operate in.
     #[arg(short, long, default_value = DEFAULT_NAMESPACE)]
@@ -71,8 +75,9 @@ impl Cli {
 }
 
 /// Intilize mbus.
-pub(crate) async fn mbus_init(mbus_url: &str) -> BusSubscription<EventMessage> {
-    let mut bus = message_bus_init(mbus_url, None).await;
+pub(crate) async fn mbus_init(args: &Cli) -> BusSubscription<EventMessage> {
+    let mut bus =
+        message_bus_init(args.events_url.to_string().as_str(), args.events_replicas).await;
     bus.subscribe::<EventMessage>()
         .await
         .map_err(|error| trace!("Error subscribing to jetstream: {error:?}"))
@@ -107,8 +112,8 @@ async fn main() -> errors::Result<()> {
     init_logging(&args);
     info!(?args, "stats aggregation started");
 
-    let bus_sub = mbus_init(args.mbus_url.as_str()).await;
-    info!("mbus initialized successfully!");
+    let bus_sub = mbus_init(&args).await;
+    info!("events bus initialized successfully!");
 
     let init_data = initialize_events_store(&args.namespace, &args.release_name).await?;
     info!("event store initialized successfully!");

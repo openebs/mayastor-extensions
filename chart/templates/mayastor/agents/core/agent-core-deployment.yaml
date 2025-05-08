@@ -58,7 +58,8 @@ spec:
             - "--snapshot-commitment={{ .Values.agents.core.capacity.thin.snapshotCommitment }}"
             - "--volume-commitment-initial={{ .Values.agents.core.capacity.thin.volumeCommitmentInitial }}"
             - "--volume-commitment={{ .Values.agents.core.capacity.thin.volumeCommitment }}"{{ if .Values.eventing.enabled }}
-            - "--events-url=nats://{{ .Release.Name }}-nats:4222"{{ end }}{{ if not .Values.agents.ha.enabled }}
+            - "--events-url=nats://{{ .Release.Name }}-nats:4222"
+            - "--events-replicas={{ include "events_replicas" . }}"{{ end }}{{ if not .Values.agents.ha.enabled }}
             - "--disable-ha"{{ end }}
             - "--fmt-style={{ include "logFormat" . }}"
             - "--ansi-colors={{ .Values.base.logging.color }}"
@@ -103,7 +104,8 @@ spec:
             - "--store=http://{{ include "etcdUrl" . }}"
             - "--core-grpc=https://{{ .Release.Name }}-agent-core:50051"{{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ include "jaeger_url" . }}"{{ end }}{{ if .Values.eventing.enabled }}
-            - "--events-url=nats://{{ .Release.Name }}-nats:4222"{{ end }}
+            - "--events-url=nats://{{ .Release.Name }}-nats:4222"
+            - "--events-replicas={{ include "events_replicas" . }}"{{ end }}
             - "--ansi-colors={{ .Values.base.logging.color }}"
             - "--fmt-style={{ include "logFormat" . }}"
           ports:

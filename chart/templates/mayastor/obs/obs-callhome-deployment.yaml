@@ -64,7 +64,8 @@ spec:
           args:
             - "--namespace={{ .Release.Namespace }}"
             - "--release-name={{ .Release.Name }}"
-            - "--mbus-url=nats://{{ .Release.Name }}-nats:4222"
+            - "--events-url=nats://{{ .Release.Name }}-nats:4222"
+            - "--events-replicas={{ include "events_replicas" . }}"
             - "--ansi-colors={{ .Values.base.logging.color }}"
             - "--fmt-style={{ include "logFormat" . }}"
           ports:
