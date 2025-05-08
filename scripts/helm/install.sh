@@ -165,6 +165,8 @@ else
        --set="etcd.livenessProbe.initialDelaySeconds=5,etcd.readinessProbe.initialDelaySeconds=5,etcd.replicaCount=1" \
        --set="obs.callhome.enabled=true,obs.callhome.sendReport=false,localpv-provisioner.analytics.enabled=false" \
        --set="eventing.enabled=true,nats.cluster.enabled=false,nats.cluster.replicas=1" \
+       --set="loki.loki.commonConfig.replication_factor=2,loki.singleBinary.replicas=2,loki.minio.replicas=2" \
+       --set="loki-stack.enabled=false" \
        $HELM_DRY_RUN $WAIT_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
   set +x
 fi

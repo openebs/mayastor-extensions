@@ -903,4 +903,3 @@ localpv-provisioner:
     enabled: false
   analytics:
     enabled: true
-loki-stack: {}
