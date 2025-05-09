@@ -25,6 +25,8 @@ pub(crate) struct DumpConfig {
     /// Topologer implements functionality to build topological information of system
     pub(crate) topologer: Option<Box<dyn Topologer>>,
     pub(crate) output_format: OutputFormat,
+    /// Tenant ID that needs to be passed while querying.
+    pub(crate) tenant_id: String,
 }
 
 /// The output format.

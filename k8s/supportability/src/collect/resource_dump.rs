@@ -84,6 +84,7 @@ impl ResourceDumper {
             config.loki_uri,
             config.since,
             config.timeout,
+            config.tenant_id,
         )
         .await
         {

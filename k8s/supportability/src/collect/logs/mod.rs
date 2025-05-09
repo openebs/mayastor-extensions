@@ -92,12 +92,14 @@ impl LogCollection {
     /// param 'loki_uri' --> Defines the address of loki instance
     /// param 'since'  --> Defines period from which logs needs to collect
     /// param 'timeout' --> Specifies the timeout while interacting with Loki Service
+    /// param 'tenant_id' --> Specifies the tenant_id while interacting with Loki Service
     pub(crate) async fn new_logger(
         kube_config_path: Option<std::path::PathBuf>,
         namespace: String,
         loki_uri: Option<String>,
         since: humantime::Duration,
         timeout: humantime::Duration,
+        tenant_id: String,
     ) -> Result<Box<dyn Logger>, LogError> {
         let client_set = ClientSet::new(kube_config_path.clone(), namespace.clone()).await?;
         Ok(Box::new(Self {
@@ -107,6 +109,7 @@ impl LogCollection {
                 namespace,
                 since,
                 timeout,
+                tenant_id,
             )
             .await,
             k8s_logger_client: K8sLoggerClient::new(client_set),

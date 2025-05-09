@@ -1,3 +1,4 @@
+use crate::collect::constants::X_SCOPE_ORGID;
 use crate::{collect::utils::write_to_log_file, log};
 use chrono::Utc;
 use hyper::body::Buf;
@@ -130,6 +131,8 @@ pub(crate) struct LokiClient {
     direction: LogDirection,
     /// maximum number of entries to return on one http call
     limit: u64,
+    /// Tenant id to be used for querying.
+    tenant_id: String,
 }
 
 impl LokiClient {
@@ -140,6 +143,7 @@ impl LokiClient {
         namespace: String,
         since: humantime::Duration,
         timeout: humantime::Duration,
+        tenant_id: String,
     ) -> Option<Self> {
         let (uri, client) = match uri {
             None => {
@@ -188,6 +192,7 @@ impl LokiClient {
             logs_endpoint: ENDPOINT.to_string(),
             direction: LogDirection::Forward,
             limit: 3000,
+            tenant_id,
         })
     }
 
@@ -317,6 +322,7 @@ impl<'a> LokiPoll<'a> {
         let request = http::Request::builder()
             .method("GET")
             .uri(&request_str)
+            .header(X_SCOPE_ORGID, self.client.tenant_id.clone())
             .body(hyper_body::Body::empty())?;
 
         let response = self.client().ready().await?.call(request).await?;

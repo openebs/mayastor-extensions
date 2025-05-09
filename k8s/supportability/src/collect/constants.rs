@@ -37,6 +37,9 @@ pub(crate) const MAYASTOR_SERVICE: &str = "io-engine";
 /// Defines the name of mayastor-io container(dataplane container)
 pub(crate) const DATA_PLANE_CONTAINER_NAME: &str = "io-engine";
 
+/// Loki Tenant ID header key.
+pub(crate) const X_SCOPE_ORGID: &str = "X-Scope-OrgID";
+
 /// Defines the logging label(key-value pair) on services.
 pub(crate) fn logging_label_selector() -> String {
     format!("{}=true", ::constants::loki_logging_key())

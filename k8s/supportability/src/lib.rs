@@ -48,6 +48,10 @@ pub struct SupportArgs {
     /// Path to kubeconfig file.
     #[clap(skip)]
     pub kubeconfig: Option<PathBuf>,
+
+    /// The tenant id to be used to query loki logs.
+    #[clap(global = true, long, default_value = "openebs")]
+    tenant_id: String,
 }
 
 /// Supportability - collects state & log information of services and dumps it to a tar file.
@@ -115,6 +119,7 @@ async fn execute_resource_dump(
         timeout: cli_args.timeout,
         topologer: None,
         output_format: OutputFormat::Tar,
+        tenant_id: cli_args.tenant_id,
     };
     let mut errors = Vec::new();
     match resource {
