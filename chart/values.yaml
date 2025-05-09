@@ -593,6 +593,10 @@ loki:
       # -- VolumeBindingMode of minio's localpv hostpath storage class.
       volumeBindingMode: WaitForFirstConsumer
   loki:
+    serviceLabels:
+      app: loki
+    podLabels:
+      app: loki
     schemaConfig:
       configs:
         - from: 2024-04-01
