@@ -168,6 +168,7 @@ else
        --set="loki.loki.commonConfig.replication_factor=2,loki.singleBinary.replicas=2,loki.minio.replicas=2" \
        --set="loki-stack.enabled=false" \
        $HELM_DRY_RUN $WAIT_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
+       # TODO: `--set="loki-stack.enabled=false"` remove this once the upgrade operator supports step upgrade to remove old loki-stack.
   set +x
 fi
 
