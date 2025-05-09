@@ -51,6 +51,7 @@ parse_args() {
 
 # Generate in-place consolidated values YAMLs throughout the
 # helm chart hierarchy (root chart and sub-charts).
+# Ignore if values file doesn't exist. Ex: alloy's crd chart dependency doesn't have values.yaml
 consolidate() {
   local -r chart_dir="$1"
   local -r chart_name="${chart_dir##*/}"
@@ -61,12 +62,18 @@ consolidate() {
     done
   fi
 
-  if [[ $(yq ".$chart_name" "$chart_dir"/../../values.yaml) == null ]]; then
-    yq -i ".$chart_name = {}" "$chart_dir"/../../values.yaml
+  local -r values_file="$chart_dir/values.yaml"
+  local -r values_yaml="$chart_dir/../../values.yaml"
+
+  if [[ $(yq ".$chart_name" "$values_yaml") == null ]]; then
+    yq -i ".$chart_name = {}" "$values_yaml"
   fi
 
-  yq -i ".$chart_name |= (load(\"$chart_dir/values.yaml\") * .)" "$chart_dir"/../../values.yaml
+  if [[ -f "$values_file" ]]; then
+    yq -i ".$chart_name |= (load(\"$values_file\") * .)" "$values_yaml"
+  fi
 }
+
 
 # Parse CLI args.
 parse_args "$@"
