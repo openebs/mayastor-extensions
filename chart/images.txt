@@ -24,9 +24,9 @@ openebs/provisioner-localpv:4.2.0
 quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
 quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
 quay.io/prometheus-operator/prometheus-config-reloader:v0.81.0
-registry.k8s.io/sig-storage/csi-attacher:v4.3.0
-registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.10.0
-registry.k8s.io/sig-storage/csi-provisioner:v3.5.0
-registry.k8s.io/sig-storage/csi-resizer:v1.9.3
-registry.k8s.io/sig-storage/csi-snapshotter:v6.3.3
-registry.k8s.io/sig-storage/snapshot-controller:v6.3.3
+registry.k8s.io/sig-storage/csi-attacher:v4.8.1
+registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.13.0
+registry.k8s.io/sig-storage/csi-provisioner:v5.2.0
+registry.k8s.io/sig-storage/csi-resizer:v1.13.2
+registry.k8s.io/sig-storage/csi-snapshotter:v8.2.0
+registry.k8s.io/sig-storage/snapshot-controller:v8.2.0
