@@ -68,9 +68,6 @@ pub const NEXUS: &str = "nexus";
 /// Field manager for Patch param, required for [`Patch::Apply`].
 pub const PATCH_PARAM_FILED_MANAGER: &str = "events_store_configmap";
 
-/// Default mbus url.
-pub const DEFAULT_MBUS_URL: &str = "nats://mayastor-nats:4222";
-
 /// Defines the default namespace.
 pub const DEFAULT_NAMESPACE: &str = "mayastor";
 

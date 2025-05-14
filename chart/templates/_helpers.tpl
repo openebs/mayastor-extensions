@@ -343,3 +343,14 @@ Renders init containers. If unset it sets the container image.
     {{- end -}}
     {{- tpl ($containers | toYaml) .context }}
 {{- end -}}
+
+{{/*
+Get the Events Jetstream Replica Count
+*/}}
+{{- define "events_replicas" -}}
+    {{- if .Values.nats.cluster.enabled }}
+        {{- min .Values.nats.cluster.replicas 3 }}
+    {{- else }}
+        {{- print "1" -}}
+    {{- end }}
+{{- end -}}

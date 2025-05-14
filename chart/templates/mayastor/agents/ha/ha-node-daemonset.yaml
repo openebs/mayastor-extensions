@@ -76,7 +76,8 @@ spec:
         - "--grpc-port=50053"
         - "--cluster-agent=https://{{ .Release.Name }}-agent-core:50052"{{ if .Values.base.jaeger.enabled }}
         - "--jaeger={{ include "jaeger_url" . }}"{{ end }}{{ if .Values.eventing.enabled }}
-        - "--events-url=nats://{{ .Release.Name }}-nats:4222"{{ end }}
+        - "--events-url=nats://{{ .Release.Name }}-nats:4222"
+        - "--events-replicas={{ include "events_replicas" . }}"{{ end }}
         - "--ansi-colors={{ .Values.base.logging.color }}"
         - "--fmt-style={{ include "logFormat" . }}"
         volumeMounts:

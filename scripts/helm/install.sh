@@ -34,7 +34,7 @@ K8S_NAMESPACE="mayastor"
 FAIL_IF_INSTALLED=
 HOSTED=
 VERSION=
-REGISTRY=
+PULL_POLICY=
 DEFAULT_REGISTRY="https://openebs.github.io/mayastor-extensions"
 HELM="helm"
 KUBECTL="kubectl"
@@ -54,6 +54,7 @@ Options:
   --hosted-chart                 Install a hosted chart instead of the local chart.
   --version   <version>          Set the version/version-range for the chart. Works only when used with the '--hosted' option.
   --registry  <registry-url>     Set the registry URL for the hosted chart. Works only when used with the '--hosted' option. (Default: $DEFAULT_REGISTRY)
+  --pull-policy <policy>         Set the image pull policy.
   --helm      <stringArray>      Pass Helm Args directly to the install/upgrade commands.
 
 Examples:
@@ -120,6 +121,11 @@ while [ "$#" -gt 0 ]; do
         REGISTRY="${1#*=}"
       fi
       shift;;
+    --pull-policy)
+      shift
+      test $# -lt 1 && die "Missing pull policy"
+      PULL_POLICY="$1"
+      shift;;
     --helm)
       shift
       test $# -lt 1 && die "Missing helm args"
@@ -152,6 +158,10 @@ if [ -n "$HOSTED" ]; then
   DEP_UPDATE_ARG=
 fi
 
+if [ -n "$PULL_POLICY" ]; then
+  PULL_POLICY_ARG="--set image.pullPolicy=$PULL_POLICY"
+fi
+
 if [ -z "$DRY_RUN" ] && [ "$($HELM ls -n "$K8S_NAMESPACE" -o yaml | yq "contains([{\"name\": \"$RELEASE_NAME\"}])")" = "true" ]; then
   already_exists_log="Helm release $RELEASE_NAME already exists in namespace $K8S_NAMESPACE"
   if [ -n "$FAIL_IF_INSTALLED" ]; then
@@ -167,7 +177,7 @@ else
        --set="eventing.enabled=true,nats.cluster.enabled=false,nats.cluster.replicas=1" \
        --set="loki.loki.commonConfig.replication_factor=2,loki.singleBinary.replicas=2,loki.minio.replicas=2" \
        --set="loki-stack.enabled=false" \
-       $HELM_DRY_RUN $WAIT_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
+       $HELM_DRY_RUN $WAIT_ARG $PULL_POLICY_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
        # TODO: `--set="loki-stack.enabled=false"` remove this once the upgrade operator supports step upgrade to remove old loki-stack.
   set +x
 fi

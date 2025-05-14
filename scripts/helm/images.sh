@@ -53,6 +53,9 @@ helm_dep_value_required() {
 helm_dep_version() {
   $HELM show chart "$CHART_DIR" --kubeconfig "$CHART_DIR/fake" | dep="${1:-}" yq '.dependencies[]|select(.name == strenv(dep)).version'
 }
+helm_chart_tag() {
+  $HELM show values "$CHART_DIR" --kubeconfig "$CHART_DIR/fake" | yq '.image.tag'
+}
 
 helm_localpv_prov_helper_image() {
   local registry
@@ -138,6 +141,7 @@ Command:
   generate                   Generate a list of helm images using the helm chart.
   patch                      Patch the chart/Chart.yaml with the images from the chart/images.txt file.
   verify                     Verify the chart/images.txt file with the pod images by installing on a live cluster.
+  build                      Builds the container images which reside on this repository.
 
 Options:
   -h, --help                 Display this text.
@@ -154,7 +158,7 @@ COMMAND=
 while test $# -gt 0; do
   arg="$1"
   case "$arg" in
-    generate | patch | verify)
+    generate | patch | verify | build)
       [ -n "$COMMAND" ] && needs_help "Can't specify two commands"
       COMMAND="$1"
       ;;
@@ -178,6 +182,11 @@ done
 trap cleanup EXIT
 
 case "$COMMAND" in
+  build)
+    TAG="$(helm_chart_tag)"
+    RUSTFLAGS="-C debuginfo=0 -C strip=debuginfo" "$ROOT_DIR"/scripts/release.sh --no-static-linking --skip-bins --skip-publish --debug --alias-tag "$TAG"
+    "$ROOT_DIR"/scripts/k8s/load-images-to-kind.sh --tag "$TAG" --trim-debug-suffix
+    ;;
   generate)
     TEMPLATE_IMAGES=$(mktemp /tmp/helm-XXXXXX.txt)
 
