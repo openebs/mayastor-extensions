@@ -55,7 +55,11 @@ if [ -z "$TAG" ]; then
   log_fatal "requires an image tag"
 fi
 
-IMAGE_TAG="v${TAG#v}"
+if [ "$(semver validate "$version")" == "valid" ]; then
+  IMAGE_TAG="v${TAG#v}"
+else
+  IMAGE_TAG="$TAG"
+fi
 # This list is static and is bound to fall out of date.
 # TODO: generate the list of container images at run time from build assets.
 images=("upgrade-job" "obs-callhome" "obs-callhome-stats" "metrics-exporter-io-engine")

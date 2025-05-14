@@ -349,8 +349,8 @@ Get the Events Jetstream Replica Count
 */}}
 {{- define "events_replicas" -}}
     {{- if .Values.nats.cluster.enabled }}
-        {{- print "1" -}}
-    {{- else }}
         {{- min .Values.nats.cluster.replicas 3 }}
+    {{- else }}
+        {{- print "1" -}}
     {{- end }}
 {{- end -}}
