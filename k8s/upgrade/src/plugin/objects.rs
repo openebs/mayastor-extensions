@@ -85,7 +85,15 @@ pub(crate) fn upgrade_job_cluster_role(
                     ]
                     .into_vec(),
                 ),
-                verbs: vec!["create", "delete", "get", "list", "patch"].into_vec(),
+                verbs: vec![
+                    "create",
+                    "delete",
+                    "deletecollection",
+                    "get",
+                    "list",
+                    "patch",
+                ]
+                .into_vec(),
                 ..Default::default()
             },
             PolicyRule {
