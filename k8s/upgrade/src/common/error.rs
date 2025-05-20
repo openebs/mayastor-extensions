@@ -89,6 +89,16 @@ pub enum Error {
         count: usize,
     },
 
+    /// Error for loki statefulset delete fails.
+    #[snafu(display(
+        "Failed to delete the Loki StatefulSet for helm release '{release_name}' in the '{namespace}' namespace: {source}"
+    ))]
+    FailedToDeleteLokiStatefulSet {
+        source: kube::Error,
+        release_name: String,
+        namespace: String,
+    },
+
     /// Error for when there's too few or too many helm configmaps for a release in a namespace.
     #[snafu(display(
         "'{count}' is an invalid no. of helm ConfigMaps for release '{release_name}' in namespace '{namespace}'"

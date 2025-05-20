@@ -2,19 +2,19 @@ use crate::common::{
     constants::KUBE_API_PAGE_SIZE,
     error::{
         ControllerRevisionDoesntHaveHashLabel, ControllerRevisionListEmpty,
-        FailedToListMetadataPaginated, FailedToListPaginated, InvalidNoOfHelmConfigMaps,
-        InvalidNoOfHelmSecrets, K8sClientGeneration, Result,
+        FailedToDeleteLokiStatefulSet, FailedToListMetadataPaginated, FailedToListPaginated,
+        InvalidNoOfHelmConfigMaps, InvalidNoOfHelmSecrets, K8sClientGeneration, Result,
     },
 };
 use k8s_openapi::{
     api::{
-        apps::v1::ControllerRevision,
+        apps::v1::{ControllerRevision, StatefulSet},
         core::v1::{ConfigMap, Namespace, Node, Pod, Secret},
     },
     apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition,
 };
 use kube::{
-    api::{Api, ListParams},
+    api::{Api, DeleteParams, ListParams},
     core::PartialObjectMeta,
     Client, Resource, ResourceExt,
 };
@@ -41,6 +41,11 @@ pub async fn crds_api() -> Result<Api<CustomResourceDefinition>> {
     Ok(Api::all(client().await?))
 }
 
+/// Generate the StatefulSet api client.
+pub async fn sts_api(namespace: &str) -> Result<Api<StatefulSet>> {
+    Ok(Api::namespaced(client().await?, namespace))
+}
+
 /// Generate ControllerRevision api client.
 pub async fn controller_revisions_api(namespace: &str) -> Result<Api<ControllerRevision>> {
     Ok(Api::namespaced(client().await?, namespace))
@@ -59,6 +64,27 @@ pub async fn secrets_api(namespace: &str) -> Result<Api<Secret>> {
 /// Generate the Configmap api client.
 pub async fn configmaps_api(namespace: &str) -> Result<Api<ConfigMap>> {
     Ok(Api::namespaced(client().await?, namespace))
+}
+
+pub async fn delete_loki_sts(release_name: String, namespace: String) -> Result<()> {
+    let sts_api = sts_api(namespace.as_str()).await?;
+    let label_selector = format!("app=loki,release={release_name}");
+
+    let list_params = ListParams::default().labels(label_selector.as_str());
+    let delete_params = DeleteParams::foreground();
+    sts_api
+        .delete_collection(&delete_params, &list_params)
+        .await
+        .map(|_| ())
+        .or_else(|error| match error {
+            // Handling NotFound case.
+            kube::Error::Api(resp) if resp.code == 404 => Ok(()),
+            something_else => Err(something_else),
+        })
+        .context(FailedToDeleteLokiStatefulSet {
+            release_name,
+            namespace,
+        })
 }
 
 pub async fn list_pods(

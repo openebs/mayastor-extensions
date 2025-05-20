@@ -1,11 +1,12 @@
 use crate::{
     common::{
-        constants::{CORE_CHART_NAME, UMBRELLA_CHART_NAME},
+        constants::{CORE_CHART_NAME, TWO_DOT_NINE, TWO_DOT_O_RC_ONE, UMBRELLA_CHART_NAME},
         error::{
             HelmUpgradeOptionNamespaceAbsent, HelmUpgradeOptionReleaseNameAbsent,
             InvalidUpgradePath, NoHelmStorageDriver, NoInputHelmChartDir, NotAKnownHelmChart,
-            Result, RollbackForbidden, UmbrellaChartNotUpgraded,
+            Result, RollbackForbidden, SemverParse, UmbrellaChartNotUpgraded,
         },
+        kube::client::delete_loki_sts,
         macros::vec_to_strings,
         regex::Regex,
     },
@@ -21,7 +22,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use semver::Version;
-use snafu::ensure;
+use snafu::{ensure, ResultExt};
 use std::{future::Future, path::PathBuf, pin::Pin, str};
 use tempfile::NamedTempFile as TempFile;
 use tracing::info;
@@ -275,6 +276,7 @@ impl HelmUpgraderBuilder {
 
             Ok(Box::new(CoreHelmUpgrader {
                 chart_dir,
+                namespace,
                 release_name,
                 client,
                 helm_upgrade_extra_args,
@@ -293,6 +295,7 @@ impl HelmUpgraderBuilder {
 /// this actually can set up a helm upgrade.
 pub(crate) struct CoreHelmUpgrader {
     chart_dir: PathBuf,
+    namespace: String,
     release_name: String,
     client: HelmReleaseClient,
     helm_upgrade_extra_args: Vec<String>,
@@ -328,6 +331,15 @@ impl HelmUpgrader for CoreHelmUpgrader {
             // the helm upgrade's "-f <values_file>" argument to work.
             // This handle is dropped when this closure returns, after helm upgrade.
             let _values_file = self.upgrade_values_file;
+
+            let two_dot_o_rc_one = Version::parse(TWO_DOT_O_RC_ONE).context(SemverParse {
+                version_string: TWO_DOT_O_RC_ONE.to_string(),
+            })?;
+
+            // Delete Loki for the upgrade from loki-stack to loki helm chart.
+            if self.source_version.ge(&two_dot_o_rc_one) && self.source_version.lt(&TWO_DOT_NINE) {
+                delete_loki_sts(self.release_name.clone(), self.namespace.clone()).await?;
+            }
 
             info!("Starting helm upgrade...");
             self.client
