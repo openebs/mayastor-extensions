@@ -2,6 +2,7 @@ use crate::collect::{
     k8s_resources::k8s_resource_dump::K8sResourceDumperError, logs::LogError,
     persistent_store::EtcdError, resources::ResourceError,
 };
+
 use std::ffi::OsString;
 
 /// Error contains possible errors that can occur while interacting
@@ -9,7 +10,7 @@ use std::ffi::OsString;
 #[derive(Debug)]
 #[allow(clippy::enum_variant_names)]
 #[allow(unused)]
-pub(crate) enum Error {
+pub enum Error {
     ResourceError(ResourceError),
     ArchiveError(std::io::Error),
     LogCollectionError(LogError),
@@ -17,6 +18,7 @@ pub(crate) enum Error {
     OSStringError(OsString),
     EtcdDumpError(EtcdError),
     MultipleErrors(Vec<Error>),
+    Generic(String),
 }
 
 impl From<std::io::Error> for Error {

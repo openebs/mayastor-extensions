@@ -6,24 +6,20 @@ use crate::{
     },
     log,
 };
+use utils::csi_plugin_name;
+
 use k8s_openapi::{
     api::{apps::v1, core::v1::Event},
     apimachinery::pkg::apis::meta::v1::MicroTime,
 };
 use kube::Resource;
 use serde::Serialize;
-use std::{
-    collections::HashSet,
-    fs::File,
-    io::Write,
-    iter::FromIterator,
-    path::{Path, PathBuf},
-};
-use utils::csi_plugin_name;
+use std::path::Path;
+use std::{collections::HashSet, fs::File, io::Write, iter::FromIterator, path::PathBuf};
 
 /// K8s resource dumper client
 #[derive(Clone)]
-pub(crate) struct K8sResourceDumperClient {
+pub struct K8sResourceDumperClient {
     k8s_client: ClientSet,
 }
 
@@ -31,13 +27,14 @@ pub(crate) struct K8sResourceDumperClient {
 #[derive(Debug)]
 #[allow(clippy::enum_variant_names)]
 #[allow(unused)]
-pub(crate) enum K8sResourceDumperError {
+pub enum K8sResourceDumperError {
     K8sResourceError(K8sResourceError),
     IOError(std::io::Error),
     YamlSerializationError(serde_yaml::Error),
     JsonSerializationError(serde_json::Error),
     // Used to hold stack of multiple errors and used to continue collecting information
     MultipleErrors(Vec<K8sResourceDumperError>),
+    Generic(String),
 }
 
 impl From<std::io::Error> for K8sResourceDumperError {
@@ -108,11 +105,10 @@ impl K8sResourceDumperClient {
     }
 
     /// dump the kubernetes resources like deployments, daemonsets,
-    /// pods, statefulsets, events, disk pools in the given root path
-    pub(crate) async fn dump_k8s_resources(
+    /// pods, statefulsets, events.
+    pub(crate) async fn dump_common_k8s_resources(
         &self,
         root_path: String,
-        required_pools: Option<Vec<String>>,
     ) -> Result<(), K8sResourceDumperError> {
         // Create the root dir path
         let mut root_dir = PathBuf::from(root_path);
@@ -123,68 +119,101 @@ impl K8sResourceDumperClient {
         let mut configurations_path = root_dir.to_path_buf();
         configurations_path.push("configurations");
         // Create the configurations directory
-        create_directory_if_not_exist(configurations_path.clone())?;
+        create_directory_if_not_exist(configurations_path.to_path_buf())?;
 
         let mut errors = Vec::new();
 
+        log("Collecting K8s resources...".to_string());
+
         // Fetch all events in provided NAMESPACE
         if let Err(error) = get_k8s_events(&self.k8s_client, &root_dir).await {
-            errors.push(error)
+            log(format!("\t Failed to collect k8s events, {error:?}"));
+            errors.push(error);
         }
 
         // Fetch all Daemonsets in provided NAMESPACE
         if let Err(error) = get_k8s_daemonsets(&self.k8s_client, &configurations_path).await {
+            log(format!("\t Failed to collect k8s daemonsets, {error:?}"));
             errors.push(error)
         }
 
         // Fetch all Deployments in provided NAMESPACE
         if let Err(error) = get_k8s_deployments(&self.k8s_client, &configurations_path).await {
+            log(format!("\t Failed to collect k8s deployments, {error:?}"));
             errors.push(error)
         }
 
         // Fetch all StatefulSets in provided NAMESPACE
         if let Err(error) = get_k8s_statefulsets(&self.k8s_client, &configurations_path).await {
-            errors.push(error)
-        }
-
-        // Fetch all DiskPools in provided NAMESPACE
-        if let Err(error) = get_k8s_diskpools(&self.k8s_client, &root_dir, required_pools).await {
-            errors.push(error)
-        }
-
-        // Fetch all VolumeSnapshotClasses for mayastor csi driver
-        if let Err(error) = get_k8s_vs_classes(&self.k8s_client, &root_dir).await {
-            errors.push(error)
-        }
-
-        // Fetch all VolumeSnapshotContents for mayastor csi driver
-        if let Err(error) = get_k8s_vsnapshot_contents(&self.k8s_client, &root_dir).await {
+            log(format!("\t Failed to collect k8s statefulsets, {error:?}"));
             errors.push(error)
         }
 
         // Fetch all Pods in provided NAMESPACE
         if let Err(error) = get_k8s_pod_configurations(&self.k8s_client, &root_dir).await {
+            log(format!(
+                "\t Failed to collect k8s pod configurations, {error:?}"
+            ));
             errors.push(error)
         }
 
         if !errors.is_empty() {
             return Err(K8sResourceDumperError::MultipleErrors(errors));
         }
+        log("Completed collection of k8s resources".to_string());
         Ok(())
     }
-}
 
-/// Creates a file and writes the passed content in it
-fn create_file_and_write(
-    mut file_path: PathBuf,
-    file_name: String,
-    content: String,
-) -> Result<(), std::io::Error> {
-    file_path.push(file_name);
-    let mut file = File::create(file_path)?;
-    file.write_all(content.as_bytes())?;
-    file.flush().unwrap();
-    Ok(())
+    /// Dump the mayastor specific k8s resources, like diskpools, vs_class and vs_conts.
+    pub(crate) async fn dump_mayastor_k8s_resources(
+        &self,
+        root_path: &Path,
+        required_pools: Option<Vec<String>>,
+    ) -> Result<(), K8sResourceDumperError> {
+        // Create the root dir path
+        create_directory_if_not_exist(root_path.to_path_buf())?;
+
+        let mut errors = Vec::new();
+
+        log("Collecting mayastor specific k8s resources...".to_string());
+        // Fetch all DiskPools in provided NAMESPACE
+        if let Err(error) = get_k8s_diskpools(&self.k8s_client, root_path, required_pools).await {
+            log(format!(
+                "\t Failed to collect mayastor diskpools, {error:?}"
+            ));
+            errors.push(error)
+        }
+
+        // Fetch all VolumeSnapshotClasses for mayastor csi driver
+        if let Err(error) = get_k8s_vs_classes(&self.k8s_client, root_path, csi_plugin_name()).await
+        {
+            log(format!(
+                "\t Failed to collect mayastor volume snapshot classes, {error:?}"
+            ));
+            errors.push(error)
+        }
+
+        // Fetch all VolumeSnapshotContents for mayastor csi driver
+        if let Err(error) =
+            get_k8s_vsnapshot_contents(&self.k8s_client, root_path, csi_plugin_name()).await
+        {
+            log(format!(
+                "\t Failed to collect mayastor volume snapshot contents, {error:?}"
+            ));
+            errors.push(error)
+        }
+
+        if !errors.is_empty() {
+            return Err(K8sResourceDumperError::MultipleErrors(errors));
+        }
+        log("Completed collection of mayastor specific k8s resources".to_string());
+        Ok(())
+    }
+
+    /// Get the k8s clientset.
+    pub fn client_set(&self) -> &ClientSet {
+        &self.k8s_client
+    }
 }
 
 /// create the app specific yamls
@@ -246,7 +275,7 @@ async fn get_k8s_daemonsets(
     log("\t Collecting daemonsets configuration".to_string());
     match k8s_client.get_daemonsets("", "").await {
         Ok(daemonsets) => {
-            // Create all Daemonsets configurations
+            // Create all daemonsets configurations
             create_app_configurations(
                 daemonsets.into_iter().map(DaemonSet).collect(),
                 configurations_path.to_path_buf(),
@@ -265,7 +294,7 @@ async fn get_k8s_deployments(
     log("\t Collecting deployments configuration".to_string());
     match k8s_client.get_deployments("", "").await {
         Ok(deploys) => {
-            // Create all Daemonsets configurations
+            // Create all deployment configurations
             create_app_configurations(
                 deploys.into_iter().map(Deployment).collect(),
                 configurations_path.to_path_buf(),
@@ -284,7 +313,7 @@ async fn get_k8s_statefulsets(
     log("\t Collecting statefulsets configuration".to_string());
     match k8s_client.get_statefulsets("", "").await {
         Ok(statefulsets) => {
-            // Create all Daemonsets configurations
+            // Create all statefulsets configurations
             create_app_configurations(
                 statefulsets.into_iter().map(StatefulSet).collect(),
                 configurations_path.to_path_buf(),
@@ -301,7 +330,7 @@ async fn get_k8s_diskpools(
     required_pools: Option<Vec<String>>,
 ) -> Result<(), K8sResourceDumperError> {
     // Fetch all DiskPools in provided NAMESPACE
-    log("\t Collecting Kubernetes disk pool resources".to_string());
+    log("\t Collecting mayastor diskpool resources".to_string());
     match k8s_client.list_pools(None, None).await {
         Ok(disk_pools) => {
             let filtered_pools = match required_pools {
@@ -327,58 +356,12 @@ async fn get_k8s_diskpools(
     }
 }
 
-async fn get_k8s_vs_classes(
-    k8s_client: &ClientSet,
-    root_dir: &Path,
-) -> Result<(), K8sResourceDumperError> {
-    log("\t Collecting Kubernetes VolumeSnapshotClass resources".to_string());
-    match k8s_client
-        .list_volumesnapshot_classes(Some(&csi_plugin_name()), None, None)
-        .await
-    {
-        Ok(vscs) => {
-            // NOTE: Unmarshalling object recevied from K8s API-server will not fail
-            create_file_and_write(
-                root_dir.to_path_buf(),
-                "volume_snapshot_classes.yaml".to_string(),
-                serde_yaml::to_string(&vscs)?,
-            )
-            .map_err(K8sResourceDumperError::IOError)?;
-            Ok(())
-        }
-        Err(error) => Err(K8sResourceDumperError::K8sResourceError(error)),
-    }
-}
-
-async fn get_k8s_vsnapshot_contents(
-    k8s_client: &ClientSet,
-    root_dir: &Path,
-) -> Result<(), K8sResourceDumperError> {
-    log("\t Collecting Kubernetes VolumeSnapshotContents resources".to_string());
-    match k8s_client
-        .list_volumesnapshotcontents(Some(&csi_plugin_name()), None, None)
-        .await
-    {
-        Ok(vscs) => {
-            // NOTE: Unmarshalling object recevied from K8s API-server will not fail
-            create_file_and_write(
-                root_dir.to_path_buf(),
-                "volume_snapshot_contents.yaml".to_string(),
-                serde_yaml::to_string(&vscs)?,
-            )
-            .map_err(K8sResourceDumperError::IOError)?;
-            Ok(())
-        }
-        Err(error) => Err(K8sResourceDumperError::K8sResourceError(error)),
-    }
-}
-
 async fn get_k8s_pod_configurations(
     k8s_client: &ClientSet,
     root_dir: &Path,
 ) -> Result<(), K8sResourceDumperError> {
     // Fetch all Pods in provided NAMESPACE
-    log("\t Collecting Kuberbetes pod resources".to_string());
+    log("\t Collecting Kubernetes pod resources".to_string());
     match k8s_client.get_pods("", "").await {
         Ok(pods) => {
             create_file_and_write(
@@ -410,6 +393,73 @@ async fn get_k8s_events(
                 serde_json::to_string_pretty(&events)?,
             )
             .map_err(K8sResourceDumperError::IOError)?;
+            Ok(())
+        }
+        Err(error) => Err(K8sResourceDumperError::K8sResourceError(error)),
+    }
+}
+
+/// Creates a file and writes the passed content in it
+pub fn create_file_and_write(
+    mut file_path: PathBuf,
+    file_name: String,
+    content: String,
+) -> Result<(), std::io::Error> {
+    file_path.push(file_name);
+    let mut file = File::create(file_path)?;
+    file.write_all(content.as_bytes())?;
+    file.flush().unwrap();
+    Ok(())
+}
+
+/// Get all the volume snapshot classes for a given driver.
+pub async fn get_k8s_vs_classes(
+    k8s_client: &ClientSet,
+    root_dir: &Path,
+    driver_selector: String,
+) -> Result<(), K8sResourceDumperError> {
+    log("\t Collecting Kubernetes VolumeSnapshotClass resources".to_string());
+    match k8s_client
+        .list_volumesnapshot_classes(Some(&driver_selector), None, None)
+        .await
+    {
+        Ok(vsclasses) => {
+            // NOTE: Unmarshalling object received from K8s API-server will not fail
+            if !vsclasses.is_empty() {
+                create_file_and_write(
+                    root_dir.to_path_buf(),
+                    "volume_snapshot_classes.yaml".to_string(),
+                    serde_yaml::to_string(&vsclasses)?,
+                )
+                .map_err(K8sResourceDumperError::IOError)?;
+            }
+            Ok(())
+        }
+        Err(error) => Err(K8sResourceDumperError::K8sResourceError(error)),
+    }
+}
+
+/// Get all the volume snapshot contents for a given driver.
+pub async fn get_k8s_vsnapshot_contents(
+    k8s_client: &ClientSet,
+    root_dir: &Path,
+    driver_selector: String,
+) -> Result<(), K8sResourceDumperError> {
+    log("\t Collecting Kubernetes VolumeSnapshotContents resources".to_string());
+    match k8s_client
+        .list_volumesnapshotcontents(Some(&driver_selector), None, None)
+        .await
+    {
+        Ok(vscs) => {
+            // NOTE: Unmarshalling object received from K8s API-server will not fail
+            if !vscs.is_empty() {
+                create_file_and_write(
+                    root_dir.to_path_buf(),
+                    "volume_snapshot_contents.yaml".to_string(),
+                    serde_yaml::to_string(&vscs)?,
+                )
+                .map_err(K8sResourceDumperError::IOError)?;
+            }
             Ok(())
         }
         Err(error) => Err(K8sResourceDumperError::K8sResourceError(error)),

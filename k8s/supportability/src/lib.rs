@@ -1,20 +1,16 @@
-pub mod collect;
-pub mod operations;
-
+use crate::collect::resource_dump::ResourceDumper;
 use collect::{
     common::{DumpConfig, OutputFormat},
     error::Error,
-    resource_dump::ResourceDumper,
-    resources::{node::NodeClientWrapper, Resourcer},
-    rest_wrapper,
     utils::log,
 };
 use operations::Resource;
-
-use collect::resources::{pool::PoolClientWrapper, traits::Topologer, volume::VolumeClientWrapper};
-
 use plugin::ExecuteOperation;
+
 use std::path::PathBuf;
+
+pub mod collect;
+pub mod operations;
 
 /// Collects state & log information of mayastor services running in the system and dump them.
 #[derive(Debug, Clone, clap::Args)]
@@ -47,11 +43,26 @@ pub struct SupportArgs {
 
     /// Path to kubeconfig file.
     #[clap(skip)]
-    pub kubeconfig: Option<PathBuf>,
+    kubeconfig: Option<PathBuf>,
 
     /// The tenant id to be used to query loki logs.
     #[clap(global = true, long, default_value = "openebs")]
     tenant_id: String,
+
+    /// Logging label selectors
+    #[clap(global = true, long, default_value = "openebs.io/logging=true")]
+    logging_label_selectors: String,
+}
+
+impl SupportArgs {
+    /// Sets the path to the kubeconfig file used to interact with the Kube-Apiserver.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - An optional `PathBuf` representing the kubeconfig path.
+    pub fn set_kube_config_path(&mut self, path: Option<std::path::PathBuf>) {
+        self.kubeconfig = path;
+    }
 }
 
 /// Supportability - collects state & log information of services and dumps it to a tar file.
@@ -70,7 +81,7 @@ pub struct DumpArgs {
 impl ExecuteOperation for DumpArgs {
     type Args = ();
     type Error = anyhow::Error;
-    async fn execute(&self, _: &Self::Args) -> Result<(), Self::Error> {
+    async fn execute(&self, _cli_args: &Self::Args) -> Result<(), Self::Error> {
         self.resource.execute(&self.args).await
     }
 }
@@ -81,60 +92,43 @@ impl ExecuteOperation for Resource {
     type Error = anyhow::Error;
 
     async fn execute(&self, cli_args: &Self::Args) -> Result<(), Self::Error> {
-        let config = kube_proxy::ConfigBuilder::default_api_rest()
-            .with_kube_config(cli_args.kubeconfig.clone())
-            .with_timeout(*cli_args.timeout)
-            .with_target_mod(|t| t.with_namespace(&cli_args.namespace))
-            .build()
-            .await?;
-
-        let rest_client = rest_wrapper::RestClient::new_with_config(config);
-
-        execute_resource_dump(
-            cli_args.clone(),
-            rest_client,
-            cli_args.kubeconfig.clone(),
-            self.clone(),
-        )
-        .await
-        .map_err(|e| anyhow::anyhow!("{:?}", e))
+        execute_resource_dump(cli_args.clone(), cli_args.kubeconfig.clone(), self.clone())
+            .await
+            .map_err(|e| anyhow::anyhow!("{:?}", e))
     }
 }
 
+// Holds prefix of archive file name
+pub(crate) const ARCHIVE_PREFIX: &str = "mayastor";
+
 async fn execute_resource_dump(
     cli_args: SupportArgs,
-    rest_client: rest_wrapper::RestClient,
     kube_config_path: Option<PathBuf>,
     resource: Resource,
 ) -> Result<(), Error> {
-    let topologer: Box<dyn Topologer>;
-    let mut config = DumpConfig {
-        rest_client: rest_client.clone(),
-        output_directory: cli_args.output_directory_path,
-        namespace: cli_args.namespace,
-        loki_uri: cli_args.loki_endpoint,
-        etcd_uri: cli_args.etcd_endpoint,
-        since: cli_args.since,
+    let mut config = DumpConfig::new(
+        cli_args.output_directory_path,
+        cli_args.namespace,
+        cli_args.loki_endpoint,
+        cli_args.etcd_endpoint,
+        cli_args.since,
         kube_config_path,
-        timeout: cli_args.timeout,
-        topologer: None,
-        output_format: OutputFormat::Tar,
-        tenant_id: cli_args.tenant_id,
-    };
+        cli_args.timeout,
+        OutputFormat::Tar,
+        cli_args.tenant_id,
+        cli_args.logging_label_selectors,
+    );
     let mut errors = Vec::new();
     match resource {
         Resource::Loki => {
-            let mut system_dumper =
-                collect::system_dump::SystemDumper::get_or_panic_system_dumper(config, true).await;
-            let node_topologer = NodeClientWrapper::new(system_dumper.rest_client())
-                .get_topologer(None)
-                .await
-                .ok();
+            let mut system_dumper = collect::system_dump::SystemDumper::get_or_panic_system_dumper(
+                config,
+                ARCHIVE_PREFIX,
+            )
+            .await;
             log("Completed collection of topology information".to_string());
 
-            system_dumper
-                .collect_and_dump_loki_logs(node_topologer)
-                .await?;
+            system_dumper.collect_and_dump_loki_logs().await?;
             if let Err(e) = system_dumper.fill_archive_and_delete_tmp() {
                 log(format!("Failed to copy content to archive, error: {e:?}"));
                 errors.push(e);
@@ -143,12 +137,18 @@ async fn execute_resource_dump(
         Resource::System(args) => {
             let mut system_dumper = collect::system_dump::SystemDumper::get_or_panic_system_dumper(
                 config,
-                args.disable_log_collection,
+                ARCHIVE_PREFIX,
             )
             .await;
-            if let Err(e) = system_dumper.dump_system().await {
-                // NOTE: We also need to log error content into Supportability log file
-                log(format!("Failed to dump system state, error: {e:?}"));
+            if !args.disable_log_collection() {
+                if let Err(e) = system_dumper.collect_and_dump_loki_logs().await {
+                    errors.push(e);
+                }
+            }
+            if let Err(e) = system_dumper.dump_common_k8s_resources().await {
+                errors.push(e);
+            }
+            if let Err(e) = system_dumper.dump_mayastor().await {
                 errors.push(e);
             }
             if let Err(e) = system_dumper.fill_archive_and_delete_tmp() {
@@ -156,103 +156,16 @@ async fn execute_resource_dump(
                 errors.push(e);
             }
         }
-        Resource::Volumes => {
-            let volume_client = VolumeClientWrapper::new(rest_client);
-            topologer = volume_client.get_topologer(None).await?;
-            config.topologer = Some(topologer);
-            let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
-            if let Err(e) = dumper.dump_info("topology/volume".to_string()).await {
-                log(format!("Failed to dump volumes information, Error: {e:?}"));
-                errors.push(e);
-            }
-            if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                log(format!("Failed to copy content to archive, error: {e:?}"));
-                errors.push(e);
-            }
-        }
-        Resource::Volume { id } => {
-            let volume_client = VolumeClientWrapper::new(rest_client);
-            topologer = volume_client.get_topologer(Some(id)).await?;
-            config.topologer = Some(topologer);
-            let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
-            if let Err(e) = dumper.dump_info("topology/volume".to_string()).await {
-                log(format!(
-                    "Failed to dump volume {id} information, Error: {e:?}"
-                ));
-                errors.push(e);
-            }
-            if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                log(format!("Failed to copy content to archive, error: {e:?}"));
-                errors.push(e);
-            }
-        }
-        Resource::Pools => {
-            let pool_client = PoolClientWrapper::new(rest_client);
-            topologer = pool_client.get_topologer(None).await?;
-            config.topologer = Some(topologer);
-            let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
-            if let Err(e) = dumper.dump_info("topology/pool".to_string()).await {
-                log(format!("Failed to dump pools information, Error: {e:?}"));
-                errors.push(e);
-            }
-            if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                log(format!("Failed to copy content to archive, error: {e:?}"));
-                errors.push(e);
-            }
-        }
-        Resource::Pool { id } => {
-            let pool_client = PoolClientWrapper::new(rest_client);
-            topologer = pool_client.get_topologer(Some(id.to_string())).await?;
-            config.topologer = Some(topologer);
-            let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
-            if let Err(e) = dumper.dump_info("topology/pool".to_string()).await {
-                log(format!(
-                    "Failed to dump pool {id} information, Error: {e:?}"
-                ));
-                errors.push(e);
-            }
-            if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                log(format!("Failed to copy content to archive, error: {e:?}"));
-                errors.push(e);
-            }
-        }
-        Resource::Nodes => {
-            let node_client = NodeClientWrapper { rest_client };
-            topologer = node_client.get_topologer(None).await?;
-            config.topologer = Some(topologer);
-            let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
-            if let Err(e) = dumper.dump_info("topology/node".to_string()).await {
-                log(format!("Failed to dump nodes information, Error: {e:?}"));
-                errors.push(e);
-            }
-            if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                log(format!("Failed to copy content to archive, error: {e:?}"));
-                errors.push(e);
-            }
-        }
-        Resource::Node { id } => {
-            let node_client = NodeClientWrapper { rest_client };
-            topologer = node_client.get_topologer(Some(id.to_string())).await?;
-            config.topologer = Some(topologer);
-            let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
-            if let Err(e) = dumper.dump_info("topology/node".to_string()).await {
-                log(format!(
-                    "Failed to dump node {id} information, Error: {e:?}"
-                ));
-                errors.push(e);
-            }
-            if let Err(e) = dumper.fill_archive_and_delete_tmp() {
-                log(format!("Failed to copy content to archive, error: {e:?}"));
-                errors.push(e);
-            }
-        }
         Resource::Etcd { stdout } => {
-            config.output_format = if stdout {
+            let format = if stdout {
                 OutputFormat::Stdout
             } else {
                 OutputFormat::Tar
             };
-            let mut dumper = ResourceDumper::get_or_panic_resource_dumper(config).await;
+            config.set_output_format(format);
+
+            let mut dumper =
+                ResourceDumper::get_or_panic_resource_dumper(config, ARCHIVE_PREFIX).await;
             if let Err(e) = dumper.dump_etcd().await {
                 log(format!("Failed to dump etcd information, Error: {e:?}"));
                 errors.push(e);
@@ -260,6 +173,7 @@ async fn execute_resource_dump(
         }
     }
     if !errors.is_empty() {
+        log("Failed to dump system state".to_string());
         return Err(Error::MultipleErrors(errors));
     }
     println!("Completed collection of dump !!");

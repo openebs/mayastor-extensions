@@ -1,5 +1,6 @@
 use crate::collect::k8s_resources::client::K8sResourceError;
 use pstor::Error as StoreError;
+
 use std::io::Error;
 
 pub mod etcd;
@@ -8,7 +9,7 @@ pub mod etcd;
 /// from etcd database
 #[derive(Debug)]
 #[allow(unused)]
-pub(crate) enum EtcdError {
+pub enum EtcdError {
     Etcd(StoreError),
     K8sResource(K8sResourceError),
     IOError(std::io::Error),

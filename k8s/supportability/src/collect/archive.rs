@@ -1,11 +1,9 @@
 use crate::collect::error::Error;
+
 use chrono::Utc;
 use flate2::{write::GzEncoder, Compression};
 use std::fs::File;
 use tar::Builder;
-
-// Holds prefix of archive file name
-const ARCHIVE_PREFIX: &str = "mayastor";
 
 /// Archive is a wrapper around tar::Writer to create archive files
 pub(crate) struct Archive {
@@ -14,12 +12,12 @@ pub(crate) struct Archive {
 
 impl Archive {
     /// Creates new archive file with 'mayastor-<timestamp>.tar.gz' in provided directory
-    pub(crate) fn new(dir_path: Option<String>) -> Result<Self, Error> {
+    pub(crate) fn new(dir_path: Option<String>, archive_prefix: &str) -> Result<Self, Error> {
         let tar = if let Some(dir_path) = dir_path {
             let date = Utc::now();
             let archive_file_name = format!(
                 "{}-{}.tar.gz",
-                ARCHIVE_PREFIX,
+                archive_prefix,
                 date.format("%Y-%m-%d--%H-%M-%S-%Z")
             );
             let tar_file_name = std::path::Path::new(&dir_path).join(archive_file_name);

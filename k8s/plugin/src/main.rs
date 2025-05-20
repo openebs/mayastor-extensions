@@ -1,9 +1,10 @@
-use clap::Parser;
 use plugin::ExecuteOperation;
 use resources::{init_rest, Error, Operations};
-pub mod resources;
 
+use clap::Parser;
 use std::{env, ops::Deref, path::PathBuf};
+
+pub mod resources;
 
 #[derive(Parser, Debug)]
 #[clap(name = utils::package_description!(), version = utils::version_info_str!())]
@@ -35,7 +36,7 @@ impl CliArgs {
         let path = args.kube_config_path.clone();
         args.args.kubeconfig = path.clone();
         if let Operations::Dump(ref mut dump_args) = args.operations {
-            dump_args.args.kubeconfig = path;
+            dump_args.args.set_kube_config_path(path);
         }
         args.args.namespace = if let Some(namespace) = &args.namespace {
             namespace.to_string()

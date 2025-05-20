@@ -1,5 +1,6 @@
 use crate::collect::constants::X_SCOPE_ORGID;
 use crate::{collect::utils::write_to_log_file, log};
+
 use chrono::Utc;
 use hyper::body::Buf;
 use serde::{Deserialize, Serialize};
@@ -14,7 +15,7 @@ const SERVICE_NAME: &str = "loki";
 /// Possible errors can occur while interacting with Loki service
 #[derive(Debug)]
 #[allow(unused)]
-pub(crate) enum LokiError {
+pub enum LokiError {
     Request(http::Error),
     Response(String),
     Tower(tower::BoxError),

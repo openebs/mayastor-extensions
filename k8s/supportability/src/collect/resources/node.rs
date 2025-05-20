@@ -4,20 +4,13 @@ use crate::{
     },
     log,
 };
-use async_trait::async_trait;
 use openapi::models::{BlockDevice, Node};
 use resources::ResourceError;
+use traits::{Resourcer, Topologer};
+
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashSet,
-    fs::File,
-    io::Write,
-    iter::FromIterator,
-    path::{Path, PathBuf},
-};
-use traits::{
-    ResourceInformation, Resourcer, Topologer, MAYASTOR_DAEMONSET_LABEL, RESOURCE_TO_CONTAINER_NAME,
-};
+use std::{fs::File, io::Write, path::PathBuf};
 
 /// NodeTopology represents information about
 /// mayastor node and devices attached to node
@@ -25,42 +18,6 @@ use traits::{
 pub(crate) struct NodeTopology {
     node: Node,
     devices: Option<Vec<BlockDevice>>,
-}
-
-/// Check the status of block device and return true when device is not online
-pub(crate) fn is_device_not_online(_device: &BlockDevice) -> bool {
-    // TODO: Update when Device API represents state of block device
-    false
-}
-
-/// Check the status of node and return true only when when node is online
-/// else false(which state of node is not online)
-pub(crate) fn is_node_online(node_state: openapi::models::NodeStatus) -> bool {
-    matches!(node_state, openapi::models::NodeStatus::Online)
-}
-
-impl NodeTopology {
-    // fetch details of mayastor node where device is attached/accessible
-    fn get_device_node_info(
-        &self,
-        predicate_fn: fn(&BlockDevice) -> bool,
-    ) -> HashSet<ResourceInformation> {
-        let resources: HashSet<ResourceInformation> = HashSet::new();
-        if let Some(devices) = &self.devices {
-            return HashSet::from_iter(devices.iter().filter(|d| predicate_fn(&(*d).clone())).map(
-                |_d| {
-                    let mut resource_info = ResourceInformation::default();
-                    resource_info
-                        .set_container_name(RESOURCE_TO_CONTAINER_NAME["device"].to_string());
-                    resource_info.set_host_name(self.node.id.clone());
-                    resource_info
-                        .set_label_selector([MAYASTOR_DAEMONSET_LABEL.to_string()].to_vec());
-                    resource_info
-                },
-            ));
-        }
-        resources
-    }
 }
 
 /// Topologer Contains methods to build topology information for generic Object
@@ -75,54 +32,14 @@ impl Topologer for NodeTopology {
     }
 
     /// Writes topology information into a file in specified directory
-    fn dump_topology_info(&self, dir_path: String) -> Result<(), ResourceError> {
-        create_directory_if_not_exist(PathBuf::from(dir_path.clone()))?;
-        let file_path = Path::new(&dir_path).join(format!("node-{}-topology.json", self.node.id));
+    fn dump_topology_info(&self, dir_path: PathBuf) -> Result<(), ResourceError> {
+        create_directory_if_not_exist(dir_path.clone())?;
+        let file_path = dir_path.join(format!("node-{}-topology.json", self.node.id));
         let mut topo_file = File::create(file_path)?;
         let topology_as_pretty = serde_json::to_string_pretty(self)?;
         topo_file.write_all(topology_as_pretty.as_bytes())?;
         topo_file.flush()?;
         Ok(())
-    }
-
-    fn get_unhealthy_resource_info(&self) -> HashSet<ResourceInformation> {
-        let mut resources: HashSet<ResourceInformation> = HashSet::new();
-        if let Some(node_state) = &self.node.state {
-            if !is_node_online(node_state.status) {
-                let mut resource_info = ResourceInformation::default();
-                resource_info.set_container_name(RESOURCE_TO_CONTAINER_NAME["node"].to_string());
-                resource_info.set_host_name(node_state.id.clone());
-                resource_info.set_label_selector([MAYASTOR_DAEMONSET_LABEL.to_string()].to_vec());
-                resources.insert(resource_info);
-            }
-        } else if let Some(node_spec) = &self.node.spec {
-            let mut resource_info = ResourceInformation::default();
-            resource_info.set_container_name(RESOURCE_TO_CONTAINER_NAME["node"].to_string());
-            resource_info.set_host_name(node_spec.id.clone());
-            resource_info.set_label_selector([MAYASTOR_DAEMONSET_LABEL.to_string()].to_vec());
-            resources.insert(resource_info);
-        }
-        resources.extend(self.get_device_node_info(is_device_not_online));
-        resources
-    }
-
-    fn get_all_resource_info(&self) -> HashSet<ResourceInformation> {
-        let mut resources = HashSet::new();
-        if let Some(node_spec) = &self.node.spec {
-            let mut resource_info = ResourceInformation::default();
-            resource_info.set_container_name(RESOURCE_TO_CONTAINER_NAME["node"].to_string());
-            resource_info.set_host_name(node_spec.id.clone());
-            resource_info.set_label_selector([MAYASTOR_DAEMONSET_LABEL.to_string()].to_vec());
-            resources.insert(resource_info);
-        }
-        resources
-    }
-
-    fn get_k8s_resource_names(&self) -> Vec<String> {
-        // NOTE: AS of now there is only one direct dependency between Kubernetes
-        // CustomResource and mayastor resource i.e disk pool resource(msp). Since mayastor
-        // node doesn't have any dependency we can safely return empty vector
-        vec![]
     }
 }
 
