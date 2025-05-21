@@ -176,9 +176,7 @@ else
        --set="obs.callhome.enabled=true,obs.callhome.sendReport=false,localpv-provisioner.analytics.enabled=false" \
        --set="eventing.enabled=true,nats.cluster.enabled=false,nats.cluster.replicas=1" \
        --set="loki.loki.commonConfig.replication_factor=2,loki.singleBinary.replicas=2,loki.minio.replicas=2" \
-       --set="loki-stack.enabled=false" \
        $HELM_DRY_RUN $WAIT_ARG $PULL_POLICY_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
-       # TODO: `--set="loki-stack.enabled=false"` remove this once the upgrade operator supports step upgrade to remove old loki-stack.
   set +x
 fi
 
