@@ -179,7 +179,7 @@ pub(crate) fn init_logging(args: &Cli) {
 }
 
 fn stats_route(cfg: &mut web::ServiceConfig) {
-    info!(" configuted at /stats");
+    info!(" configured at /stats");
     cfg.route("/stats", web::get().to(metrics_handlers));
 }
 
