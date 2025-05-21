@@ -937,20 +937,20 @@ entries:
         - name: prometheus-config-reloader
           image: quay.io/prometheus-operator/prometheus-config-reloader:v0.81.0
         - name: csi-attacher
-          image: registry.k8s.io/sig-storage/csi-attacher:v4.3.0
+          image: registry.k8s.io/sig-storage/csi-attacher:v4.8.1
         - name: csi-node-driver-registrar
-          image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.10.0
+          image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.13.0
         - name: csi-provisioner
-          image: registry.k8s.io/sig-storage/csi-provisioner:v3.5.0
+          image: registry.k8s.io/sig-storage/csi-provisioner:v5.2.0
         - name: csi-resizer
-          image: registry.k8s.io/sig-storage/csi-resizer:v1.9.3
+          image: registry.k8s.io/sig-storage/csi-resizer:v1.13.2
         - name: csi-snapshotter
-          image: registry.k8s.io/sig-storage/csi-snapshotter:v6.3.3
+          image: registry.k8s.io/sig-storage/csi-snapshotter:v8.2.0
         - name: snapshot-controller
-          image: registry.k8s.io/sig-storage/snapshot-controller:v6.3.3
+          image: registry.k8s.io/sig-storage/snapshot-controller:v8.2.0
     apiVersion: v2
     appVersion: 0.0.0
-    created: "2025-05-14T11:11:42.296757265Z"
+    created: "2025-05-21T06:37:15.34570082Z"
     dependencies:
     - condition: crds.enabled
       name: crds
@@ -981,7 +981,7 @@ entries:
       repository: https://openebs.github.io/dynamic-localpv-provisioner
       version: 4.2.0
     description: Mayastor Helm chart for Kubernetes
-    digest: 45b2f006335557cf90adae38af63f94d2c071df6cee3dd23934b02ee1f502523
+    digest: 0ae8414f12dfb0e2ee087b43fc7bd740e1a914c84f961c9adda3c0e01fc3f674
     name: mayastor
     type: application
     urls:
@@ -1017,4 +1017,4 @@ entries:
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2025-05-14T11:11:42.273224598Z"
+generated: "2025-05-21T06:37:15.320721669Z"
