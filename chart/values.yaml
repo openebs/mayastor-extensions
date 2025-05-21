@@ -306,17 +306,17 @@ csi:
     # -- imagePullPolicy for all CSI Sidecar images
     pullPolicy: IfNotPresent
     # -- csi-provisioner image release tag
-    provisionerTag: v3.5.0
+    provisionerTag: v5.2.0
     # -- csi-attacher image release tag
-    attacherTag: v4.3.0
+    attacherTag: v4.8.1
     # -- csi-snapshotter image release tag
-    snapshotterTag: v6.3.3
+    snapshotterTag: v8.2.0
     # -- csi-snapshot-controller image release tag
-    snapshotControllerTag: v6.3.3
+    snapshotControllerTag: v8.2.0
     # -- csi-node-driver-registrar image release tag
-    registrarTag: v2.10.0
+    registrarTag: v2.13.0
     # -- csi-resizer image release tag
-    resizerTag: v1.9.3
+    resizerTag: v1.13.2
   controller:
     # -- Log level for the csi controller
     logLevel: info
