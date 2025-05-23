@@ -830,6 +830,14 @@ nats:
         size: "5Mi"
       fileStorage:
         enabled: false
+  # Affinity for pod assignment
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: nats
+          topologyKey: kubernetes.io/hostname
   cluster:
     enabled: true
     replicas: 3
