@@ -346,7 +346,7 @@ async fn get_k8s_diskpools(
             // NOTE: Unmarshalling object recevied from K8s API-server will not fail
             create_file_and_write(
                 root_dir.to_path_buf(),
-                "k8s_disk_pools.yaml".to_string(),
+                "disk_pools.yaml".to_string(),
                 serde_yaml::to_string(&filtered_pools)?,
             )
             .map_err(K8sResourceDumperError::IOError)?;
