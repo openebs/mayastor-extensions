@@ -2,6 +2,7 @@
 
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
 ROOT_DIR="$SCRIPT_DIR/../.."
+TEST_ROOT_DIR=${TEST_ROOT_DIR:-"$ROOT_DIR"}
 
 # Imports
 source "$ROOT_DIR/scripts/utils/log.sh"
@@ -57,7 +58,7 @@ parse_args "$@"
 
 # Setup the python config files (similar to extending the PYTHONPATH env, but within venv)
 if [ -n "$VENV_PTH" ]; then
-  for python_version in "$ROOT_DIR"/tests/bdd/venv/lib/*; do
+  for python_version in "$TEST_ROOT_DIR"/tests/bdd/venv/lib/*; do
     rm "$python_version/site-packages/bdd.pth" 2>/dev/null || true
     for dir in $(echo "$VENV_PTH" | tr ':' '\n'); do
       echo "$dir" >> "$python_version/site-packages/bdd.pth"

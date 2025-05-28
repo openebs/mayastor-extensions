@@ -2,10 +2,12 @@
 
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
 ROOT_DIR="$SCRIPT_DIR/../.."
-REPORT="$ROOT_DIR/report.xml"
+TEST_ROOT_DIR=${TEST_ROOT_DIR:-"$ROOT_DIR"}
 
 # Imports
 source "$ROOT_DIR/scripts/utils/log.sh"
+
+REPORT="$TEST_ROOT_DIR/report.xml"
 
 set -e
 
@@ -18,7 +20,7 @@ Options:
   -h, --help                 Display this text.
 
 Environment Variables:
-  BDD_TEST_DIR               The directory from which the pytests would be run. (default: $(realpath "$ROOT_DIR/tests/bdd"))
+  BDD_TEST_DIR               The directory from which the pytests would be run. (default: $(realpath "$TEST_ROOT_DIR/tests/bdd"))
 
 Examples:
   BDD_TEST_DIR=./tests/bdd $(basename "${0}")
@@ -46,10 +48,10 @@ while test $# -gt 0; do
 done
 
 # virtualenv setup.
-source "$ROOT_DIR"/tests/bdd/setup.sh
+source "$TEST_ROOT_DIR"/tests/bdd/setup.sh
 
 if [ -z "$ARGS" ]; then
-  pytest "${BDD_TEST_DIR:-$ROOT_DIR/tests/bdd}" --junit-xml="$REPORT" --durations=20
+  pytest "${BDD_TEST_DIR:-$TEST_ROOT_DIR/tests/bdd}" --junit-xml="$REPORT" --durations=20
 else
   pytest "$ARGS --junit-xml=$REPORT"
 fi
