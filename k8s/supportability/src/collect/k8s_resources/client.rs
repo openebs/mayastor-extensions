@@ -8,11 +8,12 @@ use k8s_openapi::api::{
 };
 use kube::{
     api::{DynamicObject, ListParams},
+    core::GroupVersionKind,
+    discovery,
     discovery::{verbs, Scope},
-    Api, Client, Discovery, Resource,
+    Api, Client, Resource,
 };
-use std::collections::HashSet;
-use std::convert::TryFrom;
+use std::{collections::HashSet, convert::TryFrom};
 
 const SNAPSHOT_GROUP: &str = "snapshot.storage.k8s.io";
 const SNAPSHOT_VERSION: &str = "v1";
@@ -109,37 +110,33 @@ impl ClientSet {
     pub async fn dynamic_object_api(
         &self,
         namespace: Option<&str>,
-        group_name: &str,
+        group: &str,
         version: &str,
         kind: &str,
-    ) -> Result<Api<DynamicObject>, K8sResourceError> {
-        let discovery = Discovery::new(self.kube_client()).run().await?;
-        for group in discovery.groups() {
-            if group.name() == group_name {
-                for (ar, caps) in group.recommended_resources() {
-                    if !caps.supports_operation(verbs::LIST) {
-                        continue;
-                    }
-                    if ar.version == version && ar.kind == kind {
-                        let result = match namespace {
-                            None if caps.scope == Scope::Cluster => {
-                                Ok(Api::all_with(self.kube_client(), &ar))
-                            }
-                            Some(ns) if caps.scope == Scope::Namespaced => {
-                                Ok(Api::namespaced_with(self.kube_client(), ns, &ar))
-                            }
-                            _ => Err(K8sResourceError::CustomError(
-                                "Invalid namespace, expected a valid namespace value".to_string(),
-                            )),
-                        };
-                        return result;
-                    }
+    ) -> Result<Option<Api<DynamicObject>>, K8sResourceError> {
+        let gvk = GroupVersionKind::gvk(group, version, kind);
+
+        match discovery::pinned_kind(&self.kube_client(), &gvk).await {
+            Ok((ar, caps)) => {
+                if !caps.supports_operation(verbs::LIST) {
+                    return Ok(None);
                 }
+
+                let api = match (namespace, caps.scope) {
+                    (Some(ns), Scope::Namespaced) => {
+                        Api::namespaced_with(self.kube_client(), ns, &ar)
+                    }
+                    (None, Scope::Cluster) => Api::all_with(self.kube_client(), &ar),
+                    _ => return Ok(None),
+                };
+
+                Ok(Some(api))
             }
+            // For any discovery and API 404 we should not error out.
+            Err(kube::Error::Api(ref api_err)) if api_err.code == 404 => Ok(None),
+            Err(kube::Error::Discovery(_)) => Ok(None),
+            Err(e) => Err(K8sResourceError::ClientError(e)),
         }
-        Err(K8sResourceError::CustomError(format!(
-            "DynamicObject Api not available for {kind} of {group_name}/{version}"
-        )))
     }
 
     /// Get pods when given a label selector that has multiple labels comma seperated.
@@ -249,7 +246,9 @@ impl ClientSet {
         let list_params = ListParams::default()
             .labels(label_selector.unwrap_or_default())
             .fields(field_selector.unwrap_or_default());
-        let vsc_api: Api<DynamicObject> = self
+
+        // Attempt to retrieve the VolumeSnapshotClass API
+        let vsc_api_opt = self
             .dynamic_object_api(
                 None,
                 SNAPSHOT_GROUP,
@@ -257,6 +256,13 @@ impl ClientSet {
                 VOLUME_SNAPSHOT_CLASS,
             )
             .await?;
+
+        // If the API is not available, return an empty list
+        let vsc_api = match vsc_api_opt {
+            Some(api) => api,
+            None => return Ok(vec![]),
+        };
+
         let vscs = match vsc_api.list(&list_params).await {
             Ok(val) => val,
             Err(kube_error) => match kube_error {
@@ -296,7 +302,8 @@ impl ClientSet {
             .labels(label_selector.unwrap_or_default())
             .fields(field_selector.unwrap_or_default())
             .limit(2);
-        let vsc_api: Api<DynamicObject> = self
+
+        let vsc_api_opt = self
             .dynamic_object_api(
                 None,
                 SNAPSHOT_GROUP,
@@ -304,6 +311,12 @@ impl ClientSet {
                 VOLUME_SNAPSHOT_CONTENT,
             )
             .await?;
+
+        // If the API is not available, return an empty list
+        let vsc_api = match vsc_api_opt {
+            Some(api) => api,
+            None => return Ok(vec![]),
+        };
 
         let mut vscs_filtered: Vec<DynamicObject> = vec![];
         loop {
