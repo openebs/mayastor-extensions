@@ -2,6 +2,7 @@
 
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]:-"$0"}")")"
 ROOT_DIR="$SCRIPT_DIR/../.."
+TEST_ROOT_DIR=${TEST_ROOT_DIR:-"$ROOT_DIR"}
 
 # Imports
 source "$ROOT_DIR"/scripts/utils/log.sh
@@ -52,7 +53,7 @@ fmt_check() {
 CHECK=
 DIFF=
 PATHS_GLOB=
-DEFAULT_PATHS_GLOB=$(realpath "$ROOT_DIR"/tests/bdd)/{common,features}
+DEFAULT_PATHS_GLOB=$(realpath "$TEST_ROOT_DIR"/tests/bdd)/{common,features}
 
 # Print usage options for this script.
 print_help() {
