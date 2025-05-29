@@ -66,7 +66,7 @@ jobs:
           nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
       - name: Create Pull Request
         id: cpr
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "chore(ci): update future helm chart versions"
           committer: GitHub <noreply@github.com>
@@ -78,15 +78,14 @@ jobs:
           draft: false
           signoff: true
           delete-branch: true
-          branch-suffix: "random"
-          base: ${{ env.BASE_BRANCH }}
-          token: ${{ github.token }}
-      - name: Approve Pull Request by CI User 1
+          base: "update-chart-${{ env.BASE_BRANCH }}"
+          token: ${{ secrets.ORG_CI_GITHUB }}
+      - name: Approve Pull Request by CI Bot
         if: ${{ steps.cpr.outputs.pull-request-number }}
         run: |
           gh pr review ${{ steps.cpr.outputs.pull-request-number }} --approve
         env:
-          GH_TOKEN: ${{ secrets.ORG_CI_GITHUB }}
+          GH_TOKEN: ${{ github.token }}
       - name: Approve Pull Request by CI User 2
         if: ${{ steps.cpr.outputs.pull-request-number }}
         run: |
