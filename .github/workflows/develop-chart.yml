@@ -23,6 +23,8 @@ jobs:
           nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch"" ./scripts/helm/shell.nix
       - name: Publish Mayastor Helm chart
         uses: stefanprodan/helm-gh-pages@v1.7.0
+        env:
+          TMPDIR: /tmp
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           charts_dir: .
