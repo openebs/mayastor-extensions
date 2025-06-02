@@ -67,7 +67,7 @@ base:
     enabled: true
     image:
       name: alpine-sh
-      tag: 4.1.0
+      tag: 4.2.0
       pullPolicy: IfNotPresent
     containers:
       - name: agent-core-grpc-probe
@@ -547,7 +547,7 @@ etcd:
     image:
       registry: docker.io
       repository: openebs/alpine-bash
-      tag: 4.1.0
+      tag: 4.2.0
       pullSecrets: []
   # extra debug information on logs
   debug: false
