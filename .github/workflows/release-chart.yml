@@ -78,7 +78,8 @@ jobs:
           draft: false
           signoff: true
           delete-branch: true
-          base: "update-chart-${{ env.BASE_BRANCH }}"
+          base: ${{ env.BASE_BRANCH }}
+          branch: "update-chart-${{ env.BASE_BRANCH }}"
           token: ${{ secrets.ORG_CI_GITHUB }}
       - name: Approve Pull Request by CI Bot
         if: ${{ steps.cpr.outputs.pull-request-number }}

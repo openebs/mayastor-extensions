@@ -42,7 +42,7 @@ jobs:
           draft: false
           signoff: true
           delete-branch: true
-          base: "prepare-${{ github.ref_name }}"
+          branch: "prepare-${{ github.ref_name }}"
           token: ${{ secrets.ORG_CI_GITHUB }}
       - name: Approve Pull Request by CI Bot
         if: ${{ steps.cpr.outputs.pull-request-number }}
