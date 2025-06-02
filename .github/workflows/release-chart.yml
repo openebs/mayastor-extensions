@@ -73,8 +73,8 @@ jobs:
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           title: Bump future helm chart version on the release branch
           labels: |
-            update-release-branch
-            automated-pr
+            area/helm
+            kind/ci
           draft: false
           signoff: true
           delete-branch: true
