@@ -926,9 +926,9 @@ entries:
         - name: loki
           image: docker.io/grafana/loki:3.4.2
         - name: alpine-bash
-          image: docker.io/openebs/alpine-bash:4.1.0
+          image: docker.io/openebs/alpine-bash:4.2.0
         - name: alpine-sh
-          image: docker.io/openebs/alpine-sh:4.1.0
+          image: docker.io/openebs/alpine-sh:4.2.0
         - name: mayastor-agent-core
           image: docker.io/openebs/mayastor-agent-core:develop
         - name: mayastor-agent-ha-cluster
@@ -962,9 +962,9 @@ entries:
         - name: prometheus-nats-exporter
           image: natsio/prometheus-nats-exporter:0.11.0
         - name: linux-utils
-          image: openebs/linux-utils:4.1.0
+          image: openebs/linux-utils:4.2.0
         - name: provisioner-localpv
-          image: openebs/provisioner-localpv:4.2.0
+          image: openebs/provisioner-localpv:4.3.0
         - name: mc
           image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
         - name: minio
@@ -985,7 +985,7 @@ entries:
           image: registry.k8s.io/sig-storage/snapshot-controller:v8.2.0
     apiVersion: v2
     appVersion: 0.0.0
-    created: "2025-06-02T15:14:31.667024684Z"
+    created: "2025-06-02T16:21:11.026023129Z"
     dependencies:
     - condition: crds.enabled
       name: crds
@@ -1016,7 +1016,7 @@ entries:
       repository: https://openebs.github.io/dynamic-localpv-provisioner
       version: 4.3.0
     description: Mayastor Helm chart for Kubernetes
-    digest: 0d3bb426fd93cb089b4a1433d27b1d7d0b5e361993c47400685913c7ce67541e
+    digest: a37405c084fcd1b20908e12799aba6286d0abd9e1dfc18e5e125505e0e0b096d
     name: mayastor
     type: application
     urls:
@@ -1052,4 +1052,4 @@ entries:
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2025-06-02T15:14:31.644260533Z"
+generated: "2025-06-02T16:21:11.000746092Z"
