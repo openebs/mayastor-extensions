@@ -37,8 +37,8 @@ jobs:
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           title: Prepare release branch
           labels: |
-            prepare-release-branch
-            automated-pr
+            area/helm
+            kind/ci
           draft: false
           signoff: true
           delete-branch: true
