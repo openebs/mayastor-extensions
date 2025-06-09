@@ -25,6 +25,27 @@ def chart_vnext_skip():
     return False
 
 
+def plugin_path():
+    plugin = os.getenv("CHART_VNEXT_PLUGIN")
+    if plugin is not None and len(plugin) > 0:
+        return plugin
+    return os.path.join(chart_vnext(), "kubectl-plugin/bin/kubectl-mayastor")
+
+
+def upgrade_registry():
+    registry = os.getenv("CHART_VNEXT_REGISTRY")
+    if registry is not None and len(registry) > 0:
+        return registry
+    return "docker.io"
+
+
+def upgrade_namespace():
+    namespace = os.getenv("CHART_VNEXT_NAMESPACE")
+    if namespace is not None and len(namespace) > 0:
+        return namespace
+    return "openebs"
+
+
 def run(
     command: str,
     args: list[str] = None,

@@ -5,7 +5,7 @@ use crate::plugin::{
         DEFAULT_IMAGE_REGISTRY, DEFAULT_RELEASE_NAME, IO_ENGINE_POD_LABEL, MAX_RETRY_ATTEMPTS,
         UPGRADE_CONFIG_MAP_MOUNT_PATH, UPGRADE_CONFIG_MAP_NAME_SUFFIX,
         UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
-        UPGRADE_JOB_IMAGE_REPO, UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+        UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     error, objects,
     user_prompt::{
@@ -83,6 +83,10 @@ pub struct UpgradeArgs {
     #[clap(global = true, long)]
     registry: Option<String>,
 
+    /// Specify the container namespace for the upgrade-job image.
+    #[clap(global = true, long)]
+    repo_namespace: Option<String>,
+
     /// Allow upgrade from stable versions to unstable versions. This is implied when the
     /// '--skip-upgrade-path-validation-for-unsupported-version' option is used.
     #[clap(global = true, long, hide = true)]
@@ -138,6 +142,7 @@ impl UpgradeArgs {
     pub fn new() -> Self {
         Self {
             registry: None,
+            repo_namespace: None,
             allow_unstable: false,
             dry_run: false,
             skip_data_plane_restart: false,
@@ -710,17 +715,21 @@ impl UpgradeResources {
                     let img = ImageProperties::try_from(rest_deployment)?;
                     let set_file = create_helm_set_file_args(args, set_file_map).await?;
 
-                    // Image registry override check.
+                    // Image registry/namespace override check.
                     let registry: &str = match args.registry {
                         Some(ref registry_override) => registry_override,
                         None => img.registry(),
+                    };
+                    let namespace: &str = match args.repo_namespace {
+                        Some(ref namespace) => namespace,
+                        None => img.namespace(),
                     };
 
                     let upgrade_deploy = objects::upgrade_job(
                         ns,
                         upgrade_image_concat(
                             registry,
-                            UPGRADE_JOB_IMAGE_REPO,
+                            namespace,
                             &upgrade_job_img(),
                             upgrade_job_image_tag.as_str(),
                         ),
@@ -884,6 +893,7 @@ pub(crate) async fn is_upgrade_job_completed(ns: &str) -> error::Result<bool> {
 struct ImageProperties {
     pull_secrets: Option<Vec<k8s_openapi::api::core::v1::LocalObjectReference>>,
     registry: String,
+    namespace: String,
     pull_policy: Option<String>,
 }
 
@@ -912,16 +922,18 @@ impl TryFrom<Deployment> for ImageProperties {
         if image_sections.is_empty() || image_sections.len() == 1 {
             return error::ReferenceDeploymentInvalidImage.fail();
         }
-
-        let registry = match image_sections.len() {
-            3 => image_sections[0],
-            _ => DEFAULT_IMAGE_REGISTRY,
-        }
-        .to_string();
+        // todo: isn't the registry always explicitly shown anyway?
+        let (registry, namespace) = if image_sections.len() >= 3 {
+            let namespace = image_sections[1..image_sections.len() - 1].join("/");
+            (image_sections[0], namespace)
+        } else {
+            (DEFAULT_IMAGE_REGISTRY, image_sections[0].to_string())
+        };
 
         Ok(Self {
             pull_secrets: pod_spec.image_pull_secrets.clone(),
-            registry,
+            registry: registry.to_string(),
+            namespace,
             pull_policy: container.image_pull_policy.clone(),
         })
     }
@@ -934,6 +946,10 @@ impl ImageProperties {
 
     fn registry(&self) -> &str {
         self.registry.as_str()
+    }
+
+    fn namespace(&self) -> &str {
+        self.namespace.as_str()
     }
 
     fn pull_policy(&self) -> Option<String> {

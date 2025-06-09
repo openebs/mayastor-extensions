@@ -1,18 +1,27 @@
 name: K8s CI
 on:
   workflow_call:
+    inputs:
+      helm-pins:
+        required: false
+        type: boolean
+        default: false
+      registry:
+        required: false
+        type: string
+        default: ghcr.io
+      namespace:
+        required: false
+        type: string
+        default: openebs/helm-pins
 
 jobs:
   k8s-ci:
     runs-on: ubuntu-latest-8-cores
     steps:
-      - name: Bind mount /dev/sda1 to /nix
-        run: |
-          sudo mkdir -p /nix
-          sudo mount --bind /mnt /nix
-          lsblk
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           submodules: recursive
       - uses: cachix/install-nix-action@v31.3.0
         with:
@@ -33,29 +42,67 @@ jobs:
           sudo dpkg-reconfigure man-db || true
           nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
       - name: Prepare v-next images and binary
+        if: ${{ !inputs.helm-pins }}
         run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --build --chart-tag --chart ./chart"
       - name: Load images to kind cluster
+        if: ${{ !inputs.helm-pins }}
         run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --load"
-      - name: Run pytest
+      - name: Login to Helm Pins Registry
+        if: ${{ inputs.helm-pins }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Pinned Helm Chart
+        id: pin
+        if: ${{ inputs.helm-pins }}
         run: |
-          export REUSE_CLUSTER=1
-          export CHART_VNEXT_SKIP=1
-          export CLEAN=0
-          nix-shell ./scripts/python/shell.nix --run "./scripts/python/test.sh"
+          nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/pin.sh --registry ${{ inputs.registry }} --namespace ${{ inputs.namespace }} --kind"
+          if ! git diff --exit-code "./chart"; then
+            echo "update=true" >> $GITHUB_OUTPUT
+          else
+            echo "update=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Run pytest
+        if: ${{ inputs.helm-pins && steps.pin.outputs.update == 'true' }}
+        env:
+          CHART_VNEXT_REGISTRY: ${{ inputs.registry }}
+          CHART_VNEXT_NAMESPACE: ${{ inputs.namespace }}
+          CHART_VNEXT_PLUGIN: "./kubectl-plugin/bin/kubectl-mayastor"
+          REUSE_CLUSTER: 1
+          CHART_VNEXT_SKIP: 1
+          CLEAN: 0
+        run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/test.sh"
+      - name: Run pytest
+        if: ${{ !inputs.helm-pins }}
+        env:
+          REUSE_CLUSTER: 1
+          CHART_VNEXT_SKIP: 1
+          CLEAN: 0
+        run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/test.sh"
+      - name: Push Pinned Helm Chart
+        if: ${{ inputs.helm-pins && steps.pin.outputs.update == 'true' }}
+        run: |
+          # Push pinned with specific version
+          nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/push-oci.sh -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --registry ${{ inputs.registry }} --namespace ${{ inputs.namespace }} -k -j"
+          # Push pinned latest
+          nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/pin.sh --registry ${{ inputs.registry }} --namespace ${{ inputs.namespace }} --latest"
+          nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/push-oci.sh -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --registry ${{ inputs.registry }} --namespace ${{ inputs.namespace }} -k"
       - name: Collect logs
         if: ${{ failure() }}
         run: |
           nix-shell ./scripts/k8s/shell.nix --run "kubectl get pods -A -o wide"
-          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l openebs.io/release=mayastor --all-containers=true"
-          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l app=upgrade --all-containers=true"
+          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l openebs.io/release=mayastor --all-containers=true --tail=-1"
+          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l app=upgrade --all-containers=true --tail=-1"
       - name: Upload pytest logs
-        if: always()
+        if: ${{ always() && steps.pin.outputs.update != 'false' }}
         uses: actions/upload-artifact@v4
         with:
           name: pytest.log
           path: pytest.log
       - name: Report pytest results
-        if: always()
+        if: ${{ always() && steps.pin.outputs.update != 'false' }}
         uses: pmeier/pytest-results-action@main
         with:
           path: report.xml
@@ -63,9 +110,26 @@ jobs:
           display-options: a
           fail-on-empty: true
           title: Test results
+      - name: Collect dump
+        if: failure()
+        run: |
+          nix-shell ./scripts/k8s/shell.nix --run "kind export logs ./dump/kind"
+          nix-shell ./scripts/k8s/shell.nix --run "kubectl cluster-info dump --output-directory=./dump/k8s --namespaces=mayastor"
+      - name: Upload cluster dump
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8s-dump
+          path: dump
+      # debugging
+  #      - name: Setup tmate session
+  #        if: ${{ failure() }}
+  #        timeout-minutes: 120
+  #        uses: mxschmitt/action-tmate@v3
 
   k8s-ci-vm:
     runs-on: ubuntu-latest-8-cores
+    if: ${{ !inputs.helm-pins }}
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31.3.0

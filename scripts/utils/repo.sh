@@ -5,9 +5,9 @@
 # done already.
 latest_release_branch() {
   local -r remote=${1:-"origin"}
-  local -r root_dir=${2:-"$ROOTDIR"}
+  local -r root_dir=${2:-"${ROOTDIR:-"$ROOT_DIR"}"}
 
-  if [ -n "$LATEST_RELEASE_BRANCH" ]; then
+  if [ -n "${LATEST_RELEASE_BRANCH:-}" ]; then
     echo "$LATEST_RELEASE_BRANCH"
     return 0
   fi

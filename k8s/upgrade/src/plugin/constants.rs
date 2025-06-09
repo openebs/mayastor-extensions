@@ -69,9 +69,6 @@ pub(crate) const DEFAULT_IMAGE_REGISTRY: &str = "docker.io";
 /// The upgrade job will use the UPGRADE_JOB_IMAGE_NAME image (below) with this tag.
 pub(crate) const UPGRADE_JOB_IMAGE_TAG: &str = "develop";
 
-/// Upgrade job container image repository.
-pub(crate) const UPGRADE_JOB_IMAGE_REPO: &str = constants::UPGRADE_JOB_IMAGE_REPO;
-
 pub(crate) use constants::upgrade_job_img;
 
 /// Upgrade job name suffix.
