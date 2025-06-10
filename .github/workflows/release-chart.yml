@@ -24,6 +24,8 @@ jobs:
             # Publish the Chart.yaml locally
             # Note this does not commit the Chart.yaml changes this the branch
             nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag "$tag"" ./scripts/helm/shell.nix
+            nix-shell --pure --run "./scripts/helm/images.sh generate" ./scripts/helm/shell.nix
+            nix-shell --pure --run "./scripts/helm/images.sh patch" ./scripts/helm/shell.nix
           else
             branch="${{ github.ref_name }}"
             nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch"" ./scripts/helm/shell.nix
