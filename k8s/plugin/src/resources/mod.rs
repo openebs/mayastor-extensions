@@ -97,7 +97,7 @@ pub enum Operations {
     Dump(DumpArgs),
     /// `Upgrade` the deployment.
     Upgrade(UpgradeArgs),
-    /// `Delete` the upgrade resources.
+    /// `Delete` resources.
     Delete(DeleteArgs),
 }
 
