@@ -88,6 +88,26 @@ helm_on_demand_images() {
   helm_localpv_prov_helper_image >> "$images"
 }
 
+# helm template seems to sometimes use the unpacked dependencies rather than the tar files
+# even weirder, if you run helm template a few times, sometimes it does use the tar file!
+# given this, it's safer to simply delete the unpacked tars here, ensuring we run helm
+# template with a "clean" slate.
+helm_dep_clean() {
+  local deps
+
+  if ! deps=$($HELM show chart "$CHART_DIR" --kubeconfig "$CHART_DIR/fake" | yq -ojson '.dependencies[]|select(.repository != "")' | jq -c); then
+    log_fatal "Can't find the helm dependencies in $CHART_DIR"
+  fi
+
+  for chart in ${deps[@]}; do
+    name=$(echo "$chart" | jq -r '.name')
+    path="$CHART_DIR/charts/$name"
+    if [ -d "$path" ]; then
+      rm -rf "$path"
+    fi
+  done
+}
+
 # This fetches the dependencies in an exact version from the Chart.yaml
 # NOTE: This won't work if we ever modify the Chart.yaml to specify non-pinned versions, ex: 14 vs 14.0.0
 # Update can be forced with global var DEP_UPDATE="true".
@@ -116,6 +136,7 @@ helm_dep_update() {
     done
   fi
 
+  helm_dep_clean
   if [ "$update" = "true" ]; then
     $HELM dependency update "$CHART_DIR" --kubeconfig "$CHART_DIR/fake"
   fi
@@ -130,6 +151,14 @@ cleanup() {
   fi
   if [ -f "${LIVE_IMAGES:-}" ]; then
     rm "${LIVE_IMAGES:-}"
+  fi
+}
+
+needs_help() {
+  if [ -n "$1" ]; then
+    log_error "$1"
+    help
+    exit 1
   fi
 }
 
