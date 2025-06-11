@@ -500,9 +500,11 @@ kubectl mayastor dump system -d <output_directory> -n <mayastor_namespace>
         Kubernetes namespace of mayastor service [default: mayastor]
    -h, --help
         Print help
-   ```
+```
+</details>
 
-3. Delete upgrade resources
+ Delete resources
+ 1. Delete upgrade resource
 ```
    ## Command
    kubectl mayastor delete upgrade
@@ -525,4 +527,29 @@ kubectl mayastor dump system -d <output_directory> -n <mayastor_namespace>
           Print help
 
 ```
+ 2. Delete volume
+ ```
+Usage: kubectl-mayastor delete volume [OPTIONS] <ID>
+
+Arguments:
+  <ID>  The id of the volume to delete
+
+Options:
+  -i, --ignore-not-found
+          Ignore error if resource is not found
+  -y, --yes
+          Automatically confirm and assume yes for all prompts
+  -n, --namespace <NAMESPACE>
+          Kubernetes namespace of mayastor service [default: mayastor]
+  -r, --rest <REST>
+          The rest endpoint to connect to
+  -o, --output <OUTPUT>
+          The Output, viz yaml, json [default: none]
+  -j, --jaeger <JAEGER>
+          Trace rest requests to the Jaeger endpoint agent
+  -k, --kube-config-path <KUBE_CONFIG_PATH>
+          Path to kubeconfig file
+  -h, --help
+          Print help
+ ```
 </details>
