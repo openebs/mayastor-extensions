@@ -53,5 +53,5 @@ source "$TEST_ROOT_DIR"/tests/bdd/setup.sh
 if [ -z "$ARGS" ]; then
   pytest "${BDD_TEST_DIR:-$TEST_ROOT_DIR/tests/bdd}" --junit-xml="$REPORT" --durations=20
 else
-  pytest "$ARGS --junit-xml=$REPORT"
+  pytest "$ARGS" "--junit-xml=$REPORT"
 fi

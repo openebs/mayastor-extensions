@@ -46,6 +46,10 @@ def upgrade_namespace():
     return "openebs"
 
 
+def namespace():
+    return "mayastor"
+
+
 def run(
     command: str,
     args: list[str] = None,
