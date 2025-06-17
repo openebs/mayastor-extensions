@@ -11,20 +11,9 @@ def deployer():
     return "./scripts/k8s/deployer.sh"
 
 
-def start(workers: int):
+def start(args: list[str] = None):
     if carry_on():
         try:
-            common.run(
-                "helm",
-                [
-                    "uninstall",
-                    "mayastor",
-                    "-n=mayastor",
-                    "--ignore-not-found",
-                    "--wait",
-                ],
-                absolute=True,
-            )
             common.run(
                 "kubectl", ["delete", "jobs", "-n=mayastor", "--all"], absolute=True
             )
@@ -32,7 +21,7 @@ def start(workers: int):
         except:
             pass
 
-    run(deployer(), ["start", "--label", "--cleanup", f"--workers={workers}"])
+    run(deployer(), ["start", "--cleanup"] + args)
 
 
 def stop():

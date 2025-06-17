@@ -8,13 +8,14 @@ CHART_DIR="$ROOT_DIR/chart"
 CHART="$CHART_DIR/Chart.yaml"
 IMAGES="$CHART_DIR/images.txt"
 NAMESPACE="mayastor"
+HELM="helm"
 
 source "$ROOT_DIR/scripts/utils/yaml.sh"
 source "$ROOT_DIR/scripts/utils/log.sh"
+source "$ROOT_DIR/scripts/utils/helm.sh"
 
 EXIT_CODE=
 DEP_UPDATE=
-HELM="helm"
 ENABLE_ANALYTICS="eventing.enabled=true,obs.callhome.enabled=true,obs.callhome.sendReport=true,localpv-provisioner.analytics.enabled=true"
 
 helm_dep_value() {
@@ -50,13 +51,6 @@ helm_dep_value_required() {
   echo "$value"
 }
 
-helm_dep_version() {
-  $HELM show chart "$CHART_DIR" --kubeconfig "$CHART_DIR/fake" | dep="${1:-}" yq '.dependencies[]|select(.name == strenv(dep)).version'
-}
-helm_chart_tag() {
-  $HELM show values "$CHART_DIR" --kubeconfig "$CHART_DIR/fake" | yq '.image.tag'
-}
-
 helm_localpv_prov_helper_image() {
   local registry
   local repository
@@ -86,60 +80,6 @@ helm_on_demand_images() {
   local images="${1:-}"
 
   helm_localpv_prov_helper_image >> "$images"
-}
-
-# helm template seems to sometimes use the unpacked dependencies rather than the tar files
-# even weirder, if you run helm template a few times, sometimes it does use the tar file!
-# given this, it's safer to simply delete the unpacked tars here, ensuring we run helm
-# template with a "clean" slate.
-helm_dep_clean() {
-  local deps
-
-  if ! deps=$($HELM show chart "$CHART_DIR" --kubeconfig "$CHART_DIR/fake" | yq -ojson '.dependencies[]|select(.repository != "")' | jq -c); then
-    log_fatal "Can't find the helm dependencies in $CHART_DIR"
-  fi
-
-  for chart in ${deps[@]}; do
-    name=$(echo "$chart" | jq -r '.name')
-    path="$CHART_DIR/charts/$name"
-    if [ -d "$path" ]; then
-      rm -rf "$path"
-    fi
-  done
-}
-
-# This fetches the dependencies in an exact version from the Chart.yaml
-# NOTE: This won't work if we ever modify the Chart.yaml to specify non-pinned versions, ex: 14 vs 14.0.0
-# Update can be forced with global var DEP_UPDATE="true".
-helm_dep_update() {
-  local update="false"
-
-  if [ "$DEP_UPDATE" = "true" ]; then
-    update="true"
-  else
-    local deps
-
-    if ! deps=$($HELM show chart "$CHART_DIR" --kubeconfig "$CHART_DIR/fake" | yq -ojson '.dependencies[]|select(.repository != "")' | jq -c); then
-      log_fatal "Can't find the helm dependencies in $CHART_DIR"
-    fi
-
-    for chart in ${deps[@]}; do
-      version=$(echo "$chart" | jq -r '.version')
-      name=$(echo "$chart" | jq -r '.name')
-      if [ "$(semver validate "$version")" != "valid" ]; then
-        log_fatal "Found $name with version $version only pinned versions are supported!"
-      fi
-      if ! [ -f "$CHART_DIR/charts/$name-$version.tgz" ]; then
-        update="true"
-        break
-      fi
-    done
-  fi
-
-  helm_dep_clean
-  if [ "$update" = "true" ]; then
-    $HELM dependency update "$CHART_DIR" --kubeconfig "$CHART_DIR/fake"
-  fi
 }
 
 cleanup() {

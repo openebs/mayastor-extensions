@@ -1,5 +1,4 @@
 import logging
-import os
 
 import common
 
@@ -7,12 +6,17 @@ logger = logging.getLogger(__name__)
 
 
 def plugin_vnext():
-    chart_vnext = common.chart_vnext()
-    return os.path.join(chart_vnext, "kubectl-plugin/bin/kubectl-mayastor")
+    return common.plugin_path()
 
 
 def upgrade_vnext():
-    run(["upgrade"], log_run=True)
+    args = [
+        "upgrade",
+        "--allow-unstable",
+        f"--registry={common.upgrade_registry()}",
+        f"--repo-namespace={common.upgrade_namespace()}",
+    ]
+    run(args, log_run=True)
 
 
 def run(args: list[str], log_run=False):

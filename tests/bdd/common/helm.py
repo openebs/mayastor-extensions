@@ -138,27 +138,39 @@ class HelmReleaseClient:
             "ls",
             "-n",
             self.namespace,
-            "--deployed",
             f"--filter=^{release}$",
             "-o=json",
         ]
         return common.run(helm_bin, args)
 
-    def install_mayastor(self, source: ChartSource, version=None):
+    def local_version(self):
+        """
+        Get the local chart version
+        """
+        return common.run("scripts/helm/chart-version.sh")
+
+    def uninstall_mayastor(self):
+        args = ["uninstall", "-n", self.namespace, "mayastor"]
+        return common.run(helm_bin, args)
+
+    def install_mayastor(self, source: ChartSource, args: str = None, version=None):
         output_json = json.loads(self.get_deployed("mayastor"))
+        if source == ChartSource.LOCAL:
+            assert version is None, "Can't set version on local chart"
+            version = self.local_version()
         if len(output_json) == 1:
             current_version = output_json[0]["app_version"]
+
+            if current_version == version:
+                return
             logger.warning(
-                f"Helm release 'mayastor' already exists in the 'mayastor' namespace @ v{current_version}."
+                f"Helm release 'mayastor' already exists in the '{self.namespace}' namespace @ v{current_version}."
             )
-            assert (
-                current_version == version
-            ), f"Wanted to install {version}, but {current_version} already installed"
-            return
+            self.uninstall_mayastor()
 
         install_command = []
         if source == ChartSource.HOSTED:
-            install_command = source.value
+            install_command = source.value.copy()
             if version is not None:
                 install_command[-1] = install_command[-1] + " --version " + version
             logger.info(
@@ -166,8 +178,11 @@ class HelmReleaseClient:
             )
 
         if source == ChartSource.LOCAL:
-            install_command = source.value
+            install_command = source.value.copy()
             logger.info("Installing mayastor helm chart from local directory")
+
+        if args:
+            install_command[-1] = install_command[-1] + f" {args}"
 
         try:
             result = subprocess.run(

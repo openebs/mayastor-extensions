@@ -12,5 +12,6 @@ pkgs.mkShell {
     semver-tool
     yq-go
     jq
+    oras
   ];
 }

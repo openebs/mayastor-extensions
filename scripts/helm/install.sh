@@ -35,6 +35,7 @@ FAIL_IF_INSTALLED=
 HOSTED=
 VERSION=
 PULL_POLICY=
+INS_LOKI="true"
 DEFAULT_REGISTRY="https://openebs.github.io/mayastor-extensions"
 HELM="helm"
 KUBECTL="kubectl"
@@ -55,6 +56,7 @@ Options:
   --version   <version>          Set the version/version-range for the chart. Works only when used with the '--hosted' option.
   --registry  <registry-url>     Set the registry URL for the hosted chart. Works only when used with the '--hosted' option. (Default: $DEFAULT_REGISTRY)
   --pull-policy <policy>         Set the image pull policy.
+  --no-loki                      Don't deploy Loki.
   --helm      <stringArray>      Pass Helm Args directly to the install/upgrade commands.
 
 Examples:
@@ -70,6 +72,51 @@ die() {
   local _return="${2:-1}"
   echo_stderr "$1"
   exit "${_return}"
+}
+
+prefix_args() {
+  local prefix="$1"
+  if [ -n "$prefix" ]; then
+    prefix="$prefix."
+  fi
+  local sep=""
+  for set in $(echo "${@:2}" | awk -F, '{ for(i=1; i<=NF; i++) print $i; }'); do
+    echo -n "$sep$prefix$set"
+    if [ -z "$sep" ]; then
+      sep=","
+    fi
+  done
+}
+
+set_args() {
+  echo -n "--set="
+  prefix_args "" "$@"
+}
+
+loki_args() {
+  local replicas=1
+  local minio="true"
+  local mode="standalone"
+  if [ "$replicas" != 1 ]; then
+    mode="distributed"
+  fi
+
+  if [ "$replicas" = "0" ] || [ "$INS_LOKI" = "false" ]; then
+    echo -n "$(set_args "loki.enabled=false,alloy.enabled=false")"
+    return 0
+  fi
+
+  echo -n "$(set_args "loki.loki.commonConfig.replication_factor=$replicas")" \
+          "$(set_args "loki.singleBinary.replicas=$replicas")" \
+          "$(set_args "loki.minio.mode=$mode") "
+
+  if [ "$minio" = "true" ]; then
+    echo -n "$(set_args "loki.minio.enabled=true,loki.minio.replicas=$replicas")"
+  else
+    echo -n "$(set_args "loki.loki.storage.type=filesystem")" \
+            "$(set_args "loki.singleBinary.persistence.enabled=true")" \
+            "$(set_args "loki.minio.enabled=false")"
+  fi
 }
 
 while [ "$#" -gt 0 ]; do
@@ -126,6 +173,9 @@ while [ "$#" -gt 0 ]; do
       test $# -lt 1 && die "Missing pull policy"
       PULL_POLICY="$1"
       shift;;
+    --no-loki)
+      INS_LOKI="false"
+      shift;;
     --helm)
       shift
       test $# -lt 1 && die "Missing helm args"
@@ -170,14 +220,13 @@ if [ -z "$DRY_RUN" ] && [ "$($HELM ls -n "$K8S_NAMESPACE" -o yaml | yq "contains
   echo "$already_exists_log"
 else
   echo "Installing Mayastor Chart"
-  set -x
+
   $HELM install "$RELEASE_NAME" "$CHART_SOURCE" -n "$K8S_NAMESPACE" --create-namespace \
        --set="etcd.livenessProbe.initialDelaySeconds=5,etcd.readinessProbe.initialDelaySeconds=5,etcd.replicaCount=1" \
        --set="obs.callhome.enabled=true,obs.callhome.sendReport=false,localpv-provisioner.analytics.enabled=false" \
        --set="eventing.enabled=true,nats.cluster.enabled=false,nats.cluster.replicas=1" \
-       --set="loki.loki.commonConfig.replication_factor=2,loki.singleBinary.replicas=2,loki.minio.replicas=2" \
+       $(loki_args) \
        $HELM_DRY_RUN $WAIT_ARG $PULL_POLICY_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
-  set +x
 fi
 
 $KUBECTL get pods -n "$K8S_NAMESPACE" -o wide

@@ -1,0 +1,13 @@
+name: Helm Pins
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    uses: ./.github/workflows/k8s-ci.yml
+    secrets: inherit
+    with:
+      helm-pins: true
+      registry: 'ghcr.io'
+      namespace: 'openebs/helm-pins'

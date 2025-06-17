@@ -5,12 +5,15 @@ on:
 jobs:
   ci:
     uses: ./.github/workflows/pr-ci.yml
+  helm-pins:
+    uses: ./.github/workflows/helm-pins.yml
+    secrets: inherit
   nightly-ci:
     if: ${{ success() }}
     needs:
       - ci
+      - helm-pins
     runs-on: ubuntu-latest
     steps:
       - name: CI succeeded
         run: exit 0
-

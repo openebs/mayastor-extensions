@@ -28,7 +28,7 @@ def test_upgrade_to_vnext():
 @given("a 2-worker node kind kubernetes cluster")
 def _():
     """a 2-worker node kind kubernetes cluster."""
-    k8s_deployer.start(workers=2)
+    k8s_deployer.start(["--workers", "2", "--label"])
     yield
     k8s_deployer.stop()
 
@@ -36,7 +36,7 @@ def _():
 @given("the latest mayastor helm chart is installed")
 def the_latest_mayastor_is_installed(latest_chart_version):
     """the latest mayastor helm chart is installed."""
-    helm.install_mayastor(ChartSource.HOSTED, latest_chart_version)
+    helm.install_mayastor(ChartSource.HOSTED, version=latest_chart_version)
 
 
 @given("all io-engine nodes shall be listed by kubectl-mayastor")
