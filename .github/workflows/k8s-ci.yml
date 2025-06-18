@@ -96,7 +96,13 @@ jobs:
           nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l openebs.io/release=mayastor --all-containers=true --tail=-1"
           nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l app=upgrade --all-containers=true --tail=-1"
       - name: Upload pytest logs
-        if: ${{ always() && steps.pin.outputs.update != 'false' }}
+        if: ${{ always() && inputs.helm-pins && steps.pin.outputs.update == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-pins.log
+          path: pytest.log
+      - name: Upload pytest logs
+        if: ${{ always() && !inputs.helm-pins }}
         uses: actions/upload-artifact@v4
         with:
           name: pytest.log
