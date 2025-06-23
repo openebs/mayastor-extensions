@@ -322,10 +322,13 @@ if [ ! "${UNPIN_CHART:-}" = "true" ] && [[ "$PINNED_VERSION" != "$PINNED_VERSION
     exit 0
   fi
 fi
-# Ensure the pinned version really doesn't exist already
-exists=$(helm_oci_chart_exists "$PINNED_OCI_CHART" "$PINNED_VERSION")
-if [[ "$exists" = "true" ]]; then
-  log_fatal "Pinned chart $PINNED_VERSION already exists!"
+
+if [ ! "${UNPIN_CHART:-}" = "true" ]; then
+  # Ensure the pinned version really doesn't exist already
+  exists=$(helm_oci_chart_exists "$PINNED_OCI_CHART" "$PINNED_VERSION")
+  if [[ "$exists" = "true" ]]; then
+    log_fatal "Pinned chart $PINNED_VERSION already exists!"
+  fi
 fi
 
 if [[ "${DRY_RUN:-}" = "true" ]]; then
