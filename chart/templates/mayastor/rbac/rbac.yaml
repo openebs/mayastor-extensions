@@ -16,7 +16,7 @@ metadata:
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
     {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 rules:
-  # must create mayastor crd if it doesn't exist, replace if exist,
+  # must create mayastor crd if it doesn't exist, replace if exists,
   # merge schema to existing CRD.
 - apiGroups: ["apiextensions.k8s.io"]
   resources: ["customresourcedefinitions"]
