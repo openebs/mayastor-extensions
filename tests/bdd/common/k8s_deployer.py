@@ -15,7 +15,9 @@ def start(args: list[str] = None):
     if carry_on():
         try:
             common.run(
-                "kubectl", ["delete", "jobs", "-n=mayastor", "--all"], absolute=True
+                "kubectl",
+                ["delete", "jobs", "-n=mayastor", "--all", "--cascade=foreground"],
+                absolute=True,
             )
             return
         except:
