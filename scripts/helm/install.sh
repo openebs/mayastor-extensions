@@ -53,8 +53,8 @@ Options:
   --dep-update                   Run helm dependency update.
   --fail-if-installed            Fail with a status code 1 if the helm release '$RELEASE_NAME' already exists in the $K8S_NAMESPACE namespace.
   --hosted-chart                 Install a hosted chart instead of the local chart.
-  --version   <version>          Set the version/version-range for the chart. Works only when used with the '--hosted' option.
-  --registry  <registry-url>     Set the registry URL for the hosted chart. Works only when used with the '--hosted' option. (Default: $DEFAULT_REGISTRY)
+  --version   <version>          Set the version/version-range for the chart. Works only when used with the '--hosted-chart' option.
+  --registry  <registry-url>     Set the registry URL for the hosted chart. Works only when used with the '--hosted-chart' option. (Default: $DEFAULT_REGISTRY)
   --pull-policy <policy>         Set the image pull policy.
   --no-loki                      Don't deploy Loki.
   --helm      <stringArray>      Pass Helm Args directly to the install/upgrade commands.
@@ -186,6 +186,13 @@ while [ "$#" -gt 0 ]; do
       shift;;
   esac
 done
+
+if [ -n "$VERSION" ] && [ -z "$HOSTED" ]; then
+  die "The ``--version <vers>` option may be used with the `--hosted-chart` option only"
+fi
+if [ -n "$REGISTRY" ] && [ -z "$HOSTED" ]; then
+  die "The ``--registry <url>` option may be used with the `--hosted-chart` option only"
+fi
 
 DEP_UPDATE_ARG=
 if [ -n "$DEP_UPDATE" ]; then
