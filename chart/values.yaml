@@ -696,6 +696,10 @@ alloy:
       content: |
         {{- $releaseName := .Release.Name | replace "-" "_" -}}
 
+        logging {
+          level  = "debug"
+        }
+
         livedebugging {
           enabled = {{ .Values.logging_config.debugging }}
         }
