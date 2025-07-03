@@ -90,7 +90,7 @@ let
       package = extensions.${buildType}.obs.callhome;
       copyToRoot = [ ./../../../call-home/assets busybox gnupg ];
       extraCommands = ''
-        mkdir -p encryption_dir
+        mkdir -m 0777 encryption_dir
       '';
       pname = package.pname;
       config = {

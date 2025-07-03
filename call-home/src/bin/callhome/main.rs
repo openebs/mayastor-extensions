@@ -22,7 +22,6 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use tokio::time::sleep;
 use tokio_retry::{
     strategy::{jitter, ExponentialBackoff},
     Retry,
@@ -86,7 +85,7 @@ async fn run(logs: Arc<Mutex<VecDeque<LogEntry>>>) -> anyhow::Result<()> {
     let aggregator_url = args.aggregator_url;
     let send_report = args.send_report;
     let namespace = digest(args.namespace);
-    let sleep_duration = call_home_frequency();
+    let frequency = call_home_frequency();
     let encryption_dir = encryption_dir();
     let key_filepath = key_filepath();
 
@@ -115,7 +114,11 @@ async fn run(logs: Arc<Mutex<VecDeque<LogEntry>>>) -> anyhow::Result<()> {
         .map_err(|error| anyhow::anyhow!("failed to create openapi configuration: {:?}", error))?;
     let client = openapi::clients::tower::ApiClient::new(config);
 
+    // using an interval ensures we don't drift across reports.
+    let mut interval = tokio::time::interval(frequency);
     loop {
+        interval.tick().await;
+
         // Generate report.
         let report = generate_report(
             k8s_client.clone(),
@@ -135,18 +138,15 @@ async fn run(logs: Arc<Mutex<VecDeque<LogEntry>>>) -> anyhow::Result<()> {
             encryption::encrypt(&report, &encryption_dir, &key_filepath)
         })
         .await?;
-        let output = output.map_err(|error| anyhow::anyhow!("encryption failed: {:?}", error))?;
+        let output = output.map_err(|error| anyhow::anyhow!("encryption failed: {error:?}"))?;
 
         // POST data to receiver API.
         if send_report {
             match receiver.post(output).await {
                 Ok(response) => info!(?response, "Success"),
-                Err(e) => error!(?e, "failed HTTP POST request"),
+                Err(error) => error!(?error, "failed HTTP POST request"),
             }
         }
-
-        // Block until next transmission window.
-        sleep(sleep_duration).await;
     }
 }
 

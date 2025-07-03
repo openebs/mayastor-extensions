@@ -19,14 +19,15 @@ repo_add() {
   echo "$repo"
 }
 
-
 TIMEOUT="5m"
 WAIT=
 DRY_RUN=
 HELM_DRY_RUN=""
 HELM_ARGS=
 SCRIPT_DIR="$(dirname "$0")"
-CHART_DIR="$SCRIPT_DIR"/../../chart
+ROOT_DIR="$SCRIPT_DIR/../.."
+CHART_DIR="$ROOT_DIR/chart"
+CHART="$CHART_DIR/Chart.yaml"
 CHART_SOURCE=$CHART_DIR
 DEP_UPDATE=
 RELEASE_NAME="mayastor"
@@ -39,6 +40,8 @@ INS_LOKI="true"
 DEFAULT_REGISTRY="https://openebs.github.io/mayastor-extensions"
 HELM="helm"
 KUBECTL="kubectl"
+
+source "$ROOT_DIR/scripts/utils/helm.sh"
 
 help() {
   cat <<EOF
@@ -57,6 +60,7 @@ Options:
   --registry  <registry-url>     Set the registry URL for the hosted chart. Works only when used with the '--hosted-chart' option. (Default: $DEFAULT_REGISTRY)
   --pull-policy <policy>         Set the image pull policy.
   --no-loki                      Don't deploy Loki.
+  --upgrade                      Upgrade deployment if already exists.
   --helm      <stringArray>      Pass Helm Args directly to the install/upgrade commands.
 
 Examples:
@@ -181,6 +185,9 @@ while [ "$#" -gt 0 ]; do
       test $# -lt 1 && die "Missing helm args"
       HELM_ARGS="${HELM_ARGS:-} $1"
       shift;;
+    --upgrade)
+      HELM_UPGRADE="true"
+      shift;;
     *)
       die "Unknown argument $1!"
       shift;;
@@ -197,6 +204,8 @@ fi
 DEP_UPDATE_ARG=
 if [ -n "$DEP_UPDATE" ]; then
   DEP_UPDATE_ARG="--dependency-update"
+else
+  helm_dep_update
 fi
 
 if [ -n "$WAIT" ]; then
@@ -225,15 +234,28 @@ if [ -z "$DRY_RUN" ] && [ "$($HELM ls -n "$K8S_NAMESPACE" -o yaml | yq "contains
     die "ERROR: $already_exists_log" 1
   fi
   echo "$already_exists_log"
-else
-  echo "Installing Mayastor Chart"
+  HELM_EXISTS="true"
+fi
 
-  $HELM install "$RELEASE_NAME" "$CHART_SOURCE" -n "$K8S_NAMESPACE" --create-namespace \
+if [ "${HELM_EXISTS:-}" != "true" ] || [ "${HELM_UPGRADE:-}" = "true" ]; then
+  if [ "${HELM_EXISTS:-}" = "true" ]; then
+      echo "Upgrading Mayastor Chart"
+      HELM_CMD="upgrade"
+  else
+      echo "Installing Mayastor Chart"
+      HELM_CMD="install"
+  fi
+
+  LOKI_ARGS=$(loki_args)
+
+  set -x
+  $HELM "$HELM_CMD" "$RELEASE_NAME" "$CHART_SOURCE" -n "$K8S_NAMESPACE" --create-namespace \
        --set="etcd.livenessProbe.initialDelaySeconds=5,etcd.readinessProbe.initialDelaySeconds=5,etcd.replicaCount=1" \
        --set="obs.callhome.enabled=true,obs.callhome.sendReport=false,localpv-provisioner.analytics.enabled=false" \
        --set="eventing.enabled=true,nats.cluster.enabled=false,nats.cluster.replicas=1" \
-       $(loki_args) \
+       $LOKI_ARGS \
        $HELM_DRY_RUN $WAIT_ARG $PULL_POLICY_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
+  set +x
 fi
 
 $KUBECTL get pods -n "$K8S_NAMESPACE" -o wide
