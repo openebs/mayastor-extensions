@@ -36,6 +36,20 @@ jobs:
         run: nix-shell ./scripts/helm/shell.nix --run "echo"
       - name: Pre-populate pytest nix-shell
         run: nix-shell ./scripts/python/shell.nix --run "echo"
+      - name: Login to Docker Hub
+        if: ${{ !inputs.helm-pins }}
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to Helm Pins Registry
+        if: ${{ inputs.helm-pins }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: BootStrap k8s cluster
         run: |
           sudo debconf-communicate <<< "set man-db/auto-update false" || true
@@ -47,13 +61,6 @@ jobs:
       - name: Load images to kind cluster
         if: ${{ !inputs.helm-pins }}
         run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --load"
-      - name: Login to Helm Pins Registry
-        if: ${{ inputs.helm-pins }}
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ inputs.registry }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Pinned Helm Chart
         id: pin
         if: ${{ inputs.helm-pins }}

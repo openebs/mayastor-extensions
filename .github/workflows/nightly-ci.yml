@@ -5,6 +5,7 @@ on:
 jobs:
   ci:
     uses: ./.github/workflows/pr-ci.yml
+    secrets: inherit
   helm-pins:
     uses: ./.github/workflows/helm-pins.yml
     secrets: inherit
