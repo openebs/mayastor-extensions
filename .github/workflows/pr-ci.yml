@@ -11,12 +11,14 @@ jobs:
     uses: ./.github/workflows/lint.yml
   helm-ci:
     uses: ./.github/workflows/helm-chart.yml
+    secrets: inherit
   int-ci:
     uses: ./.github/workflows/unit-int.yml
   image-ci:
     uses: ./.github/workflows/image-pr.yml
   k8s-ci:
     uses: ./.github/workflows/k8s-ci.yml
+    secrets: inherit
   bors-ci:
     if: ${{ success() }}
     needs:
