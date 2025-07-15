@@ -54,10 +54,11 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         ports:
-          - containerPort: 9502
+          - containerPort: {{ default 9502 .Values.base.metrics.port }}
             protocol: TCP
             name: metrics
         args:
+          - "--metrics-endpoint=0.0.0.0:{{ default 9502 .Values.base.metrics.port }}"
           - "--fmt-style={{ include "logFormat" . }}"
           - "--ansi-colors={{ .Values.base.logging.color }}"
       {{- end }}
@@ -98,7 +99,7 @@ spec:
         # For example -l 1,2,10-20 means use core 1, 2, 10 to 20.
         # Note: Ensure that the CPU resources are updated accordingly.
         #       If you use 2 CPUs, the CPU: field should also read 2.
-        - "-g$(MY_POD_IP)"
+        - "-g$(MY_POD_IP):{{ default 10124 .Values.io_engine.port }}"
         - "-N$(MY_NODE_NAME)"
         - "-Rhttps://{{ .Release.Name }}-agent-core:50051"
         - "-y/var/local/{{ .Release.Name }}/io-engine/config.yaml"
@@ -137,7 +138,7 @@ spec:
             memory: {{ .Values.io_engine.resources.requests.memory | quote }}
             hugepages-2Mi: {{ .Values.io_engine.resources.requests.hugepages2Mi | quote }}
         ports:
-        - containerPort: 10124
+        - containerPort: {{ default 10124 .Values.io_engine.port }}
           protocol: TCP
           name: io-engine
       volumes:
