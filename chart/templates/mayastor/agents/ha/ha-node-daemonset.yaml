@@ -73,7 +73,7 @@ spec:
         - "--node-name=$(MY_NODE_NAME)"
         - "--csi-socket={{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--grpc-ip=$(MY_POD_IP)"
-        - "--grpc-port=50053"
+        - "--grpc-port={{ default 50053 .Values.agents.ha.node.port }}"
         - "--cluster-agent=https://{{ .Release.Name }}-agent-core:50052"{{ if .Values.base.jaeger.enabled }}
         - "--jaeger={{ include "jaeger_url" . }}"{{ end }}{{ if .Values.eventing.enabled }}
         - "--events-url=nats://{{ .Release.Name }}-nats:4222"
@@ -97,7 +97,7 @@ spec:
             cpu: {{ .Values.agents.ha.node.resources.requests.cpu | quote }}
             memory: {{ .Values.agents.ha.node.resources.requests.memory | quote }}
         ports:
-          - containerPort: 50053
+          - containerPort: {{ default 50053 .Values.agents.ha.node.port }}
             protocol: TCP
             name: ha-node
       volumes:
