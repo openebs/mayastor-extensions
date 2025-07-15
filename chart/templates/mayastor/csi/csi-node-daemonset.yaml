@@ -92,7 +92,7 @@ spec:
         - "--enable-rest"{{ end }}
         - "--enable-registration"
         - "--grpc-ip=$(MY_POD_IP)"
-        - "--grpc-port=10199"{{ if .Values.csi.node.nvme.io_timeout }}
+        - "--grpc-port={{ default 10199 .Values.csi.node.port }}"{{ if .Values.csi.node.nvme.io_timeout }}
         - "--nvme-io-timeout={{ .Values.csi.node.nvme.io_timeout }}"
         - "--nvme-core-io-timeout={{ .Values.csi.node.nvme.io_timeout }}"{{ else }}
         - "--nvme-io-timeout={{ .Values.io_engine.nvme.ioTimeout }}10s"
@@ -146,7 +146,7 @@ spec:
             memory: "50Mi"
         # Mayastor node plugin gRPC server
         ports:
-        - containerPort: 10199
+        - containerPort: {{ default 10199 .Values.csi.node.port }}
           protocol: TCP
           name: mayastor-node
       volumes:
