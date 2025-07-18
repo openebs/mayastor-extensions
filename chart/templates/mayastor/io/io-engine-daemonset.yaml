@@ -41,28 +41,6 @@ spec:
       initContainers:
         {{- include "base_init_containers" . }}
       containers:
-      {{- if .Values.base.metrics.enabled }}
-      - name: metrics-exporter-io-engine
-        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-metrics-exporter-io-engine:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        env:
-        - name: MY_NODE_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
-        - name: MY_POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        ports:
-          - containerPort: {{ default 9502 .Values.base.metrics.port }}
-            protocol: TCP
-            name: metrics
-        args:
-          - "--metrics-endpoint=[::]:{{ default 9502 .Values.base.metrics.port }}"
-          - "--fmt-style={{ include "logFormat" . }}"
-          - "--ansi-colors={{ .Values.base.logging.color }}"
-      {{- end }}
       - name: io-engine
         image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-io-engine:{{ default .Values.image.tag .Values.image.repoTags.dataPlane }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -145,6 +123,28 @@ spec:
         - containerPort: 10124
           protocol: TCP
           name: io-engine
+      {{- if .Values.base.metrics.enabled }}
+      - name: metrics-exporter-io-engine
+        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-metrics-exporter-io-engine:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: MY_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ports:
+          - containerPort: {{ default 9502 .Values.base.metrics.port }}
+            protocol: TCP
+            name: metrics
+        args:
+          - "--metrics-endpoint=[::]:{{ default 9502 .Values.base.metrics.port }}"
+          - "--fmt-style={{ include "logFormat" . }}"
+          - "--ansi-colors={{ .Values.base.logging.color }}"
+      {{- end }}
       volumes:
       - name: device
         hostPath:
