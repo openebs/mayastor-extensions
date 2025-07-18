@@ -461,15 +461,19 @@ io_engine:
       cpu: ""
       # -- Memory limits for the io-engine
       memory: "1Gi"
-      # -- Hugepage size available on the nodes
+      # -- Hugepage memory in 2MiB chunks
       hugepages2Mi: "2Gi"
+      # -- Hugepage memory in 1GiB chunks
+      hugepages1Gi:
     requests:
       # -- Cpu requests for the io-engine
       cpu: ""
       # -- Memory requests for the io-engine
       memory: "1Gi"
-      # -- Hugepage size available on the nodes
+      # -- Hugepage memory in 2MiB chunks
       hugepages2Mi: "2Gi"
+      # -- Hugepage memory in 1GiB chunks
+      hugepages1Gi:
   # -- Set tolerations, overrides global
   tolerations: []
   # -- Set PriorityClass, overrides global
