@@ -108,8 +108,8 @@ spec:
           mountPath: /dev/shm
         - name: configlocation
           mountPath: /var/local/{{ .Release.Name }}/io-engine/
-        - name: hugepage
-          mountPath: /dev/hugepages
+        - name: hugepages-2mi
+          mountPath: /dev/hugepages-2mi
         resources:
           limits:
             cpu: {{ .Values.io_engine.resources.limits.cpu | default (include "coreCount" .) | quote }}
@@ -158,9 +158,9 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: "1Gi"
-      - name: hugepage
+      - name: hugepages-2mi
         emptyDir:
-          medium: HugePages
+          medium: HugePages-2Mi
       - name: configlocation
         hostPath:
           path: /var/local/{{ .Release.Name }}/io-engine/
