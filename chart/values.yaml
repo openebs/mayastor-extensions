@@ -87,6 +87,8 @@ base:
   metrics:
     # -- Enable the metrics exporter
     enabled: true
+    # -- Container port for the metrics exporter service
+    port: 9502
   jaeger:
     # Enable jaeger tracing (for development only).
     # Since version 1.31 the Jaeger Operator uses webhooks to validate Jaeger custom resources (CRs).
@@ -229,6 +231,8 @@ agents:
       tolerations: []
       # -- Set PriorityClass, overrides global
       priorityClassName: ""
+      # -- Container port for the ha-node service
+      port: 50053
     cluster:
       # -- Log level for the ha cluster service
       logLevel: info
@@ -394,6 +398,8 @@ csi:
       containers:
         - name: nvme-tcp-probe
           command: ['sh', '-c', 'trap "exit 1" TERM; until [ -d /sys/module/nvme_tcp ]; do [ -z "$WARNED" ] && echo "nvme_tcp module not loaded..."; WARNED=1; sleep 60; done;']
+    # -- Container port for the csi-node service
+    port: 10199
 io_engine:
   # -- Log level for the io-engine service
   logLevel: info
@@ -472,6 +478,8 @@ io_engine:
   runtimeClassName: ""
   # -- Number of retries for pstor persistence before the volume target self shutdowns
   pstorRetries: 300
+  # -- Container port for the io-engine service
+  port: 10124
 etcd:
   # -- Disable when using an external etcd cluster.
   enabled: true
