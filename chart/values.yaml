@@ -592,6 +592,9 @@ etcd:
       peer: ""
   tolerations: []
   priorityClassName: ""
+  preUpgradeJob:
+    annotations:
+      "helm.sh/hook-delete-policy": "hook-succeeded"
 loki:
   enabled: true
   # NOTE: For all possible storage options for loki, check https://github.com/openebs/mayastor-extensions/blob/HEAD/chart/loki-storage.md
@@ -948,8 +951,13 @@ preUpgradeHook:
   ## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
   imagePullSecrets: []
   # - name: secretName
-  # -- Labels to be added to the pod hook job
-  podLabels: {}
+  # Labels to be added to the Job Pod.
+  podLabels:
+    openebs.io/logging: "true"
+  # Extra annotations to be added to all the hook resources.
+  # -- This helps in debugging by leaving the Job/Pod instances lying around
+  annotations:
+    "helm.sh/hook-delete-policy": hook-succeeded
   image:
     # -- The container image registry URL for the hook job
     registry: docker.io
