@@ -89,16 +89,6 @@ pub enum Error {
         count: usize,
     },
 
-    /// Error for loki statefulset delete fails.
-    #[snafu(display(
-        "Failed to delete the Loki StatefulSet for helm release '{release_name}' in the '{namespace}' namespace: {source}"
-    ))]
-    FailedToDeleteLokiStatefulSet {
-        source: kube::Error,
-        release_name: String,
-        namespace: String,
-    },
-
     /// Error for when there's too few or too many helm configmaps for a release in a namespace.
     #[snafu(display(
         "'{count}' is an invalid no. of helm ConfigMaps for release '{release_name}' in namespace '{namespace}'"
@@ -684,6 +674,21 @@ pub enum Error {
 
     #[snafu(display("Failed to list resource metadata in a paginated manner: {source}"))]
     FailedToListMetadataPaginated { source: kube::Error },
+
+    #[snafu(display("Failed to delete StatefulSet in namespace '{namespace}': {source}"))]
+    FailedToDeleteStatefulSet {
+        source: kube::Error,
+        namespace: String,
+    },
+
+    #[snafu(display(
+        "Failed to patch Etcd Pod '{pod_name}' in namespace '{namespace}': {source}"
+    ))]
+    FailedToPatchEtcdPod {
+        source: kube::Error,
+        pod_name: String,
+        namespace: String,
+    },
 }
 
 /// A wrapper type to remove repeated Result<T, Error> returns.

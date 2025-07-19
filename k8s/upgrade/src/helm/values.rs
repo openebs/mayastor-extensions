@@ -2,7 +2,8 @@ use crate::{
     common::{
         constants::{
             TWO_DOT_EIGHT, TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE,
-            TWO_DOT_SEVEN_DOT_THREE, TWO_DOT_SEVEN_DOT_TWO, TWO_DOT_SIX, TWO_DOT_THREE,
+            TWO_DOT_SEVEN_DOT_THREE, TWO_DOT_SEVEN_DOT_TWO, TWO_DOT_SIX, TWO_DOT_TEN,
+            TWO_DOT_THREE,
         },
         error::{
             DeserializePromtailExtraConfig, Result, SemverParse, SerializeBaseInitContainersToJson,
@@ -89,7 +90,7 @@ where
         if source_values.io_engine_log_level().eq(log_level_to_replace)
             && target_values.io_engine_log_level().ne(log_level_to_replace)
         {
-            yq.set_literal_value(
+            yq.set_quoted_string_value(
                 YamlKey::try_from(".io_engine.logLevel")?,
                 target_values.io_engine_log_level(),
                 upgrade_values_file.path(),
@@ -102,17 +103,17 @@ where
         // RepoTags fields will also be set to the values found in the target helm values file
         // (low_priority file). This is so integration tests which use specific repo commits can
         // upgrade to a custom helm chart.
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".image.repoTags.controlPlane")?,
             target_values.control_plane_repotag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".image.repoTags.dataPlane")?,
             target_values.data_plane_repotag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".image.repoTags.extensions")?,
             target_values.extensions_repotag(),
             upgrade_values_file.path(),
@@ -126,7 +127,7 @@ where
             .eventing_enabled()
             .ne(&target_values.eventing_enabled())
     {
-        yq.set_literal_value(
+        yq.set_unquoted_value(
             YamlKey::try_from(".eventing.enabled")?,
             target_values.eventing_enabled(),
             upgrade_values_file.path(),
@@ -181,7 +182,7 @@ where
                 .loki_stack_promtail_scrape_configs()
                 .ne(scrape_configs_to_replace)
         {
-            yq.set_literal_value(
+            yq.set_quoted_string_value(
                 YamlKey::try_from(".loki-stack.promtail.config.snippets.scrapeConfigs")?,
                 target_values.loki_stack_promtail_scrape_configs(),
                 upgrade_values_file.path(),
@@ -197,7 +198,7 @@ where
                 .csi_node_nvme_io_timeout()
                 .ne(io_timeout_to_replace)
         {
-            yq.set_literal_value(
+            yq.set_quoted_string_value(
                 YamlKey::try_from(".csi.node.nvme.io_timeout")?,
                 target_values.csi_node_nvme_io_timeout(),
                 upgrade_values_file.path(),
@@ -223,52 +224,52 @@ where
         )?;
 
         // Switch out image tag for the latest one.
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.loki.image.tag")?,
             target_values.loki_stack_loki_image_tag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.filebeat.imageTag")?,
             target_values.filebeat_image_tag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.logstash.imageTag")?,
             target_values.logstash_image_tag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.grafana.downloadDashboardsImage.tag")?,
             target_values.grafana_download_dashboards_image_tag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.grafana.image.tag")?,
             target_values.grafana_image_tag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.grafana.sidecar.image.tag")?,
             target_values.grafana_sidecar_image_tag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.prometheus.alertmanager.image.tag")?,
             target_values.prometheus_alertmanager_image_tag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.prometheus.nodeExporter.image.tag")?,
             target_values.prometheus_node_exporter_image_tag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.prometheus.pushgateway.image.tag")?,
             target_values.prometheus_pushgateway_image_tag(),
             upgrade_values_file.path(),
         )?;
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.prometheus.server.image.tag")?,
             target_values.prometheus_server_image_tag(),
             upgrade_values_file.path(),
@@ -290,7 +291,7 @@ where
 
         loki_address_to_clients(source_values, upgrade_values_file.path(), &yq)?;
 
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.promtail.config.file")?,
             target_values.loki_stack_promtail_config_file(),
             upgrade_values_file.path(),
@@ -307,15 +308,17 @@ where
                 upgrade_values_file.path(),
             )?;
         }
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".loki-stack.promtail.readinessProbe.httpGet.path")?,
-            target_values.promtail_readiness_probe_http_get_path(),
+            target_values
+                .promtail_readiness_probe_http_get_path()
+                .as_str(),
             upgrade_values_file.path(),
         )?;
 
         // This helm value key was changed:
         // Ref: https://github.com/openebs/mayastor-extensions/pull/419
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".base.logging.silenceLevel")?,
             source_values.deprecated_log_silence_level(),
             upgrade_values_file.path(),
@@ -327,7 +330,7 @@ where
 
         // This is a fix for a typo in the .csi.node.pluginMounthPath key.
         // It was fixed, and the key now is called .csi.node.pluginMountPath.
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".csi.node.pluginMountPath")?,
             source_values.deprecated_node_csi_mount_path(),
             upgrade_values_file.path(),
@@ -339,7 +342,7 @@ where
 
         // This sets the image tag for the jaeger-operator. This is required for the
         // jaeger-operator dependency update from 2.50.0 to 2.50.1.
-        yq.set_literal_value(
+        yq.set_quoted_string_value(
             YamlKey::try_from(".jaeger-operator.image.tag")?,
             source_values.jaeger_operator_image_tag(),
             upgrade_values_file.path(),
@@ -586,54 +589,216 @@ where
         }
     }
 
+    // Special-case values for 2.10.0.
+    if source_version.ge(&two_dot_o_rc_one) && source_version.lt(&TWO_DOT_TEN) {
+        if let Some(etcd_deprecated_client_secure_transport) =
+            source_values.etcd_deprecated_client_secure_transport()
+        {
+            yq.delete_object(
+                YamlKey::try_from(".etcd.client")?,
+                upgrade_values_file.path(),
+            )?;
+            yq.set_unquoted_value(
+                YamlKey::try_from(".etcd.auth.client.secureTransport")?,
+                etcd_deprecated_client_secure_transport,
+                upgrade_values_file.path(),
+            )?;
+        }
+
+        if let Some(etcd_deprecated_peer_secure_transport) =
+            source_values.etcd_deprecated_peer_secure_transport()
+        {
+            yq.delete_object(YamlKey::try_from(".etcd.peer")?, upgrade_values_file.path())?;
+            yq.set_unquoted_value(
+                YamlKey::try_from(".etcd.auth.peer.secureTransport")?,
+                etcd_deprecated_peer_secure_transport,
+                upgrade_values_file.path(),
+            )?;
+        }
+
+        yq.delete_object(
+            YamlKey::try_from(".etcd.auth.rbac.enabled")?,
+            upgrade_values_file.path(),
+        )?;
+        yq.delete_object(
+            YamlKey::try_from(".etcd.persistence.reclaimPolicy")?,
+            upgrade_values_file.path(),
+        )?;
+
+        if let Some(auto_compaction_retention) = source_values.etcd_auto_compaction_retention() {
+            yq.set_quoted_string_value(
+                YamlKey::try_from(".etcd.autoCompactionRetention")?,
+                auto_compaction_retention,
+                upgrade_values_file.path(),
+            )?;
+        }
+
+        if let Some(debug_logs) = source_values.etcd_deprecated_debug_logs() {
+            yq.delete_object(
+                YamlKey::try_from(".etcd.debug")?,
+                upgrade_values_file.path(),
+            )?;
+            yq.set_unquoted_value(
+                YamlKey::try_from(".etcd.image.debug")?,
+                debug_logs,
+                upgrade_values_file.path(),
+            )?;
+        }
+
+        if let Some(etcd_port) = source_values.etcd_service_deprecated_port() {
+            yq.delete_object(
+                YamlKey::try_from(".etcd.service.port")?,
+                upgrade_values_file.path(),
+            )?;
+            yq.set_unquoted_value(
+                YamlKey::try_from(".etcd.service.ports.client")?,
+                etcd_port,
+                upgrade_values_file.path(),
+            )?;
+
+            {
+                let init_containers_key = YamlKey::try_from(".base.initContainers.containers")?;
+
+                yq.delete_object(init_containers_key.clone(), upgrade_values_file.path())?;
+
+                for container in target_values.base_init_containers() {
+                    let container_val = serde_json::to_string(container).context(
+                        SerializeBaseInitContainersToJson {
+                            object: container.clone(),
+                        },
+                    )?;
+                    yq.append_to_array(
+                        init_containers_key.clone(),
+                        container_val,
+                        upgrade_values_file.path(),
+                    )?;
+                }
+            }
+
+            {
+                let init_core_containers_key =
+                    YamlKey::try_from(".base.initCoreContainers.containers")?;
+
+                yq.delete_object(init_core_containers_key.clone(), upgrade_values_file.path())?;
+
+                for container in target_values.base_init_core_containers() {
+                    let container_val = serde_json::to_string(container).context(
+                        SerializeBaseInitCoreContainersToJson {
+                            object: container.clone(),
+                        },
+                    )?;
+                    yq.append_to_array(
+                        init_core_containers_key.clone(),
+                        container_val,
+                        upgrade_values_file.path(),
+                    )?;
+                }
+            }
+        }
+
+        if let Some(client_node_port) = source_values.etcd_deprecated_client_node_port() {
+            yq.delete_object(
+                YamlKey::try_from(".etcd.service.nodePorts.clientPort")?,
+                upgrade_values_file.path(),
+            )?;
+            yq.set_unquoted_value(
+                YamlKey::try_from(".etcd.service.nodePorts.client")?,
+                client_node_port,
+                upgrade_values_file.path(),
+            )?;
+        }
+
+        if let Some(peer_node_port) = source_values
+            .etcd_deprecated_peer_node_port()
+            .filter(|p| !p.is_empty())
+        {
+            yq.delete_object(
+                YamlKey::try_from(".etcd.service.nodePorts.peerPort")?,
+                upgrade_values_file.path(),
+            )?;
+            yq.set_unquoted_value(
+                YamlKey::try_from(".etcd.service.nodePorts.peer")?,
+                peer_node_port,
+                upgrade_values_file.path(),
+            )?;
+        }
+    }
+
     // Default options.
     // Image tag is set because the high_priority file is the user's source options file.
     // The target's image tag needs to be set for PRODUCT upgrade.
-    yq.set_literal_value(
+    yq.set_quoted_string_value(
         YamlKey::try_from(".image.tag")?,
         target_values.image_tag(),
         upgrade_values_file.path(),
     )?;
+    if let Some(init_containers_image) = target_values.base_init_containers_image() {
+        yq.set_quoted_string_value(
+            YamlKey::try_from(".base.initContainers.image.name")?,
+            init_containers_image.name(),
+            upgrade_values_file.path(),
+        )?;
+        yq.set_quoted_string_value(
+            YamlKey::try_from(".base.initContainers.image.tag")?,
+            init_containers_image.tag(),
+            upgrade_values_file.path(),
+        )?;
+    }
 
     // The CSI sidecar images need to always be the versions set on the chart by default.
-    yq.set_literal_value(
+    yq.set_quoted_string_value(
         YamlKey::try_from(".csi.image.provisionerTag")?,
         target_values.csi_provisioner_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_literal_value(
+    yq.set_quoted_string_value(
         YamlKey::try_from(".csi.image.attacherTag")?,
         target_values.csi_attacher_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_literal_value(
+    yq.set_quoted_string_value(
         YamlKey::try_from(".csi.image.snapshotterTag")?,
         target_values.csi_snapshotter_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_literal_value(
+    yq.set_quoted_string_value(
         YamlKey::try_from(".csi.image.snapshotControllerTag")?,
         target_values.csi_snapshot_controller_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_literal_value(
+    yq.set_quoted_string_value(
         YamlKey::try_from(".csi.image.registrarTag")?,
         target_values.csi_node_driver_registrar_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_literal_value(
+    yq.set_quoted_string_value(
         YamlKey::try_from(".csi.image.resizerTag")?,
         target_values.csi_resizer_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_literal_value(
+    yq.set_quoted_string_value(
         YamlKey::try_from(".localpv-provisioner.localpv.image.tag")?,
         target_values.localpv_provisioner_image_tag(),
         upgrade_values_file.path(),
     )?;
-    yq.set_literal_value(
+    yq.set_quoted_string_value(
         YamlKey::try_from(".localpv-provisioner.helperPod.image.tag")?,
         target_values.localpv_helper_image_tag(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_quoted_string_value(
+        YamlKey::try_from(".etcd.image.tag")?,
+        target_values.etcd_image_tag(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_quoted_string_value(
+        YamlKey::try_from(".etcd.volumePermissions.image.tag")?,
+        target_values.etcd_vol_permissions_image_tag(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_quoted_string_value(
+        YamlKey::try_from(".etcd.volumePermissions.image.repository")?,
+        target_values.etcd_vol_permissions_image_repo(),
         upgrade_values_file.path(),
     )?;
 
@@ -742,7 +907,7 @@ async fn safe_crd_install(upgrade_values_filepath: &Path, yq: &YqV4) -> Result<(
             .iter()
             .any(|name| crd_set.contains(&name.as_str()))
         {
-            yq.set_literal_value(helm_toggle, false, upgrade_values_filepath)?
+            yq.set_unquoted_value(helm_toggle, false, upgrade_values_filepath)?
         }
     }
 
