@@ -300,7 +300,7 @@ Get the Jaeger URL
           {{- fail "etcd.externalUrl must be set" }}
         {{- end }}
     {{- else }}
-        {{- .Release.Name }}-etcd:{{ .Values.etcd.service.port }}
+        {{- .Release.Name }}-etcd:{{ .Values.etcd.service.ports.client }}
     {{- end }}
 {{- end }}
 

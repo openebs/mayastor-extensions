@@ -30,7 +30,7 @@ dependencies:
     condition: crds.enabled
   - name: etcd
     repository: https://charts.bitnami.com/bitnami
-    version: 8.6.0
+    version: 12.0.11
     condition: etcd.enabled
   - name: jaeger-operator
     version: 2.50.1
@@ -55,7 +55,9 @@ dependencies:
 annotations:
   helm.sh/images: |
     - name: etcd
-      image: docker.io/bitnami/etcd:3.5.6-debian-11-r10
+      image: docker.io/bitnami/etcd:3.6.2-debian-12-r0
+    - name: kubectl
+      image: docker.io/bitnami/kubectl:1.25.15
     - name: alloy
       image: docker.io/grafana/alloy:v1.8.1
     - name: loki

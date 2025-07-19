@@ -6,6 +6,10 @@ crds:
       # -- Install Volume Snapshot CRDs
       enabled: true
 
+global:
+  security:
+    allowInsecureImages: true
+
 image:
   # -- Image registry to pull our product images
   registry: docker.io
@@ -73,7 +77,7 @@ base:
       - name: agent-core-grpc-probe
         command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50051; do date; echo "Waiting for agent-core-grpc services..."; sleep 1; done;']
       - name: etcd-probe
-        command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{.Values.etcd.service.port}}; do date; echo "Waiting for etcd..."; sleep 1; done;']
+        command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{ .Values.etcd.service.ports.client }}; do date; echo "Waiting for etcd..."; sleep 1; done;']
   initHaNodeContainers:
     enabled: true
     containers:
@@ -83,7 +87,7 @@ base:
     enabled: true
     containers:
       - name: etcd-probe
-        command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{.Values.etcd.service.port}}; do date; echo "Waiting for etcd..."; sleep 1; done;']
+        command: ['sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-etcd {{ .Values.etcd.service.ports.client }}; do date; echo "Waiting for etcd..."; sleep 1; done;']
   metrics:
     # -- Enable the metrics exporter
     enabled: true
@@ -510,12 +514,16 @@ etcd:
   clusterDomain: cluster.local
   # TLS authentication for client-to-server communications
   # ref: https://etcd.io/docs/current/op-guide/security/
-  client:
-    secureTransport: false
-  # TLS authentication for server-to-server communications
-  # ref: https://etcd.io/docs/current/op-guide/security/
-  peer:
-    secureTransport: false
+  auth:
+    client:
+      secureTransport: false
+    # TLS authentication for server-to-server communications
+    # ref: https://etcd.io/docs/current/op-guide/security/
+    peer:
+      secureTransport: false
+    rbac:
+      create: false
+      allowNoneAuthentication: true
   # Enable persistence using Persistent Volume Claims
   persistence:
     # -- If true, use a Persistent Volume Claim. If false, use emptyDir.
@@ -526,8 +534,11 @@ etcd:
     storageClass: "mayastor-etcd-localpv"
     # -- Volume size
     size: 2Gi
+  persistentVolumeClaimRetentionPolicy:
     # -- PVC's reclaimPolicy
-    reclaimPolicy: "Delete"
+    enabled: false
+    whenDeleted: Retain
+    whenScaled: Retain
   # -- Use a PreStop hook to remove the etcd members from the etcd cluster on container termination
   # Ignored if lifecycleHooks is set or replicaCount=1
   removeMemberOnContainerTermination: false
@@ -540,16 +551,11 @@ etcd:
   # - 'revision' for revision number based retention.
   autoCompactionMode: revision
   # -- Auto compaction retention length. 0 means disable auto compaction.
-  autoCompactionRetention: 100
+  autoCompactionRetention: "100"
   extraEnvVars:
     # -- Raise alarms when backend size exceeds the given quota.
     - name: ETCD_QUOTA_BACKEND_BYTES
       value: "8589934592"
-  auth:
-    rbac:
-      create: false
-      enabled: false
-      allowNoneAuthentication: true
   # Init containers parameters:
   # volumePermissions: Change the owner and group of the persistent volume mountpoint to runAsUser:fsGroup values from the securityContext section.
   #
@@ -561,8 +567,9 @@ etcd:
       repository: openebs/alpine-bash
       tag: 4.2.0
       pullSecrets: []
-  # extra debug information on logs
-  debug: false
+  image:
+    # extra debug information on logs
+    debug: false
   # -- Pod anti-affinity preset
   # Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
   podAntiAffinityPreset: "hard"
@@ -573,15 +580,16 @@ etcd:
   service:
     # K8s service type
     type: ClusterIP
-    # etcd client port
-    port: 2379
+    ports:
+      # etcd client port
+      client: 2379
     # Specify the nodePort(s) value(s) for the LoadBalancer and NodePort service types.
     # ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
     #
     nodePorts:
       # Port from where etcd endpoints are accessible from outside cluster
-      clientPort: 31379
-      peerPort: ""
+      client: 31379
+      peer: ""
   tolerations: []
   priorityClassName: ""
 loki:
@@ -931,3 +939,23 @@ localpv-provisioner:
     enabled: false
   analytics:
     enabled: true
+preUpgradeHook:
+  # -- Node tolerations for server scheduling to nodes with taints
+  ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+  ##
+  tolerations: []
+  # -- Optional array of imagePullSecrets containing private registry credentials
+  ## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  imagePullSecrets: []
+  # - name: secretName
+  # -- Labels to be added to the pod hook job
+  podLabels: {}
+  image:
+    # -- The container image registry URL for the hook job
+    registry: docker.io
+    # -- The container repository for the hook job
+    repo: bitnami/kubectl
+    # -- The container image tag for the hook job
+    tag: "1.25.15"
+    # -- The imagePullPolicy for the container
+    pullPolicy: IfNotPresent
