@@ -2,12 +2,15 @@ import json
 import logging
 import os
 import subprocess
+import time
 from enum import Enum
 from shutil import which
 
 import common
 from common import root_dir, run
 from common.environment import get_env
+from kubernetes import client as k8s_client
+from kubernetes import config as k8s_config
 
 logger = logging.getLogger(__name__)
 
@@ -150,6 +153,25 @@ class HelmReleaseClient:
         return common.run("scripts/helm/chart-version.sh")
 
     def uninstall_mayastor(self):
+        # K8s client
+        k8s_config.load_kube_config()
+        apps_v1 = k8s_client.AppsV1Api()
+        v1 = k8s_client.CoreV1Api()
+
+        # Scale Etcd to 0
+        patch = {"spec": {"replicas": 0}}
+        apps_v1.patch_namespaced_stateful_set(
+            name="mayastor-etcd", namespace=self.namespace, body=patch
+        )
+        # Delete Etcd PVCs
+        v1.delete_collection_namespaced_persistent_volume_claim(
+            namespace=self.namespace,
+            label_selector="app.kubernetes.io/name=etcd",
+        )
+        # Wait for PV delete
+        time.sleep(2)
+
+        # Uninstall helm chart
         args = ["uninstall", "-n", self.namespace, "mayastor"]
         return common.run(helm_bin, args)
 

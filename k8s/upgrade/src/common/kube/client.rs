@@ -2,7 +2,7 @@ use crate::common::{
     constants::KUBE_API_PAGE_SIZE,
     error::{
         ControllerRevisionDoesntHaveHashLabel, ControllerRevisionListEmpty,
-        FailedToDeleteLokiStatefulSet, FailedToListMetadataPaginated, FailedToListPaginated,
+        FailedToDeleteStatefulSet, FailedToListMetadataPaginated, FailedToListPaginated,
         InvalidNoOfHelmConfigMaps, InvalidNoOfHelmSecrets, K8sClientGeneration, Result,
     },
 };
@@ -66,14 +66,15 @@ pub async fn configmaps_api(namespace: &str) -> Result<Api<ConfigMap>> {
     Ok(Api::namespaced(client().await?, namespace))
 }
 
-pub async fn delete_loki_sts(release_name: String, namespace: String) -> Result<()> {
-    let sts_api = sts_api(namespace.as_str()).await?;
-    let label_selector = format!("app=loki,release={release_name}");
+async fn delete_sts(
+    namespace: &str,
+    delete_params: &DeleteParams,
+    list_params: &ListParams,
+) -> Result<()> {
+    let sts_api = sts_api(namespace).await?;
 
-    let list_params = ListParams::default().labels(label_selector.as_str());
-    let delete_params = DeleteParams::foreground();
     sts_api
-        .delete_collection(&delete_params, &list_params)
+        .delete_collection(delete_params, list_params)
         .await
         .map(|_| ())
         .or_else(|error| match error {
@@ -81,10 +82,17 @@ pub async fn delete_loki_sts(release_name: String, namespace: String) -> Result<
             kube::Error::Api(resp) if resp.code == 404 => Ok(()),
             something_else => Err(something_else),
         })
-        .context(FailedToDeleteLokiStatefulSet {
-            release_name,
-            namespace,
+        .context(FailedToDeleteStatefulSet {
+            namespace: namespace.to_string(),
         })
+}
+
+pub async fn delete_loki_sts(release_name: String, namespace: String) -> Result<()> {
+    let label_selector = format!("app=loki,release={release_name}");
+
+    let list_params = ListParams::default().labels(label_selector.as_str());
+    let delete_params = DeleteParams::foreground();
+    delete_sts(namespace.as_str(), &delete_params, &list_params).await
 }
 
 pub async fn list_pods(

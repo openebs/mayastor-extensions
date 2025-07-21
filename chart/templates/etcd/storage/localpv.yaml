@@ -10,7 +10,7 @@ metadata:
 spec:
   storageClassName: manual
   # You must also delete the hostpath on the node
-  persistentVolumeReclaimPolicy: {{ $.Values.etcd.persistence.reclaimPolicy }}
+  persistentVolumeReclaimPolicy: {{ $.Values.etcd.persistentVolumeClaimRetentionPolicy.whenDeleted }}
   capacity:
     storage: {{ $.Values.etcd.persistence.size | quote }}
   accessModes:

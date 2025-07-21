@@ -1,0 +1,140 @@
+{{- if .Release.IsUpgrade }}
+{{- if include "etcd_is_8.6.0" . }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mayastor-pre-upgrade-hook
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-9999"
+    {{- with .Values.preUpgradeHook.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: mayastor-pre-upgrade-hook
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-9999"
+    {{- with .Values.preUpgradeHook.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    verbs: ["get", "create", "delete", "list", "watch"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: mayastor-pre-upgrade-hook
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-9998"
+    {{- with .Values.preUpgradeHook.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+subjects:
+  - kind: ServiceAccount
+    name: mayastor-pre-upgrade-hook
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: mayastor-pre-upgrade-hook
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "mayastor-pre-upgrade-hook"
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-9999"
+    {{- with .Values.preUpgradeHook.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  label-etcd-for-helm-release.sh: |-
+    {{- .Files.Get "label-etcd-for-helm-release.sh" | nindent 4 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "mayastor-pre-upgrade-hook"
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-9997"
+    {{- with .Values.preUpgradeHook.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  template:
+    metadata:
+      name: "mayastor-pre-upgrade-hook"
+      labels:
+        app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        {{- with .Values.preUpgradeHook.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: "mayastor-pre-upgrade-hook"
+      {{- with .Values.preUpgradeHook.tolerations }}
+      tolerations:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      restartPolicy: Never
+      volumes:
+        - name: scripts
+          configMap:
+            name: "mayastor-pre-upgrade-hook"
+            defaultMode: 0777
+      containers:
+        - name: mayastor-pre-upgrade-hook
+          image: {{ .Values.preUpgradeHook.image.registry }}/{{ .Values.preUpgradeHook.image.repo }}:{{ .Values.preUpgradeHook.image.tag }}
+          imagePullPolicy: {{ .Values.preUpgradeHook.image.pullPolicy }}
+          command:
+            - "sh"
+            - "-c"
+          args:
+            - "/scripts/label-etcd-for-helm-release.sh {{ .Release.Name }} -n {{ .Release.Namespace }}"
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      {{- if .Values.preUpgradeHook.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml .Values.preUpgradeHook.imagePullSecrets | nindent 8 }}
+      {{- end }}
+{{- end }}
+{{- end }}

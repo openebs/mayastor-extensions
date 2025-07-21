@@ -253,62 +253,27 @@ impl YqV4 {
         Ok(yq_merge_output.stdout)
     }
 
-    /// This sets in-place yaml values in yaml files.
-    pub fn set_literal_value<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
+    /// This sets in-place yaml values in yaml files, with double quotes around the value.
+    pub fn set_quoted_string_value<P>(&self, key: YamlKey, value: &str, filepath: P) -> Result<()>
     where
-        V: Display + Sized,
         P: AsRef<Path>,
     {
         // Command for use during yq file update
-        let mut command = self.command();
+        let mut cmd = self.command();
+        cmd.env("VAL", value);
 
-        // Assigning value based on if it needs quotes around it or not.
-        // Strings require quotes.
-        let value = match format!("{value}").as_str() {
-            // Boolean yaml values do not need quotes.
-            "true" => "true".to_string(),
-            "false" => "false".to_string(),
-            // Null doesn't need quotes as well.
-            "null" => "null".to_string(),
-            // What remains is integers and strings
-            something_else => 'other: {
-                // If it's an integer, then no quotes.
-                if something_else.parse::<i64>().is_ok() {
-                    break 'other something_else.to_string();
-                }
+        let value = "strenv(VAL)".to_string();
 
-                // Preserve special characters for a string.
-                // Ref: https://mikefarah.gitbook.io/yq/usage/tips-and-tricks#special-characters-in-strings
-                command.env("VAL", something_else);
-                "strenv(VAL)".to_string()
-            }
-        };
+        set_value(key, &mut cmd, value, filepath)
+    }
 
-        let yq_set_args = vec_to_strings![
-            "-i",
-            format!(r#"{} = {value}"#, key.as_str()),
-            filepath.as_ref().to_string_lossy()
-        ];
-        let yq_set_output = command
-            .args(yq_set_args.clone())
-            .output()
-            .context(YqCommandExec {
-                command: self.command_as_str().to_string(),
-                args: yq_set_args.clone(),
-            })?;
-
-        ensure!(
-            yq_set_output.status.success(),
-            YqSetCommand {
-                command: self.command_as_str().to_string(),
-                args: yq_set_args,
-                std_err: str::from_utf8(yq_set_output.stderr.as_slice())
-                    .context(U8VectorToString)?
-                    .to_string()
-            }
-        );
-
-        Ok(())
+    /// This sets in-place yaml values in yaml files, with no quotes around the value.
+    pub fn set_unquoted_value<V, P>(&self, key: YamlKey, value: V, filepath: P) -> Result<()>
+    where
+        V: ToString + Sized,
+        P: AsRef<Path>,
+    {
+        set_value(key, &mut self.command(), value.to_string(), filepath)
     }
 
     /// Returns an std::process::Command using the command_as_str member's value.
@@ -316,7 +281,6 @@ impl YqV4 {
         Command::new(self.command_name.clone())
     }
 
-    /// This executes a command and returns the output.
     fn command_output(&self, args: Vec<String>) -> Result<Output> {
         self.command()
             .args(args.clone())
@@ -331,4 +295,36 @@ impl YqV4 {
     fn command_as_str(&self) -> &str {
         self.command_name.as_str()
     }
+}
+
+/// This sets in-place yaml values in yaml files.
+fn set_value<P>(key: YamlKey, cmd: &mut Command, value: String, filepath: P) -> Result<()>
+where
+    P: AsRef<Path>,
+{
+    let yq_set_args = vec_to_strings![
+        "-i",
+        format!(r#"{} = {value}"#, key.as_str()),
+        filepath.as_ref().to_string_lossy()
+    ];
+    let yq_set_output = cmd
+        .args(yq_set_args.clone())
+        .output()
+        .context(YqCommandExec {
+            command: cmd.get_program().to_string_lossy().to_string(),
+            args: yq_set_args.clone(),
+        })?;
+
+    ensure!(
+        yq_set_output.status.success(),
+        YqSetCommand {
+            command: cmd.get_program().to_string_lossy().to_string(),
+            args: yq_set_args,
+            std_err: str::from_utf8(yq_set_output.stderr.as_slice())
+                .context(U8VectorToString)?
+                .to_string()
+        }
+    );
+
+    Ok(())
 }

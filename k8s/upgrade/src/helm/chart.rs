@@ -96,6 +96,8 @@ pub(crate) struct CoreValues {
     agents: Agents,
     /// This contains values for all the base components.
     base: Base,
+    /// This contains values for all of the Etcd components,
+    etcd: Etcd,
     /// This is the yaml object which contains values for the container image registry, repository,
     /// tag, etc.
     image: Image,
@@ -351,6 +353,11 @@ impl CoreValues {
         self.base.init_containers()
     }
 
+    /// This returns the image object from the .initContainers yaml key.
+    pub(crate) fn base_init_containers_image(&self) -> Option<&InitContainersImage> {
+        self.base.init_containers_image()
+    }
+
     /// This is the array of containers associated with jaeger agent initContainers.
     pub(crate) fn base_jaeger_agent_init_container(&self) -> &[Container] {
         self.base.jaeger_agent_init_container()
@@ -365,6 +372,204 @@ impl CoreValues {
     /// Useful when updating the Jaeger operator dependency chart to ensure the new chart uses the updated image tag.
     pub(crate) fn jaeger_operator_image_tag(&self) -> &str {
         self.jaeger_operator.image_tag()
+    }
+
+    /// Return the value of etcd.client.secureTransport (as seen on etcd chart v8.6.0).
+    pub(crate) fn etcd_deprecated_client_secure_transport(&self) -> Option<bool> {
+        self.etcd.deprecated_client_secure_transport()
+    }
+
+    /// Return the value of etcd.peer.secureTransport (as seen on etcd chart v8.6.0).
+    pub(crate) fn etcd_deprecated_peer_secure_transport(&self) -> Option<bool> {
+        self.etcd.deprecated_peer_secure_transport()
+    }
+
+    /// Returns the value of .etcd.autoCompactionRetention.
+    pub(crate) fn etcd_auto_compaction_retention(&self) -> Option<&str> {
+        self.etcd.auto_compaction_retention()
+    }
+
+    /// Returns the value of .etcd.debug (as seen on etcd chart v8.6.0).
+    pub(crate) fn etcd_deprecated_debug_logs(&self) -> Option<bool> {
+        self.etcd.deprecated_debug_logs()
+    }
+
+    /// Returns the value of .etcd.service.port (as seen etcd chart v8.6.0).
+    pub(crate) fn etcd_service_deprecated_port(&self) -> Option<i64> {
+        self.etcd.deprecated_port()
+    }
+
+    /// Returns the value of .etcd.service.nodePorts.clientPort (as seen etcd chart v8.6.0).
+    pub(crate) fn etcd_deprecated_client_node_port(&self) -> Option<i64> {
+        self.etcd.deprecated_client_node_port()
+    }
+
+    /// Returns the value of .etcd.service.nodePorts.peerPort (as seen etcd chart v8.6.0).
+    pub(crate) fn etcd_deprecated_peer_node_port(&self) -> Option<&str> {
+        self.etcd.deprecated_peer_node_port()
+    }
+
+    /// Returns the image tag of the etcd container.
+    pub(crate) fn etcd_image_tag(&self) -> &str {
+        self.etcd.image_tag()
+    }
+
+    pub(crate) fn etcd_vol_permissions_image_tag(&self) -> &str {
+        self.etcd.vol_permissions_image_tag()
+    }
+
+    pub(crate) fn etcd_vol_permissions_image_repo(&self) -> &str {
+        self.etcd.vol_permissions_image_repo()
+    }
+}
+
+/// This is used to deserialize the yaml object etcd.
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct Etcd {
+    #[serde(rename(deserialize = "client"))]
+    deprecated_client: Option<EtcdClient>,
+    #[serde(rename(deserialize = "peer"))]
+    deprecated_peer: Option<EtcdPeer>,
+    auto_compaction_retention: Option<String>,
+    #[serde(rename(deserialize = "debug"))]
+    deprecated_debug: Option<bool>,
+    service: EtcdService,
+    image: GenericImage,
+    volume_permissions: EtcdVolumePermissions,
+}
+
+impl Etcd {
+    /// Return the value of the etcd.client.secureTransport key, this key was a part of an older
+    /// etcd chart.
+    fn deprecated_client_secure_transport(&self) -> Option<bool> {
+        self.deprecated_client
+            .as_ref()
+            .map(EtcdClient::secure_transport)
+    }
+
+    /// Return the value of the etcd.peer.secureTransport key, this key was a part of an older
+    /// etcd chart.
+    fn deprecated_peer_secure_transport(&self) -> Option<bool> {
+        self.deprecated_peer
+            .as_ref()
+            .map(EtcdPeer::secure_transport)
+    }
+
+    /// Returns the value of .etcd.autoCompactionRetention.
+    fn auto_compaction_retention(&self) -> Option<&str> {
+        self.auto_compaction_retention.as_deref()
+    }
+
+    /// Returns the value of .etcd.autoCompactionRetention.
+    fn deprecated_debug_logs(&self) -> Option<bool> {
+        self.deprecated_debug
+    }
+
+    /// Returns the value of the client port, as see on an older etcd helm chart.
+    fn deprecated_port(&self) -> Option<i64> {
+        self.service.deprecated_port()
+    }
+
+    fn deprecated_client_node_port(&self) -> Option<i64> {
+        self.service.deprecated_client_node_port()
+    }
+
+    fn deprecated_peer_node_port(&self) -> Option<&str> {
+        self.service.deprecated_peer_node_port()
+    }
+
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+
+    fn vol_permissions_image_tag(&self) -> &str {
+        self.volume_permissions.image_tag()
+    }
+
+    fn vol_permissions_image_repo(&self) -> &str {
+        self.volume_permissions.image_repo()
+    }
+}
+
+/// This is used to deserialize the yaml object .etcd.volumePermissions.
+#[derive(Deserialize)]
+struct EtcdVolumePermissions {
+    image: GenericImage,
+}
+
+impl EtcdVolumePermissions {
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+
+    fn image_repo(&self) -> &str {
+        self.image.repository()
+    }
+}
+
+/// This is used to deserialize the yaml object etcd.auth.client.
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct EtcdClient {
+    secure_transport: bool,
+}
+
+impl EtcdClient {
+    fn secure_transport(&self) -> bool {
+        self.secure_transport
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct EtcdPeer {
+    secure_transport: bool,
+}
+
+impl EtcdPeer {
+    fn secure_transport(&self) -> bool {
+        self.secure_transport
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct EtcdService {
+    #[serde(rename(deserialize = "port"))]
+    deprecated_port: Option<i64>,
+    node_ports: EtcdServiceNodeports,
+}
+
+impl EtcdService {
+    fn deprecated_port(&self) -> Option<i64> {
+        self.deprecated_port
+    }
+
+    fn deprecated_client_node_port(&self) -> Option<i64> {
+        self.node_ports.deprecated_client_node_port()
+    }
+
+    fn deprecated_peer_node_port(&self) -> Option<&str> {
+        self.node_ports.deprecated_peer_node_port()
+    }
+}
+
+#[derive(Deserialize)]
+struct EtcdServiceNodeports {
+    #[serde(rename(deserialize = "clientPort"))]
+    deprecated_client_port: Option<i64>,
+    #[serde(rename(deserialize = "peerPort"))]
+    deprecated_peer_port: Option<String>,
+}
+
+impl EtcdServiceNodeports {
+    fn deprecated_client_node_port(&self) -> Option<i64> {
+        self.deprecated_client_port
+    }
+
+    fn deprecated_peer_node_port(&self) -> Option<&str> {
+        self.deprecated_peer_port.as_deref()
     }
 }
 
@@ -394,7 +599,7 @@ struct Base {
     /// This is the older helm value.yaml key for configuring log silence level.
     #[serde(default, rename(deserialize = "logSilenceLevel"))]
     deprecated_log_silence_level: String,
-    init_containers: GenericContainers,
+    init_containers: InitContainers,
     init_core_containers: GenericContainers,
     init_ha_node_containers: GenericContainers,
     init_rest_container: InitRestContainer,
@@ -410,6 +615,11 @@ impl Base {
     /// This returns the array of kubernetes initContainer objects.
     fn init_containers(&self) -> &[Container] {
         self.init_containers.containers()
+    }
+
+    /// This returns the image object from the .initContainers yaml key.
+    fn init_containers_image(&self) -> Option<&InitContainersImage> {
+        self.init_containers.image()
     }
 
     /// This returns the array of kubernetes initContainer objects for core.
@@ -435,6 +645,37 @@ impl Base {
     /// This returns the array of kubernetes initContainer objects for jaeger collector.
     fn jaeger_collector_init_container(&self) -> &[Container] {
         self.jaeger.collector_init_container()
+    }
+}
+
+#[derive(Deserialize)]
+struct InitContainers {
+    image: Option<InitContainersImage>,
+    containers: Vec<Container>,
+}
+
+impl InitContainers {
+    fn image(&self) -> Option<&InitContainersImage> {
+        self.image.as_ref()
+    }
+
+    fn containers(&self) -> &[Container] {
+        self.containers.as_slice()
+    }
+}
+
+#[derive(Default, Deserialize)]
+pub(crate) struct InitContainersImage {
+    name: String,
+    tag: String,
+}
+
+impl InitContainersImage {
+    pub(crate) fn name(&self) -> &str {
+        self.name.as_str()
+    }
+    pub(crate) fn tag(&self) -> &str {
+        self.tag.as_str()
     }
 }
 
@@ -1258,12 +1499,18 @@ impl LocalpvProvisionerLocalpv {
 struct GenericImage {
     #[serde(default)]
     tag: String,
+    #[serde(default)]
+    repository: String,
 }
 
 impl GenericImage {
-    /// This is getter for the various container image tags in the localpv-provisioner helm chart.
+    /// This is getter for various container image tags.
     fn tag(&self) -> &str {
         self.tag.as_str()
+    }
+    /// This is a getter for the various container image repositories.
+    fn repository(&self) -> &str {
+        self.repository.as_str()
     }
 }
 
