@@ -1270,7 +1270,7 @@ entries:
   - annotations:
       helm.sh/images: |
         - name: etcd
-          image: docker.io/bitnami/etcd:3.5.6-debian-11-r10
+          image: docker.io/bitnami/etcd:3.6.2-debian-12-r0
         - name: alloy
           image: docker.io/grafana/alloy:v1.8.1
         - name: loki
@@ -1335,7 +1335,7 @@ entries:
           image: registry.k8s.io/sig-storage/snapshot-controller:v8.2.0
     apiVersion: v2
     appVersion: 0.0.0
-    created: "2025-07-21T15:18:52.780460831Z"
+    created: "2025-07-21T19:51:55.050274349Z"
     dependencies:
     - condition: crds.enabled
       name: crds
@@ -1344,7 +1344,7 @@ entries:
     - condition: etcd.enabled
       name: etcd
       repository: https://charts.bitnami.com/bitnami
-      version: 8.6.0
+      version: 12.0.11
     - condition: base.jaeger.enabled
       name: jaeger-operator
       repository: https://jaegertracing.github.io/helm-charts
@@ -1366,7 +1366,7 @@ entries:
       repository: https://openebs.github.io/dynamic-localpv-provisioner
       version: 4.3.0
     description: Mayastor Helm chart for Kubernetes
-    digest: b745fd41783f14089cb7a08e10be658eb10fbad7958588d97bbdc4fde76aaf22
+    digest: c10ea9ecd3a72ebabcb5b16cfefdd680acdd8308c0c6cfe5eafd4721f031869b
     name: mayastor
     type: application
     urls:
@@ -1402,4 +1402,4 @@ entries:
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2025-07-21T15:18:52.754353526Z"
+generated: "2025-07-21T19:51:55.02348114Z"
