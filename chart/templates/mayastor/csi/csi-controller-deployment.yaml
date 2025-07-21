@@ -38,6 +38,37 @@ spec:
       tolerations: {{ $tolerations }}
       {{- end }}
       containers:
+        - name: csi-controller
+          resources:
+            limits:
+              cpu: {{ .Values.csi.controller.resources.limits.cpu | quote }}
+              memory: {{ .Values.csi.controller.resources.limits.memory | quote }}
+            requests:
+              cpu: {{ .Values.csi.controller.resources.requests.cpu | quote }}
+              memory: {{ .Values.csi.controller.resources.requests.memory | quote }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-csi-controller:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
+            - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"{{ if .Values.base.jaeger.enabled }}
+            - "--jaeger={{ include "jaeger_url" . }}"{{ end }}
+            {{- range $key, $val := .Values.csi.node.topology.segments }}
+            - "--node-selector={{ $key }}={{ $val }}"
+            {{- end }}
+            - "--ansi-colors={{ .Values.base.logging.color }}"
+            - "--fmt-style={{ include "logFormat" . }}"
+            - "--create-volume-limit={{ .Values.csi.controller.maxCreateVolume }}"
+            - "--enable-orphan-vol-gc={{- .Values.csi.controller.enableDangerousRetainGC | default false }}"
+          env:
+            - name: RUST_LOG
+              value: {{ .Values.csi.controller.logLevel }}
+            {{- if default .Values.base.logging.silenceLevel .Values.csi.controller.logSilenceLevel }}
+            - name: RUST_LOG_SILENCE
+              value: {{ default .Values.base.logging.silenceLevel .Values.csi.controller.logSilenceLevel }}
+            {{- end }}
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-provisioner
           image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-provisioner:{{ .Values.csi.image.provisionerTag }}"
           args:
@@ -103,37 +134,6 @@ spec:
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
           image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-resizer:{{ .Values.csi.image.resizerTag }}"
           imagePullPolicy: {{ .Values.csi.image.pullPolicy }}
-          volumeMounts:
-            - name: socket-dir
-              mountPath: /var/lib/csi/sockets/pluginproxy/
-        - name: csi-controller
-          resources:
-            limits:
-              cpu: {{ .Values.csi.controller.resources.limits.cpu | quote }}
-              memory: {{ .Values.csi.controller.resources.limits.memory | quote }}
-            requests:
-              cpu: {{ .Values.csi.controller.resources.requests.cpu | quote }}
-              memory: {{ .Values.csi.controller.resources.requests.memory | quote }}
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-csi-controller:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          args:
-            - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
-            - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"{{ if .Values.base.jaeger.enabled }}
-            - "--jaeger={{ include "jaeger_url" . }}"{{ end }}
-            {{- range $key, $val := .Values.csi.node.topology.segments }}
-            - "--node-selector={{ $key }}={{ $val }}"
-            {{- end }}
-            - "--ansi-colors={{ .Values.base.logging.color }}"
-            - "--fmt-style={{ include "logFormat" . }}"
-            - "--create-volume-limit={{ .Values.csi.controller.maxCreateVolume }}"
-            - "--enable-orphan-vol-gc={{- .Values.csi.controller.enableDangerousRetainGC | default false }}"
-          env:
-            - name: RUST_LOG
-              value: {{ .Values.csi.controller.logLevel }}
-            {{- if default .Values.base.logging.silenceLevel .Values.csi.controller.logSilenceLevel }}
-            - name: RUST_LOG_SILENCE
-              value: {{ default .Values.base.logging.silenceLevel .Values.csi.controller.logSilenceLevel }}
-            {{- end }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/

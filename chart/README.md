@@ -188,10 +188,12 @@ This removes all the Kubernetes components associated with the chart and deletes
 | io_engine.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
 | io_engine.&ZeroWidthSpace;pstorRetries | Number of retries for pstor persistence before the volume target self shutdowns | `300` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for the io-engine | `""` |
-| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;hugepages2Mi | Hugepage size available on the nodes | `"2Gi"` |
+| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;hugepages1Gi | Hugepage memory in 1GiB chunks | `nil` |
+| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;hugepages2Mi | Hugepage memory in 2MiB chunks | `"2Gi"` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for the io-engine | `"1Gi"` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for the io-engine | `""` |
-| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;hugepages2Mi | Hugepage size available on the nodes | `"2Gi"` |
+| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;hugepages1Gi | Hugepage memory in 1GiB chunks | `nil` |
+| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;hugepages2Mi | Hugepage memory in 2MiB chunks | `"2Gi"` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for the io-engine | `"1Gi"` |
 | io_engine.&ZeroWidthSpace;runtimeClassName | Runtime class to use. Defaults to cluster standard | `""` |
 | io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;iface | NVMF target interface (ip, mac, name or subnet) If RDMA is enabled, please set iface to an RDMA capable netdev name from host network. Example, if an rdma device mlx5_0 is available on a netdev eth0 on RNIC, as can be seen from `rdma link` command output, then this field should be set to eth0. | `""` |
