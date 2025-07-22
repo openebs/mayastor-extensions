@@ -358,7 +358,7 @@ Get the Events Jetstream Replica Count
 {{/*
 Returns matched if the Etcd StatefulSet is of v8.6.0
 Usage:
-  {{- if include "is_etcd_8.6.0" . }}
+  {{- if include "etcd_is_8.6.0" . }}
     Do something
   {{- end }}
 */}}
