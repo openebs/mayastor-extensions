@@ -254,7 +254,7 @@ parse_args "$@"
 etcd_selector="app.kubernetes.io/name=etcd,\
 app.kubernetes.io/instance=${RELEASE_NAME},\
 helm.sh/chart=etcd-8.6.0,\
-app.kubernetes.io/component!=etcd"\
+app.kubernetes.io/component!=etcd"
 
 # This step needs to happen in the outer scope of this script, so that it's able to exit when it fails.
 # This will exit 0 if there is no StatefulSet of 8.6.0 and w/o the label. This makes the create step idempotent.
