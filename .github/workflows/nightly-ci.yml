@@ -1,19 +1,26 @@
 name: Nightly CI
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - mod-update
 
 jobs:
-  ci:
-    uses: ./.github/workflows/pr-ci.yml
-    secrets: inherit
-  helm-pins:
-    uses: ./.github/workflows/helm-pins.yml
+  # ci:
+  #   uses: ./.github/workflows/pr-ci.yml
+  #   secrets: inherit
+  # helm-pins:
+  #   uses: ./.github/workflows/helm-pins.yml
+  #   secrets: inherit
+  submodule-update:
+    uses: ./.github/workflows/mod-update.yml
     secrets: inherit
   nightly-ci:
     if: ${{ success() }}
     needs:
-      - ci
-      - helm-pins
+      # - ci
+      # - helm-pins
+      - submodule-update
     runs-on: ubuntu-latest
     steps:
       - name: CI succeeded

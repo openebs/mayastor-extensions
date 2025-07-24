@@ -14,9 +14,19 @@ submodule_set_branch_all() {
   done
 }
 
+submodule_update() {
+  for mod in `git config --file .gitmodules --get-regexp path | awk '{ print $2 }'`; do
+    git submodule update --remote "$mod"
+    pushd "$mod" >/dev/null
+    git submodule update --init --recursive .
+    popd >/dev/null
+  done
+}
+
 BRANCH=`git rev-parse --abbrev-ref HEAD`
 SET_BRANCH=
 CLEAR_BRANCH=
+UPDATE=
 while [ "$#" -gt 0 ]; do
   case $1 in
     -b|--branch)
@@ -28,6 +38,10 @@ while [ "$#" -gt 0 ]; do
       CLEAR_BRANCH=="y"
       shift
       ;;
+    -u|--update)
+      UPDATE="y"
+      shift
+      ;;
     *)
       echo "Unknown option: $1"
       exit 1
@@ -35,13 +49,13 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-
-
 if [ "$BRANCH" == "develop" ] || [ "${BRANCH#release/}" != "${BRANCH}" ]; then
   SET_BRANCH="${BRANCH}"
 fi
 
-if [ -n "$CLEAR_BRANCH" ]; then
+if [ -n "$UPDATE" ]; then
+  submodule_update
+elif [ -n "$CLEAR_BRANCH" ]; then
   submodule_set_branch_all ""
 elif [ -n "$SET_BRANCH" ]; then
   submodule_set_branch_all "$SET_BRANCH"
