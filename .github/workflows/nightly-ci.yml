@@ -9,11 +9,15 @@ jobs:
   helm-pins:
     uses: ./.github/workflows/helm-pins.yml
     secrets: inherit
+  submodule-update:
+    uses: ./.github/workflows/mod-update.yml
+    secrets: inherit
   nightly-ci:
     if: ${{ success() }}
     needs:
       - ci
       - helm-pins
+      - submodule-update
     runs-on: ubuntu-latest
     steps:
       - name: CI succeeded
