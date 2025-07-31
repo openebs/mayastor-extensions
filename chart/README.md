@@ -55,7 +55,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | Repository | Name | Version |
 |------------|------|---------|
 |  | crds | 0.0.0 |
-| https://charts.bitnami.com/bitnami | etcd | 12.0.11 |
+| https://charts.bitnami.com/bitnami | etcd | 12.0.14 |
 | https://grafana.github.io/helm-charts | alloy | 1.0.1 |
 | https://grafana.github.io/helm-charts | loki | 6.29.0 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.50.1 |
@@ -234,7 +234,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | preUpgradeHook.&ZeroWidthSpace;annotations | This helps in debugging by leaving the Job/Pod instances lying around | <pre>{<br>"helm.sh/hook-delete-policy":"hook-succeeded"<br>}</pre> |
 | preUpgradeHook.&ZeroWidthSpace;image.&ZeroWidthSpace;pullPolicy | The imagePullPolicy for the container | `"IfNotPresent"` |
 | preUpgradeHook.&ZeroWidthSpace;image.&ZeroWidthSpace;registry | The container image registry URL for the hook job | `"docker.io"` |
-| preUpgradeHook.&ZeroWidthSpace;image.&ZeroWidthSpace;repo | The container repository for the hook job | `"bitnami/kubectl"` |
+| preUpgradeHook.&ZeroWidthSpace;image.&ZeroWidthSpace;repo | The container repository for the hook job | `"bitnamilegacy/kubectl"` |
 | preUpgradeHook.&ZeroWidthSpace;image.&ZeroWidthSpace;tag | The container image tag for the hook job | `"1.25.15"` |
 | preUpgradeHook.&ZeroWidthSpace;imagePullSecrets | Optional array of imagePullSecrets containing private registry credentials # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/ | `[]` |
 | preUpgradeHook.&ZeroWidthSpace;tolerations | Node tolerations for server scheduling to nodes with taints # Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ # | `[]` |

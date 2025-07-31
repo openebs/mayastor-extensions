@@ -117,6 +117,8 @@ pub(crate) struct CoreValues {
     /// This contains the sub-chart values for the hostpath provisioner's helm chart.
     #[serde(default, rename(deserialize = "localpv-provisioner"))]
     localpv_provisioner: LocalpvProvisioner,
+    #[serde(default, rename(deserialize = "preUpgradeHook"))]
+    pre_upgrade_hook: PreUpgradeHook,
 }
 
 impl TryFrom<&Path> for CoreValues {
@@ -414,12 +416,44 @@ impl CoreValues {
         self.etcd.image_tag()
     }
 
+    /// Returns the image repository of the etcd container.
+    pub(crate) fn etcd_image_repo(&self) -> &str {
+        self.etcd.image_repository()
+    }
+
     pub(crate) fn etcd_vol_permissions_image_tag(&self) -> &str {
         self.etcd.vol_permissions_image_tag()
     }
 
     pub(crate) fn etcd_vol_permissions_image_repo(&self) -> &str {
         self.etcd.vol_permissions_image_repo()
+    }
+
+    /// Returns the image tag of the etcd container.
+    pub(crate) fn pre_upgrade_hook_image_tag(&self) -> &str {
+        self.pre_upgrade_hook.image_tag()
+    }
+
+    /// Returns the image repository of the etcd container.
+    pub(crate) fn pre_upgrade_hook_image_repo(&self) -> &str {
+        self.pre_upgrade_hook.image_repository()
+    }
+}
+
+/// This is used to deserialize the yaml object preUpgradeHook.
+#[derive(Default, Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct PreUpgradeHook {
+    image: GenericImage,
+}
+
+impl PreUpgradeHook {
+    fn image_tag(&self) -> &str {
+        self.image.tag()
+    }
+
+    fn image_repository(&self) -> &str {
+        self.image.repository()
     }
 }
 
@@ -481,6 +515,10 @@ impl Etcd {
 
     fn image_tag(&self) -> &str {
         self.image.tag()
+    }
+
+    fn image_repository(&self) -> &str {
+        self.image.repository()
     }
 
     fn vol_permissions_image_tag(&self) -> &str {

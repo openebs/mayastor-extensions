@@ -787,6 +787,11 @@ where
         upgrade_values_file.path(),
     )?;
     yq.set_quoted_string_value(
+        YamlKey::try_from(".etcd.image.repository")?,
+        target_values.etcd_image_repo(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_quoted_string_value(
         YamlKey::try_from(".etcd.image.tag")?,
         target_values.etcd_image_tag(),
         upgrade_values_file.path(),
@@ -794,6 +799,16 @@ where
     yq.set_quoted_string_value(
         YamlKey::try_from(".etcd.volumePermissions.image.tag")?,
         target_values.etcd_vol_permissions_image_tag(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_quoted_string_value(
+        YamlKey::try_from(".preUpgradeHook.image.repository")?,
+        target_values.pre_upgrade_hook_image_repo(),
+        upgrade_values_file.path(),
+    )?;
+    yq.set_quoted_string_value(
+        YamlKey::try_from(".preUpgradeHook.image.tag")?,
+        target_values.pre_upgrade_hook_image_tag(),
         upgrade_values_file.path(),
     )?;
     yq.set_quoted_string_value(
