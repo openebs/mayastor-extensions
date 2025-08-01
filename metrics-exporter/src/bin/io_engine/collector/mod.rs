@@ -19,7 +19,7 @@ fn init_diskpool_gauge_vec(
         .subsystem("diskpool")
         .variable_labels(vec!["node".to_string(), "name".to_string()]);
     let gauge_vec = GaugeVec::new(opts, &["node", "name"])
-        .unwrap_or_else(|_| panic!("Unable to create gauge metric type for {}", metric_name));
+        .unwrap_or_else(|_| panic!("Unable to create gauge metric type for {metric_name}"));
     descs.extend(gauge_vec.desc().into_iter().cloned());
     gauge_vec
 }
@@ -31,7 +31,7 @@ fn init_volume_gauge_vec(metric_name: &str, metric_desc: &str, descs: &mut Vec<D
         .subsystem("volume")
         .variable_labels(vec!["node".to_string(), "pv_name".to_string()]);
     let gauge_vec = GaugeVec::new(opts, &["node", "pv_name"])
-        .unwrap_or_else(|_| panic!("Unable to create gauge metric type for {}", metric_name));
+        .unwrap_or_else(|_| panic!("Unable to create gauge metric type for {metric_name}"));
     descs.extend(gauge_vec.desc().into_iter().cloned());
     gauge_vec
 }
@@ -47,7 +47,7 @@ fn init_replica_gauge_vec(metric_name: &str, metric_desc: &str, descs: &mut Vec<
             "pv_name".to_string(),
         ]);
     let gauge_vec = GaugeVec::new(opts, &["node", "name", "pv_name"])
-        .unwrap_or_else(|_| panic!("Unable to create gauge metric type for {}", metric_name));
+        .unwrap_or_else(|_| panic!("Unable to create gauge metric type for {metric_name}"));
     descs.extend(gauge_vec.desc().into_iter().cloned());
     gauge_vec
 }

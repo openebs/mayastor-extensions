@@ -133,7 +133,7 @@ impl LogCollection {
             logging_resources.insert(LogResource {
                 container_name: container.name,
                 host_name: hostname.clone(),
-                label_selector: format!("app={}", service_name),
+                label_selector: format!("app={service_name}"),
                 service_type: service_name.clone(),
             });
         }
