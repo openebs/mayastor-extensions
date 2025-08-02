@@ -31,7 +31,7 @@ let
       kubectl-plugin = buildKubectlPlugin {
         inherit release;
         target = windows;
-        addBuildOptions = [ "--no-default-features" "--features" "tls" ];
+        # addBuildOptions = [ "--no-default-features" "--features" "tls" ];
       };
     };
     ${if linux != null then "linux-musl" else null } = {

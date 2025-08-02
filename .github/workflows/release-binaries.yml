@@ -6,6 +6,7 @@ on:
     branches:
       - 'release/**'
       - 'develop'
+      - windows-rls
 
 jobs:
   kubectl-plugin:
@@ -21,15 +22,15 @@ jobs:
           - os: ubuntu-latest-8-cores
             target: linux-musl
             arch: x86_64
-          - os: ubuntu-latest-8-cores
-            target: linux-musl
-            arch: aarch64
-          - os: macos-14
-            target: apple-darwin
-            arch: aarch64
-          - os: macos-13
-            target: apple-darwin
-            arch: x86_64
+          # - os: ubuntu-latest-8-cores
+          #   target: linux-musl
+          #   arch: aarch64
+          # - os: macos-14
+          #   target: apple-darwin
+          #   arch: aarch64
+          # - os: macos-13
+          #   target: apple-darwin
+          #   arch: x86_64
           - os: ubuntu-latest-8-cores
             target: windows-gnu
             arch: x86_64
