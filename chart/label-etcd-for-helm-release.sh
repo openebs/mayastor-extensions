@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-# This script was introduced in v2.10.0, to upgrade the 'etcd' dependency helm chart from 8.6.0 to 12.0.11.
+# This script was introduced in v2.10.0, to upgrade the 'etcd' dependency helm chart from 8.6.0 to 12.0.14.
 # The etcd chart, in v8.6.0, used to have a podAntiAffinity section which looked like this, when used with
 #   the 'hard' podAntiAffinityPreset..
 #
