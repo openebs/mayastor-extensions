@@ -4,7 +4,7 @@ let
   sources = import ../sources.nix;
 in
 rec {
-  makeRustTarget = platform: pkgs.rust.toRustTargetSpec platform;
+  makeRustTarget = platform: platform.rust.rustcTargetSpec;
   rust_default = { override ? { } }: rec {
     nightly_pkg = pkgs.rust-bin.nightly."2025-06-26";
     stable_pkg = pkgs.rust-bin.stable."1.88.0";
@@ -29,8 +29,8 @@ rec {
       cargo = channel.stable;
     };
     os = platform: builtins.replaceStrings [ "${platform.qemuArch}-" ] [ "" ] platform.system;
-    hostPlatform = "${pkgs.rust.toRustTargetSpec pkgs.pkgsStatic.hostPlatform}";
-    targetPlatform = "${pkgs.rust.toRustTargetSpec pkgs.pkgsCross."${target}".hostPlatform}";
+    hostPlatform = "${makeRustTarget pkgs.pkgsStatic.hostPlatform}";
+    targetPlatform = "${makeRustTarget pkgs.pkgsCross."${target}".hostPlatform}";
     pkgsTarget = if hostPlatform == targetPlatform then pkgs else pkgs.pkgsCross."${target}";
     pkgsTargetNative = if hostPlatform == targetPlatform then pkgs else if hostOs == targetOs then
       import sources.nixpkgs
