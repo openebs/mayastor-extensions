@@ -127,7 +127,7 @@ impl SystemDumper {
         {
             Ok(config) => Some(rest_wrapper::RestClient::new_with_config(config)),
             Err(error) => {
-                log(format!("Can't create rest client: {}", error));
+                log(format!("Can't create rest client: {error}"));
                 None
             }
         };

@@ -400,7 +400,7 @@ pub enum Error {
     ))]
     SerializePromtailInitContainerToJson {
         source: serde_json::Error,
-        object: Container,
+        object: Box<Container>,
     },
 
     /// Error in deserializing a promtail helm chart's deprecated extraClientConfig to a
@@ -433,7 +433,7 @@ pub enum Error {
     #[snafu(display("Failed to serialize .base.initContainers.containers {object:?}: {source}",))]
     SerializeBaseInitContainersToJson {
         source: serde_json::Error,
-        object: Container,
+        object: Box<Container>,
     },
 
     /// Error in serializing base.initCoreContainers.containers.
@@ -442,7 +442,7 @@ pub enum Error {
     ))]
     SerializeBaseInitCoreContainersToJson {
         source: serde_json::Error,
-        object: Container,
+        object: Box<Container>,
     },
 
     /// Error in serializing base.initHaNodeContainers.containers.
@@ -451,7 +451,7 @@ pub enum Error {
     ))]
     SerializeBaseInitHaNodeContainersToJson {
         source: serde_json::Error,
-        object: Container,
+        object: Box<Container>,
     },
 
     /// Error in serializing base.initRestContainer.initContainer.
@@ -460,14 +460,14 @@ pub enum Error {
     ))]
     SerializeBaseInitRestContainerToJson {
         source: serde_json::Error,
-        object: Container,
+        object: Box<Container>,
     },
 
     /// Error in serializing base.jaeger.agent.initContainers.
     #[snafu(display("Failed to serialize .base.jaeger.agent.initContainer {object:?}: {source}"))]
     SerializeJaegerAgentInitContainerToJson {
         source: serde_json::Error,
-        object: Container,
+        object: Box<Container>,
     },
 
     /// Error in serializing base.jaeger.collector.initContainers.
@@ -476,7 +476,7 @@ pub enum Error {
     ))]
     SerializeJaegerCollectorInitContainerToJson {
         source: serde_json::Error,
-        object: Container,
+        object: Box<Container>,
     },
 
     #[snafu(display(
@@ -484,13 +484,13 @@ pub enum Error {
     ))]
     SerializeCsiNodeInitContainersToJson {
         source: serde_json::Error,
-        object: Container,
+        object: Box<Container>,
     },
 
     #[snafu(display("Failed to serialize .loki-stack.loki.initContainers {object:?}: {source}"))]
     SerializeLokiInitContainersToJson {
         source: serde_json::Error,
-        object: Container,
+        object: Box<Container>,
     },
 
     /// Error for when there are too many io-engine Pods in one single node;

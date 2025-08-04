@@ -44,7 +44,6 @@ pkgs.mkShell {
 
   PROTOC = "${pkgs.protobuf}/bin/protoc";
   PROTOC_INCLUDE = "${pkgs.protobuf}/include";
-  NODE_PATH = "${pkgs.nodePackages."@commitlint/config-conventional"}/lib/node_modules";
 
   # using the nix rust toolchain
   USE_NIX_RUST = "${toString (!norust)}";
@@ -55,7 +54,7 @@ pkgs.mkShell {
 
   shellHook = ''
     ./scripts/nix/git-submodule-init.sh
-    if [ -z "$CI" ]; then
+    if [ "$CI" != "1" ] && [ "$IN_NIX_SHELL" == "impure" ]; then
       echo
       pre-commit install
       pre-commit install --hook commit-msg
