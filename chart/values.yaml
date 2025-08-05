@@ -596,7 +596,7 @@ etcd:
   priorityClassName: ""
   preUpgradeJob:
     annotations:
-      "helm.sh/hook-delete-policy": "hook-succeeded"
+      "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
 loki:
   enabled: true
   # NOTE: For all possible storage options for loki, check https://github.com/openebs/mayastor-extensions/blob/HEAD/chart/loki-storage.md
@@ -945,6 +945,8 @@ localpv-provisioner:
   analytics:
     enabled: true
 preUpgradeHook:
+  # -- Enable/Disable mayastor pre-upgrade hook
+  enabled: true
   # -- Node tolerations for server scheduling to nodes with taints
   ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
   ##
@@ -957,9 +959,9 @@ preUpgradeHook:
   podLabels:
     openebs.io/logging: "true"
   # Extra annotations to be added to all the hook resources.
-  # -- This helps in debugging by leaving the Job/Pod instances lying around
+  # This helps in debugging by leaving the Job/Pod instances lying around
   annotations:
-    "helm.sh/hook-delete-policy": hook-succeeded
+    "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
   image:
     # -- The container image registry URL for the hook job
     registry: docker.io

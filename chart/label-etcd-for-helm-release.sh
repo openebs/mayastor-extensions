@@ -215,6 +215,15 @@ kubectl_ns() {
   fi
 }
 
+# Count the no. of newlines in a string.
+# Arguments:
+#   $1 -- The string to count newlines from
+# Returns:
+#   Count of newlines in the string
+line_count() {
+  [ -n "$1" ] && printf "%s\n" "$1" | wc -l | sed 's/^[[:space:]]*//' || echo 0
+}
+
 # Prints the Yaml to an Etcd StatefulSet
 # Arguments:
 #   $1 -- Kubernetes label selector for the Etcd StatefulSet
@@ -227,7 +236,7 @@ get_etcd_sts_yaml_or_die() {
 -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')" || exit $?
 
   # Make sure that there's just one such StatefulSet.
-  name_count=$(printf "%s" "$sts_name" | grep -c "^")
+  name_count=$(line_count "$sts_name")
   if [ "$name_count" -eq 0 ]; then
     log_with_ns "Nothing to do: no such StatefulSet"
     exit 0

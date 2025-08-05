@@ -1,3 +1,4 @@
+{{- if .Values.preUpgradeHook.enabled }}
 {{- if .Release.IsUpgrade }}
 {{- if include "etcd_is_8.6.0" . }}
 apiVersion: v1
@@ -136,5 +137,6 @@ spec:
       {{- if .Values.preUpgradeHook.imagePullSecrets }}
       imagePullSecrets: {{ toYaml .Values.preUpgradeHook.imagePullSecrets | nindent 8 }}
       {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
