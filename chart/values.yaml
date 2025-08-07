@@ -549,8 +549,11 @@ etcd:
       repository: openebs/alpine-bash
       tag: 4.2.0
       pullSecrets: []
-  # extra debug information on logs
-  debug: false
+  image:
+    registry: docker.io
+    repository: openebs/etcd
+    # extra debug information on logs
+    debug: false
   # -- Pod anti-affinity preset
   # Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
   podAntiAffinityPreset: "hard"
