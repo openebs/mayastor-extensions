@@ -1,8 +1,8 @@
 bats/bats:1.8.2
-docker.io/bitnami/etcd:3.5.6-debian-11-r10
 docker.io/grafana/promtail:2.8.3
 docker.io/openebs/alpine-bash:4.1.0
 docker.io/openebs/alpine-sh:4.1.0
+docker.io/openebs/etcd:3.5.6-debian-11-r10
 docker.io/openebs/mayastor-agent-core:release-2.8
 docker.io/openebs/mayastor-agent-ha-cluster:release-2.8
 docker.io/openebs/mayastor-agent-ha-node:release-2.8

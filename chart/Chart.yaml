@@ -52,14 +52,14 @@ annotations:
   helm.sh/images: |
     - name: bats
       image: bats/bats:1.8.2
-    - name: etcd
-      image: docker.io/bitnami/etcd:3.5.6-debian-11-r10
     - name: promtail
       image: docker.io/grafana/promtail:2.8.3
     - name: alpine-bash
       image: docker.io/openebs/alpine-bash:4.1.0
     - name: alpine-sh
       image: docker.io/openebs/alpine-sh:4.1.0
+    - name: etcd
+      image: docker.io/openebs/etcd:3.5.6-debian-11-r10
     - name: mayastor-agent-core
       image: docker.io/openebs/mayastor-agent-core:release-2.8
     - name: mayastor-agent-ha-cluster
