@@ -60,3 +60,6 @@ pub(crate) const TWO_DOT_SEVEN_DOT_TWO: &str = "2.7.2";
 
 /// Version value for 2.7.3.
 pub(crate) const TWO_DOT_SEVEN_DOT_THREE: &str = "2.7.3";
+
+/// Version value for 2.7.8.
+pub(crate) const TWO_DOT_SEVEN_DOT_EIGHT: &str = "2.7.8";
