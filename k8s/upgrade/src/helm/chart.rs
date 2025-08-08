@@ -96,6 +96,8 @@ pub(crate) struct CoreValues {
     agents: Agents,
     /// This contains values for all the base components.
     base: Base,
+    /// This contains values for all of the Etcd components,
+    etcd: Etcd,
     /// This is the yaml object which contains values for the container image registry, repository,
     /// tag, etc.
     image: Image,
@@ -365,6 +367,36 @@ impl CoreValues {
     /// Useful when updating the Jaeger operator dependency chart to ensure the new chart uses the updated image tag.
     pub(crate) fn jaeger_operator_image_tag(&self) -> &str {
         self.jaeger_operator.image_tag()
+    }
+
+    /// Returns the value of .etcd.debug (as seen on etcd chart v8.6.0).
+    pub(crate) fn etcd_deprecated_debug_logs(&self) -> Option<bool> {
+        self.etcd.deprecated_debug_logs()
+    }
+
+    /// Returns the image repository of the etcd container.
+    pub(crate) fn etcd_image_repo(&self) -> &str {
+        self.etcd.image_repository()
+    }
+}
+
+/// This is used to deserialize the yaml object etcd.
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
+struct Etcd {
+    image: GenericImage,
+    #[serde(rename(deserialize = "debug"))]
+    deprecated_debug: Option<bool>,
+}
+
+impl Etcd {
+    /// Returns the value of .etcd.autoCompactionRetention.
+    fn deprecated_debug_logs(&self) -> Option<bool> {
+        self.deprecated_debug
+    }
+
+    fn image_repository(&self) -> &str {
+        self.image.repository()
     }
 }
 
@@ -1258,12 +1290,18 @@ impl LocalpvProvisionerLocalpv {
 struct GenericImage {
     #[serde(default)]
     tag: String,
+    #[serde(default)]
+    repository: String,
 }
 
 impl GenericImage {
-    /// This is getter for the various container image tags in the localpv-provisioner helm chart.
+    /// This is getter for various container image tags.
     fn tag(&self) -> &str {
         self.tag.as_str()
+    }
+    /// This is a getter for the various container image repositories.
+    fn repository(&self) -> &str {
+        self.repository.as_str()
     }
 }
 
