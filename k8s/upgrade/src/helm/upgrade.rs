@@ -286,7 +286,7 @@ impl HelmUpgraderBuilder {
             }))
         } else {
             // Case: Helm chart release is not a known helm chart installation.
-            return NotAKnownHelmChart { chart_name: chart }.fail();
+            NotAKnownHelmChart { chart_name: chart }.fail()
         }
     }
 }
