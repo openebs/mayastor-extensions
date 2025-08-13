@@ -215,6 +215,11 @@ agents:
     # If a volume wasn't provisioned with a encryption storageclass, we try to place the replicas of such volume on best-effort basis onto encrypted pools, if this global is set.
     # This is effective subject to volume spec already modified via plugin to request encryption.
     encryptedPoolsSoftScheduling: false
+    # -- Default blobstore cluster size for diskpools, in bytes.
+    # This value is used as a default value of blobstore cluster size on diskpools. This is set to 4MiB internally by default, if nothing specified here.
+    # The value is also configurable via Diskpool CR, which takes precedence over this setting. This is an advanced configuration, please refer documentation to
+    # understand the usage and implications of this.
+    poolClusterSize: ""
   ha:
     enabled: true
     node:
