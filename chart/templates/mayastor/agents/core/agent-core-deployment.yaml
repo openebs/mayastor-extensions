@@ -74,6 +74,11 @@ spec:
             - "--no-volume-health"{{ end }}
             {{- if eq .Values.agents.core.encryptedPoolsSoftScheduling true }}
             - "--encrypted-pools-soft-scheduling"{{- end }}
+            {{- if eq .Values.agents.core.allowNonPersistentDevlink true}}
+            - "--allow-non-persistent-devlink"{{- end }}
+            {{- with .Values.agents.core.poolClusterSize }}
+            - "--pool-cluster-size={{ . }}"{{- end }}
+
           ports:
             - containerPort: 50051
           env:
