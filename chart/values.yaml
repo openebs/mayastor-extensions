@@ -209,6 +209,10 @@ agents:
     # If a volume wasn't provisioned with a encryption storageclass, we try to place the replicas of such volume on best-effort basis onto encrypted pools, if this global is set.
     # This is effective subject to volume spec already modified via plugin to request encryption.
     encryptedPoolsSoftScheduling: false
+    # -- Allow using non-persistent kernel devpaths for pool disks.
+    # Enabling this will let users to use the kernel devpaths e.g /dev/sda, for diskpools. However, this comes with associated risks if the devpaths
+    # get swapped among disks, resulting in total data loss especially if encryption is being used.
+    allowNonPersistentDevlink: false
   ha:
     enabled: true
     node:
