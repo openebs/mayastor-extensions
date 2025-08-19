@@ -14,6 +14,11 @@ let
   channel = import ./nix/lib/rust.nix { inherit pkgs; };
   rust_chan = channel.default_src;
   rust = rust_chan.${rust-profile};
+  usePreCommit = builtins.getEnv "IN_NIX_SHELL" == "impure" && builtins.getEnv "CI" != "1";
+  pre-commit = pkgs.runCommand "pre-commit" { } ''
+    mkdir -p $out/bin
+    cp ${pkgs.pre-commit}/bin/pre-commit $out/bin/pre-commit
+  '';
   k8sShellAttrs = import ./scripts/k8s/shell.nix { inherit pkgs; };
   helmShellAttrs = import ./chart/shell.nix { inherit pkgs; };
   bddShellAttrs = import ./tests/bdd/shell.nix { inherit pkgs; };
@@ -32,9 +37,8 @@ let
     paperclip
     openssl
     pkg-config
-    pre-commit
     utillinux
-  ];
+  ] ++ pkgs.lib.optional (usePreCommit) pre-commit;
 in
 pkgs.mkShell {
   name = "extensions-shell";
@@ -54,7 +58,7 @@ pkgs.mkShell {
 
   shellHook = ''
     ./scripts/nix/git-submodule-init.sh
-    if [ "$CI" != "1" ] && [ "$IN_NIX_SHELL" == "impure" ]; then
+    if [ "${toString usePreCommit}" = "1" ]; then
       echo
       pre-commit install
       pre-commit install --hook commit-msg
