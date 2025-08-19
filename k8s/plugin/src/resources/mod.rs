@@ -1,8 +1,9 @@
 use anyhow::anyhow;
 use clap::Parser;
 use k8s_openapi::api::core::v1 as core_v1;
+use kube::api::GroupVersionKind;
 use openapi::tower::client::Url;
-use plugin::resources::VolumeId;
+use plugin::resources::{snapshot, VolumeId};
 use plugin::{
     resources::{
         CordonResources, DrainResources, GetResources, LabelResources, ScaleResources,
@@ -50,6 +51,20 @@ impl CliArgs {
     /// Get the [`core_v1::PersistentVolume`] api client for the client namespace.
     pub async fn pv_api(&self) -> anyhow::Result<kube::Api<core_v1::PersistentVolume>> {
         Ok(kube::Api::all(self.client().await?))
+    }
+    fn snap_content(&self) -> kube::api::ApiResource {
+        kube::api::ApiResource::from_gvk(&GroupVersionKind {
+            group: "snapshot.storage.k8s.io".into(),
+            version: "v1".into(),
+            kind: "VolumeSnapshotContent".into(),
+        })
+    }
+    /// Get the cluster-scoped `VolumeSnapshotContent` [`kube::api::DynamicObject`] api client.
+    pub async fn snap_content_api(&self) -> anyhow::Result<kube::Api<kube::api::DynamicObject>> {
+        Ok(kube::Api::all_with(
+            self.client().await?,
+            &self.snap_content(),
+        ))
     }
 }
 
@@ -126,6 +141,8 @@ pub enum DeleteResources {
         /// The id of the volume to delete.
         id: VolumeId,
     },
+    /// Deletes the specified volume snapshot resource.
+    VolumeSnapshot(snapshot::DelVolumeSnapshotArgs),
 }
 
 #[async_trait::async_trait(?Send)]
@@ -190,6 +207,32 @@ impl ExecuteOperation for Operations {
                             ignore_not_found: args.ignore_not_found,
                             yes: args.yes,
                             resource: plugin::resources::DeleteResources::Volume { id: *id },
+                        }
+                        .execute(cli_args)
+                        .await?
+                    }
+                    DeleteResources::VolumeSnapshot(snap_args) => {
+                        // 1. ensure the K8s VolumeSnapshotContent CR is not present.
+                        let vsc_name = format!("snapcontent-{}", snap_args.snapshot);
+                        let client = cli_args.snap_content_api().await?;
+                        let vsc = client.get_opt(&vsc_name).await.map_err(|error| {
+                            anyhow::anyhow!(
+                                "Failed to fetch VSC {vsc_name} from K8s api-server: {error}"
+                            )
+                        })?;
+                        if vsc.is_some() {
+                            return Err(Error::Generic(anyhow::anyhow!(
+                                "The volume snapshot is still being referenced by VSC {vsc_name}"
+                            )));
+                        }
+
+                        // 2. go ahead and try to delete the mayastor volume snapshot
+                        plugin::resources::DeleteArgs {
+                            ignore_not_found: args.ignore_not_found,
+                            yes: args.yes,
+                            resource: plugin::resources::DeleteResources::VolumeSnapshot(
+                                snap_args.clone(),
+                            ),
                         }
                         .execute(cli_args)
                         .await?
