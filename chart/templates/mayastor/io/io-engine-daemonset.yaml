@@ -29,7 +29,7 @@ spec:
       # To resolve services in the namespace
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector: {{- .Values.io_engine.nodeSelector | toYaml | nindent 8 }}
-      {{- if $pcName := include "priority_class" (dict "template" . "localPriorityClass" .Values.io_engine.priorityClassName) }}
+      {{- if $pcName := include "priority_class_with_default" (dict "template" . "localPriorityClass" .Values.io_engine.priorityClassName) }}
       priorityClassName: {{ $pcName }}
       {{- end }}
       {{- if .Values.runtimeClassName }}
