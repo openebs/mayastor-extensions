@@ -40,7 +40,7 @@ let
     utillinux
   ] ++ pkgs.lib.optional (usePreCommit) pre-commit;
 in
-pkgs.mkShell {
+pkgs.mkShellNoCC {
   name = "extensions-shell";
   buildInputs = buildInputs ++ pkgs.lib.optional (!norust) rust
     ++ k8sShellAttrs.buildInputs ++ helmShellAttrs.buildInputs ++ bddShellAttrs.buildInputs
@@ -54,7 +54,7 @@ pkgs.mkShell {
   # copy the rust toolchain to a writable directory, see: https://github.com/rust-lang/cargo/issues/10096
   # the whole toolchain is copied to allow the src to be retrievable through "rustc --print sysroot"
   RUST_TOOLCHAIN = ".rust-toolchain/${rust.version}";
-  RUST_TOOLCHAIN_NIX = "${rust}";
+  RUST_TOOLCHAIN_NIX = pkgs.lib.optional (!norust) "${rust}";
 
   shellHook = ''
     ./scripts/nix/git-submodule-init.sh
@@ -72,5 +72,7 @@ pkgs.mkShell {
 
     rust_version="${rust.version}" rustup_channel="${lib.strings.concatMapStringsSep "-" (x: x) (lib.lists.drop 1 (lib.strings.splitString "-" rust.version))}" \
     dev_rustup="${toString (devrustup)}" devrustup_moth="${devrustup_moth}" . "$CTRL_SRC"/scripts/rust/env-setup.sh
+    unset CC
+    unset AR
   '';
 }

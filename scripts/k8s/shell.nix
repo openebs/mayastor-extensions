@@ -5,7 +5,7 @@
 let
   inPureNixShell = builtins.getEnv "IN_NIX_SHELL" == "pure";
 in
-pkgs.mkShell {
+pkgs.mkShellNoCC {
   name = "k8s-cluster-shell";
   buildInputs = with pkgs; [
     kubernetes-helm-wrapped
