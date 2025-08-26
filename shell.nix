@@ -14,6 +14,11 @@ let
   channel = import ./nix/lib/rust.nix { inherit pkgs; };
   rust_chan = channel.default_src;
   rust = rust_chan.${rust-profile};
+  usePreCommit = builtins.getEnv "IN_NIX_SHELL" == "impure" && builtins.getEnv "CI" != "1";
+  pre-commit = pkgs.runCommand "pre-commit" { } ''
+    mkdir -p $out/bin
+    cp ${pkgs.pre-commit}/bin/pre-commit $out/bin/pre-commit
+  '';
   k8sShellAttrs = import ./scripts/k8s/shell.nix { inherit pkgs; };
   helmShellAttrs = import ./chart/shell.nix { inherit pkgs; };
   bddShellAttrs = import ./tests/bdd/shell.nix { inherit pkgs; };
@@ -32,11 +37,10 @@ let
     paperclip
     openssl
     pkg-config
-    pre-commit
     utillinux
-  ];
+  ] ++ pkgs.lib.optional (usePreCommit) pre-commit;
 in
-pkgs.mkShell {
+pkgs.mkShellNoCC {
   name = "extensions-shell";
   buildInputs = buildInputs ++ pkgs.lib.optional (!norust) rust
     ++ k8sShellAttrs.buildInputs ++ helmShellAttrs.buildInputs ++ bddShellAttrs.buildInputs
@@ -50,11 +54,11 @@ pkgs.mkShell {
   # copy the rust toolchain to a writable directory, see: https://github.com/rust-lang/cargo/issues/10096
   # the whole toolchain is copied to allow the src to be retrievable through "rustc --print sysroot"
   RUST_TOOLCHAIN = ".rust-toolchain/${rust.version}";
-  RUST_TOOLCHAIN_NIX = "${rust}";
+  RUST_TOOLCHAIN_NIX = pkgs.lib.optional (!norust) "${rust}";
 
   shellHook = ''
     ./scripts/nix/git-submodule-init.sh
-    if [ "$CI" != "1" ] && [ "$IN_NIX_SHELL" == "impure" ]; then
+    if [ "${toString usePreCommit}" = "1" ]; then
       echo
       pre-commit install
       pre-commit install --hook commit-msg
@@ -68,5 +72,7 @@ pkgs.mkShell {
 
     rust_version="${rust.version}" rustup_channel="${lib.strings.concatMapStringsSep "-" (x: x) (lib.lists.drop 1 (lib.strings.splitString "-" rust.version))}" \
     dev_rustup="${toString (devrustup)}" devrustup_moth="${devrustup_moth}" . "$CTRL_SRC"/scripts/rust/env-setup.sh
+    unset CC
+    unset AR
   '';
 }
