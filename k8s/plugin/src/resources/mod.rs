@@ -35,6 +35,10 @@ pub struct CliArgs {
     #[clap(skip)]
     pub namespace: String,
 
+    /// Kubernetes context in the kubeconfig file.
+    #[clap(skip)]
+    pub context: Option<String>,
+
     #[clap(flatten)]
     pub cli_args: plugin::CliArgs,
 }
@@ -42,7 +46,8 @@ pub struct CliArgs {
 impl CliArgs {
     /// The kube client, with the correct install namespace.
     pub async fn client(&self) -> anyhow::Result<kube::Client> {
-        let mut config = kube_proxy::config_from_kubeconfig(self.kubeconfig.clone()).await?;
+        let opts = kube_proxy::kubeconfig_options_from_context(self.context.clone());
+        let mut config = kube_proxy::config_from_kubeconfig(self.kubeconfig.clone(), opts).await?;
         // If taking namespace from context, we already know self.namespace has been set
         // from the context.
         config.default_namespace = self.namespace.clone();
@@ -294,6 +299,7 @@ pub async fn init_rest(cli_args: &CliArgs) -> Result<(), Error> {
         None => {
             let config = kube_proxy::ConfigBuilder::default_api_rest()
                 .with_kube_config(cli_args.kubeconfig.clone())
+                .with_context(cli_args.context.clone())
                 .with_timeout(*cli_args.timeout)
                 .with_target_mod(|t| t.with_namespace(&cli_args.namespace))
                 .build()
