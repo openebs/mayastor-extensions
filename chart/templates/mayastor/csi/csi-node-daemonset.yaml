@@ -32,7 +32,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
-      {{- if $pcName := include "priority_class" (dict "template" . "localPriorityClass" .Values.csi.node.priorityClassName) }}
+      {{- if $pcName := include "priority_class_with_default" (dict "template" . "localPriorityClass" .Values.csi.node.priorityClassName) }}
       priorityClassName: {{ $pcName }}
       {{- end }}
       nodeSelector:
