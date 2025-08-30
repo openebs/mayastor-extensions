@@ -97,10 +97,10 @@ impl EntityName for StatefulSet {
 impl K8sResourceDumperClient {
     /// get a new k8s resource dumper client
     pub(crate) async fn new(
-        kube_config_path: Option<std::path::PathBuf>,
+        kubeconfig_args: crate::KubeConfigArgs,
         namespace: String,
     ) -> Result<Self, K8sResourceDumperError> {
-        let k8s_client = ClientSet::new(kube_config_path, namespace).await?;
+        let k8s_client = ClientSet::new(kubeconfig_args, namespace).await?;
         Ok(Self { k8s_client })
     }
 

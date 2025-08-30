@@ -43,7 +43,7 @@ pub struct SupportArgs {
 
     /// Path to kubeconfig file.
     #[clap(skip)]
-    kubeconfig: Option<PathBuf>,
+    kubeconfig: KubeConfigArgs,
 
     /// The tenant id to be used to query loki logs.
     #[clap(global = true, long, default_value = "openebs")]
@@ -55,13 +55,20 @@ pub struct SupportArgs {
 }
 
 impl SupportArgs {
-    /// Sets the path to the kubeconfig file used to interact with the Kube-Apiserver.
+    /// Sets the kubeconfig file and context name, used to interact with the Kube-Apiserver.
     ///
     /// # Arguments
     ///
     /// * `path` - An optional `PathBuf` representing the kubeconfig path.
-    pub fn set_kube_config_path(&mut self, path: Option<std::path::PathBuf>) {
-        self.kubeconfig = path;
+    /// * `context` - An optional context in the kubeconfig file.
+    pub fn set_kube_config(&mut self, path: Option<std::path::PathBuf>, context: Option<String>) {
+        self.kubeconfig = crate::KubeConfigArgs {
+            path,
+            opts: kube::config::KubeConfigOptions {
+                context,
+                ..Default::default()
+            },
+        };
     }
 }
 
@@ -103,7 +110,7 @@ pub(crate) const ARCHIVE_PREFIX: &str = "mayastor";
 
 async fn execute_resource_dump(
     cli_args: SupportArgs,
-    kube_config_path: Option<PathBuf>,
+    kubeconfig: crate::KubeConfigArgs,
     resource: Resource,
 ) -> Result<(), Error> {
     let mut config = DumpConfig::new(
@@ -112,7 +119,7 @@ async fn execute_resource_dump(
         cli_args.loki_endpoint,
         cli_args.etcd_endpoint,
         cli_args.since,
-        kube_config_path,
+        kubeconfig,
         cli_args.timeout,
         OutputFormat::Tar,
         cli_args.tenant_id,
@@ -178,4 +185,21 @@ async fn execute_resource_dump(
     }
     println!("Completed collection of dump !!");
     Ok(())
+}
+
+/// Kubeconfig arguments.
+#[derive(Default, Clone)]
+pub struct KubeConfigArgs {
+    /// The path to the kubeconfig file, otherwise it's inferred.
+    path: Option<PathBuf>,
+    /// Options used when loading the kubeconfig file.
+    opts: kube::config::KubeConfigOptions,
+}
+
+impl std::fmt::Debug for KubeConfigArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KubeConfigOpts")
+            .field("kubeconfig", &self.path)
+            .finish()
+    }
 }

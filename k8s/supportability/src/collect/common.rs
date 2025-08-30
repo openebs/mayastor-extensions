@@ -15,8 +15,8 @@ pub struct DumpConfig {
     etcd_uri: Option<String>,
     /// Period states to collect logs from specified duration
     since: humantime::Duration,
-    /// Path to kubeconfig file, which requires to interact with Kube-Apiserver
-    kube_config_path: Option<std::path::PathBuf>,
+    /// The kubeconfig options
+    kubeconfig: crate::KubeConfigArgs,
     /// Specifies the timeout value to interact with other systems
     timeout: humantime::Duration,
     /// Specfies the output format, i.e tar, stdout.
@@ -37,7 +37,7 @@ impl DumpConfig {
     /// * `loki_uri` - Optional address of the Loki service endpoint.
     /// * `etcd_uri` - Optional address of the etcd service endpoint.
     /// * `since` - Duration from which to collect logs.
-    /// * `kube_config_path` - Optional path to the kubeconfig file.
+    /// * `kubeconfig` - kubeconfig file and options.
     /// * `timeout` - Timeout duration for interacting with external systems.
     /// * `output_format` - Output format (e.g., tar, stdout).
     /// * `tenant_id` - Tenant ID used while querying.
@@ -49,7 +49,7 @@ impl DumpConfig {
         loki_uri: Option<String>,
         etcd_uri: Option<String>,
         since: humantime::Duration,
-        kube_config_path: Option<std::path::PathBuf>,
+        kubeconfig: crate::KubeConfigArgs,
         timeout: humantime::Duration,
         output_format: OutputFormat,
         tenant_id: String,
@@ -61,7 +61,7 @@ impl DumpConfig {
             loki_uri,
             etcd_uri,
             since,
-            kube_config_path,
+            kubeconfig,
             timeout,
             output_format,
             tenant_id,
@@ -94,9 +94,19 @@ impl DumpConfig {
         &self.since
     }
 
+    /// Returns a reference to the [`crate::KubeConfigArgs`].
+    pub fn kubeconfig(&self) -> &crate::KubeConfigArgs {
+        &self.kubeconfig
+    }
+
     /// Returns the optional path to the kubeconfig file used to interact with the Kube-Apiserver.
     pub fn kube_config_path(&self) -> Option<&std::path::PathBuf> {
-        self.kube_config_path.as_ref()
+        self.kubeconfig.path.as_ref()
+    }
+
+    /// Returns the optional context to the kubeconfig file used to interact with the Kube-Apiserver.
+    pub fn kube_config_opts(&self) -> &kube::config::KubeConfigOptions {
+        &self.kubeconfig.opts
     }
 
     /// Returns the timeout duration used to interact with external systems.

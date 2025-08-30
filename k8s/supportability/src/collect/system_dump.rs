@@ -71,7 +71,7 @@ impl SystemDumper {
         };
 
         let logger = match LogCollection::new_logger(
-            config.kube_config_path().cloned(),
+            config.kubeconfig().clone(),
             config.namespace().to_string(),
             config.loki_uri().cloned(),
             *config.since(),
@@ -90,7 +90,7 @@ impl SystemDumper {
         };
 
         let k8s_resource_dumper = match K8sResourceDumperClient::new(
-            config.kube_config_path().cloned(),
+            config.kubeconfig().clone(),
             config.namespace().to_string(),
         )
         .await
@@ -105,7 +105,7 @@ impl SystemDumper {
         };
 
         let etcd_dumper = match EtcdStore::new(
-            config.kube_config_path().cloned(),
+            config.kubeconfig().clone(),
             config.etcd_uri().cloned(),
             config.namespace().to_string(),
         )
@@ -120,6 +120,7 @@ impl SystemDumper {
 
         let rest_client = match kube_proxy::ConfigBuilder::default_api_rest()
             .with_kube_config(config.kube_config_path().cloned())
+            .with_context(config.kube_config_opts().context.clone())
             .with_timeout(Some((*config.timeout()).into()))
             .with_target_mod(|t| t.with_namespace(config.namespace()))
             .build()

@@ -16,11 +16,11 @@ impl EtcdStore {
     /// The provided namespace will be used to search for etcd service, if the
     /// etcd point is not provided
     pub(crate) async fn new(
-        kube_config_path: Option<std::path::PathBuf>,
+        kubeconfig: crate::KubeConfigArgs,
         etcd_endpoint: Option<String>,
         namespace: String,
     ) -> Result<Self, EtcdError> {
-        let client_set = ClientSet::new(kube_config_path.clone(), namespace.clone()).await?;
+        let client_set = ClientSet::new(kubeconfig.clone(), namespace.clone()).await?;
         let platform_info =
             platform::k8s::K8s::from_custom(client_set.kube_client(), client_set.namespace())
                 .await
@@ -33,7 +33,8 @@ impl EtcdStore {
             endpoint
         } else {
             let uri = kube_proxy::ConfigBuilder::default_etcd()
-                .with_kube_config(kube_config_path)
+                .with_kube_config(kubeconfig.path)
+                .with_context(kubeconfig.opts.context)
                 .with_target_mod(|t| t.with_namespace(namespace))
                 .build()
                 .await

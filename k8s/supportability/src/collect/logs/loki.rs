@@ -140,7 +140,7 @@ impl LokiClient {
     /// Instantiate new instance of Http Loki client
     pub(crate) async fn new(
         uri: Option<String>,
-        kube_config_path: Option<std::path::PathBuf>,
+        kubeconfig_args: crate::KubeConfigArgs,
         namespace: String,
         since: humantime::Duration,
         timeout: humantime::Duration,
@@ -149,7 +149,8 @@ impl LokiClient {
         let (uri, client) = match uri {
             None => {
                 let (uri, svc) = match kube_proxy::ConfigBuilder::default_loki()
-                    .with_kube_config(kube_config_path)
+                    .with_kube_config(kubeconfig_args.path.clone())
+                    .with_context(kubeconfig_args.opts.context.clone())
                     .with_target_mod(|t| t.with_namespace(namespace))
                     .build()
                     .await

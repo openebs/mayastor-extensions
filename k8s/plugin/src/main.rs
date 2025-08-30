@@ -40,17 +40,15 @@ impl CliArgs {
         let path = args.kube_config_path.clone();
         args.args.kubeconfig = path.clone();
         if let Operations::Dump(ref mut dump_args) = args.operations {
-            dump_args.args.set_kube_config_path(path);
+            dump_args
+                .args
+                .set_kube_config(path.clone(), args.context.clone());
         }
         args.args.context = args.context.clone();
         args.args.namespace = if let Some(namespace) = &args.namespace {
             namespace.to_string()
         } else if args.namespace_from_context {
-            let client = kube_proxy::client_from_kubeconfig(
-                args.kube_config_path.clone(),
-                args.context.clone(),
-            )
-            .await?;
+            let client = kube_proxy::client_from_kubeconfig(path, args.context.clone()).await?;
             client.default_namespace().to_string()
         } else {
             constants::DEFAULT_PLUGIN_NAMESPACE.to_string()

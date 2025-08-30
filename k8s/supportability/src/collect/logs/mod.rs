@@ -84,18 +84,18 @@ impl LogCollection {
     /// param 'timeout' --> Specifies the timeout while interacting with Loki Service
     /// param 'tenant_id' --> Specifies the tenant_id while interacting with Loki Service
     pub(crate) async fn new_logger(
-        kube_config_path: Option<std::path::PathBuf>,
+        kubeconfig_args: crate::KubeConfigArgs,
         namespace: String,
         loki_uri: Option<String>,
         since: humantime::Duration,
         timeout: humantime::Duration,
         tenant_id: String,
     ) -> Result<Box<dyn Logger>, LogError> {
-        let client_set = ClientSet::new(kube_config_path.clone(), namespace.clone()).await?;
+        let client_set = ClientSet::new(kubeconfig_args.clone(), namespace.clone()).await?;
         Ok(Box::new(Self {
             loki_client: loki::LokiClient::new(
                 loki_uri,
-                kube_config_path,
+                kubeconfig_args,
                 namespace,
                 since,
                 timeout,

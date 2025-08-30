@@ -22,13 +22,15 @@ use utils::version_info;
 pub async fn preflight_check(
     namespace: &str,
     kube_config_path: Option<PathBuf>,
+    context: Option<String>,
     timeout: humantime::Duration,
     resources: &UpgradeArgs,
 ) -> error::Result<()> {
     console_logger::info(user_prompt::UPGRADE_WARNING, "");
     // Initialise the REST client.
     let config = kube_proxy::ConfigBuilder::default_api_rest()
-        .with_kube_config(kube_config_path.clone())
+        .with_kube_config(kube_config_path)
+        .with_context(context)
         .with_timeout(*timeout)
         .with_target_mod(|t| t.with_namespace(namespace))
         .build()
