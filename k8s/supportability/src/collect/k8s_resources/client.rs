@@ -82,16 +82,16 @@ pub struct ClientSet {
 impl ClientSet {
     /// Create a new ClientSet, from the config file if provided, otherwise with default.
     pub(crate) async fn new(
-        kube_config_path: Option<std::path::PathBuf>,
+        kubeconfig: crate::KubeConfigArgs,
         namespace: String,
     ) -> Result<Self, K8sResourceError> {
-        let config = match kube_config_path {
+        let config = match kubeconfig.path {
             Some(config_path) => {
                 let kube_config = kube::config::Kubeconfig::read_from(&config_path)
                     .map_err(|e| -> K8sResourceError { e.into() })?;
-                kube::Config::from_custom_kubeconfig(kube_config, &Default::default()).await?
+                kube::Config::from_custom_kubeconfig(kube_config, &kubeconfig.opts).await?
             }
-            None => kube::Config::infer().await?,
+            None => kube::Config::from_kubeconfig(&kubeconfig.opts).await?,
         };
         let client = Client::try_from(config)?;
         Ok(Self { client, namespace })

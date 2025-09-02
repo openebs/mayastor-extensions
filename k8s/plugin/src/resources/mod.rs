@@ -182,6 +182,7 @@ impl ExecuteOperation for Operations {
                 preflight_validations::preflight_check(
                     &cli_args.namespace,
                     cli_args.kubeconfig.clone(),
+                    cli_args.context.clone(),
                     cli_args.timeout,
                     resources,
                 )

@@ -71,7 +71,7 @@ impl ResourceDumper {
         };
 
         let etcd_dumper = match EtcdStore::new(
-            config.kube_config_path().cloned(),
+            config.kubeconfig().clone(),
             config.etcd_uri().cloned(),
             config.namespace().to_string(),
         )
