@@ -4,7 +4,7 @@ on:
 
 jobs:
   k8s-ci:
-    runs-on: ubuntu-latest-8-cores
+    runs-on: oracle-vm-8cpu-32gb-x86-64
     steps:
       - name: Bind mount /dev/sda1 to /nix
         run: |
@@ -63,22 +63,3 @@ jobs:
           display-options: a
           fail-on-empty: true
           title: Test results
-
-  k8s-ci-vm:
-    runs-on: ubuntu-latest-8-cores
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v31.3.0
-        with:
-          enable_kvm: true
-      - name: Pre-populate nix-shell
-        run: |
-          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
-          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
-          nix-shell ./scripts/helm/shell.nix --run "echo"
-      - name: Test on VM
-        run: |
-          nix-shell ./scripts/helm/shell.nix --run "cd chart; helm dependency update"
-          # todo: this is broken currently, as it doesn't take into account changes
-          # to the local images!
-          # nix-build ./tests/helm/test.nix --option sandbox false
