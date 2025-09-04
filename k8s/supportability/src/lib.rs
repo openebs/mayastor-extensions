@@ -191,9 +191,9 @@ async fn execute_resource_dump(
 #[derive(Default, Clone)]
 pub struct KubeConfigArgs {
     /// The path to the kubeconfig file, otherwise it's inferred.
-    path: Option<PathBuf>,
+    pub path: Option<PathBuf>,
     /// Options used when loading the kubeconfig file.
-    opts: kube::config::KubeConfigOptions,
+    pub opts: kube::config::KubeConfigOptions,
 }
 
 impl std::fmt::Debug for KubeConfigArgs {
