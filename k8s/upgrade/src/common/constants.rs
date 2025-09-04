@@ -63,3 +63,6 @@ pub(crate) const TWO_DOT_SEVEN_DOT_THREE: Version = Version::new(2, 7, 3);
 
 /// Version value for 2.8.0.
 pub(crate) const TWO_DOT_EIGHT: Version = Version::new(2, 8, 0);
+
+/// Version value for 2.8.1.
+pub(crate) const TWO_DOT_EIGHT_DOT_ONE: Version = Version::new(2, 8, 1);
