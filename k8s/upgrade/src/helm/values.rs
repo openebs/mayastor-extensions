@@ -2,7 +2,8 @@ use crate::{
     common::{
         constants::{
             KUBE_API_PAGE_SIZE, TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE,
-            TWO_DOT_SEVEN_DOT_THREE, TWO_DOT_SEVEN_DOT_TWO, TWO_DOT_SIX, TWO_DOT_THREE,
+            TWO_DOT_SEVEN_DOT_EIGHT, TWO_DOT_SEVEN_DOT_THREE, TWO_DOT_SEVEN_DOT_TWO, TWO_DOT_SIX,
+            TWO_DOT_THREE,
         },
         error::{
             DeserializePromtailExtraConfig, ListCrds, Result, SemverParse,
@@ -522,6 +523,24 @@ where
         )?;
     }
 
+    // Special-case values for 2.7.8
+    let two_dot_seven_dot_eight = Version::parse(TWO_DOT_SEVEN_DOT_EIGHT).context(SemverParse {
+        version_string: TWO_DOT_SEVEN_DOT_EIGHT.to_string(),
+    })?;
+    if source_version.ge(&two_dot_o_rc_zero) && source_version.lt(&two_dot_seven_dot_eight) {
+        if let Some(debug_logs) = source_values.etcd_deprecated_debug_logs() {
+            yq.delete_object(
+                YamlKey::try_from(".etcd.debug")?,
+                upgrade_values_file.path(),
+            )?;
+            yq.set_literal_value(
+                YamlKey::try_from(".etcd.image.debug")?,
+                debug_logs,
+                upgrade_values_file.path(),
+            )?;
+        }
+    }
+
     // Default options.
     // Image tag is set because the high_priority file is the user's source options file.
     // The target's image tag needs to be set for PRODUCT upgrade.
@@ -572,7 +591,11 @@ where
         target_values.localpv_helper_image_tag(),
         upgrade_values_file.path(),
     )?;
-
+    yq.set_literal_value(
+        YamlKey::try_from(".etcd.image.repository")?,
+        target_values.etcd_image_repo(),
+        upgrade_values_file.path(),
+    )?;
     // Disable CRD installation in case they already exist using helm values.
     safe_crd_install(upgrade_values_file.path(), &yq).await?;
 
