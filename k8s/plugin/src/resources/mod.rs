@@ -171,11 +171,19 @@ impl ExecuteOperation for Operations {
             Operations::Cordon(resource) => resource.execute(cli_args).await?,
             Operations::Uncordon(resource) => resource.execute(cli_args).await?,
             Operations::Dump(resources) => {
-                // todo: build and pass arguments
-                resources.execute(&()).await.inspect_err(|_| {
-                    // todo: check why is this here, can it be removed?
-                    println!("Partially collected dump information: ");
-                })?
+                resources
+                    .execute(&supportability::K8sCtxArgs {
+                        namespace: cli_args.namespace.clone(),
+                        kubeconfig: supportability::KubeConfigArgs {
+                            path: cli_args.kubeconfig.clone(),
+                            opts: Default::default(),
+                        },
+                    })
+                    .await
+                    .inspect_err(|_| {
+                        // todo: check why is this here, can it be removed?
+                        println!("Partially collected dump information: ");
+                    })?
             }
             Operations::Upgrade(resources) => {
                 // todo: use generic execute trait

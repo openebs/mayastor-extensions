@@ -37,13 +37,9 @@ pub struct SupportArgs {
     #[clap(global = true, long, short = 'd', default_value = "./")]
     output_directory_path: String,
 
-    /// Kubernetes namespace of mayastor service
-    #[clap(global = true, long, short = 'n', default_value = "mayastor")]
-    namespace: String,
-
-    /// Path to kubeconfig file.
+    /// K8s connection context arguments.
     #[clap(skip)]
-    kubeconfig: KubeConfigArgs,
+    ctx: K8sCtxArgs,
 
     /// The tenant id to be used to query loki logs.
     #[clap(global = true, long, default_value = "openebs")]
@@ -62,13 +58,17 @@ impl SupportArgs {
     /// * `path` - An optional `PathBuf` representing the kubeconfig path.
     /// * `context` - An optional context in the kubeconfig file.
     pub fn set_kube_config(&mut self, path: Option<std::path::PathBuf>, context: Option<String>) {
-        self.kubeconfig = crate::KubeConfigArgs {
+        self.ctx.kubeconfig = crate::KubeConfigArgs {
             path,
             opts: kube::config::KubeConfigOptions {
                 context,
                 ..Default::default()
             },
         };
+    }
+    /// Sets the namespace of the target install.
+    pub fn set_namespace(&mut self, namespace: String) {
+        self.ctx.namespace = namespace;
     }
 }
 
@@ -86,10 +86,15 @@ pub struct DumpArgs {
 
 #[async_trait::async_trait(?Send)]
 impl ExecuteOperation for DumpArgs {
-    type Args = ();
+    type Args = K8sCtxArgs;
     type Error = anyhow::Error;
-    async fn execute(&self, _cli_args: &Self::Args) -> Result<(), Self::Error> {
-        self.resource.execute(&self.args).await
+    async fn execute(&self, cli_args: &Self::Args) -> Result<(), Self::Error> {
+        let args = SupportArgs {
+            ctx: cli_args.clone(),
+            ..self.args.clone()
+        };
+
+        self.resource.execute(&args).await
     }
 }
 
@@ -99,7 +104,7 @@ impl ExecuteOperation for Resource {
     type Error = anyhow::Error;
 
     async fn execute(&self, cli_args: &Self::Args) -> Result<(), Self::Error> {
-        execute_resource_dump(cli_args.clone(), cli_args.kubeconfig.clone(), self.clone())
+        execute_resource_dump(cli_args.clone(), self.clone())
             .await
             .map_err(|e| anyhow::anyhow!("{:?}", e))
     }
@@ -108,18 +113,14 @@ impl ExecuteOperation for Resource {
 // Holds prefix of archive file name
 pub(crate) const ARCHIVE_PREFIX: &str = "mayastor";
 
-async fn execute_resource_dump(
-    cli_args: SupportArgs,
-    kubeconfig: crate::KubeConfigArgs,
-    resource: Resource,
-) -> Result<(), Error> {
+async fn execute_resource_dump(cli_args: SupportArgs, resource: Resource) -> Result<(), Error> {
     let mut config = DumpConfig::new(
         cli_args.output_directory_path,
-        cli_args.namespace,
+        cli_args.ctx.namespace,
         cli_args.loki_endpoint,
         cli_args.etcd_endpoint,
         cli_args.since,
-        kubeconfig,
+        cli_args.ctx.kubeconfig,
         cli_args.timeout,
         OutputFormat::Tar,
         cli_args.tenant_id,
@@ -200,6 +201,20 @@ impl std::fmt::Debug for KubeConfigArgs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("KubeConfigOpts")
             .field("kubeconfig", &self.path)
+            .field("cluster", &self.opts.cluster)
+            .field("context", &self.opts.context)
+            .field("user", &self.opts.user)
             .finish()
     }
+}
+
+/// K8s contextual arguments.
+#[derive(Default, Debug, Clone)]
+pub struct K8sCtxArgs {
+    /// The namespace where we're installed.
+    pub namespace: String,
+    /// Options used when loading the kubeconfig file.
+    /// This is necessary because the existing code uses these directly, even though the
+    /// initial connection and context namespace is retrieved at the start.
+    pub kubeconfig: KubeConfigArgs,
 }
