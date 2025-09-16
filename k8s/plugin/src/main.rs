@@ -39,11 +39,6 @@ impl CliArgs {
         let mut args = CliArgs::parse();
         let path = args.kube_config_path.clone();
         args.args.kubeconfig = path.clone();
-        if let Operations::Dump(ref mut dump_args) = args.operations {
-            dump_args
-                .args
-                .set_kube_config(path.clone(), args.context.clone());
-        }
         args.args.context = args.context.clone();
         args.args.namespace = if let Some(namespace) = &args.namespace {
             namespace.to_string()
