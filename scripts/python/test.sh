@@ -50,8 +50,10 @@ done
 # virtualenv setup.
 source "$TEST_ROOT_DIR"/tests/bdd/setup.sh
 
+TEST_ROOT="${BDD_TEST_DIR:-$TEST_ROOT_DIR/tests/bdd}"
+
 if [ -z "$ARGS" ]; then
-  pytest "${BDD_TEST_DIR:-$TEST_ROOT_DIR/tests/bdd}" --junit-xml="$REPORT" --durations=20
+  pytest "$TEST_ROOT" --junit-xml="$REPORT" --durations=20
 else
-  pytest "$ARGS" "--junit-xml=$REPORT"
+  pytest --rootdir="$TEST_ROOT" $ARGS --junit-xml="$REPORT"
 fi
