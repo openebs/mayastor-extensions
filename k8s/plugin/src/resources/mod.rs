@@ -6,8 +6,8 @@ use openapi::tower::client::Url;
 use plugin::resources::{snapshot, VolumeId};
 use plugin::{
     resources::{
-        CordonResources, DrainResources, GetResources, LabelResources, ScaleResources,
-        SetPropertyResources, UnCordonResources,
+        CordonResources, DrainResources, ExpandResources, GetResources, LabelResources,
+        ScaleResources, SetPropertyResources, UnCordonResources,
     },
     rest_wrapper::RestClient,
     ExecuteOperation,
@@ -101,6 +101,9 @@ pub enum Operations {
     /// 'Get' resources.
     #[clap(subcommand)]
     Get(GetResourcesK8s),
+    /// 'Expand' resources.
+    #[clap(subcommand)]
+    Expand(ExpandResources),
     /// 'Scale' resources.
     #[clap(subcommand)]
     Scale(ScaleResources),
@@ -165,7 +168,7 @@ impl ExecuteOperation for Operations {
             },
             Operations::Drain(resource) => resource.execute(cli_args).await?,
             Operations::Label(resource) => resource.execute(cli_args).await?,
-
+            Operations::Expand(resource) => resource.execute(cli_args).await?,
             Operations::Scale(resource) => resource.execute(cli_args).await?,
             Operations::Set(resource) => resource.execute(cli_args).await?,
             Operations::Cordon(resource) => resource.execute(cli_args).await?,
