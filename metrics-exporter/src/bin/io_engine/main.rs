@@ -49,6 +49,10 @@ pub(crate) struct Cli {
     #[clap(long, short, default_value = "[::]:9502")]
     metrics_endpoint: SocketAddr,
 
+    /// Port for the io-engine gRPC server running on the same pod.
+    #[clap(long, default_value_t = 10124)]
+    grpc_port: u16,
+
     /// Formatting style to be used while logging.
     #[clap(default_value = FmtStyle::Pretty.as_ref(), short, long)]
     fmt_style: FmtStyle,
@@ -85,7 +89,7 @@ async fn main() -> Result<(), ExporterError> {
         .init("metrics-exporter-io_engine");
 
     initialize_cache().await;
-    let client = init_client().await?;
+    let client = init_client(args.grpc_port).await?;
     // Initialize io engine gRPC client.
     GRPC_CLIENT
         .set(client)

@@ -105,14 +105,14 @@ impl GrpcClient {
 }
 
 /// Initialize mayastor grpc client.
-pub(crate) async fn init_client() -> Result<GrpcClient, ExporterError> {
+pub(crate) async fn init_client(grpc_port: u16) -> Result<GrpcClient, ExporterError> {
     let timeout = Timeouts::new(Duration::from_secs(1), Duration::from_secs(5));
     let pod_ip = get_pod_ip()?;
     let _ = get_node_name()?;
 
     let endpoint = Uri::builder()
         .scheme("https")
-        .authority(SocketAddr::new(pod_ip, 10124).to_string())
+        .authority(SocketAddr::new(pod_ip, grpc_port).to_string())
         .path_and_query("")
         .build()
         .map_err(|error| ExporterError::InvalidURI(error.to_string()))?;
