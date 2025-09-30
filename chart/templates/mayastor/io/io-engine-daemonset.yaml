@@ -60,6 +60,7 @@ spec:
             name: metrics
         args:
           - "--metrics-endpoint=[::]:{{ default 9502 .Values.base.metrics.port }}"
+          - "--grpc-port={{ default 10124 .Values.io_engine.port }}"
           - "--fmt-style={{ include "logFormat" . }}"
           - "--ansi-colors={{ .Values.base.logging.color }}"
       {{- end }}
@@ -142,7 +143,7 @@ spec:
             memory: {{ .Values.io_engine.resources.requests.memory | quote }}
             hugepages-2Mi: {{ .Values.io_engine.resources.requests.hugepages2Mi | quote }}
         ports:
-        - containerPort: 10124
+        - containerPort: {{ default 10124 .Values.io_engine.port }}
           protocol: TCP
           name: io-engine
       volumes:
