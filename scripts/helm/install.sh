@@ -29,6 +29,8 @@ SCRIPT_DIR="$(dirname "$0")"
 CHART_DIR="$SCRIPT_DIR"/../../chart
 CHART_SOURCE=$CHART_DIR
 DEP_UPDATE=
+INS_LOKI="true"
+HELM_UPGRADE="false"
 RELEASE_NAME="mayastor"
 K8S_NAMESPACE="mayastor"
 FAIL_IF_INSTALLED=
@@ -49,12 +51,14 @@ Options:
   --wait                         Wait for helm to complete install.
   --dry-run                      Don't run any commands, output them only.
   --helm-dry-run                 Install helm with --dry-run.
+  --upgrade                      Upgrades an existing installation.
   --dep-update                   Run helm dependency update.
   --fail-if-installed            Fail with a status code 1 if the helm release '$RELEASE_NAME' already exists in the $K8S_NAMESPACE namespace.
   --hosted-chart                 Install a hosted chart instead of the local chart.
   --version   <version>          Set the version/version-range for the chart. Works only when used with the '--hosted' option.
   --registry  <registry-url>     Set the registry URL for the hosted chart. Works only when used with the '--hosted' option. (Default: $DEFAULT_REGISTRY)
   --pull-policy <policy>         Set the image pull policy.
+  --no-loki                      Don't deploy Loki.
   --helm      <stringArray>      Pass Helm Args directly to the install/upgrade commands.
 
 Examples:
@@ -70,6 +74,28 @@ die() {
   local _return="${2:-1}"
   echo_stderr "$1"
   exit "${_return}"
+}
+
+loki_args() {
+  local replicas=1
+  local minio="true"
+  local mode="standalone"
+  if [ "$replicas" != 1 ]; then
+    mode="distributed"
+  fi
+
+  if [ "$replicas" = "0" ] || [ "$INS_LOKI" = "false" ]; then
+    echo -n "loki.enabled=false,alloy.enabled=false"
+    return 0
+  fi
+
+  echo -n "loki.loki.commonConfig.replication_factor=$replicas,loki.singleBinary.replicas=$replicas,loki.minio.mode=$mode,"
+
+  if [ "$minio" = "true" ]; then
+    echo -n "loki.minio.enabled=true,loki.minio.replicas=$replicas"
+  else
+    echo -n "loki.loki.storage.type=filesystem,loki.singleBinary.persistence.enabled=true,loki.minio.enabled=false"
+  fi
 }
 
 while [ "$#" -gt 0 ]; do
@@ -93,6 +119,9 @@ while [ "$#" -gt 0 ]; do
       DRY_RUN="yes"
       HELM="echo $HELM"
       KUBECTL="echo $KUBECTL"
+      shift;;
+    --upgrade)
+      HELM_UPGRADE="true"
       shift;;
     --dep-update)
       DEP_UPDATE="y"
@@ -125,6 +154,9 @@ while [ "$#" -gt 0 ]; do
       shift
       test $# -lt 1 && die "Missing pull policy"
       PULL_POLICY="$1"
+      shift;;
+    --no-loki)
+      INS_LOKI="false"
       shift;;
     --helm)
       shift
@@ -163,20 +195,28 @@ if [ -n "$PULL_POLICY" ]; then
 fi
 
 if [ -z "$DRY_RUN" ] && [ "$($HELM ls -n "$K8S_NAMESPACE" -o yaml | yq "contains([{\"name\": \"$RELEASE_NAME\"}])")" = "true" ]; then
+  INS_EXISTS="true"
   already_exists_log="Helm release $RELEASE_NAME already exists in namespace $K8S_NAMESPACE"
   if [ -n "$FAIL_IF_INSTALLED" ]; then
     die "ERROR: $already_exists_log" 1
   fi
   echo "$already_exists_log"
-else
-  echo "Installing Mayastor Chart"
+fi
+if [ "${INS_EXISTS:-"false"}" = "false" ] || [ "$HELM_UPGRADE" = "true" ]; then
+  if [ "$HELM_UPGRADE" = "true" ]; then
+    echo "Upgrading Mayastor Chart"
+    action="upgrade"
+  else
+    echo "Installing Mayastor Chart"
+    action="install"
+  fi
+  LOKI_ARGS="--set="$(loki_args)""
   set -x
-  $HELM install "$RELEASE_NAME" "$CHART_SOURCE" -n "$K8S_NAMESPACE" --create-namespace \
+  $HELM $action "$RELEASE_NAME" "$CHART_SOURCE" -n "$K8S_NAMESPACE" --create-namespace \
        --set="etcd.livenessProbe.initialDelaySeconds=5,etcd.readinessProbe.initialDelaySeconds=5,etcd.replicaCount=1" \
        --set="obs.callhome.enabled=true,obs.callhome.sendReport=false,localpv-provisioner.analytics.enabled=false" \
        --set="eventing.enabled=true,nats.cluster.enabled=false,nats.cluster.replicas=1" \
-       --set="loki.loki.commonConfig.replication_factor=2,loki.singleBinary.replicas=2,loki.minio.replicas=2" \
-       $HELM_DRY_RUN $WAIT_ARG $PULL_POLICY_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
+       $LOKI_ARGS $HELM_DRY_RUN $WAIT_ARG $PULL_POLICY_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
   set +x
 fi
 
