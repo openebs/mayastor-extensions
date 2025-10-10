@@ -14,6 +14,111 @@ entries:
         - name: etcd
           image: docker.io/openebs/etcd:3.5.6-debian-11-r10
         - name: mayastor-agent-core
+          image: docker.io/openebs/mayastor-agent-core:v2.9.3
+        - name: mayastor-agent-ha-cluster
+          image: docker.io/openebs/mayastor-agent-ha-cluster:v2.9.3
+        - name: mayastor-agent-ha-node
+          image: docker.io/openebs/mayastor-agent-ha-node:v2.9.3
+        - name: mayastor-api-rest
+          image: docker.io/openebs/mayastor-api-rest:v2.9.3
+        - name: mayastor-csi-controller
+          image: docker.io/openebs/mayastor-csi-controller:v2.9.3
+        - name: mayastor-csi-node
+          image: docker.io/openebs/mayastor-csi-node:v2.9.3
+        - name: mayastor-io-engine
+          image: docker.io/openebs/mayastor-io-engine:v2.9.3
+        - name: mayastor-metrics-exporter-io-engine
+          image: docker.io/openebs/mayastor-metrics-exporter-io-engine:v2.9.3
+        - name: mayastor-obs-callhome-stats
+          image: docker.io/openebs/mayastor-obs-callhome-stats:v2.9.3
+        - name: mayastor-obs-callhome
+          image: docker.io/openebs/mayastor-obs-callhome:v2.9.3
+        - name: mayastor-operator-diskpool
+          image: docker.io/openebs/mayastor-operator-diskpool:v2.9.3
+        - name: k8s-sidecar
+          image: kiwigrid/k8s-sidecar:1.30.2
+        - name: nats
+          image: nats:2.9.17-alpine
+        - name: nats-box
+          image: natsio/nats-box:0.13.8
+        - name: nats-server-config-reloader
+          image: natsio/nats-server-config-reloader:0.10.1
+        - name: prometheus-nats-exporter
+          image: natsio/prometheus-nats-exporter:0.11.0
+        - name: linux-utils
+          image: openebs/linux-utils:4.2.0
+        - name: provisioner-localpv
+          image: openebs/provisioner-localpv:4.3.0
+        - name: mc
+          image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
+        - name: minio
+          image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+        - name: prometheus-config-reloader
+          image: quay.io/prometheus-operator/prometheus-config-reloader:v0.81.0
+        - name: csi-attacher
+          image: registry.k8s.io/sig-storage/csi-attacher:v4.8.1
+        - name: csi-node-driver-registrar
+          image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.13.0
+        - name: csi-provisioner
+          image: registry.k8s.io/sig-storage/csi-provisioner:v5.2.0
+        - name: csi-resizer
+          image: registry.k8s.io/sig-storage/csi-resizer:v1.13.2
+        - name: csi-snapshotter
+          image: registry.k8s.io/sig-storage/csi-snapshotter:v8.2.0
+        - name: snapshot-controller
+          image: registry.k8s.io/sig-storage/snapshot-controller:v8.2.0
+    apiVersion: v2
+    appVersion: 2.9.3
+    created: "2025-10-10T06:28:22.323909221Z"
+    dependencies:
+    - condition: crds.enabled
+      name: crds
+      repository: ""
+      version: 2.9.3
+    - condition: etcd.enabled
+      name: etcd
+      repository: https://charts.bitnami.com/bitnami
+      version: 8.6.0
+    - condition: base.jaeger.enabled
+      name: jaeger-operator
+      repository: https://jaegertracing.github.io/helm-charts
+      version: 2.50.1
+    - condition: loki.enabled
+      name: loki
+      repository: https://grafana.github.io/helm-charts
+      version: 6.29.0
+    - condition: alloy.enabled
+      name: alloy
+      repository: https://grafana.github.io/helm-charts
+      version: 1.0.1
+    - condition: eventing.enabled
+      name: nats
+      repository: https://nats-io.github.io/k8s/helm/charts/
+      version: 0.19.14
+    - condition: localpv-provisioner.enabled
+      name: localpv-provisioner
+      repository: https://openebs.github.io/dynamic-localpv-provisioner
+      version: 4.3.0
+    description: Mayastor Helm chart for Kubernetes
+    digest: 54cdc5cf735baeb76dfc16fdfcae2b50e9c4c0a7aa16f023f90357edd9bd5566
+    name: mayastor
+    type: application
+    urls:
+    - https://openebs.github.io/mayastor-extensions/mayastor-2.9.3.tgz
+    version: 2.9.3
+  - annotations:
+      helm.sh/images: |
+        - name: alloy
+          image: docker.io/grafana/alloy:v1.8.1
+        - name: loki
+          image: docker.io/grafana/loki:3.4.2
+        - name: alpine-bash
+          image: docker.io/openebs/alpine-bash:4.2.0
+        - name: alpine-sh
+          image: docker.io/openebs/alpine-sh:4.2.0
+        - name: etcd
+          image: docker.io/openebs/etcd:3.5.6-debian-11-r10
+        - name: mayastor-agent-core
           image: docker.io/openebs/mayastor-agent-core:v2.9.2
         - name: mayastor-agent-ha-cluster
           image: docker.io/openebs/mayastor-agent-ha-cluster:v2.9.2
@@ -1544,4 +1649,4 @@ entries:
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2025-10-09T09:15:23.352871537Z"
+generated: "2025-10-10T06:28:22.29741419Z"
