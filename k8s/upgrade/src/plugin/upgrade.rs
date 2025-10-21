@@ -196,6 +196,7 @@ impl UpgradeArgs {
                         .context(error::EventSerdeDeserialization { event: data })?;
                     console_logger::error(HELM_UPGRADE_VALIDATION_ERROR, ev.message.as_str());
 
+                    // todo: leave around for debugging?
                     UpgradeResources::delete_upgrade_resources(namespace).await?;
                 } else {
                     return error::MessageInEventNotPresent.fail();
@@ -762,10 +763,14 @@ impl UpgradeResources {
     pub async fn create_upgrade_resources(ns: &str, args: &UpgradeArgs) -> error::Result<()> {
         let uo = UpgradeResources::new(ns).await?;
 
+        // todo: there's no checks here for content being the same
+        //  in particular if the job is failed, everything is stuck
+        //  why not delete simply everything and start anew??
+
         // Create Service Account
         uo.service_account_actions(ns, Actions::Create).await?;
 
-        // Create Cluser role
+        // Create Cluster role
         uo.cluster_role_actions(ns, Actions::Create).await?;
 
         // Create Cluster role binding
@@ -774,7 +779,7 @@ impl UpgradeResources {
         // Create config map
         let set_file_map = uo.config_map_actions(ns, Actions::Create, args).await?;
 
-        // Create Service Account
+        // Create the job
         uo.job_actions(ns, Actions::Create, args, Some(set_file_map))
             .await?;
 
