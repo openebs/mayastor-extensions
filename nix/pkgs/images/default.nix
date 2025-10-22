@@ -2,7 +2,7 @@
 # avoid dependency on docker tool chain. Though the maturity of OCI
 # builder in nixpkgs is questionable which is why we postpone this step.
 
-{ pkgs, dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, runCommand, sourcer, img_tag ? "", img_org ? "", img_prefix }:
+{ pkgs, dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, jq, runCommand, sourcer, img_tag ? "", img_org ? "", img_prefix }:
 let
   repo-org = if img_org != "" then img_org else "${builtins.readFile (pkgs.runCommand "repo_org" {
     buildInputs = with pkgs; [ git ];
@@ -39,7 +39,7 @@ let
   };
   tagged_helm_chart = runCommand "tagged_helm_chart"
     {
-      nativeBuildInputs = [ kubernetes-helm-wrapped helm_chart semver-tool yq-go ];
+      nativeBuildInputs = [ kubernetes-helm-wrapped helm_chart semver-tool yq-go jq ];
     } ''
     mkdir -p build && cp -drf ${helm_chart}/* build
 
@@ -67,12 +67,12 @@ let
     # dependent charts, i.e. the values from the dependent helm charts which
     # are left out of the main helm chart, are set explicitly to their default
     # values and are included into the main helm chart.
-    build/scripts/helm/generate-consolidated-values.sh -d build/chart
+    build/scripts/helm/generate-consolidated-values.sh -d build/chart -o build/chart-box
 
-    chmod -w build/chart
-    chmod -w build/chart/*.yaml
+    chmod -w build/chart-box/consolidated
+    chmod -w build/chart-box/consolidated/*.yaml
 
-    mkdir -p $out && cp -drf --preserve=mode build/chart $out/chart
+    mkdir -p $out && cp -drf --preserve=mode build/chart-box/consolidated $out/chart
   '';
   build-upgrade-image = { buildType, name }:
     build-extensions-image rec{

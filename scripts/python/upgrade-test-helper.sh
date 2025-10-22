@@ -92,8 +92,10 @@ while test $# -gt 0; do
   shift
 done
 
-if [ "$(kubectl config current-context)" != "kind-kind" ]; then
-  log_fatal "Only Supported on Kind Clusters!"
+if [ "$IMAGE_LOAD" = "true" ]; then
+  if [ "$(kubectl config current-context)" != "kind-kind" ]; then
+    log_fatal "Only Supported on Kind Clusters!"
+  fi
 fi
 
 if [ -z "$TAG" ]; then
