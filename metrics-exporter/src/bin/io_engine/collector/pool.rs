@@ -15,6 +15,8 @@ pub(crate) struct PoolCapacityCollector {
     pool_total_size: GaugeVec,
     pool_used_size: GaugeVec,
     pool_committed_size: GaugeVec,
+    pool_disk_capacity: GaugeVec,
+    pool_max_expandable_size: GaugeVec,
     descs: Vec<Desc>,
 }
 
@@ -43,11 +45,23 @@ impl PoolCapacityCollector {
             "Committed size of the pool in bytes",
             &mut descs,
         );
+        let pool_disk_capacity = init_diskpool_gauge_vec(
+            "disk_capacity_bytes",
+            "Capacity of the Pool's underlying device",
+            &mut descs,
+        );
+        let pool_max_expandable_size = init_diskpool_gauge_vec(
+            "max_expandable_size",
+            "Maximum capacity upto which this pool can be expanded, in bytes",
+            &mut descs,
+        );
 
         Self {
             pool_total_size,
             pool_used_size,
             pool_committed_size,
+            pool_disk_capacity,
+            pool_max_expandable_size,
             descs,
         }
     }
@@ -117,6 +131,34 @@ impl Collector for PoolCapacityCollector {
             };
             pool_committed_size.set(pool.committed() as f64);
             let mut metric_vec = pool_committed_size.collect();
+            metric_family.extend(metric_vec.pop());
+
+            let pool_disk_capacity = match self
+                .pool_disk_capacity
+                .get_metric_with_label_values(&[node_name.clone().as_str(), pool.name().as_str()])
+            {
+                Ok(pool_disk_capacity) => pool_disk_capacity,
+                Err(error) => {
+                    error!(%error, "Error while creating pool_disk_capacity counter with label values");
+                    return metric_family;
+                }
+            };
+            pool_disk_capacity.set(pool.disk_capacity() as f64);
+            let mut metric_vec = pool_disk_capacity.collect();
+            metric_family.extend(metric_vec.pop());
+
+            let pool_max_expandable_size = match self
+                .pool_max_expandable_size
+                .get_metric_with_label_values(&[node_name.clone().as_str(), pool.name().as_str()])
+            {
+                Ok(pool_max_expandable_size) => pool_max_expandable_size,
+                Err(error) => {
+                    error!(%error, "Error while creating pool_max_expandable_size counter with label values");
+                    return metric_family;
+                }
+            };
+            pool_max_expandable_size.set(pool.max_expandable_size() as f64);
+            let mut metric_vec = pool_max_expandable_size.collect();
             metric_family.extend(metric_vec.pop());
         }
         metric_family
