@@ -8,6 +8,8 @@ pub(crate) struct PoolInfo {
     capacity: u64,
     state: u64,
     committed: u64,
+    disk_capacity: u64,
+    max_expandable_size: u64,
 }
 
 impl PoolInfo {
@@ -31,6 +33,16 @@ impl PoolInfo {
         self.committed
     }
 
+    /// Get the underlying disk capacity in bytes.
+    pub(crate) fn disk_capacity(&self) -> u64 {
+        self.disk_capacity
+    }
+
+    /// Get the max expandable size in bytes.
+    pub(crate) fn max_expandable_size(&self) -> u64 {
+        self.max_expandable_size
+    }
+
     /// Get pool of the io_engine.
     pub(crate) fn state(&self) -> u64 {
         self.state
@@ -51,6 +63,8 @@ impl From<rpc::v1::pool::Pool> for PoolInfo {
             capacity: value.capacity,
             state: value.state as u64,
             committed: value.committed,
+            disk_capacity: value.disk_capacity,
+            max_expandable_size: value.max_expandable_size.unwrap_or_default(),
         }
     }
 }
