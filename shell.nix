@@ -31,6 +31,7 @@ let
     coreutils
     cowsay
     git
+    jq
     llvmPackages.libclang
     niv
     nixpkgs-fmt
