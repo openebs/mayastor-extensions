@@ -270,8 +270,7 @@ impl HelmUpgraderBuilder {
                 "--set",
                 helm_args_set,
                 "--set-file",
-                helm_args_set_file,
-                "--atomic"
+                helm_args_set_file
             ]);
 
             Ok(Box::new(CoreHelmUpgrader {
