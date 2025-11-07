@@ -60,7 +60,7 @@ jobs:
           nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
       - name: Load images to kind cluster
         if: ${{ !inputs.helm-pins }}
-        run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --load"
+        run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --load --chart ./chart"
       - name: Create Pinned Helm Chart
         id: pin
         if: ${{ inputs.helm-pins }}
