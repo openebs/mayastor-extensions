@@ -14,7 +14,7 @@ set -euo pipefail
 
 TAG=
 CHART_VNEXT=
-CHART="$ROOT_DIR/chart"
+CHART="$(realpath -e "$ROOT_DIR/chart")"
 CHART_FORK="false"
 CHART_TAG="false"
 IMAGE_BUILD="false"
@@ -23,12 +23,12 @@ IMAGE_LOAD="false"
 cleanup_handler() {
   ERROR=$?
   trap - INT QUIT TERM HUP EXIT
-  if [ "$CHART_TAG" = "true" ]; then
-    if command -v git &>/dev/null; then
-      git restore "$CHART_VNEXT" || :
-    fi
-  fi
   if [ $ERROR != 0 ]; then
+    if [ "$CHART_TAG" = "true" ]; then
+      if command -v git &>/dev/null; then
+        git restore "$CHART_VNEXT" || :
+      fi
+    fi
     exit $ERROR
   fi
 }
@@ -105,10 +105,14 @@ fi
 if [ -z "$CHART_VNEXT" ]; then
   CHART_VNEXT="$ROOT_DIR/tests/bdd/chart-vnext"
 fi
+CHART_VNEXT="$(realpath -e "$CHART_VNEXT")"
 KUBECTL_MAYASTOR="$CHART_VNEXT/kubectl-plugin/bin/kubectl-mayastor"
 
 # Ensure the chart vnext is created, copied from the original
 if [ "$CHART_FORK" = "true" ]; then
+  if [ "$CHART" = "$CHART_VNEXT" ]; then
+    log_fatal "Forked chart is the same as the original => $CHART"
+  fi
   mkdir -p "$CHART_VNEXT"
   rm -r "${CHART_VNEXT:?}"/*
   cp -r "$CHART/." "${CHART_VNEXT:?}"
