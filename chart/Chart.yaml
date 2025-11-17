@@ -58,6 +58,16 @@ annotations:
       image: docker.io/grafana/alloy:v1.8.1
     - name: loki
       image: docker.io/grafana/loki:3.4.2
+    - name: k8s-sidecar
+      image: docker.io/kiwigrid/k8s-sidecar:1.30.2
+    - name: nats
+      image: docker.io/nats:2.9.17-alpine
+    - name: nats-box
+      image: docker.io/natsio/nats-box:0.13.8
+    - name: nats-server-config-reloader
+      image: docker.io/natsio/nats-server-config-reloader:0.10.1
+    - name: prometheus-nats-exporter
+      image: docker.io/natsio/prometheus-nats-exporter:0.11.0
     - name: alpine-bash
       image: docker.io/openebs/alpine-bash:4.2.0
     - name: alpine-sh
@@ -88,16 +98,6 @@ annotations:
       image: docker.io/openebs/mayastor-obs-callhome:develop
     - name: mayastor-operator-diskpool
       image: docker.io/openebs/mayastor-operator-diskpool:develop
-    - name: k8s-sidecar
-      image: kiwigrid/k8s-sidecar:1.30.2
-    - name: nats
-      image: nats:2.9.17-alpine
-    - name: nats-box
-      image: natsio/nats-box:0.13.8
-    - name: nats-server-config-reloader
-      image: natsio/nats-server-config-reloader:0.10.1
-    - name: prometheus-nats-exporter
-      image: natsio/prometheus-nats-exporter:0.11.0
     - name: linux-utils
       image: openebs/linux-utils:4.2.0
     - name: provisioner-localpv

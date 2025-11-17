@@ -712,6 +712,9 @@ loki:
     replicas: 0
   bloomGateway:
     replicas: 0
+  sidecar:
+    image:
+      repository: docker.io/kiwigrid/k8s-sidecar
 alloy:
   logging_config:
     # Enable debugging on alloy components.
@@ -858,8 +861,7 @@ nats:
   nats:
     image:
       pullPolicy: IfNotPresent
-      # Defaults to docker.io
-      registry: ""
+      registry: docker.io
     jetstream:
       enabled: true
       memStorage:
@@ -887,6 +889,14 @@ nats:
   # The nats box can be installed for debugging, by default its enabled.
   natsbox:
     enabled: false
+    image:
+      registry: docker.io
+  reloader:
+    image:
+      registry: docker.io
+  exporter:
+    image:
+      registry: docker.io
 obs:
   callhome:
     # -- Enable callhome
