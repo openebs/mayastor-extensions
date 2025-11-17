@@ -1,3 +1,4 @@
+use crate::plugin::objects::normalize_k8s_name;
 use utils::version_info;
 
 /// This is used to create labels for the upgrade job.
@@ -60,7 +61,7 @@ pub(crate) fn upgrade_event_selector(release_name: &str, component_name: &str) -
     let kind = "involvedObject.kind=Job";
     let name_key = "involvedObject.name";
     let tag = upgrade_obj_suffix();
-    let name_value = format!("{release_name}-{component_name}-{tag}");
+    let name_value = normalize_k8s_name(format!("{release_name}-{component_name}-{tag}"));
     format!("{kind},{name_key}={name_value}")
 }
 

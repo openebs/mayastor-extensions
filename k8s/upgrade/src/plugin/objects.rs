@@ -23,6 +23,26 @@ use kube::core::ObjectMeta;
 use maplit::btreemap;
 use openapi::apis::IntoVec;
 
+/// Trims kubernetes names to 63 characters.
+pub(crate) fn normalize_k8s_name(mut input: String) -> String {
+    const MAX: usize = 63;
+
+    // 3. trim to 63 bytes at char boundary
+    if input.len() > MAX {
+        let mut cut = MAX;
+        while !input.is_char_boundary(cut) {
+            cut -= 1;
+        }
+        input.truncate(cut);
+    }
+
+    while input.ends_with('-') {
+        input.pop();
+    }
+
+    input
+}
+
 /// Defines the upgrade job service account.
 pub(crate) fn upgrade_job_service_account(
     namespace: Option<String>,
@@ -31,7 +51,7 @@ pub(crate) fn upgrade_job_service_account(
     ServiceAccount {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!()),
-            name: Some(service_account_name),
+            name: Some(normalize_k8s_name(service_account_name)),
             namespace,
             ..Default::default()
         },
@@ -47,7 +67,7 @@ pub(crate) fn upgrade_job_cluster_role(
     ClusterRole {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!()),
-            name: Some(cluster_role_name),
+            name: Some(normalize_k8s_name(cluster_role_name)),
             namespace,
             ..Default::default()
         },
@@ -250,21 +270,27 @@ pub(crate) fn upgrade_job_cluster_role_binding(
     ClusterRoleBinding {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!()),
-            name: Some(upgrade_name_concat(
+            name: Some(normalize_k8s_name(upgrade_name_concat(
                 &release_name,
                 UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
-            )),
+            ))),
             namespace: namespace.clone(),
             ..Default::default()
         },
         role_ref: RoleRef {
             api_group: "rbac.authorization.k8s.io".to_string(),
             kind: "ClusterRole".to_string(),
-            name: upgrade_name_concat(&release_name, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX),
+            name: normalize_k8s_name(upgrade_name_concat(
+                &release_name,
+                UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
+            )),
         },
         subjects: Some(vec![Subject {
             kind: "ServiceAccount".to_string(),
-            name: upgrade_name_concat(&release_name, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX),
+            name: normalize_k8s_name(upgrade_name_concat(
+                &release_name,
+                UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+            )),
             namespace,
             ..Default::default()
         }]),
@@ -279,10 +305,10 @@ pub(crate) fn upgrade_configmap(
     ConfigMap {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!()),
-            name: Some(upgrade_name_concat(
+            name: Some(normalize_k8s_name(upgrade_name_concat(
                 &release_name,
                 UPGRADE_CONFIG_MAP_NAME_SUFFIX,
-            )),
+            ))),
             namespace: Some(namespace.to_string()),
             ..Default::default()
         },
@@ -322,7 +348,10 @@ pub(crate) fn upgrade_job(
     Job {
         metadata: ObjectMeta {
             labels: Some(upgrade_labels!()),
-            name: Some(upgrade_name_concat(&release_name, UPGRADE_JOB_NAME_SUFFIX)),
+            name: Some(normalize_k8s_name(upgrade_name_concat(
+                &release_name,
+                UPGRADE_JOB_NAME_SUFFIX,
+            ))),
             namespace: Some(namespace.to_string()),
             ..Default::default()
         },
@@ -388,17 +417,17 @@ pub(crate) fn upgrade_job(
                         }]),
                         ..Default::default()
                     }],
-                    service_account_name: Some(upgrade_name_concat(
+                    service_account_name: Some(normalize_k8s_name(upgrade_name_concat(
                         &release_name,
                         UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
-                    )),
+                    ))),
                     volumes: Some(vec![Volume {
                         name: UPGRADE_CONFIG_MAP.to_string(),
                         config_map: Some(ConfigMapVolumeSource {
-                            name: Some(upgrade_name_concat(
+                            name: Some(normalize_k8s_name(upgrade_name_concat(
                                 &release_name,
                                 UPGRADE_CONFIG_MAP_NAME_SUFFIX,
-                            )),
+                            ))),
                             ..Default::default()
                         }),
                         ..Default::default()

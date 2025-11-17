@@ -8,6 +8,7 @@ use crate::plugin::{
         UPGRADE_JOB_NAME_SUFFIX, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
     },
     error, objects,
+    objects::normalize_k8s_name,
     user_prompt::{
         upgrade_dry_run_summary, CONTROL_PLANE_PODS_LIST, DATA_PLANE_PODS_LIST,
         DATA_PLANE_PODS_LIST_SKIP_RESTART, DELETE_INCOMPLETE_JOB, HELM_UPGRADE_VALIDATION_ERROR,
@@ -362,7 +363,7 @@ impl UpgradeEventClient {
     }
 }
 
-/// Print the upgrade iutput to console.
+/// Print the upgrade output to console.
 pub async fn log_upgrade_result(event: &Event) -> error::Result<()> {
     _ = match event.message.clone() {
         Some(data) => {
@@ -408,8 +409,10 @@ impl UpgradeResources {
 
     /// Create/Delete ServiceAction.
     pub async fn service_account_actions(&self, ns: &str, action: Actions) -> error::Result<()> {
-        let service_account_name =
-            upgrade_name_concat(&self.release_name, UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX);
+        let service_account_name = normalize_k8s_name(upgrade_name_concat(
+            &self.release_name,
+            UPGRADE_JOB_SERVICEACCOUNT_NAME_SUFFIX,
+        ));
         if let Some(sa) = self
             .service_account
             .get_opt(&service_account_name)
@@ -469,8 +472,10 @@ impl UpgradeResources {
 
     /// Create/Delete cluster role
     pub async fn cluster_role_actions(&self, ns: &str, action: Actions) -> error::Result<()> {
-        let cluster_role_name =
-            upgrade_name_concat(&self.release_name, UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX);
+        let cluster_role_name = normalize_k8s_name(upgrade_name_concat(
+            &self.release_name,
+            UPGRADE_JOB_CLUSTERROLE_NAME_SUFFIX,
+        ));
 
         if let Some(cr) = self
             .cluster_role
@@ -531,10 +536,10 @@ impl UpgradeResources {
         ns: &str,
         action: Actions,
     ) -> error::Result<()> {
-        let cluster_role_binding_name = upgrade_name_concat(
+        let cluster_role_binding_name = normalize_k8s_name(upgrade_name_concat(
             &self.release_name,
             UPGRADE_JOB_CLUSTERROLEBINDING_NAME_SUFFIX,
-        );
+        ));
         if let Some(crb) = self
             .cluster_role_binding
             .get_opt(&cluster_role_binding_name)
@@ -603,7 +608,10 @@ impl UpgradeResources {
         action: Actions,
         args: &UpgradeArgs,
     ) -> error::Result<HashMap<String, String>> {
-        let cm_name = upgrade_name_concat(&self.release_name, UPGRADE_CONFIG_MAP_NAME_SUFFIX);
+        let cm_name = normalize_k8s_name(upgrade_name_concat(
+            &self.release_name,
+            UPGRADE_CONFIG_MAP_NAME_SUFFIX,
+        ));
         let data = create_config_map_data(args).await?;
         let cm = self
             .config_map
@@ -680,7 +688,10 @@ impl UpgradeResources {
         args: &UpgradeArgs,
         set_file_map: Option<HashMap<String, String>>,
     ) -> error::Result<()> {
-        let job_name = upgrade_name_concat(&self.release_name, UPGRADE_JOB_NAME_SUFFIX);
+        let job_name = normalize_k8s_name(upgrade_name_concat(
+            &self.release_name,
+            UPGRADE_JOB_NAME_SUFFIX,
+        ));
         if let Some(job) = self
             .job
             .get_opt(&job_name)
@@ -863,7 +874,10 @@ pub(crate) async fn get_release_name(ns: &str) -> error::Result<String> {
 /// Return true if upgrade job is completed
 pub(crate) async fn is_upgrade_job_completed(ns: &str) -> error::Result<bool> {
     let uo = UpgradeResources::new(ns).await?;
-    let job_name = upgrade_name_concat(&uo.release_name, UPGRADE_JOB_NAME_SUFFIX);
+    let job_name = normalize_k8s_name(upgrade_name_concat(
+        &uo.release_name,
+        UPGRADE_JOB_NAME_SUFFIX,
+    ));
     let option_job = uo
         .job
         .get_opt(&job_name)
