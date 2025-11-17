@@ -216,7 +216,7 @@ CHECK_BRANCH=helm-testing/develop
 DATE_TIME=$(date +"$DATE_TIME_FMT")
 LATEST_RELEASE_BRANCH="release/123.456"
 BUMP_MAJOR_FOR_MAIN="false"
-APP_TAG=123.457.0-0-main-unstable-$DATE_TIME-0
+APP_TAG=123.457.0-main-unstable-$DATE_TIME
 CHART_VERSION=0.0.0
 CHART_APP_VERSION=0.0.0
 test_one "helm-testing/develop is special"
@@ -225,7 +225,7 @@ CHECK_BRANCH=helm-testing/develop
 DATE_TIME=$(date +"$DATE_TIME_FMT")
 LATEST_RELEASE_BRANCH="release/123.456"
 BUMP_MAJOR_FOR_MAIN="true"
-APP_TAG=124.0.0-0-main-unstable-$DATE_TIME-0
+APP_TAG=124.0.0-main-unstable-$DATE_TIME
 CHART_VERSION=0.0.0
 CHART_APP_VERSION=0.0.0
 test_one "helm-testing/develop is special"
@@ -235,11 +235,11 @@ HELM_TESTING=helm-testing/develop
 DATE_TIME=$(date +"$DATE_TIME_FMT")
 LATEST_RELEASE_BRANCH="release/123.456"
 BUMP_MAJOR_FOR_MAIN="false"
-APP_TAG=123.457.0-0-main-unstable-$DATE_TIME-0
+APP_TAG=123.457.0-main-unstable-$DATE_TIME
 CHART_VERSION=0.0.0
 CHART_APP_VERSION=0.0.0
-NEW_CHART_VERSION=123.457.0-0-main-unstable-$DATE_TIME-0
-NEW_CHART_APP_VERSION=123.457.0-0-main-unstable-$DATE_TIME-0
+NEW_CHART_VERSION=123.457.0-main-unstable-$DATE_TIME
+NEW_CHART_APP_VERSION=123.457.0-main-unstable-$DATE_TIME
 test_one "helm-testing/develop is special"
 
 CHECK_BRANCH=helm-testing/develop
@@ -247,22 +247,22 @@ HELM_TESTING=helm-testing/develop
 DATE_TIME=$(date +"$DATE_TIME_FMT")
 LATEST_RELEASE_BRANCH="release/123.456"
 BUMP_MAJOR_FOR_MAIN="true"
-APP_TAG=124.0.0-0-main-unstable-$DATE_TIME-0
+APP_TAG=124.0.0-main-unstable-$DATE_TIME
 CHART_VERSION=0.0.0
 CHART_APP_VERSION=0.0.0
-NEW_CHART_VERSION=124.0.0-0-main-unstable-$DATE_TIME-0
-NEW_CHART_APP_VERSION=124.0.0-0-main-unstable-$DATE_TIME-0
+NEW_CHART_VERSION=124.0.0-main-unstable-$DATE_TIME
+NEW_CHART_APP_VERSION=124.0.0-main-unstable-$DATE_TIME
 test_one "helm-testing/develop is special"
 
 CHECK_BRANCH=helm-testing/develop
 HELM_TESTING=helm-testing/develop
 LATEST_RELEASE_BRANCH="release/123.456"
 BUMP_MAJOR_FOR_MAIN="true"
-APP_TAG=124.0.0-0-main-unstable-main-0
+APP_TAG=124.0.0-main-unstable-main
 CHART_VERSION=13.14.15
 CHART_APP_VERSION=13.14.15
-NEW_CHART_VERSION=124.0.0-0-main-unstable-main-0
-NEW_CHART_APP_VERSION=124.0.0-0-main-unstable-main-0
+NEW_CHART_VERSION=124.0.0-main-unstable-main
+NEW_CHART_APP_VERSION=124.0.0-main-unstable-main
 EXPECT_FAIL=1
 test_one "helm-testing/develop is special"
 
