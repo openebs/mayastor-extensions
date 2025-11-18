@@ -49,7 +49,7 @@ dependencies:
     repository: https://nats-io.github.io/k8s/helm/charts/
     condition: eventing.enabled
   - name: localpv-provisioner
-    version: 4.3.0
+    version: 4.4.0
     repository: https://openebs.github.io/dynamic-localpv-provisioner
     condition: localpv-provisioner.enabled
 annotations:
@@ -59,9 +59,9 @@ annotations:
     - name: loki
       image: docker.io/grafana/loki:3.4.2
     - name: alpine-bash
-      image: docker.io/openebs/alpine-bash:4.2.0
+      image: docker.io/openebs/alpine-bash:4.3.0
     - name: alpine-sh
-      image: docker.io/openebs/alpine-sh:4.2.0
+      image: docker.io/openebs/alpine-sh:4.3.0
     - name: etcd
       image: docker.io/openebs/etcd:3.6.4-debian-12-r0
     - name: kubectl
@@ -88,6 +88,8 @@ annotations:
       image: docker.io/openebs/mayastor-obs-callhome:develop
     - name: mayastor-operator-diskpool
       image: docker.io/openebs/mayastor-operator-diskpool:develop
+    - name: provisioner-localpv
+      image: docker.io/openebs/provisioner-localpv:4.4.0
     - name: k8s-sidecar
       image: kiwigrid/k8s-sidecar:1.30.2
     - name: nats
@@ -99,9 +101,7 @@ annotations:
     - name: prometheus-nats-exporter
       image: natsio/prometheus-nats-exporter:0.11.0
     - name: linux-utils
-      image: openebs/linux-utils:4.2.0
-    - name: provisioner-localpv
-      image: openebs/provisioner-localpv:4.3.0
+      image: openebs/linux-utils:4.3.0
     - name: mc
       image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
     - name: minio
