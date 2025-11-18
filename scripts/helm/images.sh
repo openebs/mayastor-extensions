@@ -68,7 +68,14 @@ helm_localpv_prov_helper_image() {
     log_fatal "Can't find the helm dependency: $chart"
   fi
 
-  registry="$(helm_dep_value "$chart" "$name" "helperPod.image.registry")"
+  local_registry="$(helm_dep_value "$chart" "$name" "helperPod.image.registry")"
+  global_registry="$(helm_dep_value "$chart" "$name" "global.imageRegistry")"
+  if [ -n "$local_registry" ]; then
+    registry="$local_registry"
+  else
+    registry="$global_registry"
+  fi
+
   repository="$(helm_dep_value_required "$chart" "$name" "helperPod.image.repository")"
   tag="$(helm_dep_value_required "$chart" "$name" "helperPod.image.tag")"
 
