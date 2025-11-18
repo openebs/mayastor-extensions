@@ -1518,14 +1518,26 @@ entries:
           image: docker.io/grafana/alloy:v1.8.1
         - name: loki
           image: docker.io/grafana/loki:3.4.2
+        - name: k8s-sidecar
+          image: docker.io/kiwigrid/k8s-sidecar:1.30.2
+        - name: nats
+          image: docker.io/nats:2.9.17-alpine
+        - name: nats-box
+          image: docker.io/natsio/nats-box:0.13.8
+        - name: nats-server-config-reloader
+          image: docker.io/natsio/nats-server-config-reloader:0.10.1
+        - name: prometheus-nats-exporter
+          image: docker.io/natsio/prometheus-nats-exporter:0.11.0
         - name: alpine-bash
-          image: docker.io/openebs/alpine-bash:4.2.0
+          image: docker.io/openebs/alpine-bash:4.3.0
         - name: alpine-sh
-          image: docker.io/openebs/alpine-sh:4.2.0
+          image: docker.io/openebs/alpine-sh:4.3.0
         - name: etcd
           image: docker.io/openebs/etcd:3.6.4-debian-12-r0
         - name: kubectl
           image: docker.io/openebs/kubectl:1.25.15
+        - name: linux-utils
+          image: docker.io/openebs/linux-utils:4.3.0
         - name: mayastor-agent-core
           image: docker.io/openebs/mayastor-agent-core:develop
         - name: mayastor-agent-ha-cluster
@@ -1548,20 +1560,8 @@ entries:
           image: docker.io/openebs/mayastor-obs-callhome:develop
         - name: mayastor-operator-diskpool
           image: docker.io/openebs/mayastor-operator-diskpool:develop
-        - name: k8s-sidecar
-          image: kiwigrid/k8s-sidecar:1.30.2
-        - name: nats
-          image: nats:2.9.17-alpine
-        - name: nats-box
-          image: natsio/nats-box:0.13.8
-        - name: nats-server-config-reloader
-          image: natsio/nats-server-config-reloader:0.10.1
-        - name: prometheus-nats-exporter
-          image: natsio/prometheus-nats-exporter:0.11.0
-        - name: linux-utils
-          image: openebs/linux-utils:4.2.0
         - name: provisioner-localpv
-          image: openebs/provisioner-localpv:4.3.0
+          image: docker.io/openebs/provisioner-localpv:4.4.0
         - name: mc
           image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
         - name: minio
@@ -1582,7 +1582,7 @@ entries:
           image: registry.k8s.io/sig-storage/snapshot-controller:v8.2.0
     apiVersion: v2
     appVersion: 0.0.0
-    created: "2025-10-09T09:15:23.377209195Z"
+    created: "2025-11-18T13:55:52.016482805Z"
     dependencies:
     - condition: crds.enabled
       name: crds
@@ -1611,9 +1611,9 @@ entries:
     - condition: localpv-provisioner.enabled
       name: localpv-provisioner
       repository: https://openebs.github.io/dynamic-localpv-provisioner
-      version: 4.3.0
+      version: 4.4.0
     description: Mayastor Helm chart for Kubernetes
-    digest: 71f14636f3610087c5143a9fd336316e46567ffa39853461d61916df0cce8f8a
+    digest: c802ce939c301fb0eac7224f9f1a69dc30b7c5072f3deb5ccdf466725db6d600
     name: mayastor
     type: application
     urls:
@@ -1649,4 +1649,4 @@ entries:
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2025-10-10T06:28:22.29741419Z"
+generated: "2025-11-18T13:55:51.989370779Z"
