@@ -66,6 +66,8 @@ annotations:
       image: docker.io/openebs/etcd:3.6.4-debian-12-r0
     - name: kubectl
       image: docker.io/openebs/kubectl:1.25.15
+    - name: linux-utils
+      image: docker.io/openebs/linux-utils:4.3.0
     - name: mayastor-agent-core
       image: docker.io/openebs/mayastor-agent-core:develop
     - name: mayastor-agent-ha-cluster
@@ -100,8 +102,6 @@ annotations:
       image: natsio/nats-server-config-reloader:0.10.1
     - name: prometheus-nats-exporter
       image: natsio/prometheus-nats-exporter:0.11.0
-    - name: linux-utils
-      image: openebs/linux-utils:4.3.0
     - name: mc
       image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
     - name: minio

@@ -4,6 +4,7 @@ docker.io/openebs/alpine-bash:4.3.0
 docker.io/openebs/alpine-sh:4.3.0
 docker.io/openebs/etcd:3.6.4-debian-12-r0
 docker.io/openebs/kubectl:1.25.15
+docker.io/openebs/linux-utils:4.3.0
 docker.io/openebs/mayastor-agent-core:develop
 docker.io/openebs/mayastor-agent-ha-cluster:develop
 docker.io/openebs/mayastor-agent-ha-node:develop
@@ -21,7 +22,6 @@ nats:2.9.17-alpine
 natsio/nats-box:0.13.8
 natsio/nats-server-config-reloader:0.10.1
 natsio/prometheus-nats-exporter:0.11.0
-openebs/linux-utils:4.3.0
 quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
 quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
 quay.io/prometheus-operator/prometheus-config-reloader:v0.81.0
