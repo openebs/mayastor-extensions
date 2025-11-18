@@ -49,7 +49,7 @@ dependencies:
     repository: https://nats-io.github.io/k8s/helm/charts/
     condition: eventing.enabled
   - name: localpv-provisioner
-    version: 4.3.0
+    version: 4.4.0
     repository: https://openebs.github.io/dynamic-localpv-provisioner
     condition: localpv-provisioner.enabled
 annotations:
@@ -76,6 +76,8 @@ annotations:
       image: docker.io/openebs/etcd:3.6.4-debian-12-r0
     - name: kubectl
       image: docker.io/openebs/kubectl:1.25.15
+    - name: linux-utils
+      image: docker.io/openebs/linux-utils:4.3.0
     - name: mayastor-agent-core
       image: docker.io/openebs/mayastor-agent-core:release-2.10
     - name: mayastor-agent-ha-cluster
@@ -98,10 +100,8 @@ annotations:
       image: docker.io/openebs/mayastor-obs-callhome:release-2.10
     - name: mayastor-operator-diskpool
       image: docker.io/openebs/mayastor-operator-diskpool:release-2.10
-    - name: linux-utils
-      image: openebs/linux-utils:4.2.0
     - name: provisioner-localpv
-      image: openebs/provisioner-localpv:4.3.0
+      image: docker.io/openebs/provisioner-localpv:4.4.0
     - name: mc
       image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
     - name: minio
