@@ -68,7 +68,7 @@ helm_testing_branch_version() {
     bumped_latest=$(semver bump "$bump" "$latest_version")
   fi
 
-  semver bump prerel 0-"$helm_kind"-unstable-"$DATE_TIME"-0 "$bumped_latest"
+  semver bump prerel "$helm_kind"-unstable-"$DATE_TIME" "$bumped_latest"
 }
 
 # Checks if version is semver and removes "v" from the beginning
