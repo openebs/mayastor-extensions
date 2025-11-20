@@ -24,11 +24,11 @@ image:
     #       release/pre-release container image tags.
     #       The below tag values will be picked for images by default.
     #       If not specified, 'tag' option provided above will be picked.
-    controlPlane: ""
-    dataPlane: ""
-    extensions: ""
+    controlPlane: 8b19c6b2d816
+    dataPlane: b38684454b7a
+    extensions: c69aec45c071
   # -- ImagePullPolicy for our images
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
   # -- docker-secrets required to pull images if the container registry from image.registry is protected
   pullSecrets: []
 # -- Node labels for pod assignment
@@ -575,7 +575,7 @@ etcd:
       registry: docker.io
       repository: openebs/alpine-bash
       tag: 4.3.0
-      pullSecrets: [ ]
+      pullSecrets: []
   image:
     registry: docker.io
     repository: openebs/etcd
