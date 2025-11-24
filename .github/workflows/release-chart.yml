@@ -31,12 +31,25 @@ jobs:
             nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch"" ./scripts/helm/shell.nix
           fi
           nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
+          echo "CHART_VERSION=$(awk -F': ' '/^version:/ {print $2}' ./chart/Chart.yaml)" >> $GITHUB_ENV
       - name: Publish Mayastor Helm chart
         uses: stefanprodan/helm-gh-pages@v1.7.0
         if: ${{ github.ref_type == 'tag' }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           charts_dir: .
+      - name: Publish chart via OCI
+        uses: appany/helm-oci-chart-releaser@v0.4.2
+        if: ${{ github.ref_type == 'tag' }}
+        with:
+          name: mayastor
+          repository: ${{ github.repository_owner }}/charts
+          tag: ${{ env.CHART_VERSION }}
+          path: ./chart
+          registry: ghcr.io
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          update_dependencies: 'false'
 
   update-chart:
     runs-on: ubuntu-latest
