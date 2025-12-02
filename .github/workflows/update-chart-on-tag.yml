@@ -1,61 +1,13 @@
-name: Release Helm Chart
+name: Update future chart version on tag push
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+**'
-    branches:
-      - 'release/**'
 
 jobs:
-  release-chart:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v22
-      - name: Pre-populate nix-shell
-        run: |
-          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
-          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
-          nix-shell --pure --run "echo" ./scripts/helm/shell.nix
-      - name: Publish locally in the workspace
-        run: |
-          if [ "${{ github.ref_type }}" == "tag" ]; then
-            tag="${{ github.ref_name }}"
-            # Publish the Chart.yaml locally
-            # Note this does not commit the Chart.yaml changes this the branch
-            nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag "$tag"" ./scripts/helm/shell.nix
-            nix-shell --pure --run "./scripts/helm/images.sh generate" ./scripts/helm/shell.nix
-            nix-shell --pure --run "./scripts/helm/images.sh patch" ./scripts/helm/shell.nix
-          else
-            branch="${{ github.ref_name }}"
-            nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --check-chart "$branch"" ./scripts/helm/shell.nix
-          fi
-          nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
-          echo "CHART_VERSION=$(awk -F': ' '/^version:/ {print $2}' ./chart/Chart.yaml)" >> $GITHUB_ENV
-      - name: Publish Mayastor Helm chart
-        uses: stefanprodan/helm-gh-pages@v1.7.0
-        if: ${{ github.ref_type == 'tag' }}
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          charts_dir: .
-      - name: Publish chart via OCI
-        uses: appany/helm-oci-chart-releaser@v0.4.2
-        if: ${{ github.ref_type == 'tag' }}
-        with:
-          name: mayastor
-          repository: ${{ github.repository_owner }}/charts
-          tag: ${{ env.CHART_VERSION }}
-          path: ./chart
-          registry: ghcr.io
-          registry_username: ${{ github.actor }}
-          registry_password: ${{ secrets.GITHUB_TOKEN }}
-          update_dependencies: 'false'
-
   update-chart:
     runs-on: ubuntu-latest
     if: ${{ github.ref_type == 'tag' }}
-    needs:
-      - release-chart
     steps:
       - uses: actions/checkout@v4
         with:

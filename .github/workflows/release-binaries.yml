@@ -1,11 +1,15 @@
 name: Release Artifacts
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+**'
     branches:
       - 'release/**'
       - 'develop'
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag to build, example: v2.9.0'
+        required: true
+        type: string
 
 jobs:
   kubectl-plugin:
@@ -30,6 +34,7 @@ jobs:
           - os: macos-15-intel
             target: apple-darwin
             arch: x86_64
+            platform: x86_64-darwin
           - os: oracle-vm-8cpu-32gb-x86-64
             target: windows-gnu
             arch: x86_64
@@ -42,6 +47,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
+
       - uses: actions/checkout@v4
         env:
           checkout_token: ${{ secrets.ORG_CI_GITHUB }}
@@ -56,15 +62,26 @@ jobs:
           if [ "${{ github.ref_type }}" == "tag" ]; then
             git fetch -f origin ${{ github.ref }}:${{ github.ref }}
           fi
+
       - uses: cachix/install-nix-action@v31.3.0
         with:
           enable_kvm: false
       - run: |
-          nix-build -A utils.release.${{ matrix.arch }}.${{ matrix.target }}.kubectl-plugin --arg incremental false ${{ matrix.system }}
+          TAG_ARG=""
+          SYSTEM_ARG=""
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG_ARG="--argstr tag ${{ inputs.tag }}"
+          fi
+          if [[ -n "${{ matrix.platform }}" ]]; then
+            SYSTEM_ARG="--argstr system ${{ matrix.platform }}"
+          fi
+          nix-build -A utils.release.${{ matrix.arch }}.${{ matrix.target }}.kubectl-plugin --arg incremental false $TAG_ARG $SYSTEM_ARG
+
       - name: Archive executable
         run: |
           # NOTE: Update the .krew.yaml file (if required) when making changes here.
           tar -czvf kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.tar.gz LICENSE -C result/bin kubectl-mayastor${{ matrix.suffix }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}
