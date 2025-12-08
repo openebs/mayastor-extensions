@@ -34,7 +34,6 @@ jobs:
           - os: macos-15-intel
             target: apple-darwin
             arch: x86_64
-            platform: x86_64-darwin
           - os: oracle-vm-8cpu-32gb-x86-64
             target: windows-gnu
             arch: x86_64
@@ -67,15 +66,7 @@ jobs:
         with:
           enable_kvm: false
       - run: |
-          TAG_ARG=""
-          SYSTEM_ARG=""
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            TAG_ARG="--argstr tag ${{ inputs.tag }}"
-          fi
-          if [[ -n "${{ matrix.platform }}" ]]; then
-            SYSTEM_ARG="--argstr system ${{ matrix.platform }}"
-          fi
-          nix-build -A utils.release.${{ matrix.arch }}.${{ matrix.target }}.kubectl-plugin --arg incremental false $TAG_ARG $SYSTEM_ARG
+          nix-build -A utils.release.${{ matrix.arch }}.${{ matrix.target }}.kubectl-plugin --arg incremental false ${{ matrix.system }}
 
       - name: Archive executable
         run: |
