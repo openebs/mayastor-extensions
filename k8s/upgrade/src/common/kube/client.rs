@@ -323,10 +323,10 @@ where
         resources.extend(resource_list);
 
         match maybe_token {
-            Some(ref token) => {
+            Some(ref token) if !token.is_empty() => {
                 list_params = list_params.continue_token(token);
             }
-            None => break,
+            _ => break,
         }
     }
 
@@ -355,10 +355,10 @@ where
         resources.extend(resource_list);
 
         match maybe_token {
-            Some(ref token) => {
+            Some(ref token) if !token.is_empty() => {
                 list_params = list_params.continue_token(token);
             }
-            None => break,
+            _ => break,
         }
     }
 
