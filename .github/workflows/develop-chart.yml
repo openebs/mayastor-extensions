@@ -1,4 +1,4 @@
-name: Release and Develop Helm Chart
+name: Develop Helm Chart
 on:
   push:
     branches:
