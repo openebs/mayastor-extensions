@@ -198,8 +198,10 @@ impl ClientSet {
             let mut result = pods_api.list(&list_params).await?;
             pods.append(&mut result.items);
             match result.metadata.continue_ {
-                None => break,
-                Some(token) => list_params = list_params.continue_token(token.as_str()),
+                Some(ref token) if !token.is_empty() => {
+                    list_params = list_params.continue_token(token)
+                }
+                _ => break,
             };
         }
         Ok(pods)
@@ -352,8 +354,8 @@ impl ClientSet {
                     .collect(),
             );
             match vscs.metadata.continue_ {
-                Some(token) if !token.is_empty() => {
-                    list_params = list_params.continue_token(token.as_str())
+                Some(ref token) if !token.is_empty() => {
+                    list_params = list_params.continue_token(token)
                 }
                 _ => break,
             };
@@ -380,8 +382,8 @@ impl ClientSet {
             let mut result = events_api.list(&list_params).await?;
             events.append(&mut result.items);
             match result.metadata.continue_ {
-                Some(token) if !token.is_empty() => {
-                    list_params = list_params.continue_token(token.as_str())
+                Some(ref token) if !token.is_empty() => {
+                    list_params = list_params.continue_token(token)
                 }
                 _ => break,
             };

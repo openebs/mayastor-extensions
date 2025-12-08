@@ -33,8 +33,10 @@ impl K8sClient {
             nodes_count += node_list.items.len();
 
             match node_list.metadata.continue_ {
-                Some(ref token) => list_params = list_params.continue_token(token),
-                None => break,
+                Some(ref token) if !token.is_empty() => {
+                    list_params = list_params.continue_token(token)
+                }
+                _ => break,
             }
         }
 
