@@ -42,14 +42,9 @@ def _():
 )
 def _():
     """all io-engine nodes shall be listed by kubectl-mayastor."""
-    nodes = json.loads(kubectl_mayastor.run(["get", "nodes", "-o=json"], log_run=True))
+    nodes = get_wait_rest_nodes()
     logger.info(f"Mayastor Nodes: {nodes}")
 
-    assert 2 == len(
-        nodes
-    ), f"Expected 2 but found only {len(nodes)} nodes from kubectl-mayastor"
-
-    assert all(node["state"]["status"] == "Online" for node in nodes)
     yield nodes
 
 
@@ -74,6 +69,7 @@ def _(nodes):
                 raise e
     yield
     for node in nodes:
+        name = node["id"]
         try:
             dsp.delete(name)
         except ApiException as e:
@@ -182,4 +178,20 @@ def wait_pvc_deleted(name):
 )
 def wait_dsp_online(name):
     cr = dsp.get(name)
-    assert cr["status"]["pool_status"] == "Online"
+    assert cr["status"]["pool_status"] == "Online", f"cr: {cr}"
+
+
+@retry(
+    stop_max_attempt_number=50,
+    wait_fixed=100,
+)
+def get_wait_rest_nodes():
+    nodes = json.loads(kubectl_mayastor.run(["get", "nodes", "-o=json"], log_run=True))
+
+    assert 2 == len(
+        nodes
+    ), f"Expected 2 but found only {len(nodes)} nodes from kubectl-mayastor: {nodes}"
+
+    assert all(node["state"]["status"] == "Online" for node in nodes)
+
+    return nodes
