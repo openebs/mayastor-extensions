@@ -1,0 +1,136 @@
+name: Staging Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to be released (e.g. v4.2.0)'
+        required: true
+        type: string
+
+env:
+  TAG: ${{ inputs.tag }}
+  CI: 1
+
+jobs:
+  preflight-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: cachix/install-nix-action@v31.3.0
+      - name: Pre-populate nix-shell
+        run: |
+          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+          nix-shell --pure --run "echo" ./dependencies/control-plane/utils/dependencies/scripts/staging/shell.nix
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}  
+
+      - name: Validate if the staging should be even made
+        run: |
+          nix-shell --pure --keep CI --keep TAG --run "./dependencies/control-plane/utils/dependencies/scripts/staging/validate.sh \
+            --tag ${TAG} \
+            --type staging \
+            --chart true" \
+            ./dependencies/control-plane/utils/dependencies/scripts/staging/shell.nix
+  build-images:
+    needs: preflight-checks
+    uses: ./.github/workflows/image.yml
+    with:
+      tag: ${{ inputs.tag }}
+      registry: ghcr.io
+      namespace: mayastor/dev
+    secrets: inherit
+
+  build-binaries:
+    needs: preflight-checks
+    uses: ./.github/workflows/release-binaries.yml
+    with:
+      tag: ${{ inputs.tag }}
+    secrets: inherit
+
+  push-kubectl-to-ghcr:
+    runs-on: ubuntu-latest
+    needs: [build-binaries]
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: cachix/install-nix-action@v31.3.0
+      - name: Pre-populate nix-shell
+        run: |
+          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+          nix-shell --pure --run "echo" ./dependencies/control-plane/utils/dependencies/scripts/staging/shell.nix
+
+      - name: Download kubectl artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: kubectl-mayastor-*
+          merge-multiple: true
+
+      - name: Push kubectl binaries to GHCR
+        run: |
+          nix-shell --pure --keep CI --keep TAG --run "./dependencies/control-plane/utils/dependencies/scripts/staging/kubectl-oci.sh push\
+            --tag ${TAG} \
+            --namespace ${{ github.repository_owner }}/mayastor/dev/plugin \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.GITHUB_TOKEN }}" ./dependencies/control-plane/utils/dependencies/scripts/staging/shell.nix
+
+  release-staging-chart:
+    runs-on: ubuntu-latest
+    needs: [build-images, push-kubectl-to-ghcr]
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: cachix/install-nix-action@v31.3.0
+      - name: Pre-populate nix-shell
+        run: |
+          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
+          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
+          nix-shell --pure --run "echo" ./scripts/helm/shell.nix
+
+      - name: Publish locally in the workspace
+        run: |
+            # Note this does not commit the Chart.yaml changes this the branch
+            nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag ${{ inputs.tag }} --override-chart ${{ inputs.tag }} ${{ inputs.tag }}" ./scripts/helm/shell.nix
+            nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag "$TAG"" ./scripts/helm/shell.nix
+            nix-shell --pure --run "./scripts/helm/images.sh generate" ./scripts/helm/shell.nix
+            nix-shell --pure --run "./scripts/helm/images.sh patch" ./scripts/helm/shell.nix
+
+      - name: Push chart to staging repo
+        uses: appany/helm-oci-chart-releaser@v0.4.2
+        with:
+          name: mayastor
+          repository: ${{ github.repository_owner }}/mayastor/dev/helm
+          tag: ${{ inputs.tag }}
+          path: ./chart
+          registry: ghcr.io
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          update_dependencies: 'false'

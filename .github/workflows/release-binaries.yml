@@ -1,11 +1,15 @@
 name: Release Artifacts
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+**'
     branches:
       - 'release/**'
       - 'develop'
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag to build, example: v2.9.0'
+        required: true
+        type: string
 
 jobs:
   kubectl-plugin:
@@ -42,6 +46,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
+
       - uses: actions/checkout@v4
         env:
           checkout_token: ${{ secrets.ORG_CI_GITHUB }}
@@ -56,15 +61,18 @@ jobs:
           if [ "${{ github.ref_type }}" == "tag" ]; then
             git fetch -f origin ${{ github.ref }}:${{ github.ref }}
           fi
+
       - uses: cachix/install-nix-action@v31.3.0
         with:
           enable_kvm: false
       - run: |
           nix-build -A utils.release.${{ matrix.arch }}.${{ matrix.target }}.kubectl-plugin --arg incremental false ${{ matrix.system }}
+
       - name: Archive executable
         run: |
           # NOTE: Update the .krew.yaml file (if required) when making changes here.
           tar -czvf kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.tar.gz LICENSE -C result/bin kubectl-mayastor${{ matrix.suffix }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}
