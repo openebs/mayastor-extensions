@@ -503,6 +503,11 @@ etcd:
   # -- (string) Url of the external etcd cluster. Note, etcd.enable must be set to false.
   externalUrl: ""
   # Configuration for etcd's localpv hostpath storage class.
+  metrics:
+    # -- Expose etcd metrics.
+    enabled: true
+    # -- Use a separate endpoint for exposing metrics, override the default port (9090) by setting containerPorts.metrics.
+    useSeparateEndpoint: true
   localpvScConfig:
     enabled: true
     # Name of etcd's localpv hostpath storage class.
