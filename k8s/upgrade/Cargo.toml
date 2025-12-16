@@ -17,23 +17,22 @@ utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
 constants = { path = "../../constants" }
 kube-proxy = { path = "../../dependencies/control-plane/k8s/proxy" }
 console-logger = { path = "../../console-logger" }
-kube = { version = "0.94.2", default-features = true, features = ["derive", "runtime"] }
-clap = { version = "4.5.20", features = ["derive", "env", "string", "color"] }
-humantime = "2.1.0"
-maplit = "1.0.2"
-k8s-openapi = { version = "0.22.0", features = ["v1_24"] }
-async-trait = "0.1.83"
-serde = "1.0.214"
-serde_json = "1.0.132"
-snafu = "0.8.5"
-serde_yaml = "0.9.34"
-semver = { version = "1.0.23", features = ["serde"] }
-url = "2.5.4"
-regex = "1.11.1"
-tokio = { version = "1.41.0", features = ["full"] }
-tempfile = "3.13.0"
-# Tracing
-tracing = "0.1.40"
-base64 = "0.22.1"
-flate2 = "1.0.34"
-futures = "0.3.31"
+
+kube = { workspace = true, features = ["derive", "runtime"] }
+k8s-openapi = { workspace = true }
+clap = { workspace = true, features = ["derive", "env", "string", "color"] }
+tokio = { workspace = true, features = ["full"] }
+async-trait = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+humantime = { workspace = true }
+maplit = { workspace = true }
+serde = { workspace = true }
+url = { workspace = true }
+semver = { workspace = true, features = ["serde"] }
+regex = { workspace = true }
+snafu = { workspace = true }
+tempfile = { workspace = true }
+base64 = { workspace = true }
+flate2 = { workspace = true }
+tracing = { workspace = true }
