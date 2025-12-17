@@ -10,4 +10,4 @@ name = "console_logger"
 path = "./src/console.rs"
 
 [dependencies]
-nu-ansi-term = "0.50.1"
+nu-ansi-term = { workspace = true }

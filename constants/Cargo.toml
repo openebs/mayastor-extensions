@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-utils = {path = "../dependencies/control-plane/utils/utils-lib" }
-heck = "0.5.0"
+utils = { path = "../dependencies/control-plane/utils/utils-lib" }
+heck = { workspace = true }

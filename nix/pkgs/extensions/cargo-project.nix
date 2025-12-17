@@ -64,6 +64,7 @@ let
     "call-home"
     "upgrade"
     "constants"
+    "dependencies/control-plane/Cargo.toml"
     "dependencies/control-plane/openapi/Cargo.toml"
     "dependencies/control-plane/openapi/build.rs"
     "dependencies/control-plane/openapi/src/lib.rs"

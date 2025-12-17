@@ -23,12 +23,13 @@ constants = { path = "../../constants" }
 rest-plugin = { path = "../../dependencies/control-plane/control-plane/plugin", default-features = false }
 supportability = { path = "../supportability" }
 upgrade = { path = "../upgrade" }
-kube = { version = "0.94.2", features = ["derive", "runtime"] }
-k8s-openapi = "0.22.0"
+shutdown = { path = "../../dependencies/control-plane/utils/shutdown" }
+
+kube = { workspace = true, features = ["derive", "runtime"] }
+k8s-openapi = { workspace = true }
 kube-proxy = { path = "../../dependencies/control-plane/k8s/proxy" }
 kube-forward = { path = "../../dependencies/control-plane/k8s/forward" }
-tokio = { version = "1.41.0" }
-anyhow = "1.0.92"
-clap = { version = "4.5.20", features = ["color", "derive"] }
-async-trait = "0.1.83"
-shutdown = { path = "../../dependencies/control-plane/utils/shutdown" }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+async-trait = { workspace = true }

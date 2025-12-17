@@ -10,3 +10,67 @@ members = [
 
 exclude = ["./dependencies/control-plane"]
 resolver = "1"
+
+[workspace.dependencies]
+# k8s
+kube = { version = "0.94.2", features = ["runtime", "derive"] }
+k8s-openapi = { version = "0.22.0", features = ["v1_24"] }
+schemars = { version = "0.8.21" }
+
+# async
+tokio = { version = "1.41.0", features = ["full"] }
+tokio-retry = "0.3"
+futures = "0.3"
+async-trait = "0.1.83"
+
+# tracing
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "std"] }
+
+# ser/deser
+serde = { version = "1.0.214", features = ["derive"] }
+serde_json = "1.0.132"
+serde_yaml = "0.9.34"
+
+# errors
+snafu = "0.8.5"
+anyhow = "1.0.92"
+
+# misc
+uuid = { version = "1.11.0", features = ["serde", "v4"] }
+clap = { version = "4.5.20", features = ["cargo", "derive", "env", "string", "color"] }
+nu-ansi-term = "0.50.1"
+sha256 = "1.5.0"
+chrono = "0.4.38"
+rand = "0.8.5"
+tempfile = "3.13.0"
+humantime = "2.1.0"
+once_cell = "1.20.2"
+maplit = "1.0.2"
+semver = { version = "1.0.23", features = ["serde"] }
+regex = "1.11.1"
+base64 = "0.22.1"
+flate2 = "1.0.34"
+tar = "0.4"
+parse-size = "1.1.0"
+downcast-rs = "1.2.1"
+
+# http
+tonic = "0.12.3"
+reqwest = "0.12.9"
+reqwest-middleware = "0.3.3"
+reqwest-retry = "0.6.1"
+url = "2.5.4"
+hyper = { version = "1.5.0", features = ["client", "http1", "http2"] }
+hyper-util = "0.1.10"
+tower = { version = "0.5.1", features = ["timeout", "util"] }
+http = "1.1.0"
+urlencoding = "2.1.3"
+http-body-util = "0.1.2"
+
+# exporter
+actix-web = { version = "4.9.0", features = ["rustls-0_21"] }
+prometheus = "0.13.4"
+mime = "0.3.17"
+prometheus-parse = "0.2.5"
+heck = "0.5.0"
