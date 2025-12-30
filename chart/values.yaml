@@ -26,7 +26,7 @@ image:
     #       If not specified, 'tag' option provided above will be picked.
     controlPlane: 0126c01ec76b
     dataPlane: 05b2f91ff642
-    extensions: 50a9f0145c41
+    extensions: bacc2b66241c
   # -- ImagePullPolicy for our images
   pullPolicy: IfNotPresent
   # -- docker-secrets required to pull images if the container registry from image.registry is protected
@@ -732,7 +732,7 @@ alloy:
       create: true
       content: |
         {{- $releaseName := .Release.Name | replace "-" "_" -}}
-        
+
         livedebugging {
           enabled = {{ .Values.logging_config.debugging }}
         }
