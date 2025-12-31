@@ -25,8 +25,7 @@ latest_release_branch() {
     --all \
     --list "$remote/release/*.*" \
     --format '%(refname:short)' \
-    --sort 'refname' \
-    | tail -n 1)
+    | sort -V | tail -n 1)
 
   if [ "$latest_release_branch" = "" ]; then
     latest_release_branch="$remote/release/0.0"

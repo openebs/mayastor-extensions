@@ -46,24 +46,6 @@ Examples:
 EOF
 }
 
-oras_latest() {
-  local repo="$1"
-  local prefix="$2"
-
-  tags=$(oras repo tags "$repo")
-  local error=$?
-  if [[ $error -ne 0 ]]; then
-    local capture
-    capture=$(oras repo tags "$repo" 2>&1)
-    # todo: can't find a better way to check if repository exists ahead of time
-    if echo "$capture" | grep "404" &>/dev/null; then
-      return 0
-    fi
-    return $error
-  fi
-
-  echo "$tags" | { grep "^$prefix\." || true; } | sort -rt '.' -k4 -n | head -n 1
-}
 oci_latest() {
   local repo="$1"
   local prefix="$2"
@@ -95,12 +77,24 @@ oci_latest() {
     return $error
   fi
 
-  # todo: can't find a better way to check if repository exists ahead of time
-  if { oras repo tags "$repo" 2>&1 || :; } | grep "404" >/dev/null; then
+  # Version not found, check if repo exists to distinguish repo vs version missing.
+  local oras_output oras_error
+  oras_output=$(oras repo tags "$repo" 2>&1)
+  oras_error=$?
+
+  if [[ $oras_error -eq 0 ]]; then
+    # Repo exists, version doesn't.
     return 0
   fi
-  log_error "Failed to fetch tags from $repo"
-  return $error
+
+  # todo: can't find a better way to check if repository exists ahead of time
+  if echo "$oras_output" | grep "repository name not known to registry" >/dev/null; then
+    # Repo doesn't exist.
+    return 0
+  fi
+
+  log_error "Failed to fetch tags from $repo: $oras_output"
+  return $oras_error
 }
 oci_next() {
   local repo="$1"
@@ -158,18 +152,7 @@ helm_pins_version_prefix() {
   fi
   echo "$pinned_version_prefix"
 }
-helm_pins_version_latest() {
-  local pinned_oci_chart="$1"
-  local pinned_version_prefix="$2"
-  local pinned_version
 
-  pinned_version=$(oci_latest "$pinned_oci_chart" "$pinned_version_prefix")
-  local error=$?
-  if [[ $error -ne 0 ]]; then
-    return $error
-  fi
-  echo "$pinned_version"
-}
 helm_pins_version() {
   local pinned_oci_chart="$1"
   local pinned_version_prefix="$2"
