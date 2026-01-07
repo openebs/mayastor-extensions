@@ -203,6 +203,23 @@ update_required() {
   fi
 }
 
+# The docker tag could either be a git tag, a git branch, or a modified git branch
+# The modified git branch can happen for release branches, where release/x becomes release-x
+hash_from_docker_tag() {
+  local git_remote="$1"
+  local docker_tag="$2"
+  local hash
+  hash=$(git ls-remote "$git_remote" "refs/heads/$docker_tag" | awk '{print substr($1, 1, 12)}')
+  error=$?
+  if [ -z "$hash" ] || [ $error -ne 0 ]; then
+    # rewrite the release-x to release/x
+    local git_branch
+    git_branch=${docker_tag/-//}
+    hash=$(git ls-remote "$git_remote" "refs/heads/$git_branch" | awk '{print substr($1, 1, 12)}')
+  fi
+  echo "$hash"
+}
+
 PIN="helm-pins"
 CHART_REGISTRY="ghcr.io"
 CHART_NAMESPACE="openebs/$PIN"
@@ -263,17 +280,17 @@ fi
 # We could use get_hash but this wouldn't work on "local" commits
 if [[ -z "${EXT_HASH:-}" ]]; then
   DATA_REMOTE=$(git remote get-url origin)
-  EXT_HASH=$(git ls-remote "$DATA_REMOTE" "refs/heads/$TAG" | awk '{print substr($1, 1, 12)}')
+  EXT_HASH=$(hash_from_docker_tag "$DATA_REMOTE" "$TAG")
 fi
 # We could use the submodule dep, but I've noticed that it may be pointing to a commit part of a
 # merge commit, and in this case there's no equivalent docker image
 if [[ -z "${CTRL_HASH:-}" ]]; then
   DATA_REMOTE=$(git remote get-url origin | sed 's/mayastor-extensions/mayastor-control-plane/')
-  CTRL_HASH=$(git ls-remote "$DATA_REMOTE" "refs/heads/$TAG" | awk '{print substr($1, 1, 12)}')
+  CTRL_HASH=$(hash_from_docker_tag "$DATA_REMOTE" "$TAG")
 fi
 if [[ -z "${DATA_HASH:-}" ]]; then
   DATA_REMOTE=$(git remote get-url origin | sed 's/mayastor-extensions/mayastor/')
-  DATA_HASH=$(git ls-remote "$DATA_REMOTE" "refs/heads/$TAG" | awk '{print substr($1, 1, 12)}')
+  DATA_HASH=$(hash_from_docker_tag "$DATA_REMOTE" "$TAG")
 fi
 if [[ -z "${DATE_TIME:-}" ]]; then
   DATE_TIME=$(date +"%Y-%m-%d-%H-%M-%S")
@@ -296,6 +313,10 @@ echo "Extensions hash    : $EXT_HASH"
 echo "Control-Plane hash : $CTRL_HASH"
 echo "Data-Plane hash    : $DATA_HASH"
 echo "Chart Timestamp    : $DATE_TIME"
+
+if [ -z "${EXT_HASH:-}" ] || [ -z "${CTRL_HASH:-}" ] || [ -z "${DATA_HASH:-}" ]; then
+  log_fatal "Failed to retrieve the hashes"
+fi
 
 if [ ! "${UNPIN_CHART:-}" = "true" ] && [[ "$PINNED_VERSION" != "$PINNED_VERSION_PREFIX.1" ]]; then
   UPDATE=$(update_required "$PINNED_OCI_CHART" "$PINNED_VERSION_PREFIX" "$PINNED_VERSION" "$EXT_HASH" "$CTRL_HASH" "$DATA_HASH")
