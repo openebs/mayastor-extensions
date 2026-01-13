@@ -23,19 +23,9 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-      - uses: cachix/install-nix-action@v31.3.0
+      - uses: ./.github/actions/setup-nix
         with:
-          enable_kvm: true
-      - name: Setup Nix Path
-        run: |
-          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
-          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
-      - name: Pre-populate K8s nix-shell
-        run: nix-shell ./scripts/k8s/shell.nix --run "echo"
-      - name: Pre-populate helm nix-shell
-        run: nix-shell ./scripts/helm/shell.nix --run "echo"
-      - name: Pre-populate pytest nix-shell
-        run: nix-shell ./scripts/python/shell.nix --run "echo"
+          preFetchNix: ./scripts/k8s/shell.nix,./scripts/helm/shell.nix,./scripts/python/shell.nix
       - name: Login to Docker Hub
         if: ${{ !inputs.helm-pins }}
         uses: docker/login-action@v3
