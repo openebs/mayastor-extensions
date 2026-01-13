@@ -12,11 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v22
-      - name: Pre-populate nix-shell
-        run: |
-          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
-          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
-          nix-shell --pure --run "echo" ./scripts/helm/shell.nix
+      - uses: ./.github/actions/setup-nix
+        with:
+          preFetchNix: ./scripts/helm/shell.nix
       - name: Publish locally in the workspace
         run: |
           if [ "${{ github.ref_type }}" == "tag" ]; then
@@ -61,11 +59,9 @@ jobs:
         with:
           fetch-depth: 0
       - uses: cachix/install-nix-action@v22
-      - name: Pre-populate nix-shell
-        run: |
-          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
-          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
-          nix-shell --pure --run "echo" ./scripts/helm/shell.nix
+      - uses: ./.github/actions/setup-nix
+        with:
+          preFetchNix: ./scripts/helm/shell.nix
       - name: Publish locally in the workspace
         run: |
           tag="${{ github.ref_name }}"
