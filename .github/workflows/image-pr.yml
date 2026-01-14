@@ -14,7 +14,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
-      - uses: cachix/install-nix-action@v31.3.0
+      - uses: ./.github/actions/setup-nix
+        with:
+          gc: true
       - name: Test building the release images
         run: ./scripts/release.sh --skip-publish --build-bins --debug
       - name: Test building the static binaries

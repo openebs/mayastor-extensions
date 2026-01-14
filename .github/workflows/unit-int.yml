@@ -15,12 +15,9 @@ jobs:
         with:
           fetch-depth: 0
           submodules: 'recursive'
-      - uses: cachix/install-nix-action@v31.3.0
-      - name: Pre-populate nix-shell
-        run: |
-          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
-          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
-          nix-shell --run "echo" shell.nix
+      - uses: ./.github/actions/setup-nix
+        with:
+          preFetchNix: ./shell.nix
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v2
         with:

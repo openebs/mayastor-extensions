@@ -8,12 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v31.3.0
-      - name: Pre-populate nix-shell
-        run: |
-          export NIX_PATH=nixpkgs=$(jq '.nixpkgs.url' nix/sources.json -r)
-          echo "NIX_PATH=$NIX_PATH" >> $GITHUB_ENV
-          nix-shell --pure --run "echo" ./scripts/helm/shell.nix
+      - uses: ./.github/actions/setup-nix
+        with:
+          preFetchNix: ./scripts/helm/shell.nix
       - name: Check if the chart is publishable
         run: |
           branch="${{ github.ref_name }}"
