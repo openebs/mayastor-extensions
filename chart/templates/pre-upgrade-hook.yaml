@@ -130,7 +130,7 @@ spec:
             - "sh"
             - "-c"
           args:
-            - "/scripts/label-etcd-for-helm-release.sh {{ .Release.Name }} -n {{ .Release.Namespace }}"
+            - "/scripts/label-etcd-for-helm-release.sh {{ .Release.Name }} -n {{ .Release.Namespace }} --rollout-timeout {{ .Values.preUpgradeHook.rolloutTimeout }}"
           volumeMounts:
             - name: scripts
               mountPath: /scripts

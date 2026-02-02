@@ -241,6 +241,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | preUpgradeHook.&ZeroWidthSpace;image.&ZeroWidthSpace;repo | The container repository for the hook job | `"openebs/kubectl"` |
 | preUpgradeHook.&ZeroWidthSpace;image.&ZeroWidthSpace;tag | The container image tag for the hook job | `"1.25.15"` |
 | preUpgradeHook.&ZeroWidthSpace;imagePullSecrets | Optional array of imagePullSecrets containing private registry credentials # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/ | `[]` |
+| preUpgradeHook.&ZeroWidthSpace;rolloutTimeout | Set how long we should wait for the Etcd cluster to finish rolling out before giving up. | `"600s"` |
 | preUpgradeHook.&ZeroWidthSpace;tolerations | Node tolerations for server scheduling to nodes with taints # Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ # | `[]` |
 | priorityClassName | Pod scheduling priority. Setting this value will apply to all components except the external Chart dependencies. If any component has `priorityClassName` set, then this value would be overridden for that component. For external components like etcd, jaeger or loki, PriorityClass can only be set at component level. | `""` |
 | storageClass.&ZeroWidthSpace;allowVolumeExpansion | Enable volume expansion for the default StorageClass. | `true` |
