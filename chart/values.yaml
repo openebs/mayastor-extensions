@@ -737,7 +737,7 @@ alloy:
       create: true
       content: |
         {{- $releaseName := .Release.Name | replace "-" "_" -}}
-        
+
         livedebugging {
           enabled = {{ .Values.logging_config.debugging }}
         }
@@ -973,6 +973,8 @@ localpv-provisioner:
 preUpgradeHook:
   # -- Enable/Disable mayastor pre-upgrade hook
   enabled: true
+  # -- Set how long we should wait for the Etcd cluster to finish rolling out before giving up.
+  rolloutTimeout: "600s"
   # -- Node tolerations for server scheduling to nodes with taints
   ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
   ##

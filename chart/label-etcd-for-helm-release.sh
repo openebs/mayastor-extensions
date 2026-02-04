@@ -127,13 +127,15 @@ print_help() {
     cat <<EOF
 Usage: $0 [OPTIONS] <helm_release_name>
 
-  <helm_release_name>          (required) The release name of the helm
-                               release whose Etcd
+  <helm_release_name>            (required) The release name of the helm
+                                 release which deploys the Etcd.
 
 Options:
-  -h, --help                   Display this text.
-  -n, --namespace <namespace>  Set the kubernetes namespace of the Etcd
-                               cluster. (default: )
+  -h, --help                     Display this text.
+  -n, --namespace <namespace>    Set the kubernetes namespace of the Etcd
+                                 cluster. (default: )
+  --rollout-timeout <duration>   Timeout for waiting on StatefulSet rollout
+                                 to complete. (default: ${ROLLOUT_TIMEOUT})
 
 Examples:
   $0 -n mayastor openebs-mayastor
@@ -162,6 +164,18 @@ parse_args() {
         ;;
       *)
         NAMESPACE=${arg#*=}
+        ;;
+      esac
+      ;;
+    --rollout-timeout*)
+      case "$arg" in
+      --rollout-timeout)
+        test $# -lt 2 && log_fatal "missing value for the optional argument '$arg'."
+        ROLLOUT_TIMEOUT=$2
+        shift
+        ;;
+      *)
+        ROLLOUT_TIMEOUT=${arg#*=}
         ;;
       esac
       ;;
@@ -254,6 +268,7 @@ NAMESPACE=
 # Mandatory input.
 RELEASE_NAME=
 EXISTING_ETCD_STS=
+ROLLOUT_TIMEOUT="600s"
 
 parse_args "$@"
 
@@ -318,5 +333,9 @@ kubectl_ns label --overwrite po -l "$etcd_selector" app.kubernetes.io/component=
 kubectl_ns delete sts -l "$etcd_selector" --cascade=orphan --ignore-not-found
 # Create the StatefulSet with the new label. This is idempotent because we exit early if we find no StatefulSet.
 echo "$modified_etcd_yaml" | "$KUBECTL" create -f -
+
+# Wait for the StatefulSet rollout to complete before exiting.
+# This ensures the etcd cluster is stable before the Bitnami preUpgradeJob runs.
+kubectl_ns rollout status statefulset/"$sts_name" --timeout="$ROLLOUT_TIMEOUT"
 
 set +o errexit +o xtrace
