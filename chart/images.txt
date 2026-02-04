@@ -5,8 +5,8 @@ docker.io/nats:2.9.17-alpine
 docker.io/natsio/nats-box:0.13.8
 docker.io/natsio/nats-server-config-reloader:0.10.1
 docker.io/natsio/prometheus-nats-exporter:0.11.0
-docker.io/openebs/alpine-bash:4.3.0
-docker.io/openebs/alpine-sh:4.3.0
+docker.io/openebs/alpine-bash:4.4.0
+docker.io/openebs/alpine-sh:4.4.0
 docker.io/openebs/etcd:3.6.4-debian-12-r0
 docker.io/openebs/kubectl:1.25.15
 docker.io/openebs/linux-utils:4.3.0
