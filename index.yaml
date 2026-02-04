@@ -1636,9 +1636,9 @@ entries:
         - name: prometheus-nats-exporter
           image: docker.io/natsio/prometheus-nats-exporter:0.11.0
         - name: alpine-bash
-          image: docker.io/openebs/alpine-bash:4.3.0
+          image: docker.io/openebs/alpine-bash:4.4.0
         - name: alpine-sh
-          image: docker.io/openebs/alpine-sh:4.3.0
+          image: docker.io/openebs/alpine-sh:4.4.0
         - name: etcd
           image: docker.io/openebs/etcd:3.6.4-debian-12-r0
         - name: kubectl
@@ -1689,7 +1689,7 @@ entries:
           image: registry.k8s.io/sig-storage/snapshot-controller:v8.2.0
     apiVersion: v2
     appVersion: 0.0.0
-    created: "2026-02-04T08:32:52.755308678Z"
+    created: "2026-02-04T09:43:14.762003897Z"
     dependencies:
     - condition: crds.enabled
       name: crds
@@ -1720,7 +1720,7 @@ entries:
       repository: https://openebs.github.io/dynamic-localpv-provisioner
       version: 4.4.0
     description: Mayastor Helm chart for Kubernetes
-    digest: 6015a5d2fb317643dd4eddd5448669c8c60891555be5ba69c5c57187964be6f8
+    digest: 6ca73144955ec6d61089ec2ab25a8b5e66f2bf0923f947a08c621dd201fbf106
     name: mayastor
     type: application
     urls:
@@ -1756,4 +1756,4 @@ entries:
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2026-02-04T08:32:52.728881953Z"
+generated: "2026-02-04T09:43:14.735775557Z"
