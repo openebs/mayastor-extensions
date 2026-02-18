@@ -9,6 +9,10 @@ crds:
 global:
   security:
     allowInsecureImages: true
+  compatibility:
+    openshift:
+      # -- Adapt the securityContext sections of the ETCD STS to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation)
+      adaptSecurityContext: disable
 
 image:
   # -- Image registry to pull our product images

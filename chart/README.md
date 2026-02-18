@@ -176,6 +176,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | etcd.&ZeroWidthSpace;podAntiAffinityPreset | Pod anti-affinity preset Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity | `"hard"` |
 | etcd.&ZeroWidthSpace;removeMemberOnContainerTermination | Use a PreStop hook to remove the etcd members from the etcd cluster on container termination Ignored if lifecycleHooks is set or replicaCount=1 | `false` |
 | etcd.&ZeroWidthSpace;replicaCount | Number of replicas of etcd | `3` |
+| global.&ZeroWidthSpace;compatibility.&ZeroWidthSpace;openshift.&ZeroWidthSpace;adaptSecurityContext | Adapt the securityContext sections of the ETCD STS to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation) | `"disable"` |
 | image.&ZeroWidthSpace;pullPolicy | ImagePullPolicy for our images | `"Always"` |
 | image.&ZeroWidthSpace;pullSecrets | docker-secrets required to pull images if the container registry from image.registry is protected | `[]` |
 | image.&ZeroWidthSpace;registry | Image registry to pull our product images | `"docker.io"` |
