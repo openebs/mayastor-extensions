@@ -1,0 +1,103 @@
+name: Trivy Check CI
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 3 1,15 * *'
+
+permissions:
+  security-events: write
+  actions: read
+  contents: read
+
+jobs:
+  trivy-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-nix
+        with:
+          preFetchNix: shell.nix,./chart/shell.nix
+
+      - name: Helm dependency update
+        working-directory: chart
+        run: nix-shell shell.nix --run "helm dependency update ."
+
+      - name: Render Helm templates
+        working-directory: chart
+        run: |
+          CHART_NAME=$(yq ".name" Chart.yaml)
+          RELEASE_NAME=${RELEASE_NAME:-$CHART_NAME}
+          nix-shell shell.nix --run \
+            "helm template \"$RELEASE_NAME\" . > rendered.yaml"
+
+      - name: Trivy Helm misconfiguration scan
+        uses: aquasecurity/trivy-action@0.34.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+            scan-type: config
+            scan-ref: chart/rendered.yaml
+            format: sarif
+            output: chart/trivy-helm.sarif
+            severity: HIGH,CRITICAL
+          
+      - name: Upload Helm SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: chart/trivy-helm.sarif
+          category: trivy-helm
+
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.set-matrix.outputs.images }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-nix
+        with:
+          preFetchNix: ./scripts/helm/shell.nix
+
+      - id: set-matrix
+        run: |
+          images=$(jq -R -s -c 'split("\n") | map(select(length > 0))' chart/images.txt)
+          echo "images=$images" >> "$GITHUB_OUTPUT"
+
+  image-scan:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJson(needs.generate-matrix.outputs.images) }}
+
+    steps:
+      - name: Trivy Image Scan
+        uses: aquasecurity/trivy-action@0.34.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          scan-type: image
+          scan-ref: ${{ matrix.image }}
+          format: sarif
+          output: trivy-image.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          scanners: vuln
+          cache: true
+
+      - name: Upload Image SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image-${{ matrix.image }} 
