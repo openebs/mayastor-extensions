@@ -436,6 +436,9 @@ io_engine:
       hostCmdRetryDelay:
         # A command retry delay in milliseconds. A value of 0 means no delay, host may retry immediately
         crdt1: 30
+      # -- Maximum number of NVMe namespaces which a given io-engine node can expose.
+      # As of today, there's a 1-1 mapping of namespaces to volume targets.
+      maxNamespaces: 4096
   nvme:
     # -- Timeout for IOs
     # The default here is exaggerated for local disks, but we've observed that in
