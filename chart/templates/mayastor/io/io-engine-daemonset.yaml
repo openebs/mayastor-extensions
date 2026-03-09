@@ -80,6 +80,8 @@ spec:
           value: "{{ .Values.io_engine.nvme.adminTimeout }}"
         - name: NVME_KATO
           value: "{{ .Values.io_engine.nvme.keepAliveTimeout }}"
+        - name: NVME_MAX_NAMESPACES
+          value: "{{ default 4096 .Values.io_engine.target.nvmf.maxNamespaces }}"
         - name: MY_NODE_NAME
           valueFrom:
             fieldRef:
