@@ -24,10 +24,10 @@ jobs:
           - os: oracle-vm-8cpu-32gb-x86-64
             target: linux-musl
             arch: aarch64
-          - os: macos-14
+          - os: macos-15
             target: apple-darwin
             arch: aarch64
-          - os: macos-13
+          - os: macos-15-intel
             target: apple-darwin
             arch: x86_64
           - os: oracle-vm-8cpu-32gb-x86-64
