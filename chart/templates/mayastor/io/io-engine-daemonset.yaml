@@ -69,6 +69,10 @@ spec:
           value: "1"
         - name: NEXUS_NVMF_RESV_ENABLE
           value: "1"
+        {{- if .Values.io_engine.nvme.transportTos }}
+        - name: NVME_TRANSPORT_TOS
+          value: "{{ .Values.io_engine.nvme.transportTos }}"
+        {{- end }}
         {{- if $safeMount := .Values.base.safeMount }}
         - name: USE_SAFE_MOUNT
           value: {{ $safeMount | quote }}
