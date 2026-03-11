@@ -15,12 +15,13 @@ let
   helm_chart = sourcer.whitelistSource ../../.. [ "chart" "scripts/helm" "scripts/utils" ];
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
   tag = if img_tag != "" then img_tag else extensions.version;
-  build-extensions-image = { pname, buildType, package, extraCommands ? '''', copyToRoot ? [ ], config ? { } }:
-    dockerTools.buildImage {
-      inherit extraCommands tag;
+  build-extensions-image = { pname, buildType, package, extraCommands ? '''', fakeRootCommands ? '''', copyToRoot ? [ ], config ? { } }:
+    dockerTools.buildLayeredImage {
+      inherit extraCommands fakeRootCommands tag;
+      enableFakechroot = fakeRootCommands != "";
       created = "now";
       name = "${repo-org}/${img_prefix}-${pname}${image_suffix.${buildType}}";
-      copyToRoot = [ package ] ++ copyToRoot;
+      contents = [ package ] ++ copyToRoot;
       config = {
         Entrypoint = [ package.binary ];
       } // config;
@@ -79,6 +80,9 @@ let
       inherit buildType;
       package = extensions.${buildType}.upgrade.${name};
       copyToRoot = [ kubernetes-helm-wrapped busybox tagged_helm_chart yq-go ];
+      fakeRootCommands = ''
+        chmod -R 0777 /chart
+      '';
       pname = package.pname;
       config = {
         Env = [ "CORE_CHART_DIR=/chart" ];
