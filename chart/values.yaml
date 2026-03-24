@@ -440,6 +440,13 @@ io_engine:
       # As of today, there's a 1-1 mapping of namespaces to volume targets.
       maxNamespaces: 4096
   nvme:
+    # -- NVMe Transport Type of Service (ToS) value for RDMA QoS/DSCP marking.
+    # When using NVMe-oF over RDMA (RoCEv2), set this to mark target (responder)
+    # side RDMA traffic with a DSCP value (e.g. 104 for DSCP 26 / AF31) so that
+    # switches and NICs can classify storage traffic into a Priority Flow Control
+    # (PFC) enabled queue for lossless transport.
+    # A value of 0 (the default) means no marking (best-effort QoS).
+    transportTos: ""
     # -- Timeout for IOs
     # The default here is exaggerated for local disks, but we've observed that in
     # shared virtual environments having a higher timeout value is beneficial.
