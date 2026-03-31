@@ -133,6 +133,8 @@ operators:
         memory: "16Mi"
     # -- Set tolerations, overrides global
     tolerations: [ ]
+    # -- Set nodeSelector, overrides global
+    nodeSelector: {}
     # -- Set PriorityClass, overrides global
     priorityClassName: ""
 jaeger-operator:
@@ -207,6 +209,8 @@ agents:
         memory: "32Mi"
     # -- Set tolerations, overrides global
     tolerations: [ ]
+    # -- Set nodeSelector, overrides global
+    nodeSelector: {}
     # -- Set PriorityClass, overrides global.
     # If both local and global are not set, the final deployment manifest has a mayastor custom critical priority class assigned to the pod by default.
     # Refer the `templates/_helpers.tpl` and `templates/mayastor/agents/core/agent-core-deployment.yaml` for more details.
@@ -242,6 +246,8 @@ agents:
           memory: "64Mi"
       # -- Set tolerations, overrides global
       tolerations: [ ]
+      # -- Set nodeSelector, overrides global
+      nodeSelector: {}
       # -- Set PriorityClass, overrides global
       priorityClassName: ""
       # -- Container port for the ha-node service
@@ -314,6 +320,8 @@ apis:
         https: 30010
     # -- Set tolerations, overrides global
     tolerations: [ ]
+    # -- Set nodeSelector, overrides global
+    nodeSelector: {}
     # -- Set PriorityClass, overrides global.
     # If both local and global are not set, the final deployment manifest has a mayastor custom critical priority class assigned to the pod by default.
     # Refer the `templates/_helpers.tpl` and `templates/mayastor/apis/rest/api-rest-deployment.yaml` for more details.
@@ -356,6 +364,8 @@ csi:
         memory: "64Mi"
     # -- Set tolerations, overrides global
     tolerations: [ ]
+    # -- Set nodeSelector, overrides global
+    nodeSelector: {}
     # -- Set PriorityClass, overrides global
     priorityClassName: ""
     # -- Prevent modifying the volume mode when creating a PVC from an existing VolumeSnapshot
@@ -404,6 +414,8 @@ csi:
       enabled: true
     # -- Set tolerations, overrides global
     tolerations: [ ]
+    # -- Set nodeSelector, overrides global
+    nodeSelector: {}
     # -- Set PriorityClass, overrides global
     priorityClassName: ""
     initContainers:
@@ -950,6 +962,8 @@ obs:
         memory: "16Mi"
     # -- Set tolerations, overrides global
     tolerations: [ ]
+    # -- Set nodeSelector, overrides global
+    nodeSelector: {}
     # -- Set PriorityClass, overrides global
     priorityClassName: ""
   # Eventing component enabled/disabled based on obs.callhome.enabled value

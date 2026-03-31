@@ -74,6 +74,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | agents.&ZeroWidthSpace;core.&ZeroWidthSpace;encryptedPoolsSoftScheduling | Prefer encrypted pools for volume replicas. If a volume wasn't provisioned with a encryption storageclass, we try to place the replicas of such volume on best-effort basis onto encrypted pools, if this global is set. This is effective subject to volume spec already modified via plugin to request encryption. | `false` |
 | agents.&ZeroWidthSpace;core.&ZeroWidthSpace;logLevel | Log level for the core service | `"info"` |
 | agents.&ZeroWidthSpace;core.&ZeroWidthSpace;minTimeouts | Enable minimal timeouts | `true` |
+| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
 | agents.&ZeroWidthSpace;core.&ZeroWidthSpace;poolClusterSize | Default blobstore cluster size for diskpools, in bytes. This value is used as a default value of blobstore cluster size on diskpools. This is set to 4MiB internally by default, if nothing specified here. The value is also configurable via Diskpool CR, which takes precedence over this setting. This is an advanced configuration, please refer documentation to understand the usage and implications of this. | `""` |
 | agents.&ZeroWidthSpace;core.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global. If both local and global are not set, the final deployment manifest has a mayastor custom critical priority class assigned to the pod by default. Refer the `templates/_helpers.tpl` and `templates/mayastor/agents/core/agent-core-deployment.yaml` for more details. | `""` |
 | agents.&ZeroWidthSpace;core.&ZeroWidthSpace;rebuild.&ZeroWidthSpace;maxConcurrent | The maximum number of system-wide rebuilds permitted at any given time. If set to an empty string, there are no limits. | `""` |
@@ -92,6 +93,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;cluster.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for ha cluster agent | `"100m"` |
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;cluster.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for ha cluster agent | `"16Mi"` |
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;logLevel | Log level for the ha node service | `"info"` |
+| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;port | Container port for the ha-node service | `50053` |
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for ha node agent | `"100m"` |
@@ -113,6 +115,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;readiness.&ZeroWidthSpace;periodSeconds | No. of seconds between readiness probe checks. | `20` |
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;readiness.&ZeroWidthSpace;timeoutSeconds | No. of seconds of timeout tolerance. | `5` |
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;logLevel | Log level for the rest service | `"info"` |
+| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global. If both local and global are not set, the final deployment manifest has a mayastor custom critical priority class assigned to the pod by default. Refer the `templates/_helpers.tpl` and `templates/mayastor/apis/rest/api-rest-deployment.yaml` for more details. | `""` |
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;replicaCount | Number of replicas of rest | `1` |
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for rest | `"100m"` |
@@ -131,6 +134,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | crds.&ZeroWidthSpace;csi.&ZeroWidthSpace;volumeSnapshots.&ZeroWidthSpace;enabled | Install Volume Snapshot CRDs | `true` |
 | crds.&ZeroWidthSpace;enabled | Disables the installation of all CRDs if set to false | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;logLevel | Log level for the csi controller | `"info"` |
+| csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;preventVolumeModeConversion | Prevent modifying the volume mode when creating a PVC from an existing VolumeSnapshot | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for csi controller | `"32m"` |
@@ -148,6 +152,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;snapshotControllerTag | csi-snapshot-controller image release tag | `"v8.2.0"` |
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;snapshotterTag | csi-snapshotter image release tag | `"v8.2.0"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;kubeletDir | The kubeletDir directory for the csi-node plugin | `"/var/lib/kubelet"` |
+| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nvme.&ZeroWidthSpace;ctrl_loss_tmo | The ctrl_loss_tmo (controller loss timeout) in seconds | `"1980"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcpFallback | Fallback to nvme-tcp if nvme-rdma is enabled for Mayastor but rdma is not available on a particular csi-node | `true` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;port | Container port for the csi-node service | `10199` |
@@ -222,6 +227,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | nodeSelector | Node labels for pod assignment ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ Note that if multi-arch images support 'kubernetes.io/arch: amd64' should be removed and set 'nodeSelector' to empty '{}' as default value. | <pre>{<br>"kubernetes.io/arch":"amd64"<br>}</pre> |
 | obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;enabled | Enable callhome | `true` |
 | obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;logLevel | Log level for callhome | `"info"` |
+| obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
 | obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
 | obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for callhome | `"100m"` |
 | obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for callhome | `"32Mi"` |
@@ -235,6 +241,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | obs.&ZeroWidthSpace;stats.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for stats | `"16Mi"` |
 | obs.&ZeroWidthSpace;stats.&ZeroWidthSpace;service.&ZeroWidthSpace;type | Rest K8s service type | `"ClusterIP"` |
 | operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;logLevel | Log level for diskpool operator service | `"info"` |
+| operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
 | operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
 | operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for diskpool operator | `"100m"` |
 | operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for diskpool operator | `"32Mi"` |

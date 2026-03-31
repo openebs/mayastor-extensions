@@ -31,8 +31,8 @@ spec:
       {{- if $pcName := include "priority_class_with_default" (dict "template" . "localPriorityClass" .Values.csi.controller.priorityClassName) }}
       priorityClassName: {{ $pcName }}
       {{- end }}
-      {{- if .Values.nodeSelector }}
-      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- if $nodeSelector := include "node_selector" (dict "template" . "localNodeSelector" .Values.csi.controller.nodeSelector) }}
+      nodeSelector: {{ $nodeSelector }}
       {{- end }}
       {{- if $tolerations := include "_tolerations_with_early_eviction" (dict "template" . "localTolerations" .Values.csi.controller.tolerations) }}
       tolerations: {{ $tolerations }}
