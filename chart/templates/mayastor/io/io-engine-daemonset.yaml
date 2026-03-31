@@ -42,8 +42,8 @@ spec:
         {{- include "base_init_containers" . }}
       containers:
       - name: io-engine
-        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-io-engine:{{ default .Values.image.tag .Values.image.repoTags.dataPlane }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: "{{ default .Values.image.registry .Values.global.imageRegistry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-io-engine:{{ default .Values.image.tag .Values.image.repoTags.dataPlane }}"
+        imagePullPolicy: {{ default .Values.image.pullPolicy .Values.global.imagePullPolicy }}
         env:
         - name: RUST_LOG
           value: {{ .Values.io_engine.logLevel }}
@@ -137,8 +137,8 @@ spec:
           name: io-engine
       {{- if .Values.base.metrics.enabled }}
       - name: metrics-exporter-io-engine
-        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-metrics-exporter-io-engine:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: "{{ default .Values.image.registry .Values.global.imageRegistry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-metrics-exporter-io-engine:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
+        imagePullPolicy: {{ default .Values.image.pullPolicy .Values.global.imagePullPolicy }}
         env:
         - name: MY_NODE_NAME
           valueFrom:

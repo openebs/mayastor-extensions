@@ -46,8 +46,8 @@ spec:
             requests:
               cpu: {{ .Values.csi.controller.resources.requests.cpu | quote }}
               memory: {{ .Values.csi.controller.resources.requests.memory | quote }}
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-csi-controller:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ default .Values.image.registry .Values.global.imageRegistry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-csi-controller:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.global.imagePullPolicy }}
           args:
             - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
             - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"{{ if .Values.base.jaeger.enabled }}
@@ -70,7 +70,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-provisioner
-          image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-provisioner:{{ .Values.csi.image.provisionerTag }}"
+          image: "{{ default .Values.csi.image.registry .Values.global.imageRegistry }}/{{ .Values.csi.image.repo }}/csi-provisioner:{{ .Values.csi.image.provisionerTag }}"
           args:
             - "--v=2"
             - "--csi-address=$(ADDRESS)"
@@ -86,12 +86,12 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-          imagePullPolicy: {{ .Values.csi.image.pullPolicy }}
+          imagePullPolicy: {{ default .Values.csi.image.pullPolicy .Values.global.imagePullPolicy }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-attacher:{{ .Values.csi.image.attacherTag }}"
+          image: "{{ default .Values.csi.image.registry .Values.global.imageRegistry }}/{{ .Values.csi.image.repo }}/csi-attacher:{{ .Values.csi.image.attacherTag }}"
           args:
             - "--v=2"
             - "--timeout=36s"
@@ -99,19 +99,19 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-          imagePullPolicy: {{ .Values.csi.image.pullPolicy }}
+          imagePullPolicy: {{ default .Values.csi.image.pullPolicy .Values.global.imagePullPolicy }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-snapshotter
-          image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-snapshotter:{{ .Values.csi.image.snapshotterTag }}"
+          image: "{{ default .Values.csi.image.registry .Values.global.imageRegistry }}/{{ .Values.csi.image.repo }}/csi-snapshotter:{{ .Values.csi.image.snapshotterTag }}"
           args:
             - "--v=2"
             - "--csi-address=$(ADDRESS)"
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-          imagePullPolicy: {{ .Values.csi.image.pullPolicy }}
+          imagePullPolicy: {{ default .Values.csi.image.pullPolicy .Values.global.imagePullPolicy }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -122,8 +122,8 @@ spec:
             {{- if default .Values.csi.controller.preventVolumeModeConversion }}
             - "--prevent-volume-mode-conversion"
             {{- end }}
-          image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/snapshot-controller:{{ .Values.csi.image.snapshotControllerTag }}"
-          imagePullPolicy: {{ .Values.csi.image.pullPolicy }}
+          image: "{{ default .Values.csi.image.registry .Values.global.imageRegistry }}/{{ .Values.csi.image.repo }}/snapshot-controller:{{ .Values.csi.image.snapshotControllerTag }}"
+          imagePullPolicy: {{ default .Values.csi.image.pullPolicy .Values.global.imagePullPolicy }}
         - name: csi-resizer
           args:
             - "--v=2"
@@ -132,8 +132,8 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
-          image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-resizer:{{ .Values.csi.image.resizerTag }}"
-          imagePullPolicy: {{ .Values.csi.image.pullPolicy }}
+          image: "{{ default .Values.csi.image.registry .Values.global.imageRegistry }}/{{ .Values.csi.image.repo }}/csi-resizer:{{ .Values.csi.image.resizerTag }}"
+          imagePullPolicy: {{ default .Values.csi.image.pullPolicy .Values.global.imagePullPolicy }}
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
