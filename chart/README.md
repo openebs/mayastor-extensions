@@ -215,6 +215,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 | io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;ptpl | Reservations Persist Through Power Loss State | `true` |
 | io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;rdma | Enable RDMA Capability of Mayastor nvmf target to take RDMA connections if the cluster nodes have RDMA device(s) configured from RNIC. | <pre>{<br>"enabled":false<br>}</pre> |
 | io_engine.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
+| ipFamily | IP family for services and bind addresses. Valid values: "ipv4", "ipv6", "both" (default). | `"both"` |
 | localpv-provisioner.&ZeroWidthSpace;enabled | Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki storage class accordingly. | `true` |
 | localpv-provisioner.&ZeroWidthSpace;hostpathClass.&ZeroWidthSpace;enabled | Enable default hostpath localpv StorageClass. | `false` |
 | localpv-provisioner.&ZeroWidthSpace;localpv.&ZeroWidthSpace;priorityClassName | Set the PriorityClass for the LocalPV Hostpath provisioner Deployment. | `"{{ .Release.Name }}-cluster-critical"` |

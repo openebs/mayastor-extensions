@@ -159,7 +159,7 @@ spec:
             protocol: TCP
             name: metrics
         args:
-          - "--metrics-endpoint=[::]:{{ default 9502 .Values.base.metrics.port }}"
+          - "--metrics-endpoint={{ include "bind_address" . }}:{{ default 9502 .Values.base.metrics.port }}"
           - "--grpc-port={{ default 10124 .Values.io_engine.port }}"
           - "--fmt-style={{ include "logFormat" . }}"
           - "--ansi-colors={{ .Values.base.logging.color }}"
