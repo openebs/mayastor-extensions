@@ -54,6 +54,8 @@ flate2 = "1.0.34"
 tar = "0.4"
 parse-size = "1.1.0"
 downcast-rs = "1.2.1"
+strum = "0.26.3"
+strum_macros = "0.26.4"
 
 # http
 tonic = "0.12.3"
