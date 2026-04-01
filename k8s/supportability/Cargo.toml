@@ -45,6 +45,8 @@ flate2 = { workspace = true }
 chrono = { workspace = true }
 downcast-rs = { workspace = true }
 parse-size = { workspace = true }
+strum_macros = { workspace = true }
+strum = { workspace = true }
 
 hyper = { workspace = true, features = ["client", "http1", "http2"] }
 hyper-util = { workspace = true }
