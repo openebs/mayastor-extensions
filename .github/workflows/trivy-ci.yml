@@ -36,7 +36,7 @@ jobs:
             "helm template \"$RELEASE_NAME\" . > rendered.yaml"
 
       - name: Trivy Helm misconfiguration scan
-        uses: aquasecurity/trivy-action@0.34.2
+        uses: aquasecurity/trivy-action@v0.35.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -83,7 +83,7 @@ jobs:
 
     steps:
       - name: Trivy Image Scan
-        uses: aquasecurity/trivy-action@0.34.2
+        uses: aquasecurity/trivy-action@v0.35.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
