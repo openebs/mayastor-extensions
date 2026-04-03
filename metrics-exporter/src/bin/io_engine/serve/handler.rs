@@ -3,7 +3,7 @@ use crate::{
     collector::{
         nexus_stat::NexusIoStatsCollector,
         node_status::NodeStatusCollector,
-        pool::{PoolCapacityCollector, PoolStatusCollector},
+        pool::{PoolAlertCollector, PoolCapacityCollector, PoolStatusCollector},
         pool_stat::PoolIoStatsCollector,
         replica_stat::ReplicaIoStatsCollector,
     },
@@ -34,6 +34,7 @@ pub(crate) async fn metrics_handler() -> impl Responder {
     let pools_collector = PoolCapacityCollector::default();
     let pool_status_collector = PoolStatusCollector::default();
     let pool_iostat_collector = PoolIoStatsCollector::default();
+    let pool_alert_collector = PoolAlertCollector::default();
     let nexus_iostat_collector = NexusIoStatsCollector::default();
     let replica_iostat_collector = ReplicaIoStatsCollector::default();
     let node_status_collector = NodeStatusCollector::new(node);
@@ -45,6 +46,9 @@ pub(crate) async fn metrics_handler() -> impl Responder {
     }
     if let Err(error) = Registry::register(&registry, Box::new(pool_status_collector)) {
         warn!(%error, "Pool status collector already registered");
+    }
+    if let Err(error) = Registry::register(&registry, Box::new(pool_alert_collector)) {
+        warn!(%error, "Pool alert collector already registered");
     }
     if let Err(error) = Registry::register(&registry, Box::new(pool_iostat_collector)) {
         warn!(%error, "Pool IoStat collector already registered");

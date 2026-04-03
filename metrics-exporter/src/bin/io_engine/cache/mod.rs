@@ -8,9 +8,9 @@ use crate::client::{
     replica_stat::ReplicaIoStats,
 };
 use once_cell::sync::OnceCell;
-use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 
+/// NOTE: try to reference cache from the Collector.
 static CACHE: OnceCell<Mutex<Cache>> = OnceCell::new();
 
 /// Trait to be implemented by all Resource structs stored in Cache.
@@ -26,7 +26,7 @@ pub(crate) struct Cache {
 }
 
 /// Wrapper over all the data that has to be stored in cache.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub(crate) struct Data {
     /// Contains Pool Capacity and state data.
     pools: Pools,
