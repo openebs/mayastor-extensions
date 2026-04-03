@@ -101,6 +101,10 @@ spec:
         - "--events-url=nats://{{ .Release.Name }}-nats:4222"
         - "--events-replicas={{ include "events_replicas" . }}"{{ end }}
         - "--ps-retries={{ default 300 .Values.io_engine.pstorRetries }}"
+        - "--pool-io-error-threshold={{ default 64 .Values.io_engine.pool.ioAlerts.errorThreshold }}"
+        - "--pool-io-stall-deadline={{ default (printf "%s%s" .Values.io_engine.nvme.ioTimeout .Values.io_engine.nvme.ioTimeout) .Values.io_engine.pool.ioAlerts.stallDeadline }}"
+        - "--pool-io-stall-transition-threshold={{ default 3 .Values.io_engine.pool.ioAlerts.stallTransitionThreshold }}"
+        - "--pool-io-stall-transition-window={{ default "3h" .Values.io_engine.pool.ioAlerts.stallTransitionWindow }}"
         command:
         - io-engine
         securityContext:

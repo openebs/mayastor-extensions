@@ -507,6 +507,22 @@ io_engine:
   pstorRetries: 300
   # -- Container port for the io-engine service
   port: 10124
+  pool:
+    ioAlerts:
+      # -- After this many errors a pool alert is raised as Warning.
+      errorThreshold: 64
+      # -- If an I/O is stuck longer than this period, then the pool is considered stalled and a
+      # Critical alert is raised.
+      # The pool disk will also be reset and the stall will be cleared once complete and I/O flows
+      # again.
+      # default: .Values.io_engine.nvme.ioTimeout * 2
+      stallDeadline:
+      # -- After this many transitions within the stallTransitionWindow, a pool alert is raised
+      # as Warning.
+      stallTransitionThreshold: 3
+      # -- Time window during which stall ↔ resume state transitions are tracked for flakiness
+      # detection.
+      stallTransitionWindow: "3h"
 etcd:
   # -- Disable when using an external etcd cluster.
   enabled: true
