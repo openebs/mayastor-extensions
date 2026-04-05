@@ -12,6 +12,7 @@ path = "src/main.rs"
 
 [features]
 default = ["rls"]
+openapi = []
 rls = ["openapi/tower-client-rls", "rest-plugin/rls"]
 tls = ["openapi/tower-client-tls", "rest-plugin/tls"]
 
@@ -29,7 +30,19 @@ kube = { workspace = true, features = ["derive", "runtime"] }
 k8s-openapi = { workspace = true }
 kube-proxy = { path = "../../dependencies/control-plane/k8s/proxy" }
 kube-forward = { path = "../../dependencies/control-plane/k8s/forward" }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
 anyhow = { workspace = true }
 clap = { workspace = true }
 async-trait = { workspace = true }
+humantime = { workspace = true }
+http = { workspace = true }
+snafu = { workspace = true }
+
+# The DiskPool resource is used in this crate via the include! macro.
+# These dependencies are required to build that file.
+chrono = { workspace = true }
+parse-size = { workspace = true }
+strum_macros = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+schemars = { workspace = true }

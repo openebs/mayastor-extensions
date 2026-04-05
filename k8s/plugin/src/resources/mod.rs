@@ -1,9 +1,11 @@
+mod diskpool_cleanup;
+
 use anyhow::anyhow;
 use clap::Parser;
 use k8s_openapi::api::core::v1 as core_v1;
 use kube::api::GroupVersionKind;
-use openapi::tower::client::Url;
-use plugin::resources::{snapshot, VolumeId};
+use openapi::{apis::StatusCode, tower::client::Url};
+use plugin::resources::{pool, snapshot, VolumeId};
 use plugin::{
     resources::{
         CordonResources, DrainResources, ExpandResources, GetResources, LabelResources,
@@ -144,6 +146,8 @@ pub struct DeleteArgs {
 pub enum DeleteResources {
     /// Delete upgrade resources
     Upgrade(DeleteUpgradeArgs),
+    /// Deletes the specified pool resource.
+    Pool(PoolDeleteArgs),
     /// Deletes the specified volume resource.
     Volume {
         /// The id of the volume to delete.
@@ -151,6 +155,27 @@ pub enum DeleteResources {
     },
     /// Deletes the specified volume snapshot resource.
     VolumeSnapshot(snapshot::DelVolumeSnapshotArgs),
+}
+
+/// Arguments for deleting a pool.
+///
+/// Wraps the control-plane pool delete arguments and adds `--cleanup-cr`
+/// for also deleting the DiskPool CustomResource via the Kubernetes API.
+#[derive(Debug, Clone, clap::Args)]
+pub struct PoolDeleteArgs {
+    #[clap(flatten)]
+    rest_args: pool::DeletePoolArgs,
+
+    /// Also delete the DiskPool CustomResource via the Kubernetes API.{n}
+    /// Deletes the CR and waits for the pool operator to process the
+    /// finalizer before returning.
+    #[arg(long)]
+    cleanup_cr: bool,
+
+    /// Timeout for waiting for the DiskPool CR to be deleted by the
+    /// operator (used with --cleanup-cr).
+    #[arg(long, default_value = "60s")]
+    cleanup_cr_timeout: humantime::Duration,
 }
 
 #[async_trait::async_trait(?Send)]
@@ -204,6 +229,42 @@ impl ExecuteOperation for Operations {
                 match &args.resource {
                     // todo: use generic execute trait
                     DeleteResources::Upgrade(res) => res.delete(&cli_args.namespace).await?,
+                    DeleteResources::Pool(pool_args) if !pool_args.cleanup_cr => {
+                        // No cleanup — delegate entirely like Volume/VolumeSnapshot.
+                        plugin::resources::DeleteArgs {
+                            ignore_not_found: args.ignore_not_found,
+                            yes: args.yes,
+                            resource: plugin::resources::DeleteResources::Pool(
+                                pool_args.rest_args.clone(),
+                            ),
+                        }
+                        .execute(cli_args)
+                        .await?
+                    }
+                    DeleteResources::Pool(pool_args) => {
+                        // --cleanup-cr: run REST delete (never swallow 404), then
+                        // CR cleanup.
+                        let rest_result = plugin::resources::DeleteArgs {
+                            ignore_not_found: false,
+                            yes: args.yes,
+                            resource: plugin::resources::DeleteResources::Pool(
+                                pool_args.rest_args.clone(),
+                            ),
+                        }
+                        .execute(cli_args)
+                        .await;
+
+                        let pool_deleted = match &rest_result {
+                            Ok(()) => true,
+                            Err(plugin::resources::error::Error::DeletePoolError {
+                                source,
+                                ..
+                            }) if source.status() == Some(StatusCode::NOT_FOUND) => false,
+                            _ => return rest_result.map_err(Into::into),
+                        };
+                        cleanup_cr(cli_args, pool_args, pool_deleted, args.ignore_not_found)
+                            .await?;
+                    }
                     DeleteResources::Volume { id } => {
                         // 1. ensure PV is not present
                         let pv_name = format!("pvc-{id}");
@@ -320,4 +381,55 @@ pub async fn init_rest(cli_args: &CliArgs) -> Result<(), Error> {
             Ok(())
         }
     }
+}
+
+/// Delete the DiskPool CR and wait for the operator to process the
+/// finalizer.
+///
+/// `pool_deleted`: the plugin successfully deleted the pool spec via REST.
+/// `ignore_not_found`: suppress not-found warnings and errors.
+///
+/// If only one of pool spec or CR is missing, a warning is printed to
+/// stderr but the operation succeeds.  If both are missing, it is an
+/// error.  With `ignore_not_found`, all not-found cases are silent and
+/// successful.
+async fn cleanup_cr(
+    cli_args: &CliArgs,
+    pool_args: &PoolDeleteArgs,
+    pool_deleted: bool,
+    ignore_not_found: bool,
+) -> Result<(), Error> {
+    use diskpool_cleanup::delete_diskpool_cr;
+
+    let pool_id = &pool_args.rest_args.pool_id;
+    let namespace = &cli_args.namespace;
+    let timeout = *pool_args.cleanup_cr_timeout;
+    let client = cli_args.client().await?;
+
+    let result = tokio::time::timeout(timeout, delete_diskpool_cr(client, namespace, pool_id))
+        .await
+        .map_err(|_| {
+            anyhow!(
+                "Timed out after {} waiting for DiskPool CR {pool_id} deletion \
+                 in namespace {namespace}. Check that the pool operator is running.",
+                humantime::format_duration(timeout)
+            )
+        })?
+        .map_err(|e| anyhow!("{e}"))?;
+
+    let cr_deleted = result.is_some();
+
+    // Both missing is an error (unless ignored).
+    if !cr_deleted && !pool_deleted {
+        return if ignore_not_found {
+            Ok(())
+        } else {
+            Err(
+                anyhow!("Pool {pool_id} not found (pool spec and DiskPool CR are both missing)")
+                    .into(),
+            )
+        };
+    }
+
+    Ok(())
 }
