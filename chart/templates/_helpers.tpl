@@ -208,6 +208,19 @@ Usage:
 {{- end }}
 
 {{/*
+Creates the node selector based on the global and component wise node selectors
+Usage:
+{{ include "node_selector" (dict "template" . "localNodeSelector" .Values.path.to.local.nodeSelector) }}
+*/}}
+{{- define "node_selector" -}}
+{{- if .localNodeSelector }}
+    {{- toYaml .localNodeSelector | nindent 8 }}
+{{- else if .template.Values.nodeSelector }}
+    {{- toYaml .template.Values.nodeSelector | nindent 8 }}
+{{- end }}
+{{- end }}
+
+{{/*
 Generates the priority class name, with the given `template` and the `localPriorityClass`
 Usage:
 {{ include "priority_class" (dict "template" . "localPriorityClass" .Values.path.to.local.priorityClassName) }}

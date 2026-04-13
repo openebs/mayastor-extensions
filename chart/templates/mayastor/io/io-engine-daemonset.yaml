@@ -28,7 +28,9 @@ spec:
       hostNetwork: true
       # To resolve services in the namespace
       dnsPolicy: ClusterFirstWithHostNet
-      nodeSelector: {{- .Values.io_engine.nodeSelector | toYaml | nindent 8 }}
+      {{- if $nodeSelector := include "node_selector" (dict "template" . "localNodeSelector" .Values.io_engine.nodeSelector) }}
+      nodeSelector: {{ $nodeSelector }}
+      {{- end }}
       {{- if $pcName := include "priority_class_with_default" (dict "template" . "localPriorityClass" .Values.io_engine.priorityClassName) }}
       priorityClassName: {{ $pcName }}
       {{- end }}

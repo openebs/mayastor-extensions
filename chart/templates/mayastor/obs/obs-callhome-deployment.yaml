@@ -27,8 +27,8 @@ spec:
       {{- if $pcName := include "priority_class" (dict "template" . "localPriorityClass" .Values.obs.callhome.priorityClassName) }}
       priorityClassName: {{ $pcName }}
       {{- end }}
-      {{- if .Values.nodeSelector }}
-      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- if $nodeSelector := include "node_selector" (dict "template" . "localNodeSelector" .Values.obs.callhome.nodeSelector) }}
+      nodeSelector: {{ $nodeSelector }}
       {{- end }}
       {{- if $tolerations := include "tolerations" (dict "template" . "localTolerations" .Values.obs.callhome.tolerations) }}
       tolerations: {{ $tolerations }}

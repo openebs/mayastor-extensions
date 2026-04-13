@@ -28,8 +28,8 @@ spec:
       {{- if $pcName := include "priority_class_with_default" (dict "template" . "localPriorityClass" .Values.agents.core.priorityClassName) }}
       priorityClassName: {{ $pcName }}
       {{- end }}
-      {{- if .Values.nodeSelector }}
-      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- if $nodeSelector := include "node_selector" (dict "template" . "localNodeSelector" .Values.agents.core.nodeSelector) }}
+      nodeSelector: {{ $nodeSelector }}
       {{- end }}
       {{- if $tolerations := include "_tolerations_with_early_eviction" (dict "template" . "localTolerations" .Values.agents.core.tolerations) }}
       tolerations: {{ $tolerations }}

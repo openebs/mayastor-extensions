@@ -35,9 +35,7 @@ spec:
       priorityClassName: {{ $pcName }}
       {{- end }}
       nodeSelector:
-        {{- if .Values.nodeSelector }}
-        {{- toYaml .Values.nodeSelector | nindent 8 }}
-        {{- end }}
+        {{- include "node_selector" (dict "template" . "localNodeSelector" .Values.agents.ha.node.nodeSelector) }}
         {{- if .Values.csi.node.topology.nodeSelector }}
         {{- range $key, $val := .Values.csi.node.topology.segments }}
         {{ $key }}: {{ $val }}
