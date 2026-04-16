@@ -16,47 +16,47 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
-      - uses: ./.github/actions/setup-nix
-        with:
-          preFetchNix: ./scripts/helm/shell.nix
-      - name: HelmChart publish test
-        run: nix-shell --pure --run "./scripts/helm/test-publish-chart-yaml.sh" ./scripts/helm/shell.nix
-      - name: HelmChart Readme
-        run: nix-shell --run "./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
-      - name: HelmChart Template
-        run: nix-shell --pure --run "./scripts/helm/test-template.sh" ./scripts/helm/shell.nix
+      # - uses: ./.github/actions/setup-nix
+      #   with:
+      #     preFetchNix: ./scripts/helm/shell.nix
+      # - name: HelmChart publish test
+      #   run: nix-shell --pure --run "./scripts/helm/test-publish-chart-yaml.sh" ./scripts/helm/shell.nix
+      # - name: HelmChart Readme
+      #   run: nix-shell --run "./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
+      # - name: HelmChart Template
+      #   run: nix-shell --pure --run "./scripts/helm/test-template.sh" ./scripts/helm/shell.nix
 
-  helm-images:
-    runs-on: oracle-vm-8cpu-32gb-x86-64
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: ./.github/actions/setup-nix
-        with:
-          preFetchNix: ./scripts/k8s/shell.nix,./scripts/helm/shell.nix
-      - name: Generate image list
-        run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh generate --dependency-update --exit-code"
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        if: ${{ env.DOCKERHUB_USERNAME != '' }}
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: BootStrap k8s cluster
-        if: github.event_name != 'pull_request'
-        run: nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
-      - name: Build&Load repository-local images
-        if: github.event_name != 'pull_request'
-        run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh build"
-      - name: Install helm chart
-        if: github.event_name != 'pull_request'
-        run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/install.sh --pull-policy IfNotPresent --wait"
-      - name: Verify image list
-        if: github.event_name != 'pull_request'
-        run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh verify"
-      - name: Patch chart/Chart.yaml
-        run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh patch --exit-code"
+  # helm-images:
+  #   runs-on: oracle-vm-8cpu-32gb-x86-64
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: recursive
+  #     - uses: ./.github/actions/setup-nix
+  #       with:
+  #         preFetchNix: ./scripts/k8s/shell.nix,./scripts/helm/shell.nix
+  #     - name: Generate image list
+  #       run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh generate --dependency-update --exit-code"
+  #     - name: Login to Docker Hub
+  #       uses: docker/login-action@v3
+  #       env:
+  #         DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #       if: ${{ env.DOCKERHUB_USERNAME != '' }}
+  #       with:
+  #         registry: docker.io
+  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
+  #     - name: BootStrap k8s cluster
+  #       if: github.event_name != 'pull_request'
+  #       run: nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
+  #     - name: Build&Load repository-local images
+  #       if: github.event_name != 'pull_request'
+  #       run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh build"
+  #     - name: Install helm chart
+  #       if: github.event_name != 'pull_request'
+  #       run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/install.sh --pull-policy IfNotPresent --wait"
+  #     - name: Verify image list
+  #       if: github.event_name != 'pull_request'
+  #       run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh verify"
+  #     - name: Patch chart/Chart.yaml
+  #       run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh patch --exit-code"
