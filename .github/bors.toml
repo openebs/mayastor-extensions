@@ -1,5 +1,5 @@
 status = [ "bors-ci" ]
-pr_status = [ "helm-chart-test", "helm-images", "submodule-branch", "commitlint", "DCO" ]
+pr_status = [ "helm-chart-test", "helm-images-pr", "submodule-branch", "commitlint", "DCO" ]
 timeout_sec = 10000
 required_approvals = 2
 delete_merged_branches = true

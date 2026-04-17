@@ -1,10 +1,11 @@
-name: Bors CI
+name: Pull Request CI
 on:
   workflow_call:
   push:
     branches:
       - staging
       - trying
+  merge_group:
 
 jobs:
   lint-ci:
@@ -20,7 +21,7 @@ jobs:
     uses: ./.github/workflows/k8s-ci.yml
     secrets: inherit
   bors-ci:
-    if: ${{ success() }}
+    if: ${{ !cancelled() }}
     needs:
       - lint-ci
       - helm-ci
@@ -30,4 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: CI succeeded
-        run: exit 0
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            exit 1
+          fi
+          exit 0
