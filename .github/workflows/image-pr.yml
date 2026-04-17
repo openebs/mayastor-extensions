@@ -1,6 +1,9 @@
 name: ImageBuild CI
 on:
   workflow_call:
+  push:
+    branches:
+      - linter-pr
 
 env:
   CARGO_TERM_COLOR: always
@@ -18,6 +21,6 @@ jobs:
         with:
           gc: true
       - name: Test building the release images
-        run: ./scripts/release.sh --skip-publish --build-bins --debug
+        run: RUSTFLAGS="-C debuginfo=0 -C strip=debuginfo" ./scripts/release.sh --skip-publish --build-bins --debug --no-static-linking
       - name: Test building the static binaries
         run: nix-build -A utils.debug.x86_64.linux-musl.kubectl-plugin --arg incremental false
