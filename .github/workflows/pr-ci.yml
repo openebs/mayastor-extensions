@@ -6,28 +6,30 @@ on:
       - staging
       - trying
   pull_request:
-    types: ['opened', 'edited', 'reopened', 'synchronize']
+    types: ['opened', 'edited', 'reopened', 'synchronize', 'labeled']
   merge_group:
 
 jobs:
   lint-ci:
+    if: github.event.action != 'labeled'
     uses: ./.github/workflows/lint.yml
   helm-ci:
     uses: ./.github/workflows/helm-chart.yml
     secrets: inherit
     with:
-      trigger: ${{ github.event_name }}
+      trigger: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci/test') && 'labeled' || github.event_name }}
   int-ci:
+    if: github.event.action != 'labeled'
     uses: ./.github/workflows/unit-int.yml
   image-ci:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test')
     uses: ./.github/workflows/image-pr.yml
   k8s-ci:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test')
     uses: ./.github/workflows/k8s-ci.yml
     secrets: inherit
   bors-ci:
-    if: ${{ !cancelled() && github.event_name != 'pull_request' }}
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test')) }}
     needs:
       - lint-ci
       - helm-ci
@@ -42,3 +44,21 @@ jobs:
             exit 1
           fi
           exit 0
+  remove-label:
+    if: ${{ always() && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci/test') }}
+    needs:
+      - bors-ci
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Remove ci/test label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              name: 'ci/test',
+            });
