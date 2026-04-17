@@ -5,10 +5,12 @@ on:
   push:
     branches:
       - staging
+  merge_group:
 
 jobs:
   commitlint:
     runs-on: ubuntu-latest
+    if: github.event_name != 'merge_group'
     steps:
       - uses: actions/checkout@v4
         env:
