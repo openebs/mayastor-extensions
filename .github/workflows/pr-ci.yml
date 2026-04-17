@@ -1,27 +1,35 @@
-name: Pull Request CI
+name: CI
 on:
   workflow_call:
   push:
     branches:
       - staging
       - trying
+  pull_request:
+    types: ['opened', 'edited', 'reopened', 'synchronize']
   merge_group:
 
 jobs:
   lint-ci:
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/lint.yml
   helm-ci:
     uses: ./.github/workflows/helm-chart.yml
     secrets: inherit
+    with:
+      trigger: ${{ github.event_name }}
   int-ci:
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/unit-int.yml
   image-ci:
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/image-pr.yml
   k8s-ci:
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/k8s-ci.yml
     secrets: inherit
   bors-ci:
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.event_name != 'pull_request' }}
     needs:
       - lint-ci
       - helm-ci
