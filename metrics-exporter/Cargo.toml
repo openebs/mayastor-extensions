@@ -23,3 +23,9 @@ tonic = { workspace = true }
 serde = { workspace = true }
 mime = { workspace = true }
 tracing = { workspace = true }
+
+# OEP-4111: Node status metrics dependencies
+openapi = { path = "../dependencies/control-plane/openapi" }
+anyhow = { workspace = true }
+humantime = { workspace = true }
+url = { workspace = true }

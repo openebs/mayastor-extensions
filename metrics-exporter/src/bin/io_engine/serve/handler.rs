@@ -2,11 +2,12 @@ use crate::{
     cache::store_resource_data,
     collector::{
         nexus_stat::NexusIoStatsCollector,
+        node_status::NodeStatusCollector,
         pool::{PoolCapacityCollector, PoolStatusCollector},
         pool_stat::PoolIoStatsCollector,
         replica_stat::ReplicaIoStatsCollector,
     },
-    grpc_client,
+    grpc_client, node_name, node_status_client,
 };
 use actix_web::{http::header, HttpResponse, Responder};
 use prometheus::{Encoder, Registry};
@@ -16,12 +17,26 @@ use tracing::{error, warn};
 pub(crate) async fn metrics_handler() -> impl Responder {
     // Fetches stats for all resource from io engine, Populates the cache.
     store_resource_data(grpc_client()).await;
+
+    // Fetch node status inline at scrape time so Prometheus timestamps reflect actual state.
+    let node = match node_status_client() {
+        Some(client) => match client.fetch_node(node_name()).await {
+            Ok(node) => Some(node),
+            Err(e) => {
+                warn!("Failed to fetch node status from control-plane: {e}");
+                None
+            }
+        },
+        None => None,
+    };
+
     // Create collectors for all resources.
     let pools_collector = PoolCapacityCollector::default();
     let pool_status_collector = PoolStatusCollector::default();
     let pool_iostat_collector = PoolIoStatsCollector::default();
     let nexus_iostat_collector = NexusIoStatsCollector::default();
     let replica_iostat_collector = ReplicaIoStatsCollector::default();
+    let node_status_collector = NodeStatusCollector::new(node);
     // Create a new registry for prometheus.
     let registry = Registry::default();
     // Register all collectors to the registry.
@@ -39,6 +54,9 @@ pub(crate) async fn metrics_handler() -> impl Responder {
     }
     if let Err(error) = Registry::register(&registry, Box::new(replica_iostat_collector)) {
         warn!(%error, "Replica IoStat collector already registered");
+    }
+    if let Err(error) = Registry::register(&registry, Box::new(node_status_collector)) {
+        warn!(%error, "Node status collector already registered");
     }
 
     let mut buffer = Vec::new();
