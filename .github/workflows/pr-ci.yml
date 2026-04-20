@@ -56,9 +56,19 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            await github.rest.issues.removeLabel({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              name: 'ci/test',
-            });
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                name: 'ci/test',
+              });
+            } catch (error) {
+              const status = error.status || error.response?.status;
+              if (status === 403 || status === 404) {
+                const reason = status === 403 ? 'insufficient permissions' : 'label not found';
+                console.log(`Skipping ci/test label removal due to ${reason}: ${error.message}`);
+                return;
+              }
+              throw error;
+            }
