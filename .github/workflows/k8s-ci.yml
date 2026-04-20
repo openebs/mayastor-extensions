@@ -27,7 +27,9 @@ jobs:
         with:
           preFetchNix: ./scripts/k8s/shell.nix,./scripts/helm/shell.nix,./scripts/python/shell.nix
       - name: Login to Docker Hub
-        if: ${{ !inputs.helm-pins }}
+        env:
+          has_username: ${{ secrets.DOCKERHUB_USERNAME != '' }}
+        if: ${{ !inputs.helm-pins && env.has_username }}
         uses: docker/login-action@v3
         with:
           registry: docker.io
