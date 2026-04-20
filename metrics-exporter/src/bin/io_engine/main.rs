@@ -1,6 +1,7 @@
 use crate::{
     client::grpc_client::{init_client, GrpcClient},
     error::ExporterError,
+    node_status::NodeStatusClient,
     serve::metric_route,
 };
 use actix_web::{middleware, HttpServer};
@@ -10,16 +11,19 @@ use std::{
     env,
     net::{IpAddr, SocketAddr},
 };
+use tracing::{info, warn};
 use utils::tracing_telemetry::{FmtLayer, FmtStyle};
 
 /// Cache module for exporter.
 pub(crate) mod cache;
-/// Grpc client module.
+/// gRPC client module.
 pub(crate) mod client;
 /// Collector module.
 pub(crate) mod collector;
 /// Error module.
 pub(crate) mod error;
+/// Node status module for REST-based metrics.
+pub(crate) mod node_status;
 /// Prometheus metrics handler module.
 pub(crate) mod serve;
 
@@ -60,15 +64,19 @@ pub(crate) struct Cli {
     /// Use ANSI colors for the logs.
     #[clap(long, default_value_t = true, action = clap::ArgAction::Set)]
     ansi_colors: bool,
-}
 
-impl Cli {
-    fn args() -> Self {
-        Cli::parse()
-    }
+    /// REST endpoint for control-plane API (for node status metrics).
+    #[clap(long, env = "MAYASTOR_REST_ENDPOINT")]
+    rest_endpoint: Option<tonic::transport::Uri>,
+
+    /// Timeout for node status REST requests.
+    #[clap(long, default_value = "10s", env = "MAYASTOR_SCRAPE_TIMEOUT")]
+    scrape_timeout: humantime::Duration,
 }
 
 static GRPC_CLIENT: OnceCell<GrpcClient> = OnceCell::new();
+static NODE_STATUS_CLIENT: OnceCell<NodeStatusClient> = OnceCell::new();
+static NODE_NAME: OnceCell<String> = OnceCell::new();
 
 /// Get IO engine gRPC Client.
 pub(crate) fn grpc_client<'a>() -> &'a GrpcClient {
@@ -77,9 +85,21 @@ pub(crate) fn grpc_client<'a>() -> &'a GrpcClient {
         .expect("gRPC Client should have been initialised")
 }
 
+/// Get node status REST client, if configured.
+pub(crate) fn node_status_client() -> Option<&'static NodeStatusClient> {
+    NODE_STATUS_CLIENT.get()
+}
+
+/// Get the name of the node this exporter is running on.
+pub(crate) fn node_name() -> &'static str {
+    NODE_NAME
+        .get()
+        .expect("Node name should have been initialised")
+}
+
 #[tokio::main]
 async fn main() -> Result<(), ExporterError> {
-    let args = Cli::args();
+    let args = Cli::parse();
     utils::print_package_info!();
 
     utils::tracing_telemetry::TracingTelemetry::builder()
@@ -94,6 +114,26 @@ async fn main() -> Result<(), ExporterError> {
     GRPC_CLIENT
         .set(client)
         .expect("Expect to be initialised only once");
+
+    // Store node name for use by the metrics handler on every scrape.
+    NODE_NAME
+        .set(get_node_name()?)
+        .expect("Node name should be initialised only once");
+
+    // Initialize node status REST client if endpoint is configured.
+    if let Some(ref endpoint) = args.rest_endpoint {
+        info!("Initializing node status REST client with endpoint: {endpoint}");
+        let node_client = NodeStatusClient::new(&endpoint.to_string(), *args.scrape_timeout)
+            .map_err(|e| {
+                ExporterError::HttpServerError(format!("Failed to create node status client: {e}"))
+            })?;
+        NODE_STATUS_CLIENT
+            .set(node_client)
+            .expect("Node status client should be initialised only once");
+    } else {
+        warn!("REST endpoint not configured, node status metrics will not be available");
+    }
+
     let app = move || {
         actix_web::App::new()
             .wrap(middleware::Logger::default())

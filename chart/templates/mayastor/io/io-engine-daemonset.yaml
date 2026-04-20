@@ -163,6 +163,7 @@ spec:
           - "--grpc-port={{ default 10124 .Values.io_engine.port }}"
           - "--fmt-style={{ include "logFormat" . }}"
           - "--ansi-colors={{ .Values.base.logging.color }}"
+          - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"
       {{- end }}
       volumes:
       - name: device

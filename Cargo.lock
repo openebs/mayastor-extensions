@@ -2300,15 +2300,19 @@ name = "metrics-exporter"
 version = "0.1.0"
 dependencies = [
  "actix-web",
+ "anyhow",
  "clap",
+ "humantime",
  "mime",
  "once_cell",
+ "openapi",
  "prometheus",
  "rpc",
  "serde",
  "tokio",
  "tonic",
  "tracing",
+ "url",
  "utils",
 ]
 

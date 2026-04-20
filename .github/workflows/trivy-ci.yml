@@ -45,7 +45,7 @@ jobs:
             format: sarif
             output: chart/trivy-helm.sarif
             severity: HIGH,CRITICAL
-          
+
       - name: Upload Helm SARIF
         uses: github/codeql-action/upload-sarif@v4
         with:
@@ -100,4 +100,4 @@ jobs:
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-image.sarif
-          category: trivy-image-${{ matrix.image }} 
+          category: trivy-image-${{ matrix.image }}
