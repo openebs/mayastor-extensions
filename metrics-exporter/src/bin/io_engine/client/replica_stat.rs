@@ -1,9 +1,8 @@
 use super::ticks_to_time;
 use crate::error::ExporterError;
-use serde::{Deserialize, Serialize};
 
 /// This stores IoStat information of a replica.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct ReplicaIoStat {
     name: String,
     entity_id: String,
@@ -58,7 +57,7 @@ impl ReplicaIoStat {
 }
 
 /// Array of NexusIoStat objects.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct ReplicaIoStats {
     pub(crate) replica_stats: Vec<ReplicaIoStat>,
 }

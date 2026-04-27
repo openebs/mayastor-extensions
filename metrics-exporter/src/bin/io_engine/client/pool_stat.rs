@@ -1,8 +1,7 @@
 use super::ticks_to_time;
-use serde::{Deserialize, Serialize};
 
 /// This stores IoStat information of a pool.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct PoolIoStat {
     name: String,
     bytes_read: u64,
@@ -51,7 +50,7 @@ impl PoolIoStat {
 }
 
 /// Array of PoolIoStat objects.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct PoolIoStats {
     pub(crate) pool_stats: Vec<PoolIoStat>,
 }

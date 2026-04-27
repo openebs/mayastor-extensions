@@ -1,8 +1,7 @@
 use super::ticks_to_time;
-use serde::{Deserialize, Serialize};
 
 /// This stores IoStat information of a nexus.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct NexusIoStat {
     name: String,
     bytes_read: u64,
@@ -51,7 +50,7 @@ impl NexusIoStat {
 }
 
 /// Array of NexusIoStat objects.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct NexusIoStats {
     pub(crate) nexus_stats: Vec<NexusIoStat>,
 }
