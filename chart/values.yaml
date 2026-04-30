@@ -479,6 +479,19 @@ io_engine:
   envcontext: ""
   reactorFreezeDetection:
     enabled: false
+  # -- SPDK interrupt mode for io-engine reactors.
+  # When enabled, reactors sleep on epoll/timerfd instead of busy-polling,
+  # which dramatically reduces idle CPU usage. NVMe I/O queues are still
+  # polled, but on a periodic timer rather than continuously.
+  interruptMode:
+    # -- Enable interrupt mode by setting ENABLE_INTERRUPT_MODE=true on the
+    # io-engine container (equivalent to passing the --enable-interrupt-mode
+    # CLI flag).
+    enabled: false
+    # -- NVMe I/O queue poll period (SPDK NVME_IOQ_POLL_PERIOD). A value of
+    # "0" disables timed polling (busy poll). Typical values: "100us",
+    # "1000us". Higher values reduce CPU further at the cost of latency.
+    nvmeIoQueuePollPeriod: "100us"
   # -- The number of cores that each io-engine instance will bind to.
   cpuCount: "2"
   # -- If not empty, overrides the cpuCount and explicitly sets the list of cores.
