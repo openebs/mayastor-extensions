@@ -53,3 +53,5 @@ pub const CALL_HOME_ENDPOINT: &str = "https://openebs.phonehome.datacore.com/ope
 
 /// Label key containing controller revision hash for a controller resource for DaemonSets.
 pub const DS_CONTROLLER_REVISION_HASH_LABEL_KEY: &str = "controller-revision-hash";
+/// This is the shared Pod label of the <helm-release>-io-engine DaemonSet.
+pub const IO_ENGINE_LABEL: &str = "app=io-engine";
