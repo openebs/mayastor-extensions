@@ -472,8 +472,17 @@ io_engine:
       # -- Max size setting (both initiator and target) for an NVMe queue
       # -- You may need to increase this for a higher outstanding IOs per volume
       maxQueueDepth: "32"
-      # Max qpairs per controller.
+      # -- Max number of IO qpairs per controller
       maxQpairsPerCtrl: "32"
+      # -- The number of pooled data buffers available to the transport
+      numSharedBuf: "2047"
+      # -- The number of shared buffers to reserve for each poll group
+      bufCacheSize: "64"
+    rdma:
+      # -- The number of pooled data buffers available to the transport
+      numSharedBuf: "2047"
+      # -- The number of shared buffers to reserve for each poll group
+      bufCacheSize: "64"
   # -- Pass additional arguments to the Environment Abstraction Layer.
   # Example: --set {product}.envcontext=iova-mode=pa
   envcontext: ""
