@@ -11,7 +11,7 @@ pub const UMBRELLA_CHART_NAME: &str = constants::UMBRELLA_CHART_NAME;
 pub const CORE_CHART_NAME: &str = constants::PRODUCT_NAME;
 
 /// This is the shared Pod label of the <helm-release>-io-engine DaemonSet.
-pub const IO_ENGINE_LABEL: &str = "app=io-engine";
+pub use constants::IO_ENGINE_LABEL;
 
 /// This is the shared Pod label of the <helm-release>-agent-core Deployment.
 pub const AGENT_CORE_LABEL: &str = "app=agent-core";

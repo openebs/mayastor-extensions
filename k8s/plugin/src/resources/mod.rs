@@ -1,4 +1,5 @@
 mod diskpool_cleanup;
+mod io_engine_label_check;
 
 use anyhow::anyhow;
 use clap::Parser;
@@ -297,6 +298,15 @@ impl ExecuteOperation for Operations {
                         .await?;
                     }
                     DeleteResources::Node(node_args) if !node_args.cleanup.cleanup_dsp => {
+                        // Pre-flight: refuse if the io-engine DaemonSet would
+                        // still schedule onto this Kubernetes Node.
+                        io_engine_label_check::ensure_node_unlabelled(
+                            cli_args.client().await?,
+                            &cli_args.namespace,
+                            &node_args.rest_args.node_id,
+                        )
+                        .await?;
+
                         // No DSP cleanup — delegate entirely to the control-plane
                         // plugin lib. show_impact, purge, accept_* flags, and the
                         // confirm prompt bypass are all handled there.
@@ -312,6 +322,17 @@ impl ExecuteOperation for Operations {
                     }
                     DeleteResources::Node(node_args) => {
                         let node_id = &node_args.rest_args.node_id;
+
+                        let client = cli_args.client().await?;
+
+                        // Pre-flight: refuse if the io-engine DaemonSet would
+                        // still schedule onto this Kubernetes Node.
+                        io_engine_label_check::ensure_node_unlabelled(
+                            client.clone(),
+                            &cli_args.namespace,
+                            node_id,
+                        )
+                        .await?;
 
                         // REST delete first. If it fails with anything other than
                         // NOT_FOUND we propagate the error immediately and never
@@ -335,11 +356,9 @@ impl ExecuteOperation for Operations {
                             _ => return rest_result.map_err(Into::into),
                         };
 
-                        // Only now pay for the K8s round-trip. List DiskPool CRs
-                        // directly from Kubernetes so the lookup works even when
-                        // the node spec or pool specs are already gone from the
-                        // control plane.
-                        let client = cli_args.client().await?;
+                        // List DiskPool CRs directly from Kubernetes so the
+                        // lookup works even when the node spec or pool specs
+                        // are already gone from the control plane.
                         let pool_ids = diskpool_cleanup::list_diskpool_ids_for_node(
                             client.clone(),
                             &cli_args.namespace,
@@ -460,6 +479,12 @@ impl From<plugin::resources::error::Error> for Error {
 impl From<anyhow::Error> for Error {
     fn from(e: anyhow::Error) -> Self {
         Error::Generic(e)
+    }
+}
+
+impl From<io_engine_label_check::LabelCheckError> for Error {
+    fn from(e: io_engine_label_check::LabelCheckError) -> Self {
+        Error::Generic(anyhow::Error::new(e))
     }
 }
 
