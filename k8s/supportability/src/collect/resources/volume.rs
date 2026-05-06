@@ -127,8 +127,8 @@ impl Resourcer for VolumeClientWrapper {
         if let Some(volume_id) = id {
             let volume = self.get_volume(volume_id).await?;
             let mut replicas_topology = Vec::new();
-            for (replica_id_str, _value) in volume.state.replica_topology.clone() {
-                let replica_uuid = openapi::apis::Uuid::parse_str(replica_id_str.as_str())?;
+            for replica_id in volume.state.replica_topology.keys() {
+                let replica_uuid = openapi::apis::Uuid::parse_str(replica_id)?;
                 let replica_topology = match self.get_replica_topology(replica_uuid).await {
                     Ok(val) => Some(val),
                     Err(err) => {
@@ -160,8 +160,8 @@ impl Resourcer for VolumeClientWrapper {
             };
 
             return Ok(Box::new(VolumeTopology {
-                volume: volume.clone(),
-                target: volume.state.target,
+                target: volume.state.target.clone(),
+                volume,
                 replicas_topology,
                 rebuild_history,
             }));
@@ -172,10 +172,10 @@ impl Resourcer for VolumeClientWrapper {
         // available pools
         let mut volumes_topology = Vec::new();
         let volumes = self.list_volumes().await?;
-        for volume in volumes.iter() {
+        for volume in volumes {
             let mut replicas_topology = Vec::new();
-            for (replica_id_str, _value) in volume.state.replica_topology.clone() {
-                let replica_uuid = openapi::apis::Uuid::parse_str(replica_id_str.as_str()).unwrap();
+            for replica_id in volume.state.replica_topology.keys() {
+                let replica_uuid = openapi::apis::Uuid::parse_str(replica_id)?;
                 let replica_topology = match self.get_replica_topology(replica_uuid).await {
                     Ok(val) => Some(val),
                     // TODO: As of now when mayastor daemon is in not Running state then
@@ -207,8 +207,8 @@ impl Resourcer for VolumeClientWrapper {
                 None => None,
             };
             volumes_topology.push(VolumeTopology {
-                volume: volume.clone(),
                 target: volume.state.target.clone(),
+                volume,
                 replicas_topology,
                 rebuild_history,
             })

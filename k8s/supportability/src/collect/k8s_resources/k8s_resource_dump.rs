@@ -123,7 +123,7 @@ impl K8sResourceDumperClient {
 
         let mut errors = Vec::new();
 
-        log("Collecting K8s resources...".to_string());
+        log("Collecting K8s resources...");
 
         // Fetch all events in provided NAMESPACE
         if let Err(error) = get_k8s_events(&self.k8s_client, &root_dir).await {
@@ -160,7 +160,7 @@ impl K8sResourceDumperClient {
         if !errors.is_empty() {
             return Err(K8sResourceDumperError::MultipleErrors(errors));
         }
-        log("Completed collection of k8s resources".to_string());
+        log("Completed collection of k8s resources");
         Ok(())
     }
 
@@ -175,7 +175,7 @@ impl K8sResourceDumperClient {
 
         let mut errors = Vec::new();
 
-        log("Collecting mayastor specific k8s resources...".to_string());
+        log("Collecting mayastor specific k8s resources...");
         // Fetch all DiskPools in provided NAMESPACE
         if let Err(error) = get_k8s_diskpools(&self.k8s_client, root_path, required_pools).await {
             log(format!(
@@ -206,7 +206,7 @@ impl K8sResourceDumperClient {
         if !errors.is_empty() {
             return Err(K8sResourceDumperError::MultipleErrors(errors));
         }
-        log("Completed collection of mayastor specific k8s resources".to_string());
+        log("Completed collection of mayastor specific k8s resources");
         Ok(())
     }
 
@@ -272,7 +272,7 @@ async fn get_k8s_daemonsets(
     configurations_path: &Path,
 ) -> Result<(), K8sResourceDumperError> {
     // Fetch all Daemonsets in provided NAMESPACE
-    log("\t Collecting daemonsets configuration".to_string());
+    log("\t Collecting daemonsets configuration");
     match k8s_client.get_daemonsets("", "").await {
         Ok(daemonsets) => {
             // Create all daemonsets configurations
@@ -291,7 +291,7 @@ async fn get_k8s_deployments(
     configurations_path: &Path,
 ) -> Result<(), K8sResourceDumperError> {
     // Fetch all Deployments in provided NAMESPACE
-    log("\t Collecting deployments configuration".to_string());
+    log("\t Collecting deployments configuration");
     match k8s_client.get_deployments("", "").await {
         Ok(deploys) => {
             // Create all deployment configurations
@@ -310,7 +310,7 @@ async fn get_k8s_statefulsets(
     configurations_path: &Path,
 ) -> Result<(), K8sResourceDumperError> {
     // Fetch all StatefulSets in provided NAMESPACE
-    log("\t Collecting statefulsets configuration".to_string());
+    log("\t Collecting statefulsets configuration");
     match k8s_client.get_statefulsets("", "").await {
         Ok(statefulsets) => {
             // Create all statefulsets configurations
@@ -330,7 +330,7 @@ async fn get_k8s_diskpools(
     required_pools: Option<Vec<String>>,
 ) -> Result<(), K8sResourceDumperError> {
     // Fetch all DiskPools in provided NAMESPACE
-    log("\t Collecting mayastor diskpool resources".to_string());
+    log("\t Collecting mayastor diskpool resources");
     match k8s_client.list_pools(None, None).await {
         Ok(disk_pools) => {
             let filtered_pools = match required_pools {
@@ -361,7 +361,7 @@ async fn get_k8s_pod_configurations(
     root_dir: &Path,
 ) -> Result<(), K8sResourceDumperError> {
     // Fetch all Pods in provided NAMESPACE
-    log("\t Collecting Kubernetes pod resources".to_string());
+    log("\t Collecting Kubernetes pod resources");
     match k8s_client.get_pods("", "").await {
         Ok(pods) => {
             create_file_and_write(
@@ -381,7 +381,7 @@ async fn get_k8s_events(
     root_dir: &Path,
 ) -> Result<(), K8sResourceDumperError> {
     // Fetch all events in provided NAMESPACE
-    log("\t Collecting Kubernetes events".to_string());
+    log("\t Collecting Kubernetes events");
     match k8s_client.get_events("", "").await {
         Ok(mut events) => {
             // Sort the events based on event_time
@@ -418,7 +418,7 @@ pub async fn get_k8s_vs_classes(
     root_dir: &Path,
     driver_selector: String,
 ) -> Result<(), K8sResourceDumperError> {
-    log("\t Collecting Kubernetes VolumeSnapshotClass resources".to_string());
+    log("\t Collecting Kubernetes VolumeSnapshotClass resources");
     match k8s_client
         .list_volumesnapshot_classes(Some(&driver_selector), None, None)
         .await
@@ -445,7 +445,7 @@ pub async fn get_k8s_vsnapshot_contents(
     root_dir: &Path,
     driver_selector: String,
 ) -> Result<(), K8sResourceDumperError> {
-    log("\t Collecting Kubernetes VolumeSnapshotContents resources".to_string());
+    log("\t Collecting Kubernetes VolumeSnapshotContents resources");
     match k8s_client
         .list_volumesnapshotcontents(Some(&driver_selector), None, None)
         .await

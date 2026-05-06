@@ -162,23 +162,23 @@ impl SystemDumper {
             "Collecting logs of following services: \n {resources:#?}"
         ));
 
-        log("Collecting logs...".to_string());
+        log("Collecting logs...");
         if let Err(error) = self
             .logger
             .fetch_and_dump_logs(resources, self.dir_path.clone())
             .await
         {
-            log("Error occurred while collecting logs".to_string());
+            log("Error occurred while collecting logs");
             return Err(Error::LogCollectionError(error));
         }
-        log("Completed collection of logs".to_string());
+        log("Completed collection of logs");
         Ok(())
     }
 
     /// Copies the temporary directory into archive and delete temporary directory
     pub fn fill_archive_and_delete_tmp(&mut self) -> Result<(), Error> {
         // Log which is visible in archive system log file
-        let _ = write_to_log_file("Will copy temporary directory content to archive".to_string());
+        let _ = write_to_log_file("Will copy temporary directory content to archive");
         // Flush log file before copying contents
         flush_tool_log_file()?;
 
@@ -247,7 +247,7 @@ impl SystemDumper {
         }
 
         if !errors.is_empty() {
-            log("Failed to dump system state".to_string());
+            log("Failed to dump system state");
             return Err(Error::MultipleErrors(errors));
         }
         Ok(())
@@ -260,10 +260,7 @@ impl SystemDumper {
     ) -> Result<(), Error> {
         let rest_client = match self.rest_client.clone() {
             None => {
-                log(
-                    "Skipping topology information collection as rest client is not available"
-                        .to_string(),
-                );
+                log("Skipping topology information collection as rest client is not available");
                 return Err(Error::Generic("Failed to get rest client".to_string()));
             }
             Some(client) => client,
@@ -271,14 +268,14 @@ impl SystemDumper {
 
         let mut errors: Vec<Error> = Vec::new();
 
-        log("Collecting topology information...".to_string());
+        log("Collecting topology information...");
         // Dump information of all volume topologies exist in the system
         match VolumeClientWrapper::new(rest_client.clone())
             .get_topologer(None)
             .await
         {
             Ok(topologer) => {
-                log("\t Collecting volume topology information".to_string());
+                log("\t Collecting volume topology information");
                 let mut vol_topo_path = path.to_path_buf();
                 vol_topo_path.push("topology");
                 vol_topo_path.push("volume");
@@ -298,7 +295,7 @@ impl SystemDumper {
             .await
         {
             Ok(topologer) => {
-                log("\t Collecting snapshot topology information".to_string());
+                log("\t Collecting snapshot topology information");
                 let mut vol_snap_topo_path = path.to_path_buf();
                 vol_snap_topo_path.push("topology");
                 vol_snap_topo_path.push("snapshot");
@@ -321,7 +318,7 @@ impl SystemDumper {
             .await
         {
             Ok(topologer) => {
-                log("\t Collecting pool topology information".to_string());
+                log("\t Collecting pool topology information");
                 let mut pool_topo_path = path.to_path_buf();
                 pool_topo_path.push("topology");
                 pool_topo_path.push("pool");
@@ -341,7 +338,7 @@ impl SystemDumper {
             .await
         {
             Ok(topologer) => {
-                log("\t Collecting node topology information".to_string());
+                log("\t Collecting node topology information");
                 let mut node_topo_path = path.to_path_buf();
                 node_topo_path.push("topology");
                 node_topo_path.push("node");
@@ -359,7 +356,7 @@ impl SystemDumper {
                 None
             }
         };
-        log("Completed collection of topology information".to_string());
+        log("Completed collection of topology information");
         Ok(())
     }
 
@@ -374,7 +371,7 @@ impl SystemDumper {
     /// Dumps the mayastor etcd.
     pub(crate) async fn dump_mayastor_etcd(&mut self, path: &Path) -> Result<(), Error> {
         let _ = future::try_join_all(self.etcd_dumper.as_mut().map(|etcd_store| {
-            log("Collecting mayastor specific information from Etcd...".to_string());
+            log("Collecting mayastor specific information from Etcd...");
             etcd_store.dump(path.to_path_buf(), false)
         }))
         .await
