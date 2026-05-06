@@ -249,7 +249,7 @@ pub(crate) trait Logger {
 
 /// Creates specified directory path if not already exist
 pub fn create_directory_if_not_exist(dir_path: PathBuf) -> Result<(), std::io::Error> {
-    if std::fs::metadata(dir_path.clone()).is_err() {
+    if !dir_path.exists() {
         std::fs::create_dir_all(dir_path)?;
     }
     Ok(())

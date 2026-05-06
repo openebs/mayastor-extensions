@@ -144,14 +144,19 @@ impl Resourcer for VolumeClientWrapper {
                     replicas_topology.push(topology);
                 }
             }
-            let rebuild_history = match self.get_rebuild_history(volume_id).await {
-                Ok(rebuild_history) => Some(rebuild_history),
-                Err(error) => {
-                    log(format!(
-                        "Could not fetch rebuild history for {volume_id}, error: {error:?}"
-                    ));
-                    None
-                }
+            let rebuild_history = match &volume.spec.target {
+                Some(_) => match self.get_rebuild_history(volume_id).await {
+                    Ok(rebuild_history) => Some(rebuild_history),
+                    Err(error) => {
+                        if !error.failed_precond() {
+                            log(format!(
+                                "Could not fetch rebuild history for {volume_id}, error: {error:?}"
+                            ));
+                        }
+                        None
+                    }
+                },
+                None => None,
             };
 
             return Ok(Box::new(VolumeTopology {
@@ -186,15 +191,20 @@ impl Resourcer for VolumeClientWrapper {
                     replicas_topology.push(topology);
                 }
             }
-            let rebuild_history = match self.get_rebuild_history(volume.spec.uuid).await {
-                Ok(rebuild_history) => Some(rebuild_history),
-                Err(error) => {
-                    log(format!(
-                        "Could not fetch rebuild history for {}, error: {error:?}",
-                        volume.spec.uuid
-                    ));
-                    None
-                }
+            let rebuild_history = match &volume.spec.target {
+                Some(_) => match self.get_rebuild_history(volume.spec.uuid).await {
+                    Ok(rebuild_history) => Some(rebuild_history),
+                    Err(error) => {
+                        if !error.failed_precond() {
+                            log(format!(
+                                "Could not fetch rebuild history for {}, error: {error:?}",
+                                volume.spec.uuid
+                            ));
+                        }
+                        None
+                    }
+                },
+                None => None,
             };
             volumes_topology.push(VolumeTopology {
                 volume: volume.clone(),

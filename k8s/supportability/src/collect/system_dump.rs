@@ -57,7 +57,7 @@ impl SystemDumper {
         init_tool_log_file(PathBuf::from(format!("{new_dir}/support_tool_logs.log")))
             .expect("Support Tool Log file should be created");
 
-        log(format!("Plugin {}", utils::version_info_str!()));
+        log(format!("Plugin {}", utils::version_info!()));
 
         // Creates an arcive file to dump mayastor resource information. If creation
         // of archive is failed then we can't continue process
