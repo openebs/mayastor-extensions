@@ -49,7 +49,36 @@ This removes all the Kubernetes components associated with the chart and deletes
 
 *See [helm uninstall](https://helm.sh/docs/helm/helm_uninstall/) for command documentation.*
 
-## Chart Dependencies
+## TLS Configuration
+
+The REST API server exposes an HTTPS endpoint (port 8080). By default it uses self-signed certificates generated internally by the server — no extra tools or configuration required.
+
+### Default: self-signed certificates (no dependencies)
+
+```console
+$ helm install mayastor . -n <mayastor-namespace>
+```
+
+### Optional: cert-manager managed certificates
+
+Install [cert-manager](https://cert-manager.io/docs/installation/) first, then enable it with `--set`:
+
+```console
+$ helm install mayastor . -n <mayastor-namespace> --set tls.mode=certManager
+```
+
+The chart will automatically create a self-signed cert-manager `Issuer` and a `Certificate` for the REST API. The resulting TLS `Secret` is mounted into the `api-rest` pod.
+
+To use your own existing Issuer or ClusterIssuer instead:
+
+```console
+$ helm install mayastor . -n <mayastor-namespace> \
+  --set tls.mode=certManager \
+  --set tls.certManager.issuerRef.name=<your-issuer-name> \
+  --set tls.certManager.issuerRef.kind=ClusterIssuer
+```
+
+
 
 {{ template "chart.requirementsTable" . }}
 

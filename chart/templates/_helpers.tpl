@@ -375,6 +375,16 @@ Usage:
     Do something
   {{- end }}
 */}}
+{{/*
+Validates tls.mode and fails with a clear message when an unknown value is supplied.
+Usage: {{ include "validate_tls_mode" . }}
+*/}}
+{{- define "validate_tls_mode" -}}
+{{- if not (or (eq .Values.tls.mode "selfSigned") (eq .Values.tls.mode "certManager")) -}}
+{{- fail (printf "tls.mode must be one of: selfSigned, certManager (got: %q)" .Values.tls.mode) -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "etcd_is_8.6.0" -}}
   {{- $sts  := lookup "apps/v1" "StatefulSet" .Release.Namespace (printf "%s-etcd" .Release.Name) -}}
   {{/*

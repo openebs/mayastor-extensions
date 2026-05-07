@@ -1,0 +1,41 @@
+{{- include "validate_tls_mode" . -}}
+{{- if eq .Values.tls.mode "certManager" -}}
+{{- /* cert-manager resources for the api-rest TLS certificate.
+     Requires cert-manager (https://cert-manager.io) to be installed in the cluster.
+     When tls.certManager.issuerRef.name is empty, a SelfSigned Issuer is created automatically. */}}
+{{- if not .Values.tls.certManager.issuerRef.name }}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ .Release.Name }}-api-rest-issuer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: api-rest
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+spec:
+  selfSigned: {}
+{{- end }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Release.Name }}-api-rest-cert
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: api-rest
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+spec:
+  secretName: {{ .Release.Name }}-api-rest-tls
+  duration: {{ .Values.tls.certManager.duration | quote }}
+  renewBefore: {{ .Values.tls.certManager.renewBefore | quote }}
+  dnsNames:
+    - {{ .Release.Name }}-api-rest
+    - {{ .Release.Name }}-api-rest.{{ .Release.Namespace }}.svc
+    - {{ .Release.Name }}-api-rest.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    name: {{ .Values.tls.certManager.issuerRef.name | default (printf "%s-api-rest-issuer" .Release.Name) }}
+    kind: {{ .Values.tls.certManager.issuerRef.kind }}
+{{- end -}}

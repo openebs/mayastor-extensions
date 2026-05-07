@@ -326,6 +326,23 @@ apis:
     # If both local and global are not set, the final deployment manifest has a mayastor custom critical priority class assigned to the pod by default.
     # Refer the `templates/_helpers.tpl` and `templates/mayastor/apis/rest/api-rest-deployment.yaml` for more details.
     priorityClassName: ""
+tls:
+  # -- TLS mode for the REST API HTTPS endpoint. Valid values: "selfSigned" or "certManager".
+  # "selfSigned": the api-rest server generates its own self-signed certificates internally (no external dependencies).
+  # "certManager": cert-manager manages the TLS certificate lifecycle (cert-manager must be installed).
+  mode: selfSigned
+  certManager:
+    # -- Optional reference to an existing cert-manager Issuer or ClusterIssuer.
+    # When name is empty, a SelfSigned Issuer is created automatically by the chart.
+    issuerRef:
+      # -- Name of the Issuer or ClusterIssuer. Leave empty to auto-create a SelfSigned Issuer.
+      name: ""
+      # -- Kind of the issuer reference: Issuer or ClusterIssuer.
+      kind: Issuer
+    # -- Duration of the certificate.
+    duration: "8760h0m0s"
+    # -- How long before expiry the certificate will be renewed.
+    renewBefore: "360h0m0s"
 csi:
   image:
     # -- Image registry to pull all CSI Sidecar images
