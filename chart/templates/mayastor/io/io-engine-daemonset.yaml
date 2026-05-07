@@ -49,10 +49,20 @@ spec:
         env:
         - name: RUST_LOG
           value: {{ .Values.io_engine.logLevel }}
+        - name: NVMF_TCP_NUM_SHARED_BUF
+          value: "{{ .Values.io_engine.nvme.tcp.numSharedBuf }}"
+        - name: NVMF_TCP_BUF_CACHE_SIZE
+          value: "{{ .Values.io_engine.nvme.tcp.bufCacheSize }}"
         - name: NVMF_TCP_MAX_QPAIRS_PER_CTRL
           value: "{{ .Values.io_engine.nvme.tcp.maxQpairsPerCtrl }}"
         - name: NVMF_TCP_MAX_QUEUE_DEPTH
           value: "{{ .Values.io_engine.nvme.tcp.maxQueueDepth }}"
+        {{- if .Values.io_engine.target.nvmf.rdma.enabled }}
+        - name: NVMF_RDMA_NUM_SHARED_BUF
+          value: "{{ .Values.io_engine.nvme.rdma.numSharedBuf }}"
+        - name: NVMF_RDMA_BUF_CACHE_SIZE
+          value: "{{ .Values.io_engine.nvme.rdma.bufCacheSize }}"
+        {{- end }}
         - name: NVME_TIMEOUT
           value: "{{ .Values.io_engine.nvme.ioTimeout }}"
         - name: NVME_TIMEOUT_ADMIN
