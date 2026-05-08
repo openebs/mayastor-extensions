@@ -409,6 +409,7 @@ Returns the Secret name holding api-rest TLS materials.
 
 {{/*
 Returns the in-container CA certificate file path for api-rest TLS clients.
+Assumes cert-manager writes the CA bundle under the standard `ca.crt` Secret key.
 */}}
 {{- define "rest_api_tls_ca_path" -}}
 {{- print "/etc/mayastor/rest-api-ca/ca.crt" -}}
