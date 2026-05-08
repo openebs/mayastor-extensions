@@ -3,6 +3,9 @@
 {{- /* cert-manager resources for the api-rest TLS certificate.
      Requires cert-manager (https://cert-manager.io) to be installed in the cluster.
      When tls.certManager.issuerRef.name is empty, a SelfSigned Issuer is created automatically. */}}
+{{- if not (or (eq .Values.tls.certManager.issuerRef.kind "Issuer") (eq .Values.tls.certManager.issuerRef.kind "ClusterIssuer")) -}}
+{{- fail (printf "tls.certManager.issuerRef.kind must be one of: Issuer, ClusterIssuer (got: %q)" .Values.tls.certManager.issuerRef.kind) -}}
+{{- end -}}
 {{- if not .Values.tls.certManager.issuerRef.name }}
 ---
 apiVersion: cert-manager.io/v1

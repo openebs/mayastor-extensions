@@ -377,6 +377,7 @@ Usage:
 */}}
 {{/*
 Validates tls.mode and fails with a clear message when an unknown value is supplied.
+Valid values: "selfSigned", "certManager".
 Usage: {{ include "validate_tls_mode" . }}
 */}}
 {{- define "validate_tls_mode" -}}
