@@ -51,7 +51,7 @@ spec:
             {{- else }}
             - "--dummy-certificates"
             {{- end }}
-            # Keep HTTP enabled for in-cluster REST clients that still consume the 8081 endpoint.
+            # Keep HTTP enabled for backward compatibility with existing tooling and integrations.
             - "--no-auth"
             - "--http=[::]:8081"
             - "--request-timeout={{ .Values.base.default_req_timeout }}"{{ if .Values.base.jaeger.enabled }}
