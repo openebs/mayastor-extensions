@@ -487,4 +487,22 @@ impl ClientSet {
             )))
         }
     }
+
+    /// Get the helm release version from the rest's deployment.
+    pub(crate) async fn rest_version(&self) -> Result<String, K8sResourceError> {
+        let rest = constants::API_REST_LABEL_SELECTOR;
+        let deployments = self.get_deployments(rest, "").await?;
+        let rest_depl = deployments
+            .first()
+            .ok_or(K8sResourceError::CustomError(format!(
+                "Failed to find deployment {rest}"
+            )))?;
+        let labels = rest_depl.metadata.labels.as_ref();
+        match labels.and_then(|l| l.get(&constants::helm_release_version_key())) {
+            Some(version) => Ok(version.to_owned()),
+            None => Err(K8sResourceError::CustomError(
+                "Helm Release Version key not found".into(),
+            )),
+        }
+    }
 }

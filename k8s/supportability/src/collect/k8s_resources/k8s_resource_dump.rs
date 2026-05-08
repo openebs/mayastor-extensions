@@ -95,13 +95,9 @@ impl EntityName for StatefulSet {
 }
 
 impl K8sResourceDumperClient {
-    /// get a new k8s resource dumper client
-    pub(crate) async fn new(
-        kubeconfig_args: crate::KubeConfigArgs,
-        namespace: String,
-    ) -> Result<Self, K8sResourceDumperError> {
-        let k8s_client = ClientSet::new(kubeconfig_args, namespace).await?;
-        Ok(Self { k8s_client })
+    /// Get a new k8s resource dumper client.
+    pub(crate) async fn new(k8s_client: ClientSet) -> Self {
+        Self { k8s_client }
     }
 
     /// dump the kubernetes resources like deployments, daemonsets,

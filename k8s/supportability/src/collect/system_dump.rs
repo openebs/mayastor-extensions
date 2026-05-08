@@ -57,9 +57,25 @@ impl SystemDumper {
         init_tool_log_file(PathBuf::from(format!("{new_dir}/support_tool_logs.log")))
             .expect("Support Tool Log file should be created");
 
-        log(format!("Plugin {}", utils::version_info!()));
+        let k8s_client =
+            match ClientSet::new(config.kubeconfig().clone(), config.namespace().to_string()).await
+            {
+                Ok(val) => val,
+                Err(err) => {
+                    log(format!("Failed to instantiate K8s client, error: {err:?}"));
+                    process::exit(1);
+                }
+            };
 
-        // Creates an arcive file to dump mayastor resource information. If creation
+        log(format!("Plugin {}", utils::version_info!()));
+        match k8s_client.rest_version().await {
+            Ok(version) => log(format!("HelmRelease {version}")),
+            Err(error) => log(format!(
+                "Failed to retrieve Helm Release Version: {error:?}"
+            )),
+        }
+
+        // Creates an archive file to dump mayastor resource information. If creation
         // of archive is failed then we can't continue process
         let archive = match archive::Archive::new(
             Some(config.output_directory().to_string()),
@@ -91,20 +107,7 @@ impl SystemDumper {
             }
         };
 
-        let k8s_resource_dumper = match K8sResourceDumperClient::new(
-            config.kubeconfig().clone(),
-            config.namespace().to_string(),
-        )
-        .await
-        {
-            Ok(val) => val,
-            Err(err) => {
-                log(format!(
-                    "Failed to instantiate K8s resource dumper, error: {err:?}"
-                ));
-                process::exit(1);
-            }
-        };
+        let k8s_resource_dumper = K8sResourceDumperClient::new(k8s_client).await;
 
         let etcd_dumper = match EtcdStore::new(
             config.kubeconfig().clone(),
@@ -148,10 +151,7 @@ impl SystemDumper {
 
     /// Collect and dump loki logs across all logging services.
     pub async fn collect_and_dump_loki_logs(&mut self) -> Result<(), Error> {
-        log(format!(
-            "Label selectors : {}",
-            self.logging_label_selectors
-        ));
+        log(format!("Label selectors: {}", self.logging_label_selectors));
         // Fetch required logging resources
         let resources = self
             .logger
