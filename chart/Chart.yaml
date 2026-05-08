@@ -1,8 +1,18 @@
 apiVersion: v2
 name: mayastor
 description: Mayastor Helm chart for Kubernetes
-#icon:
-#home:
+icon: https://raw.githubusercontent.com/cncf/artwork/HEAD/projects/openebs/icon/color/openebs-icon-color.png
+home: https://www.openebs.io/
+keywords:
+  - cloud-native-storage
+  - block-storage
+  - NVMe
+  - SPDK
+sources:
+  - https://github.com/openebs/mayastor
+  - https://github.com/openebs/mayastor-control-plane
+  - https://github.com/openebs/mayastor-extensions
+  - https://github.com/openebs/mayastor-dependencies
 # A chart can be either an 'application' or a 'library' chart.
 #
 # Application charts are a collection of templates that can be packaged into versioned archives
