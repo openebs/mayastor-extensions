@@ -328,7 +328,9 @@ apis:
     priorityClassName: ""
 tls:
   # -- TLS mode for the REST API HTTPS endpoint. Valid values: "selfSigned" or "certManager".
-  # "selfSigned": the api-rest server generates its own self-signed certificates internally (no external dependencies).
+  # "selfSigned": Helm generates a self-signed TLS certificate using genSelfSignedCert and stores
+  #   it in a Kubernetes Secret. The certificate is preserved across helm upgrades. No external
+  #   dependencies are required.
   # "certManager": cert-manager manages the TLS certificate lifecycle (cert-manager must be installed).
   mode: selfSigned
   certManager:

@@ -1,4 +1,39 @@
 {{- include "validate_tls_mode" . -}}
+{{- if eq .Values.tls.mode "selfSigned" -}}
+{{- /* Generate a self-signed TLS certificate for api-rest when cert-manager is not available.
+     The existing Secret is preserved across helm upgrades via lookup so that pods are not
+     needlessly restarted on every `helm upgrade`. */}}
+{{- $existingSecret := lookup "v1" "Secret" .Release.Namespace (include "rest_api_tls_secret_name" .) -}}
+{{- $cert := "" -}}
+{{- $key := "" -}}
+{{- if and $existingSecret $existingSecret.data (index $existingSecret.data "tls.crt") -}}
+  {{- $cert = index $existingSecret.data "tls.crt" | b64dec -}}
+  {{- $key = index $existingSecret.data "tls.key" | b64dec -}}
+{{- else -}}
+  {{- $dnsSANs := list
+        (printf "%s-api-rest" .Release.Name)
+        (printf "%s-api-rest.%s.svc" .Release.Name .Release.Namespace)
+        (printf "%s-api-rest.%s.svc.cluster.local" .Release.Name .Release.Namespace) -}}
+  {{- $generated := genSelfSignedCert (printf "%s-api-rest" .Release.Name) (list) $dnsSANs 3650 -}}
+  {{- $cert = $generated.Cert -}}
+  {{- $key = $generated.Key -}}
+{{- end -}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "rest_api_tls_secret_name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: api-rest
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ $cert | b64enc }}
+  tls.key: {{ $key | b64enc }}
+  ca.crt: {{ $cert | b64enc }}
+{{- end -}}
 {{- if eq .Values.tls.mode "certManager" -}}
 {{- /* cert-manager resources for the api-rest TLS certificate.
      Requires cert-manager (https://cert-manager.io) to be installed in the cluster.

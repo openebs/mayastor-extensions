@@ -51,9 +51,8 @@ spec:
           args:
             - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
             - "--rest-endpoint={{ include "rest_api_endpoint" . }}"
-            {{- if eq .Values.tls.mode "certManager" }}
             - "--tls-client-ca-path={{ include "rest_api_tls_ca_path" . }}"
-            {{- end }}{{ if .Values.base.jaeger.enabled }}
+            {{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ include "jaeger_url" . }}"{{ end }}
             {{- range $key, $val := .Values.csi.node.topology.segments }}
             - "--node-selector={{ $key }}={{ $val }}"
@@ -72,11 +71,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
-            {{- if eq .Values.tls.mode "certManager" }}
             - name: api-rest-tls-ca
               mountPath: /etc/mayastor/rest-api-ca
               readOnly: true
-            {{- end }}
         - name: csi-provisioner
           image: "{{ .Values.csi.image.registry }}/{{ .Values.csi.image.repo }}/csi-provisioner:{{ .Values.csi.image.provisionerTag }}"
           args:
@@ -148,8 +145,6 @@ spec:
       volumes:
         - name: socket-dir
           emptyDir:
-        {{- if eq .Values.tls.mode "certManager" }}
         - name: api-rest-tls-ca
           secret:
             secretName: {{ include "rest_api_tls_secret_name" . }}
-        {{- end }}

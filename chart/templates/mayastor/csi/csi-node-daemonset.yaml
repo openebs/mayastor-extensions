@@ -87,9 +87,8 @@ spec:
         - "--csi-socket={{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--node-name=$(MY_NODE_NAME)"
         - "--rest-endpoint={{ include "rest_api_endpoint" . }}"
-        {{- if eq .Values.tls.mode "certManager" }}
         - "--tls-client-ca-path={{ include "rest_api_tls_ca_path" . }}"
-        {{- end }}{{ if .Values.csi.node.restClient.enabled }}
+        {{ if .Values.csi.node.restClient.enabled }}
         - "--enable-rest"{{ end }}
         - "--enable-registration"
         - "--grpc-ip=$(MY_POD_IP)"
@@ -120,11 +119,9 @@ spec:
         - name: kubelet-dir
           mountPath: {{ .Values.csi.node.kubeletDir }}
           mountPropagation: "Bidirectional"
-        {{- if eq .Values.tls.mode "certManager" }}
         - name: api-rest-tls-ca
           mountPath: /etc/mayastor/rest-api-ca
           readOnly: true
-        {{- end }}
         resources:
           limits:
             cpu: {{ .Values.csi.node.resources.limits.cpu | quote }}
@@ -180,8 +177,6 @@ spec:
         hostPath:
           path: {{ .Values.csi.node.kubeletDir }}
           type: Directory
-      {{- if eq .Values.tls.mode "certManager" }}
       - name: api-rest-tls-ca
         secret:
           secretName: {{ include "rest_api_tls_secret_name" . }}
-      {{- end }}
