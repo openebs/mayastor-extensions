@@ -384,6 +384,34 @@ Usage: {{ include "validate_tls_mode" . }}
 {{- if not (or (eq .Values.tls.mode "selfSigned") (eq .Values.tls.mode "certManager")) -}}
 {{- fail (printf "tls.mode must be one of: selfSigned, certManager (got: %q)" .Values.tls.mode) -}}
 {{- end -}}
+{{- if and (eq .Values.tls.mode "certManager") (not (.Capabilities.APIVersions.Has "cert-manager.io/v1")) -}}
+{{- fail "tls.mode=certManager requires cert-manager CRDs. Install cert-manager first, or set tls.mode=selfSigned." -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Returns the API REST endpoint URL for in-cluster clients.
+*/}}
+{{- define "rest_api_endpoint" -}}
+{{- if eq .Values.tls.mode "certManager" -}}
+{{- printf "https://%s-api-rest:8080" .Release.Name -}}
+{{- else -}}
+{{- printf "http://%s-api-rest:8081" .Release.Name -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Returns the Secret name holding api-rest TLS materials.
+*/}}
+{{- define "rest_api_tls_secret_name" -}}
+{{- .Values.tls.certManager.secretName | default (printf "%s-api-rest-tls" .Release.Name) -}}
+{{- end -}}
+
+{{/*
+Returns the in-container CA certificate file path for api-rest TLS clients.
+*/}}
+{{- define "rest_api_tls_ca_path" -}}
+{{- print "/etc/mayastor/rest-api-ca/ca.crt" -}}
 {{- end -}}
 
 {{- define "etcd_is_8.6.0" -}}

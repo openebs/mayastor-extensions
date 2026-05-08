@@ -170,6 +170,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        {{- if eq .Values.tls.mode "certManager" }}
+        - name: SSL_CERT_FILE
+          value: {{ include "rest_api_tls_ca_path" . }}
+        {{- end }}
         ports:
           - containerPort: {{ default 9502 .Values.base.metrics.port }}
             protocol: TCP
@@ -179,7 +183,13 @@ spec:
           - "--grpc-port={{ default 10124 .Values.io_engine.port }}"
           - "--fmt-style={{ include "logFormat" . }}"
           - "--ansi-colors={{ .Values.base.logging.color }}"
-          - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"
+          - "--rest-endpoint={{ include "rest_api_endpoint" . }}"
+        {{- if eq .Values.tls.mode "certManager" }}
+        volumeMounts:
+          - name: api-rest-tls-ca
+            mountPath: /etc/mayastor/rest-api-ca
+            readOnly: true
+        {{- end }}
       {{- end }}
       volumes:
       - name: device
@@ -206,3 +216,8 @@ spec:
         hostPath:
           path: /var/local/{{ .Release.Name }}/io-engine/
           type: DirectoryOrCreate
+      {{- if and .Values.base.metrics.enabled (eq .Values.tls.mode "certManager") }}
+      - name: api-rest-tls-ca
+        secret:
+          secretName: {{ include "rest_api_tls_secret_name" . }}
+      {{- end }}

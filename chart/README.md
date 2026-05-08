@@ -68,7 +68,7 @@ Install [cert-manager](https://cert-manager.io/docs/installation/) first, then e
 $ helm install mayastor . -n <mayastor-namespace> --set tls.mode=certManager
 ```
 
-The chart will automatically create a self-signed cert-manager `Issuer` and a `Certificate` for the REST API. The resulting TLS `Secret` is mounted into the `api-rest` pod.
+The chart will automatically create a self-signed cert-manager `Issuer` and a `Certificate` for the REST API. The resulting TLS `Secret` is mounted into the `api-rest` pod and REST clients.
 
 To use your own existing Issuer or ClusterIssuer instead:
 
@@ -77,6 +77,14 @@ $ helm install mayastor . -n <mayastor-namespace> \
   --set tls.mode=certManager \
   --set tls.certManager.issuerRef.name=<your-issuer-name> \
   --set tls.certManager.issuerRef.kind=ClusterIssuer
+```
+
+To override the generated Secret name:
+
+```console
+$ helm install mayastor . -n <mayastor-namespace> \
+  --set tls.mode=certManager \
+  --set tls.certManager.secretName=<rest-tls-secret-name>
 ```
 
 ## Chart Dependencies
@@ -299,6 +307,6 @@ $ helm install mayastor . -n <mayastor-namespace> \
 | tls.&ZeroWidthSpace;certManager.&ZeroWidthSpace;issuerRef.&ZeroWidthSpace;kind | Kind of the issuer reference: Issuer or ClusterIssuer. | `"Issuer"` |
 | tls.&ZeroWidthSpace;certManager.&ZeroWidthSpace;issuerRef.&ZeroWidthSpace;name | Name of the Issuer or ClusterIssuer. Leave empty to auto-create a SelfSigned Issuer. | `""` |
 | tls.&ZeroWidthSpace;certManager.&ZeroWidthSpace;renewBefore | How long before expiry the certificate will be renewed. | `"360h0m0s"` |
+| tls.&ZeroWidthSpace;certManager.&ZeroWidthSpace;secretName | Secret name used by cert-manager Certificate and mounted by REST clients. | `""` |
 | tls.&ZeroWidthSpace;mode | TLS mode for the REST API HTTPS endpoint. Valid values: "selfSigned" or "certManager". "selfSigned": the api-rest server generates its own self-signed certificates internally (no external dependencies). "certManager": cert-manager manages the TLS certificate lifecycle (cert-manager must be installed). | `"selfSigned"` |
 | tolerations | Tolerations to be applied to all components except external Chart dependencies. If any component has tolerations set, then it would override this value. For external components like etcd, jaeger and loki, tolerations can only be set at component level. | `[]` |
-

@@ -31,7 +31,7 @@ metadata:
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
     {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
-  secretName: {{ .Release.Name }}-api-rest-tls
+  secretName: {{ include "rest_api_tls_secret_name" . }}
   duration: {{ .Values.tls.certManager.duration | quote }}
   renewBefore: {{ .Values.tls.certManager.renewBefore | quote }}
   dnsNames:

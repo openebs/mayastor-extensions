@@ -101,5 +101,5 @@ spec:
       volumes:
         - name: api-rest-tls
           secret:
-            secretName: {{ .Release.Name }}-api-rest-tls
+            secretName: {{ include "rest_api_tls_secret_name" . }}
       {{- end }}

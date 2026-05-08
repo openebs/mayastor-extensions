@@ -67,7 +67,7 @@ Install [cert-manager](https://cert-manager.io/docs/installation/) first, then e
 $ helm install mayastor . -n <mayastor-namespace> --set tls.mode=certManager
 ```
 
-The chart will automatically create a self-signed cert-manager `Issuer` and a `Certificate` for the REST API. The resulting TLS `Secret` is mounted into the `api-rest` pod.
+The chart will automatically create a self-signed cert-manager `Issuer` and a `Certificate` for the REST API. The resulting TLS `Secret` is mounted into the `api-rest` pod and REST clients.
 
 To use your own existing Issuer or ClusterIssuer instead:
 
@@ -78,7 +78,17 @@ $ helm install mayastor . -n <mayastor-namespace> \
   --set tls.certManager.issuerRef.kind=ClusterIssuer
 ```
 
+To override the generated Secret name:
 
+```console
+$ helm install mayastor . -n <mayastor-namespace> \
+  --set tls.mode=certManager \
+  --set tls.certManager.secretName=<rest-tls-secret-name>
+```
+
+
+
+## Chart Dependencies
 
 {{ template "chart.requirementsTable" . }}
 

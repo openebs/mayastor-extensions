@@ -332,6 +332,8 @@ tls:
   # "certManager": cert-manager manages the TLS certificate lifecycle (cert-manager must be installed).
   mode: selfSigned
   certManager:
+    # -- Secret name used by cert-manager Certificate and mounted by REST clients.
+    secretName: ""
     # -- Optional reference to an existing cert-manager Issuer or ClusterIssuer.
     # When name is empty, a SelfSigned Issuer is created automatically by the chart.
     issuerRef:
