@@ -10,6 +10,7 @@ use once_cell::sync::OnceCell;
 use std::{
     env,
     net::{IpAddr, SocketAddr},
+    path::PathBuf,
 };
 use tracing::{info, warn};
 use utils::tracing_telemetry::{FmtLayer, FmtStyle};
@@ -72,6 +73,10 @@ pub(crate) struct Cli {
     /// Timeout for node status REST requests.
     #[clap(long, default_value = "10s", env = "MAYASTOR_SCRAPE_TIMEOUT")]
     scrape_timeout: humantime::Duration,
+
+    /// CA certificate path for HTTPS REST endpoint.
+    #[clap(long, env = "MAYASTOR_TLS_CLIENT_CA_PATH")]
+    tls_client_ca_path: Option<PathBuf>,
 }
 
 static GRPC_CLIENT: OnceCell<GrpcClient> = OnceCell::new();
@@ -123,10 +128,14 @@ async fn main() -> Result<(), ExporterError> {
     // Initialize node status REST client if endpoint is configured.
     if let Some(ref endpoint) = args.rest_endpoint {
         info!("Initializing node status REST client with endpoint: {endpoint}");
-        let node_client = NodeStatusClient::new(&endpoint.to_string(), *args.scrape_timeout)
-            .map_err(|e| {
-                ExporterError::HttpServerError(format!("Failed to create node status client: {e}"))
-            })?;
+        let node_client = NodeStatusClient::new(
+            &endpoint.to_string(),
+            *args.scrape_timeout,
+            args.tls_client_ca_path.as_deref(),
+        )
+        .map_err(|e| {
+            ExporterError::HttpServerError(format!("Failed to create node status client: {e}"))
+        })?;
         NODE_STATUS_CLIENT
             .set(node_client)
             .expect("Node status client should be initialised only once");

@@ -1,9 +1,8 @@
 use openapi::{
-    clients::tower::Error,
+    clients::tower::{ApiClient, Configuration, Error, Url},
     models::{Node, RestJsonError},
-    tower::client::{ApiClient, Configuration},
 };
-use std::time::Duration;
+use std::{path::Path, time::Duration};
 use tracing::trace;
 
 /// REST client for fetching node status from the control-plane.
@@ -14,13 +13,24 @@ pub(crate) struct NodeStatusClient {
 
 impl NodeStatusClient {
     /// Create a new NodeStatusClient.
-    pub(crate) fn new(endpoint: &str, timeout: Duration) -> anyhow::Result<Self> {
-        let url = url::Url::parse(endpoint)
+    pub(crate) fn new(
+        endpoint: &str,
+        timeout: Duration,
+        tls_client_ca_path: Option<&Path>,
+    ) -> anyhow::Result<Self> {
+        let url = Url::parse(endpoint)
             .map_err(|e| anyhow::anyhow!("Invalid REST endpoint URL '{endpoint}': {e}"))?;
-        let config = Configuration::builder()
-            .with_timeout(timeout)
-            .with_tracing(false)
-            .build_url(url)
+        if url.scheme() != "https" && tls_client_ca_path.is_some() {
+            anyhow::bail!("CA certificate path is only supported for HTTPS REST endpoints");
+        }
+
+        let ca_certificate = match tls_client_ca_path {
+            Some(path) => Some(std::fs::read(path).map_err(|error| {
+                anyhow::anyhow!("Failed to read TLS CA certificate '{path:?}': {error}")
+            })?),
+            None => None,
+        };
+        let config = Configuration::new(url, timeout, None, ca_certificate.as_deref(), false, None)
             .map_err(|e| anyhow::anyhow!("Failed to create openapi configuration: {e:?}"))?;
         let client = ApiClient::new(config);
         Ok(Self { client })

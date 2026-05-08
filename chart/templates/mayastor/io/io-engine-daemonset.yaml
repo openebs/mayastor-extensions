@@ -185,6 +185,9 @@ spec:
           - "--ansi-colors={{ .Values.base.logging.color }}"
           - "--rest-endpoint={{ include "rest_api_endpoint" . }}"
         {{- if eq .Values.tls.mode "certManager" }}
+          - "--tls-client-ca-path={{ include "rest_api_tls_ca_path" . }}"
+        {{- end }}
+        {{- if eq .Values.tls.mode "certManager" }}
         volumeMounts:
           - name: api-rest-tls-ca
             mountPath: /etc/mayastor/rest-api-ca

@@ -31,6 +31,9 @@ spec:
       containers:
         - args:
           - '--metrics-endpoint=9052'
+          - '--rest-endpoint=http://mayastor-api-rest:8081'
+          # For HTTPS endpoints, provide CA cert path:
+          # - '--tls-client-ca-path=/etc/mayastor/rest-api-ca/ca.crt'
 ```
 
 ## Examples
