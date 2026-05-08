@@ -57,9 +57,25 @@ impl SystemDumper {
         init_tool_log_file(PathBuf::from(format!("{new_dir}/support_tool_logs.log")))
             .expect("Support Tool Log file should be created");
 
-        log(format!("Plugin {}", utils::version_info_str!()));
+        let k8s_client =
+            match ClientSet::new(config.kubeconfig().clone(), config.namespace().to_string()).await
+            {
+                Ok(val) => val,
+                Err(err) => {
+                    log(format!("Failed to instantiate K8s client, error: {err:?}"));
+                    process::exit(1);
+                }
+            };
 
-        // Creates an arcive file to dump mayastor resource information. If creation
+        log(format!("Plugin {}", utils::version_info!()));
+        match k8s_client.rest_version().await {
+            Ok(version) => log(format!("HelmRelease {version}")),
+            Err(error) => log(format!(
+                "Failed to retrieve Helm Release Version: {error:?}"
+            )),
+        }
+
+        // Creates an archive file to dump mayastor resource information. If creation
         // of archive is failed then we can't continue process
         let archive = match archive::Archive::new(
             Some(config.output_directory().to_string()),
@@ -91,20 +107,7 @@ impl SystemDumper {
             }
         };
 
-        let k8s_resource_dumper = match K8sResourceDumperClient::new(
-            config.kubeconfig().clone(),
-            config.namespace().to_string(),
-        )
-        .await
-        {
-            Ok(val) => val,
-            Err(err) => {
-                log(format!(
-                    "Failed to instantiate K8s resource dumper, error: {err:?}"
-                ));
-                process::exit(1);
-            }
-        };
+        let k8s_resource_dumper = K8sResourceDumperClient::new(k8s_client).await;
 
         let etcd_dumper = match EtcdStore::new(
             config.kubeconfig().clone(),
@@ -148,10 +151,7 @@ impl SystemDumper {
 
     /// Collect and dump loki logs across all logging services.
     pub async fn collect_and_dump_loki_logs(&mut self) -> Result<(), Error> {
-        log(format!(
-            "Label selectors : {}",
-            self.logging_label_selectors
-        ));
+        log(format!("Label selectors: {}", self.logging_label_selectors));
         // Fetch required logging resources
         let resources = self
             .logger
@@ -162,23 +162,23 @@ impl SystemDumper {
             "Collecting logs of following services: \n {resources:#?}"
         ));
 
-        log("Collecting logs...".to_string());
+        log("Collecting logs...");
         if let Err(error) = self
             .logger
             .fetch_and_dump_logs(resources, self.dir_path.clone())
             .await
         {
-            log("Error occurred while collecting logs".to_string());
+            log("Error occurred while collecting logs");
             return Err(Error::LogCollectionError(error));
         }
-        log("Completed collection of logs".to_string());
+        log("Completed collection of logs");
         Ok(())
     }
 
     /// Copies the temporary directory into archive and delete temporary directory
     pub fn fill_archive_and_delete_tmp(&mut self) -> Result<(), Error> {
         // Log which is visible in archive system log file
-        let _ = write_to_log_file("Will copy temporary directory content to archive".to_string());
+        let _ = write_to_log_file("Will copy temporary directory content to archive");
         // Flush log file before copying contents
         flush_tool_log_file()?;
 
@@ -247,7 +247,7 @@ impl SystemDumper {
         }
 
         if !errors.is_empty() {
-            log("Failed to dump system state".to_string());
+            log("Failed to dump system state");
             return Err(Error::MultipleErrors(errors));
         }
         Ok(())
@@ -260,10 +260,7 @@ impl SystemDumper {
     ) -> Result<(), Error> {
         let rest_client = match self.rest_client.clone() {
             None => {
-                log(
-                    "Skipping topology information collection as rest client is not available"
-                        .to_string(),
-                );
+                log("Skipping topology information collection as rest client is not available");
                 return Err(Error::Generic("Failed to get rest client".to_string()));
             }
             Some(client) => client,
@@ -271,14 +268,14 @@ impl SystemDumper {
 
         let mut errors: Vec<Error> = Vec::new();
 
-        log("Collecting topology information...".to_string());
+        log("Collecting topology information...");
         // Dump information of all volume topologies exist in the system
         match VolumeClientWrapper::new(rest_client.clone())
             .get_topologer(None)
             .await
         {
             Ok(topologer) => {
-                log("\t Collecting volume topology information".to_string());
+                log("\t Collecting volume topology information");
                 let mut vol_topo_path = path.to_path_buf();
                 vol_topo_path.push("topology");
                 vol_topo_path.push("volume");
@@ -298,7 +295,7 @@ impl SystemDumper {
             .await
         {
             Ok(topologer) => {
-                log("\t Collecting snapshot topology information".to_string());
+                log("\t Collecting snapshot topology information");
                 let mut vol_snap_topo_path = path.to_path_buf();
                 vol_snap_topo_path.push("topology");
                 vol_snap_topo_path.push("snapshot");
@@ -321,7 +318,7 @@ impl SystemDumper {
             .await
         {
             Ok(topologer) => {
-                log("\t Collecting pool topology information".to_string());
+                log("\t Collecting pool topology information");
                 let mut pool_topo_path = path.to_path_buf();
                 pool_topo_path.push("topology");
                 pool_topo_path.push("pool");
@@ -341,7 +338,7 @@ impl SystemDumper {
             .await
         {
             Ok(topologer) => {
-                log("\t Collecting node topology information".to_string());
+                log("\t Collecting node topology information");
                 let mut node_topo_path = path.to_path_buf();
                 node_topo_path.push("topology");
                 node_topo_path.push("node");
@@ -359,7 +356,7 @@ impl SystemDumper {
                 None
             }
         };
-        log("Completed collection of topology information".to_string());
+        log("Completed collection of topology information");
         Ok(())
     }
 
@@ -374,7 +371,7 @@ impl SystemDumper {
     /// Dumps the mayastor etcd.
     pub(crate) async fn dump_mayastor_etcd(&mut self, path: &Path) -> Result<(), Error> {
         let _ = future::try_join_all(self.etcd_dumper.as_mut().map(|etcd_store| {
-            log("Collecting mayastor specific information from Etcd...".to_string());
+            log("Collecting mayastor specific information from Etcd...");
             etcd_store.dump(path.to_path_buf(), false)
         }))
         .await

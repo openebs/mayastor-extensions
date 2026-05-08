@@ -12,6 +12,15 @@ pub enum ResourceError {
 }
 
 impl ResourceError {
+    /// Check if the error is a failed precondition.
+    pub(crate) fn failed_precond(&self) -> bool {
+        match self {
+            Self::RestJsonError(error) => {
+                error.status() == Some(openapi::apis::StatusCode::PRECONDITION_FAILED)
+            }
+            _ => false,
+        }
+    }
     /// Checks whether resource type error is REST NotFound or not
     pub(crate) fn not_found_rest_json_error(self) -> Result<bool, Self> {
         let err = match self {

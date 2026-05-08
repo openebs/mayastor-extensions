@@ -134,7 +134,7 @@ async fn execute_resource_dump(cli_args: SupportArgs, resource: Resource) -> Res
                 ARCHIVE_PREFIX,
             )
             .await;
-            log("Completed collection of topology information".to_string());
+            log("Completed collection of topology information");
 
             system_dumper.collect_and_dump_loki_logs().await?;
             if let Err(e) = system_dumper.fill_archive_and_delete_tmp() {
@@ -181,7 +181,7 @@ async fn execute_resource_dump(cli_args: SupportArgs, resource: Resource) -> Res
         }
     }
     if !errors.is_empty() {
-        log("Failed to dump system state".to_string());
+        log("Failed to dump system state");
         return Err(Error::MultipleErrors(errors));
     }
     println!("Completed collection of dump !!");

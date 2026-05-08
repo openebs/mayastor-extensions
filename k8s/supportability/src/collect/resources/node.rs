@@ -66,21 +66,16 @@ impl NodeClientWrapper {
         Ok(nodes)
     }
 
-    async fn get_node(&self, id: String) -> Result<Node, ResourceError> {
-        let node = self
-            .rest_client
-            .nodes_api()
-            .get_node(&id)
-            .await?
-            .into_body();
+    async fn get_node(&self, id: &str) -> Result<Node, ResourceError> {
+        let node = self.rest_client.nodes_api().get_node(id).await?.into_body();
         Ok(node)
     }
 
-    async fn list_node_block_devices(&self, id: String) -> Result<Vec<BlockDevice>, ResourceError> {
+    async fn list_node_block_devices(&self, id: &str) -> Result<Vec<BlockDevice>, ResourceError> {
         let devices = match self
             .rest_client
             .block_devices_api()
-            .get_node_block_devices(&id, Some(true))
+            .get_node_block_devices(id, Some(true))
             .await
         {
             Ok(response) => response.into_body(),
@@ -104,11 +99,11 @@ impl Resourcer for NodeClientWrapper {
     ) -> Result<Box<dyn Topologer>, ResourceError> {
         // When ID is provided then caller needs topologer for given node name
         if let Some(node_id) = id {
-            let node = self.get_node(node_id.clone()).await?;
+            let node = self.get_node(&node_id).await?;
             let mut devices: Option<Vec<BlockDevice>> = None;
             if let Some(node_state) = node.clone().state {
                 if matches!(node_state.status, openapi::models::NodeStatus::Online) {
-                    devices = Some(self.list_node_block_devices(node_id).await?);
+                    devices = Some(self.list_node_block_devices(&node_id).await?);
                 }
             }
             let node_topology = NodeTopology { node, devices };
@@ -120,9 +115,9 @@ impl Resourcer for NodeClientWrapper {
         let mayastor_nodes = self.list_nodes().await?;
         for node in mayastor_nodes.iter() {
             let mut devices: Option<Vec<BlockDevice>> = None;
-            if let Some(node_state) = node.clone().state {
+            if let Some(node_state) = &node.state {
                 if matches!(node_state.status, openapi::models::NodeStatus::Online) {
-                    devices = Some(self.list_node_block_devices(node.id.clone()).await?);
+                    devices = Some(self.list_node_block_devices(&node.id).await?);
                 }
             }
             let node_topology = NodeTopology {
@@ -132,7 +127,7 @@ impl Resourcer for NodeClientWrapper {
             nodes_topology.push(node_topology);
         }
         if nodes_topology.is_empty() {
-            log("No Node resources, Are daemonset pods in Running State?!!".to_string());
+            log("No Node resources, Are daemonset pods in Running State?!!");
             return Err(ResourceError::CustomError("No Node resources".to_string()));
         }
         Ok(Box::new(nodes_topology))

@@ -20,9 +20,11 @@ pstor = { path = "../../dependencies/control-plane/utils/pstor" }
 platform = { path = "../../dependencies/control-plane/utils/dependencies/platform" }
 openapi = { path = "../../dependencies/control-plane/openapi", default-features = false, features = ["tower-client", "tower-trace"] }
 kube-proxy = { path = "../../dependencies/control-plane/k8s/proxy" }
+kube-forward = { path = "../../dependencies/control-plane/k8s/forward" }
 rest-plugin = { path = "../../dependencies/control-plane/control-plane/plugin", default-features = false }
 utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
 hyper-body = { path = "../../dependencies/control-plane/utils/hyper-body" }
+constants = { path = "../../constants" }
 
 futures = { workspace = true }
 async-trait = { workspace = true }

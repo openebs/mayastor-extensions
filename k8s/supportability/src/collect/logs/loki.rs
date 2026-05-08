@@ -157,9 +157,17 @@ impl LokiClient {
                 {
                     Ok(result) => result,
                     Err(error) => {
-                        log(format!(
-                            "Failed to create loki client ({error:?}). Continuing..."
-                        ));
+                        match matches!(
+                            error,
+                            kube_proxy::Error::Forward {
+                                source: kube_forward::Error::ServiceNotFound { .. }
+                            }
+                        ) {
+                            true => log("Loki is not found, continuing..."),
+                            false => log(format!(
+                                "Failed to create loki client ({error}). Continuing..."
+                            )),
+                        }
                         return None;
                     }
                 };

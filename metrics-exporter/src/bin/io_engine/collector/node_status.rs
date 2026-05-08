@@ -156,6 +156,7 @@ mod tests {
                 None::<String>,
                 None::<bool>,
             )),
+            meta: None,
             state: Some(NodeState::new_all(
                 format!("http://{id}:10124"),
                 id,

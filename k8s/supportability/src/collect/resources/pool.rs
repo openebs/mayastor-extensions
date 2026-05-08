@@ -61,22 +61,17 @@ impl PoolClientWrapper {
         Ok(pools.into_body())
     }
 
-    async fn get_pool(&self, id: String) -> Result<Pool, ResourceError> {
-        let pool = self
-            .rest_client
-            .pools_api()
-            .get_pool(&id)
-            .await?
-            .into_body();
+    async fn get_pool(&self, id: &str) -> Result<Pool, ResourceError> {
+        let pool = self.rest_client.pools_api().get_pool(id).await?.into_body();
         Ok(pool)
     }
 
-    async fn get_pool_node_info(&self, pool: Pool) -> Result<Option<Node>, ResourceError> {
-        if let Some(pool_spec) = pool.spec {
+    async fn get_pool_node_info(&self, pool: &Pool) -> Result<Option<Node>, ResourceError> {
+        if let Some(pool_spec) = &pool.spec {
             let node = self
                 .rest_client
                 .nodes_api()
-                .get_node(&pool_spec.node.clone())
+                .get_node(&pool_spec.node)
                 .await?
                 .into_body();
             return Ok(Some(node));
@@ -86,19 +81,19 @@ impl PoolClientWrapper {
 
     async fn get_pool_disks_info(
         &self,
-        pool: Pool,
+        pool: &Pool,
     ) -> Result<Option<Vec<BlockDevice>>, ResourceError> {
-        if let Some(pool_spec) = pool.spec {
+        if let Some(pool_spec) = &pool.spec {
             let devices = self
                 .rest_client
                 .block_devices_api()
-                .get_node_block_devices(&pool_spec.node.clone(), Some(true))
+                .get_node_block_devices(&pool_spec.node, Some(true))
                 .await?
                 .into_body();
 
             let filtered_devices: Vec<BlockDevice> = devices
                 .into_iter()
-                .filter(|device| is_it_pool_device(pool_spec.clone(), device))
+                .filter(|device| is_it_pool_device(pool_spec, device))
                 .collect::<Vec<BlockDevice>>();
             return Ok(Some(filtered_devices));
         }
@@ -106,12 +101,12 @@ impl PoolClientWrapper {
     }
 }
 
-fn is_it_pool_device(pool_spec: openapi::models::PoolSpec, device: &BlockDevice) -> bool {
+fn is_it_pool_device(pool_spec: &openapi::models::PoolSpec, device: &BlockDevice) -> bool {
     let mut device_links: HashSet<String> = HashSet::from_iter(device.devlinks.iter().cloned());
     device_links.insert(device.devname.clone());
     device_links.insert(device.devpath.clone());
-    for pool_device_name in pool_spec.disks {
-        if device_links.contains(&pool_device_name) {
+    for pool_device_name in &pool_spec.disks {
+        if device_links.contains(pool_device_name) {
             return true;
         }
     }
@@ -128,8 +123,8 @@ impl Resourcer for PoolClientWrapper {
     ) -> Result<Box<dyn Topologer>, ResourceError> {
         // When ID is provided then caller needs topologer for given pool id
         if let Some(pool_id) = id {
-            let pool = self.get_pool(pool_id.clone()).await?;
-            let node_info = match self.get_pool_node_info(pool.clone()).await {
+            let pool = self.get_pool(&pool_id).await?;
+            let node_info = match self.get_pool_node_info(&pool).await {
                 Ok(node_info) => node_info,
                 Err(e) => {
                     // TODO: Collect errors and return to caller at end
@@ -139,7 +134,7 @@ impl Resourcer for PoolClientWrapper {
                     None
                 }
             };
-            let device_info = match self.get_pool_disks_info(pool.clone()).await {
+            let device_info = match self.get_pool_disks_info(&pool).await {
                 Ok(d_info) => d_info,
                 Err(e) => {
                     // TODO: Collect errors and return to caller at end
@@ -162,7 +157,7 @@ impl Resourcer for PoolClientWrapper {
         let mut pools_topology: Vec<PoolTopology> = Vec::new();
         let pools = self.list_pools().await?;
         for pool in pools.into_iter() {
-            let node_info = match self.get_pool_node_info(pool.clone()).await {
+            let node_info = match self.get_pool_node_info(&pool).await {
                 Ok(node_info) => node_info,
                 Err(e) => {
                     // TODO: Collect errors and return to caller at end
@@ -172,7 +167,7 @@ impl Resourcer for PoolClientWrapper {
                     None
                 }
             };
-            let device_info = match self.get_pool_disks_info(pool.clone()).await {
+            let device_info = match self.get_pool_disks_info(&pool).await {
                 Ok(d_info) => d_info,
                 Err(e) => {
                     // TODO: Collect errors and return to caller at end

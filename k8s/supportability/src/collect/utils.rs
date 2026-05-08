@@ -5,7 +5,8 @@ use std::{fs::File, io::Write, path::PathBuf};
 static TOOL_LOG_FILE: OnceCell<Option<File>> = OnceCell::new();
 
 /// Method to be only used to print tool logs to console and write in file.
-pub fn log(content: String) {
+pub fn log(content: impl AsRef<str>) {
+    let content = content.as_ref();
     println!("{content}");
     // NOTE: If we failed to write to log file can't do anything, just write
     // to stdout and return
@@ -14,7 +15,7 @@ pub fn log(content: String) {
 }
 
 /// Method to be only used to write in file.
-pub(crate) fn write_to_log_file(content: String) -> Result<(), std::io::Error> {
+pub(crate) fn write_to_log_file(content: impl AsRef<str>) -> Result<(), std::io::Error> {
     if let Some(mut file) = TOOL_LOG_FILE
         .get()
         .ok_or(std::io::Error::new(
@@ -23,7 +24,7 @@ pub(crate) fn write_to_log_file(content: String) -> Result<(), std::io::Error> {
         ))?
         .as_ref()
     {
-        file.write_all(content.as_bytes())?;
+        file.write_all(content.as_ref().as_bytes())?;
     }
 
     Ok(())
