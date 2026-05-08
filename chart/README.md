@@ -52,7 +52,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 
 ## TLS Configuration
 
-The REST API server exposes an HTTPS endpoint (port 8080). By default it uses self-signed certificates generated internally by the server — no extra tools or configuration required.
+The REST API server exposes an HTTPS endpoint (port 8080). By default, Helm generates a self-signed TLS certificate using `genSelfSignedCert` and stores it in a Kubernetes Secret — no extra tools or configuration required. The certificate is preserved across `helm upgrade` runs so that pods are not unnecessarily restarted.
 
 ### Default: self-signed certificates (no dependencies)
 
@@ -308,5 +308,5 @@ $ helm install mayastor . -n <mayastor-namespace> \
 | tls.&ZeroWidthSpace;certManager.&ZeroWidthSpace;issuerRef.&ZeroWidthSpace;name | Name of the Issuer or ClusterIssuer. Leave empty to auto-create a SelfSigned Issuer. | `""` |
 | tls.&ZeroWidthSpace;certManager.&ZeroWidthSpace;renewBefore | How long before expiry the certificate will be renewed. | `"360h0m0s"` |
 | tls.&ZeroWidthSpace;certManager.&ZeroWidthSpace;secretName | Secret name used by cert-manager Certificate and mounted by REST clients. | `""` |
-| tls.&ZeroWidthSpace;mode | TLS mode for the REST API HTTPS endpoint. Valid values: "selfSigned" or "certManager". "selfSigned": the api-rest server generates its own self-signed certificates internally (no external dependencies). "certManager": cert-manager manages the TLS certificate lifecycle (cert-manager must be installed). | `"selfSigned"` |
+| tls.&ZeroWidthSpace;mode | TLS mode for the REST API HTTPS endpoint. Valid values: "selfSigned" or "certManager". "selfSigned": Helm generates a self-signed TLS certificate via `genSelfSignedCert` and stores it in a Kubernetes Secret (no external dependencies). "certManager": cert-manager manages the TLS certificate lifecycle (cert-manager must be installed). | `"selfSigned"` |
 | tolerations | Tolerations to be applied to all components except external Chart dependencies. If any component has tolerations set, then it would override this value. For external components like etcd, jaeger and loki, tolerations can only be set at component level. | `[]` |
