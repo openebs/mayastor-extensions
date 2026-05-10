@@ -4,6 +4,7 @@ on:
     branches:
       - 'release/**'
       - 'develop'
+      - windows
   workflow_call:
     inputs:
       tag:
@@ -76,3 +77,4 @@ jobs:
           name: kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}
           path: kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.tar.gz
           if-no-files-found: error
+

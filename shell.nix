@@ -36,7 +36,6 @@ let
     niv
     nixpkgs-fmt
     paperclip
-    openssl
     pkg-config
     utillinux
   ] ++ pkgs.lib.optional (usePreCommit) pre-commit;
