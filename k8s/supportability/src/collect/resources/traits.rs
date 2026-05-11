@@ -2,8 +2,7 @@ use crate::collect::resources::error::ResourceError;
 
 use async_trait::async_trait;
 use downcast_rs::{impl_downcast, Downcast};
-use std::fmt::Debug;
-use std::path::PathBuf;
+use std::{fmt::Debug, path::PathBuf};
 
 /// Implements functionality to inspect topology information
 pub(crate) trait Topologer: Downcast + Debug {

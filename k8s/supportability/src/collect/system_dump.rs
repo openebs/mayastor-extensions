@@ -1,17 +1,16 @@
-use crate::collect::k8s_resources::client::ClientSet;
-use crate::collect::rest_wrapper;
 use crate::{
     collect::{
         archive, common,
         common::DumpConfig,
         error::Error,
-        k8s_resources::k8s_resource_dump::K8sResourceDumperClient,
+        k8s_resources::{client::ClientSet, k8s_resource_dump::K8sResourceDumperClient},
         logs::{LogCollection, Logger},
         persistent_store::etcd::EtcdStore,
         resources::{
             node::NodeClientWrapper, pool::PoolClientWrapper,
             snapshot::VolumeSnapshotClientWrapper, volume::VolumeClientWrapper, Resourcer,
         },
+        rest_wrapper,
         rest_wrapper::RestClient,
         utils::{flush_tool_log_file, init_tool_log_file, write_to_log_file},
     },
@@ -19,8 +18,10 @@ use crate::{
 };
 
 use futures::future;
-use std::path::Path;
-use std::{path::PathBuf, process};
+use std::{
+    path::{Path, PathBuf},
+    process,
+};
 
 /// SystemDumper interacts with various services to collect information like mayastor resource(s),
 /// logs of mayastor service and state of mayastor artifacts in etcd

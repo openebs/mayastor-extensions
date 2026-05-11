@@ -11,8 +11,6 @@ use upgrade::{
         kube::client as KubeClient,
     },
     events::event_recorder::{EventAction, EventRecorder},
-};
-use upgrade::{
     helm::upgrade::{HelmUpgradeRunner, HelmUpgraderBuilder},
     upgrade_data_plane::upgrade_data_plane,
 };
