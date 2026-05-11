@@ -1,7 +1,7 @@
 kubernetes==31.0.0
 pytest-bdd==8.1.0
-pytest==8.4.1
-requests==2.32.4
-retrying==1.4.1
+pytest==9.0.3
+requests==2.34.0
+retrying==1.4.2
 semver==3.0.4
-urllib3==2.5.0
+urllib3==2.7.0
