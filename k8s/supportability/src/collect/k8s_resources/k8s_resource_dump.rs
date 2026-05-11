@@ -14,8 +14,13 @@ use k8s_openapi::{
 };
 use kube::Resource;
 use serde::Serialize;
-use std::path::Path;
-use std::{collections::HashSet, fs::File, io::Write, iter::FromIterator, path::PathBuf};
+use std::{
+    collections::HashSet,
+    fs::File,
+    io::Write,
+    iter::FromIterator,
+    path::{Path, PathBuf},
+};
 
 /// K8s resource dumper client
 #[derive(Clone)]

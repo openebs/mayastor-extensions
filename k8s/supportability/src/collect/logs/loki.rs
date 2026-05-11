@@ -1,5 +1,7 @@
-use crate::collect::constants::X_SCOPE_ORGID;
-use crate::{collect::utils::write_to_log_file, log};
+use crate::{
+    collect::{constants::X_SCOPE_ORGID, utils::write_to_log_file},
+    log,
+};
 
 use chrono::Utc;
 use hyper::body::Buf;

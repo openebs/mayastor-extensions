@@ -6,21 +6,20 @@ use clap::Parser;
 use k8s_openapi::api::core::v1 as core_v1;
 use kube::api::GroupVersionKind;
 use openapi::{apis::StatusCode, tower::client::Url};
-use plugin::resources::{node, pool, snapshot, VolumeId};
 use plugin::{
     resources::{
-        CordonResources, DrainResources, ExpandResources, GetResources, LabelResources,
-        ScaleResources, SetPropertyResources, UnCordonResources,
+        node, pool, snapshot, CordonResources, DrainResources, ExpandResources, GetResources,
+        LabelResources, ScaleResources, SetPropertyResources, UnCordonResources, VolumeId,
     },
     rest_wrapper::RestClient,
     ExecuteOperation,
 };
 use std::{ops::Deref, path::PathBuf};
 use supportability::DumpArgs;
-use upgrade::upgrade::DeleteUpgradeArgs;
 use upgrade::{
     plugin::upgrade::{GetUpgradeArgs, UpgradeArgs},
     preflight_validations,
+    upgrade::DeleteUpgradeArgs,
 };
 
 #[derive(Parser, Debug)]
