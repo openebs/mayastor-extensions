@@ -212,7 +212,8 @@ impl ExecuteOperation for Operations {
                 GetResourcesK8s::Rest(resource) => resource.execute(cli_args).await?,
                 GetResourcesK8s::UpgradeStatus(resources) => {
                     // todo: use generic execute trait
-                    resources.get_upgrade(&cli_args.namespace).await?
+                    let client = cli_args.client().await?;
+                    resources.get_upgrade(&cli_args.namespace, &client).await?
                 }
             },
             Operations::Drain(resource) => resource.execute(cli_args).await?,
@@ -239,20 +240,25 @@ impl ExecuteOperation for Operations {
             }
             Operations::Upgrade(resources) => {
                 // todo: use generic execute trait
+                let client = cli_args.client().await?;
                 preflight_validations::preflight_check(
                     &cli_args.namespace,
                     cli_args.kubeconfig.clone(),
                     cli_args.context.clone(),
                     cli_args.timeout,
                     resources,
+                    &client,
                 )
                 .await?;
-                resources.execute(&cli_args.namespace).await?
+                resources.execute(&cli_args.namespace, &client).await?
             }
             Operations::Delete(args) => {
                 match &args.resource {
                     // todo: use generic execute trait
-                    DeleteResources::Upgrade(res) => res.delete(&cli_args.namespace).await?,
+                    DeleteResources::Upgrade(res) => {
+                        let client = cli_args.client().await?;
+                        res.delete(&cli_args.namespace, &client).await?
+                    }
                     DeleteResources::Pool(pool_args) if !pool_args.cleanup.cleanup_dsp => {
                         // No cleanup — delegate entirely like Volume/VolumeSnapshot.
                         plugin::resources::DeleteArgs {
