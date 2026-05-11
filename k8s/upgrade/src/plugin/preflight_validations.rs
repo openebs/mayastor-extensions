@@ -7,6 +7,7 @@ use crate::{
     },
     upgrade::UpgradeArgs,
 };
+use kube::Client;
 use openapi::{
     clients::tower::{self, Configuration},
     models::CordonDrainState,
@@ -25,6 +26,7 @@ pub async fn preflight_check(
     context: Option<String>,
     timeout: humantime::Duration,
     resources: &UpgradeArgs,
+    client: &Client,
 ) -> error::Result<()> {
     console_logger::info(user_prompt::UPGRADE_WARNING, "");
     // Initialise the REST client.
@@ -39,7 +41,7 @@ pub async fn preflight_check(
     let rest_client = RestClient::new_with_config(config);
 
     if !resources.skip_upgrade_path_validation_for_unsupported_version {
-        upgrade_path_validation(namespace, resources.allow_unstable).await?;
+        upgrade_path_validation(namespace, resources.allow_unstable, client).await?;
     }
 
     if !resources.skip_replica_rebuild {
@@ -51,7 +53,7 @@ pub async fn preflight_check(
     }
 
     if !resources.skip_single_replica_volume_validation {
-        single_volume_replica_validation(&rest_client).await?;
+        single_volume_replica_validation(&rest_client, client).await?;
     }
     Ok(())
 }
@@ -91,7 +93,10 @@ pub(crate) async fn already_cordoned_nodes_validation(client: &RestClient) -> er
 }
 
 /// Prompt to user and error out if the cluster has single replica volume.
-pub(crate) async fn single_volume_replica_validation(client: &RestClient) -> error::Result<()> {
+pub(crate) async fn single_volume_replica_validation(
+    client: &RestClient,
+    kube_client: &Client,
+) -> error::Result<()> {
     // let mut single_replica_volumes = Vec::new();
     // The number of volumes to get per request.
     let max_entries = 200;
@@ -118,7 +123,7 @@ pub(crate) async fn single_volume_replica_validation(client: &RestClient) -> err
     }
 
     if !volumes.is_empty() {
-        let data = get_pvc_from_uuid(HashSet::from_iter(volumes))
+        let data = get_pvc_from_uuid(HashSet::from_iter(volumes), kube_client)
             .await?
             .join("\n");
 
@@ -197,12 +202,13 @@ pub(crate) fn strip_v_prefix(version: &str) -> &str {
 pub(crate) async fn upgrade_path_validation(
     namespace: &str,
     allow_unstable: bool,
+    client: &Client,
 ) -> error::Result<()> {
     let unsupported_version_buf =
         &std::include_bytes!("../../config/unsupported_versions.yaml")[..];
     let unsupported_versions = UnsupportedVersions::try_from(unsupported_version_buf)
         .context(error::YamlParseBufferForUnsupportedVersion)?;
-    let source_version = get_source_version(namespace).await?;
+    let source_version = get_source_version(namespace, client).await?;
 
     let source = Version::parse(source_version.as_str()).context(error::SemverParse {
         version_string: source_version.clone(),

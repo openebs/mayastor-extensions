@@ -23,7 +23,6 @@ use k8s_openapi::api::{
 };
 use kube::{
     api::{Api, DeleteParams, ListParams, PostParams},
-    core::ObjectList,
     Client,
 };
 use serde::Deserialize;
@@ -51,14 +50,14 @@ pub struct DeleteUpgradeArgs {
 
 impl DeleteUpgradeArgs {
     /// Delete the upgrade resources
-    pub async fn delete(&self, ns: &str) -> error::Result<()> {
-        match is_upgrade_job_completed(ns).await {
+    pub async fn delete(&self, ns: &str, client: &Client) -> error::Result<()> {
+        match is_upgrade_job_completed(ns, client).await {
             Ok(job_completed) => {
                 if !job_completed && !self.force {
                     console_logger::error("", DELETE_INCOMPLETE_JOB);
                 }
                 if job_completed || self.force {
-                    UpgradeResources::delete_upgrade_resources(ns).await?;
+                    UpgradeResources::delete_upgrade_resources(ns, client).await?;
                 }
                 Ok(())
             }
@@ -156,16 +155,16 @@ impl UpgradeArgs {
         }
     }
     ///  Upgrade the resources.
-    pub async fn apply(&self, namespace: &str) -> error::Result<()> {
-        let upgrade_event_client = UpgradeEventClient::new(namespace).await?;
-        let release_name = get_release_name(namespace).await?;
+    pub async fn apply(&self, namespace: &str, client: &Client) -> error::Result<()> {
+        let upgrade_event_client = UpgradeEventClient::new(namespace, client).await?;
+        let release_name = get_release_name(namespace, client).await?;
 
         // Delete any previous upgrade events
         upgrade_event_client
             .delete_upgrade_events(release_name.clone())
             .await?;
         // Create resources for upgrade
-        UpgradeResources::create_upgrade_resources(namespace, self).await?;
+        UpgradeResources::create_upgrade_resources(namespace, self, client).await?;
 
         for _i in 0..MAX_RETRY_ATTEMPTS {
             // wait for 10 seconds for the upgrade event to be published
@@ -174,7 +173,10 @@ impl UpgradeArgs {
                 .get_latest_upgrade_event(release_name.clone())
                 .await
             {
-                Ok(latest_event) => self.handle_upgrade_event(latest_event, namespace).await?,
+                Ok(latest_event) => {
+                    self.handle_upgrade_event(latest_event, namespace, client)
+                        .await?
+                }
                 Err(_) => continue,
             }
             break;
@@ -188,6 +190,7 @@ impl UpgradeArgs {
         &self,
         latest_event: Event,
         namespace: &str,
+        client: &Client,
     ) -> error::Result<()> {
         if let Some(action) = latest_event.action {
             if action == "Validation Failed" {
@@ -197,7 +200,7 @@ impl UpgradeArgs {
                     console_logger::error(HELM_UPGRADE_VALIDATION_ERROR, ev.message.as_str());
 
                     // todo: leave around for debugging?
-                    UpgradeResources::delete_upgrade_resources(namespace).await?;
+                    UpgradeResources::delete_upgrade_resources(namespace, client).await?;
                 } else {
                     return error::MessageInEventNotPresent.fail();
                 }
@@ -209,23 +212,29 @@ impl UpgradeArgs {
     }
 
     /// Execute the upgrade command.
-    pub async fn execute(&self, namespace: &str) -> error::Result<()> {
+    pub async fn execute(&self, namespace: &str, client: &Client) -> error::Result<()> {
         if self.dry_run {
-            self.dummy_apply(namespace).await
-        } else {
-            self.apply(namespace).await
+            return self.dummy_apply(namespace, client).await;
         }
+
+        self.apply(namespace, client).await
     }
 
     /// Dummy upgrade the resources.
-    pub async fn dummy_apply(&self, namespace: &str) -> error::Result<()> {
+    pub async fn dummy_apply(&self, namespace: &str, client: &Client) -> error::Result<()> {
         let mut pods_names: Vec<String> = Vec::new();
-        list_pods(AGENT_CORE_POD_LABEL, namespace, &mut pods_names).await?;
-        list_pods(API_REST_POD_LABEL, namespace, &mut pods_names).await?;
+        list_pods(AGENT_CORE_POD_LABEL, namespace, &mut pods_names, client).await?;
+        list_pods(API_REST_POD_LABEL, namespace, &mut pods_names, client).await?;
         console_logger::info(CONTROL_PLANE_PODS_LIST, &pods_names.join("\n"));
 
         let mut io_engine_pods_names: Vec<String> = Vec::new();
-        list_pods(IO_ENGINE_POD_LABEL, namespace, &mut io_engine_pods_names).await?;
+        list_pods(
+            IO_ENGINE_POD_LABEL,
+            namespace,
+            &mut io_engine_pods_names,
+            client,
+        )
+        .await?;
         if self.skip_data_plane_restart {
             console_logger::info(
                 DATA_PLANE_PODS_LIST_SKIP_RESTART,
@@ -246,11 +255,11 @@ pub(crate) async fn list_pods(
     label: &str,
     namespace: &str,
     pods_names: &mut Vec<String>,
+    client: &Client,
 ) -> error::Result<()> {
-    let client = Client::try_default().await.context(error::K8sClient)?;
-    let pods: Api<Pod> = Api::namespaced(client, namespace);
-    let pod_list: ObjectList<Pod> = pods
-        .list(&ListParams::default().labels(label))
+    let pods: Api<Pod> = Api::namespaced(client.clone(), namespace);
+    let pod_list = pods
+        .list_metadata(&ListParams::default().labels(label))
         .await
         .context(error::ListPodsWithLabel {
             label: label.to_string(),
@@ -276,9 +285,9 @@ pub struct GetUpgradeArgs {}
 
 impl GetUpgradeArgs {
     ///  Upgrade the resources.
-    pub async fn get_upgrade(&self, namespace: &str) -> error::Result<()> {
+    pub async fn get_upgrade(&self, namespace: &str, client: &Client) -> error::Result<()> {
         // Create resources for getting upgrade status
-        UpgradeEventClient::create_get_upgrade_resource(namespace).await
+        UpgradeEventClient::create_get_upgrade_resource(namespace, client).await
     }
 }
 
@@ -298,12 +307,9 @@ struct UpgradeEventClient {
 
 /// Methods implemented by UpgradeEventClient.
 impl UpgradeEventClient {
-    pub async fn new(ns: &str) -> error::Result<Self> {
-        let client = Client::try_default()
-            .await
-            .context(error::K8sClientGeneration)?;
+    pub async fn new(ns: &str, client: &Client) -> error::Result<Self> {
         Ok(Self {
-            upgrade_event: Api::<Event>::namespaced(client, ns),
+            upgrade_event: Api::<Event>::namespaced(client.clone(), ns),
         })
     }
 
@@ -351,9 +357,9 @@ impl UpgradeEventClient {
     }
 
     /// Create resources for fetching upgrade events.
-    pub async fn create_get_upgrade_resource(ns: &str) -> error::Result<()> {
-        let release_name = get_release_name(ns).await?;
-        let upgrade_event_client = UpgradeEventClient::new(ns).await?;
+    pub async fn create_get_upgrade_resource(ns: &str, client: &Client) -> error::Result<()> {
+        let release_name = get_release_name(ns, client).await?;
+        let upgrade_event_client = UpgradeEventClient::new(ns, client).await?;
         let latest_event = upgrade_event_client
             .get_latest_upgrade_event(release_name)
             .await?;
@@ -391,17 +397,14 @@ struct UpgradeResources {
 /// Methods implemented by UpgradesResources.
 impl UpgradeResources {
     /// Returns an instance of UpgradesResources
-    pub async fn new(ns: &str) -> error::Result<Self> {
-        let client = Client::try_default()
-            .await
-            .context(error::K8sClientGeneration)?;
-        let release_name = get_release_name(ns).await?;
+    pub async fn new(ns: &str, client: &Client) -> error::Result<Self> {
+        let release_name = get_release_name(ns, client).await?;
         Ok(Self {
             service_account: Api::<ServiceAccount>::namespaced(client.clone(), ns),
             cluster_role: Api::<ClusterRole>::all(client.clone()),
             cluster_role_binding: Api::<ClusterRoleBinding>::all(client.clone()),
             config_map: Api::<ConfigMap>::namespaced(client.clone(), ns),
-            job: Api::<Job>::namespaced(client, ns),
+            job: Api::<Job>::namespaced(client.clone(), ns),
             release_name,
         })
     }
@@ -679,6 +682,7 @@ impl UpgradeResources {
         action: Actions,
         args: &UpgradeArgs,
         set_file_map: Option<HashMap<String, String>>,
+        client: &Client,
     ) -> error::Result<()> {
         let job_name = upgrade_name_concat(&self.release_name, UPGRADE_JOB_NAME_SUFFIX);
         if let Some(job) = self
@@ -712,7 +716,7 @@ impl UpgradeResources {
             match action {
                 Actions::Create => {
                     let upgrade_job_image_tag = get_image_version_tag();
-                    let rest_deployment = get_deployment_for_rest(ns).await?;
+                    let rest_deployment = get_deployment_for_rest(ns, client).await?;
                     let img = ImageProperties::try_from(rest_deployment)?;
                     let set_file = create_helm_set_file_args(args, set_file_map).await?;
 
@@ -760,8 +764,12 @@ impl UpgradeResources {
     }
 
     /// Create the resources for upgrade
-    pub async fn create_upgrade_resources(ns: &str, args: &UpgradeArgs) -> error::Result<()> {
-        let uo = UpgradeResources::new(ns).await?;
+    pub async fn create_upgrade_resources(
+        ns: &str,
+        args: &UpgradeArgs,
+        client: &Client,
+    ) -> error::Result<()> {
+        let uo = UpgradeResources::new(ns, client).await?;
 
         // todo: there's no checks here for content being the same
         //  in particular if the job is failed, everything is stuck
@@ -780,19 +788,20 @@ impl UpgradeResources {
         let set_file_map = uo.config_map_actions(ns, Actions::Create, args).await?;
 
         // Create the job
-        uo.job_actions(ns, Actions::Create, args, Some(set_file_map))
+        uo.job_actions(ns, Actions::Create, args, Some(set_file_map), client)
             .await?;
 
         Ok(())
     }
 
     /// Delete the upgrade resources
-    pub async fn delete_upgrade_resources(ns: &str) -> error::Result<()> {
-        let uo = UpgradeResources::new(ns).await?;
+    pub async fn delete_upgrade_resources(ns: &str, client: &Client) -> error::Result<()> {
+        let uo = UpgradeResources::new(ns, client).await?;
         let args = &UpgradeArgs::default();
 
         // Delete the job
-        uo.job_actions(ns, Actions::Delete, args, None).await?;
+        uo.job_actions(ns, Actions::Delete, args, None, client)
+            .await?;
 
         // Delete config map
         uo.config_map_actions(ns, Actions::Delete, args).await?;
@@ -809,11 +818,15 @@ impl UpgradeResources {
     }
 }
 
-pub(crate) async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> error::Result<Vec<String>> {
-    let client = Client::try_default().await.context(error::K8sClient)?;
-    let pvclaim = Api::<PersistentVolumeClaim>::all(client);
-    let lp = ListParams::default();
-    let pvc_list = pvclaim.list(&lp).await.context(error::ListPVC)?;
+pub(crate) async fn get_pvc_from_uuid(
+    uuid_list: HashSet<String>,
+    client: &Client,
+) -> error::Result<Vec<String>> {
+    let pvclaim = Api::<PersistentVolumeClaim>::all(client.clone());
+    let pvc_list = pvclaim
+        .list_metadata(&ListParams::default())
+        .await
+        .context(error::ListPVC)?;
     let mut single_replica_volumes_pvc = Vec::new();
     for pvc in pvc_list {
         if let Some(uuid) = pvc.metadata.uid {
@@ -828,9 +841,11 @@ pub(crate) async fn get_pvc_from_uuid(uuid_list: HashSet<String>) -> error::Resu
 }
 
 /// Return results as list of deployments.
-pub(crate) async fn get_deployment_for_rest(ns: &str) -> error::Result<Deployment> {
-    let client = Client::try_default().await.context(error::K8sClient)?;
-    let deployment = Api::<Deployment>::namespaced(client, ns);
+pub(crate) async fn get_deployment_for_rest(
+    ns: &str,
+    client: &Client,
+) -> error::Result<Deployment> {
+    let deployment = Api::<Deployment>::namespaced(client.clone(), ns);
     let lp = ListParams::default().labels(API_REST_LABEL_SELECTOR);
     let deployment_list = deployment
         .list(&lp)
@@ -849,8 +864,8 @@ pub(crate) async fn get_deployment_for_rest(ns: &str) -> error::Result<Deploymen
 }
 
 /// Return the release name.
-pub(crate) async fn get_release_name(ns: &str) -> error::Result<String> {
-    let deployment = get_deployment_for_rest(ns).await?;
+pub(crate) async fn get_release_name(ns: &str, client: &Client) -> error::Result<String> {
+    let deployment = get_deployment_for_rest(ns, client).await?;
     match &deployment.metadata.labels {
         Some(label) => match label.get(&helm_release_name_key()) {
             Some(value) => Ok(value.to_string()),
@@ -861,8 +876,8 @@ pub(crate) async fn get_release_name(ns: &str) -> error::Result<String> {
 }
 
 /// Return true if upgrade job is completed
-pub(crate) async fn is_upgrade_job_completed(ns: &str) -> error::Result<bool> {
-    let uo = UpgradeResources::new(ns).await?;
+pub(crate) async fn is_upgrade_job_completed(ns: &str, client: &Client) -> error::Result<bool> {
+    let uo = UpgradeResources::new(ns, client).await?;
     let job_name = upgrade_name_concat(&uo.release_name, UPGRADE_JOB_NAME_SUFFIX);
     let option_job = uo
         .job
@@ -963,8 +978,8 @@ impl ImageProperties {
 }
 
 /// Return the installed version.
-pub(crate) async fn get_source_version(ns: &str) -> error::Result<String> {
-    let deployment = get_deployment_for_rest(ns).await?;
+pub(crate) async fn get_source_version(ns: &str, client: &Client) -> error::Result<String> {
+    let deployment = get_deployment_for_rest(ns, client).await?;
     let value = &deployment
         .metadata
         .labels
