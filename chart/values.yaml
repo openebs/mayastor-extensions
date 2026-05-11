@@ -7,6 +7,16 @@ crds:
       enabled: true
 
 global:
+  # -- Global override for image registry
+  imageRegistry: ""
+  # -- Global overide for image pull policy
+  imagePullPolicy: ""
+  # -- Global override for image pull secrets
+  # - secret
+  imagePullSecrets: []
+  analytics:
+    # -- Global overide for call home
+    enabled:
   security:
     allowInsecureImages: true
 
@@ -73,6 +83,8 @@ base:
       name: alpine-sh
       tag: 4.4.0
       pullPolicy: IfNotPresent
+      # -- Image registry for init containers
+      registry: ""
     containers:
       - name: agent-core-grpc-probe
         command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50051; do date; echo "Waiting for agent-core-grpc services..."; sleep 1; done;' ]
@@ -1024,7 +1036,13 @@ storageClass:
 localpv-provisioner:
   # -- Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki storage class accordingly.
   enabled: true
+  globalImageRegistryOverride: true
+  helperPod:
+    image:
+      registry: "docker.io"
   localpv:
+    image:
+      registry: "docker.io"
     # -- Set the PriorityClass for the LocalPV Hostpath provisioner Deployment.
     priorityClassName: "{{ .Release.Name }}-cluster-critical"
   hostpathClass:

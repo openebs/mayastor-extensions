@@ -1,4 +1,10 @@
-{{- if .Values.obs.callhome.enabled }}
+{{- $analytics := false }}
+{{- if kindIs "bool" .Values.global.analytics.enabled }}
+{{- $analytics = .Values.global.analytics.enabled }}
+{{- else }}
+{{- $analytics = .Values.obs.callhome.enabled }}
+{{- end }}
+{{- if $analytics }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -35,7 +41,7 @@ spec:
       {{- end }}
       containers:
         - name: obs-callhome
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-obs-callhome:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
+          image: "{{ default .Values.image.registry .Values.global.imageRegistry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-obs-callhome:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
           args:
             - "-e http://{{ .Release.Name }}-api-rest:8081"
             - "-n {{ .Release.Namespace }}"{{ if .Values.eventing.enabled }}
@@ -50,7 +56,7 @@ spec:
             - name: CALLHOME_PRODUCT_NAME
               value: {{ .Values.obs.callhome.productName | quote }}
           {{- end }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.global.imagePullPolicy }}
           resources:
             limits:
               cpu: {{ .Values.obs.callhome.resources.limits.cpu | quote }}
@@ -60,7 +66,7 @@ spec:
               memory: {{ .Values.obs.callhome.resources.requests.memory | quote }}
         {{- if .Values.eventing.enabled }}
         - name: obs-callhome-stats
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-obs-callhome-stats:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
+          image: "{{ default .Values.image.registry .Values.global.imageRegistry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-obs-callhome-stats:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
           args:
             - "--namespace={{ .Release.Namespace }}"
             - "--release-name={{ .Release.Name }}"
@@ -75,7 +81,7 @@ spec:
           env:
             - name: RUST_LOG
               value: {{ .Values.obs.stats.logLevel }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.global.imagePullPolicy }}
           resources:
             limits:
               cpu: {{ .Values.obs.stats.resources.limits.cpu | quote }}

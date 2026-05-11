@@ -46,8 +46,8 @@ spec:
       {{- end }}
       containers:
       - name: agent-ha-node
-        image: "{{ .Values.image.registry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-agent-ha-node:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: "{{ default .Values.image.registry .Values.global.imageRegistry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-agent-ha-node:{{ default .Values.image.tag .Values.image.repoTags.controlPlane }}"
+        imagePullPolicy: {{ default .Values.image.pullPolicy .Values.global.imagePullPolicy }}
         securityContext:
           privileged: true
         env:

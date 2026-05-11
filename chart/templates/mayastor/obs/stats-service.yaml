@@ -1,4 +1,10 @@
-{{- if .Values.obs.callhome.enabled }}
+{{- $analytics := false }}
+{{- if kindIs "bool" .Values.global.analytics.enabled }}
+{{- $analytics = .Values.global.analytics.enabled }}
+{{- else }}
+{{- $analytics = .Values.obs.callhome.enabled }}
+{{- end }}
+{{- if $analytics }}
 apiVersion: v1
 kind: Service
 metadata:
