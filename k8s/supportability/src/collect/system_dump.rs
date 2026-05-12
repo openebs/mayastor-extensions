@@ -289,7 +289,7 @@ impl SystemDumper {
                 });
             }
             Err(e) => errors.push(Error::ResourceError(e)),
-        };
+        }
 
         match VolumeSnapshotClientWrapper::new(rest_client.clone())
             .get_topologer(None)
@@ -311,7 +311,7 @@ impl SystemDumper {
                     });
             }
             Err(e) => errors.push(Error::ResourceError(e)),
-        };
+        }
 
         // Dump information of all pools topologies exist in the system
         match PoolClientWrapper::new(rest_client.clone())
@@ -332,7 +332,7 @@ impl SystemDumper {
                 });
             }
             Err(e) => errors.push(Error::ResourceError(e)),
-        };
+        }
 
         match NodeClientWrapper::new(rest_client.clone())
             .get_topologer(None)
@@ -350,13 +350,11 @@ impl SystemDumper {
                     ));
                     errors.push(Error::ResourceError(e));
                 });
-                Some(topologer)
             }
             Err(e) => {
                 errors.push(Error::ResourceError(e));
-                None
             }
-        };
+        }
 
         match AppNodeClientWrapper::new(rest_client)
             .get_topologer(None)

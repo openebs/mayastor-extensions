@@ -35,7 +35,7 @@ impl Topologer for AppNodeTopology {
 
     /// Writes topology information into a file in specified directory
     fn dump_topology_info(&self, dir_path: PathBuf) -> Result<(), ResourceError> {
-        create_directory_if_not_exist(dir_path.clone())?;
+        create_directory_if_not_exist(&dir_path)?;
         let file_path = dir_path.join(format!("app-node-{}-topology.json", self.node.id));
         let mut topo_file = File::create(file_path)?;
         let topology_as_pretty = serde_json::to_string_pretty(self)?;

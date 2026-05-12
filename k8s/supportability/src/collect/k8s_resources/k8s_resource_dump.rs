@@ -114,13 +114,13 @@ impl K8sResourceDumperClient {
         // Create the root dir path
         let mut root_dir = PathBuf::from(root_path);
         root_dir.push("k8s_resources");
-        create_directory_if_not_exist(root_dir.to_path_buf())?;
+        create_directory_if_not_exist(&root_dir)?;
 
         // Create the configurations path
         let mut configurations_path = root_dir.to_path_buf();
         configurations_path.push("configurations");
         // Create the configurations directory
-        create_directory_if_not_exist(configurations_path.to_path_buf())?;
+        create_directory_if_not_exist(&configurations_path)?;
 
         let mut errors = Vec::new();
 
@@ -172,7 +172,7 @@ impl K8sResourceDumperClient {
         required_pools: Option<Vec<String>>,
     ) -> Result<(), K8sResourceDumperError> {
         // Create the root dir path
-        create_directory_if_not_exist(root_path.to_path_buf())?;
+        create_directory_if_not_exist(root_path)?;
 
         let mut errors = Vec::new();
 
@@ -225,22 +225,20 @@ fn create_app_configurations<T: EntityName>(
     for app in apps {
         let serialized = match serde_yaml::to_string(&app) {
             Ok(value) => value,
-            Err(e) => {
+            Err(error) => {
                 log(format!(
-                    "Error serializing the app : {} , error: {}",
+                    "Error serializing the app: {}, error: {error}",
                     app.name(),
-                    e
                 ));
                 continue;
             }
         };
         match create_file_and_write(dir_path.clone(), format!("{}.yaml", app.name()), serialized) {
             Ok(_) => {}
-            Err(e) => {
+            Err(error) => {
                 log(format!(
-                    "Error creating or writing file for the app : {} , error: {}",
+                    "Error creating or writing file for the app: {}, error: {error}",
                     app.name(),
-                    e
                 ));
                 continue;
             }

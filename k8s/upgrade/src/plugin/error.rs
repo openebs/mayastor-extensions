@@ -33,54 +33,54 @@ pub enum Error {
     VolumeRebuildInProgress,
 
     /// K8s client error.
-    #[snafu(display("K8Client Error: {}", source))]
+    #[snafu(display("K8Client Error: {source}"))]
     K8sClient { source: kube::Error },
 
     /// Deserialization error for event.
-    #[snafu(display("Error in deserializing upgrade event {} Error {}", event, source))]
+    #[snafu(display("Error in deserializing upgrade event {event}: {source}"))]
     EventSerdeDeserialization {
         event: String,
         source: serde_json::Error,
     },
 
     /// Failed in creating service account.
-    #[snafu(display("Service account: {} creation failed Error: {}", name, source))]
+    #[snafu(display("Service account: {name} creation failed: {source}"))]
     ServiceAccountCreate { name: String, source: kube::Error },
 
     /// Failed in deletion service account.
-    #[snafu(display("Service account: {} deletion failed Error: {}", name, source))]
+    #[snafu(display("Service account: {name} deletion failed: {source}"))]
     ServiceAccountDelete { name: String, source: kube::Error },
 
     /// Failed in creating cluster role.
-    #[snafu(display("Cluster role: {} creation failed Error: {}", name, source))]
+    #[snafu(display("Cluster role: {name} creation failed: {source}"))]
     ClusterRoleCreate { name: String, source: kube::Error },
 
     /// Failed in deletion cluster role.
-    #[snafu(display("Cluster role: {} deletion Error: {}", name, source))]
+    #[snafu(display("Cluster role: {name} deletion failed: {source}"))]
     ClusterRoleDelete { name: String, source: kube::Error },
 
     /// Failed in deletion cluster role binding.
-    #[snafu(display("Cluster role binding: {} deletion failed Error: {}", name, source))]
+    #[snafu(display("Cluster role binding: {name} deletion failed: {source}"))]
     ClusterRoleBindingDelete { name: String, source: kube::Error },
 
     /// Failed in creating cluster role binding.
-    #[snafu(display("Cluster role binding: {} creation failed Error: {}", name, source))]
+    #[snafu(display("Cluster role binding: {name} creation failed: {source}"))]
     ClusterRoleBindingCreate { name: String, source: kube::Error },
 
     /// Failed in creating config map.
-    #[snafu(display("Config Map: {} creation failed Error: {}", name, source))]
+    #[snafu(display("Config Map: {name} creation failed: {source}"))]
     UpgradeConfigMapCreate { name: String, source: kube::Error },
 
     /// Failed in creating upgrade job.
-    #[snafu(display("Upgrade Job: {} creation failed Error: {}", name, source))]
+    #[snafu(display("Upgrade Job: {name} creation failed: {source}"))]
     UpgradeJobCreate { name: String, source: kube::Error },
 
     /// Failed in deleting upgrade job.
-    #[snafu(display("Upgrade Job: {} deletion failed Error: {}", name, source))]
+    #[snafu(display("Upgrade Job: {name} deletion failed: {source}"))]
     UpgradeJobDelete { name: String, source: kube::Error },
 
     /// Failed in deleting upgrade config map.
-    #[snafu(display("Upgrade Config Map: {} deletion failed Error: {}", name, source))]
+    #[snafu(display("Upgrade Config Map: {name} deletion failed: {source}"))]
     UpgradeConfigMapDelete { name: String, source: kube::Error },
 
     /// Error for when the image format is invalid.
@@ -104,7 +104,7 @@ pub enum Error {
     ReferenceDeploymentNoContainers,
 
     /// Node spec not present error.
-    #[snafu(display("Node spec not present, node: {}", node))]
+    #[snafu(display("Node spec not present, node: {node}"))]
     NodeSpecNotPresent { node: String },
 
     /// Error for when the pod.metadata.name is a None.
@@ -112,21 +112,16 @@ pub enum Error {
     PodNameNotPresent,
 
     /// Error for when the job.status is a None.
-    #[snafu(display("Upgrade Job: {} status not present.", name))]
+    #[snafu(display("Upgrade Job: {name} status not present."))]
     UpgradeJobStatusNotPresent { name: String },
 
     /// Error for when the upgrade job is not present.
-    #[snafu(display("Upgrade Job: {} in namespace {} does not exist.", name, namespace))]
+    #[snafu(display("Upgrade Job: {name} in namespace {namespace} does not exist."))]
     UpgradeJobNotPresent { name: String, namespace: String },
 
     /// Error for when a Kubernetes API request for GET-ing a list of Pods filtered by label(s)
     /// fails.
-    #[snafu(display(
-        "Failed to list Pods with label {} in namespace {}: {}",
-        label,
-        namespace,
-        source
-    ))]
+    #[snafu(display("Failed to list Pods with label {label} in namespace {namespace}: {source}"))]
     ListPodsWithLabel {
         source: kube::Error,
         label: String,
@@ -136,10 +131,7 @@ pub enum Error {
     /// Error for when a Kubernetes API request for GET-ing a list of Deployments filtered by
     /// label(s) fails.
     #[snafu(display(
-        "Failed to list Deployments with label {} in namespace {}: {}",
-        label,
-        namespace,
-        source
+        "Failed to list Deployments with label {label} in namespace {namespace}: {source}"
     ))]
     ListDeploymantsWithLabel {
         source: kube::Error,
@@ -149,50 +141,50 @@ pub enum Error {
 
     /// Error for when a Kubernetes API request for GET-ing a list of events filtered by
     /// filed selector fails.
-    #[snafu(display("Failed to list Events with field selector {}: {}", field, source))]
+    #[snafu(display("Failed to list Events with field selector {field}: {source}"))]
     ListEventsWithFieldSelector { source: kube::Error, field: String },
 
     /// Error for when a Kubernetes API request for Deleting a list of events filtered by
     /// filed selector fails.
-    #[snafu(display("Failed to delete Events with field selector {}: {}", field, source))]
+    #[snafu(display("Failed to delete Events with field selector {field}: {source}"))]
     DeleteEventsWithFieldSelector { source: kube::Error, field: String },
 
     /// Error listing the pvc list.
-    #[snafu(display("Failed to list pvc : {}", source))]
+    #[snafu(display("Failed to list pvc: {source}"))]
     ListPVC { source: kube::Error },
 
     /// Error listing the volumes.
-    #[snafu(display("Failed to list volumes : {}", source))]
+    #[snafu(display("Failed to list volumes: {source}"))]
     ListVolumes {
         source: openapi::tower::client::Error<openapi::models::RestJsonError>,
     },
 
     /// Error when a Get Upgrade job fails.
-    #[snafu(display("Failed to get Upgrade Job {}: {}", name, source))]
+    #[snafu(display("Failed to get Upgrade Job {name}: {source}"))]
     GetUpgradeJob { source: kube::Error, name: String },
 
     /// Error when a Get Upgrade config map fails.
-    #[snafu(display("Failed to get Upgrade Config Map {}: {}", name, source))]
+    #[snafu(display("Failed to get Upgrade Config Map {name}: {source}"))]
     GetUpgradeConfigMap { source: kube::Error, name: String },
 
     /// Error when a Get ServiceAccount fails.
-    #[snafu(display("Failed to get service account {}: {}", name, source))]
+    #[snafu(display("Failed to get service account {name}: {source}"))]
     GetServiceAccount { source: kube::Error, name: String },
 
     /// Error when a Get ClusterRole fails.
-    #[snafu(display("Failed to get cluster role {}: {}", name, source))]
+    #[snafu(display("Failed to get cluster role {name}: {source}"))]
     GetClusterRole { source: kube::Error, name: String },
 
     /// Error when a Get CLusterRoleBinding fails.
-    #[snafu(display("Failed to get cluster role binding {}: {}", name, source))]
+    #[snafu(display("Failed to get cluster role binding {name}: {source}"))]
     GetClusterRoleBinding { source: kube::Error, name: String },
 
     /// Error for when Kubernetes API client generation fails.
-    #[snafu(display("Failed to generate kubernetes client: {}", source))]
+    #[snafu(display("Failed to generate kubernetes client: {source}"))]
     K8sClientGeneration { source: kube::Error },
 
     /// Error for when REST API configuration fails.
-    #[snafu(display("Failed to configure REST API client : {:?}", source,))]
+    #[snafu(display("Failed to configure REST API client: {source:?}"))]
     RestClientConfiguration {
         #[snafu(source(false))]
         source: openapi::clients::tower::configuration::Error,
@@ -205,36 +197,36 @@ pub enum Error {
     },
 
     /// Openapi configuration error.
-    #[snafu(display("openapi configuration Error: {}", source))]
+    #[snafu(display("openapi configuration Error: {source}"))]
     OpenapiClientConfiguration { source: kube_proxy::Error },
 
     /// Error when opening a file.
-    #[snafu(display("Failed to open file {}: {}", filepath.display(), source))]
+    #[snafu(display("Failed to open file {}: {source}", filepath.display()))]
     OpeningFile {
         source: std::io::Error,
         filepath: PathBuf,
     },
 
     /// Error for when yaml could not be parsed from a file (Reader).
-    #[snafu(display("Failed to parse YAML at {}: {}", filepath.display(), source))]
+    #[snafu(display("Failed to parse YAML at {}: {source}", filepath.display()))]
     YamlParseFromFile {
         source: serde_yaml::Error,
         filepath: PathBuf,
     },
 
     /// Error when reading the entire contents of a file into a string.
-    #[snafu(display("Failed to read file at {}: {}", filepath.display(), source))]
+    #[snafu(display("Failed to read file at {}: {source}", filepath.display()))]
     ReadFromFile {
         source: std::io::Error,
         filepath: PathBuf,
     },
 
     /// Error for when yaml could not be parsed from bytes.
-    #[snafu(display("Failed to parse unsupported versions yaml: {}", source))]
+    #[snafu(display("Failed to parse unsupported versions yaml: {source}"))]
     YamlParseBufferForUnsupportedVersion { source: serde_yaml::Error },
 
     /// Error for failures in generating semver::Value from a &str input.
-    #[snafu(display("Failed to parse {} as a valid semver: {}", version_string, source))]
+    #[snafu(display("Failed to parse {version_string} as a valid semver: {source}"))]
     SemverParse {
         source: semver::Error,
         version_string: String,
@@ -253,7 +245,7 @@ pub enum Error {
     InvalidUpgradePath,
 
     /// Error when set-file arguments are not in proper format.
-    #[snafu(display("Error parsing set-file argument: {} ", arguments))]
+    #[snafu(display("Error parsing set-file argument: {arguments} "))]
     InvalidSetFileArguments { arguments: String },
 
     /// Error for key not present in Map.
