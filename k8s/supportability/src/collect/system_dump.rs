@@ -7,7 +7,7 @@ use crate::{
         logs::{LogCollection, Logger},
         persistent_store::etcd::EtcdStore,
         resources::{
-            node::NodeClientWrapper, pool::PoolClientWrapper,
+            app_node::AppNodeClientWrapper, node::NodeClientWrapper, pool::PoolClientWrapper,
             snapshot::VolumeSnapshotClientWrapper, volume::VolumeClientWrapper, Resourcer,
         },
         rest_wrapper,
@@ -289,7 +289,7 @@ impl SystemDumper {
                 });
             }
             Err(e) => errors.push(Error::ResourceError(e)),
-        };
+        }
 
         match VolumeSnapshotClientWrapper::new(rest_client.clone())
             .get_topologer(None)
@@ -311,7 +311,7 @@ impl SystemDumper {
                     });
             }
             Err(e) => errors.push(Error::ResourceError(e)),
-        };
+        }
 
         // Dump information of all pools topologies exist in the system
         match PoolClientWrapper::new(rest_client.clone())
@@ -332,9 +332,9 @@ impl SystemDumper {
                 });
             }
             Err(e) => errors.push(Error::ResourceError(e)),
-        };
+        }
 
-        match NodeClientWrapper::new(rest_client)
+        match NodeClientWrapper::new(rest_client.clone())
             .get_topologer(None)
             .await
         {
@@ -350,13 +350,34 @@ impl SystemDumper {
                     ));
                     errors.push(Error::ResourceError(e));
                 });
-                Some(topologer)
             }
             Err(e) => {
                 errors.push(Error::ResourceError(e));
-                None
             }
-        };
+        }
+
+        match AppNodeClientWrapper::new(rest_client)
+            .get_topologer(None)
+            .await
+        {
+            Ok(topologer) => {
+                log("\t Collecting app-node topology information");
+                let mut node_topo_path = path.to_path_buf();
+                node_topo_path.push("topology");
+                node_topo_path.push("app-node");
+
+                let _ = topologer.dump_topology_info(node_topo_path).map_err(|e| {
+                    log(format!(
+                        "\t Failed to dump app-node topology information, {e:?}"
+                    ));
+                    errors.push(Error::ResourceError(e));
+                });
+            }
+            Err(e) => {
+                errors.push(Error::ResourceError(e));
+            }
+        }
+
         log("Completed collection of topology information");
         Ok(())
     }

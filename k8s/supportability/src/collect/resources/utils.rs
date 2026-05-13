@@ -6,6 +6,9 @@ use std::path::PathBuf;
 /// Defines maximum entries REST service can fetch at one network call
 pub(crate) const MAX_RESOURCE_ENTRIES: isize = 200;
 
+/// Defines maximum entries REST service can fetch at one network call, for small resources.
+pub(crate) const MAX_SMALL_RESOURCE_ENTRIES: isize = 500;
+
 impl<T> Topologer for Vec<T>
 where
     T: Topologer + Serialize,

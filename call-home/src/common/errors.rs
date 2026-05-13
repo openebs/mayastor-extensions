@@ -5,7 +5,7 @@ use snafu::Snafu;
 #[snafu(visibility(pub), context(suffix(false)))]
 #[allow(clippy::enum_variant_names)]
 pub enum K8sResourceError {
-    #[snafu(display("Json Parse Error : {}", source))]
+    #[snafu(display("Json Parse Error: {}", source))]
     SerdeError { source: serde_json::Error },
 
     #[snafu(display("K8Client Error: {}", source))]

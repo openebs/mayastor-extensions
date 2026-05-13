@@ -101,11 +101,10 @@ impl K8sLoggerClient {
                 .await
             {
                 Ok(()) => {}
-                Err(err) => {
+                Err(error) => {
                     log(format!(
-                        "Error fetching logs for pod : {}, error: {:?}",
+                        "Error fetching logs for pod: {}, error: {error:?}",
                         pod.meta().name.as_ref().unwrap_or(&"".to_string()),
-                        err
                     ));
                     continue;
                 }
@@ -146,7 +145,7 @@ impl K8sLoggerClient {
         let host_name = self.k8s_client.get_hostname(node_name).await?;
 
         pod_dir.push(format!("{}_{}", host_name, pod_name.clone()));
-        create_directory_if_not_exist(pod_dir.clone())?;
+        create_directory_if_not_exist(&pod_dir)?;
 
         let mut container_restart_map: HashMap<String, bool> = HashMap::new();
 

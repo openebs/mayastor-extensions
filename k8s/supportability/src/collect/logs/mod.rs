@@ -9,7 +9,7 @@ use crate::collect::{
 
 use async_trait::async_trait;
 use k8s_openapi::api::core::v1::Pod;
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, path::Path};
 
 /// Error that can occur while interacting with logs module
 #[derive(Debug)]
@@ -178,7 +178,7 @@ impl Logger for LogCollection {
                 .join("logs")
                 .join(resource.service_type.clone());
 
-            create_directory_if_not_exist(service_dir.clone())?;
+            create_directory_if_not_exist(&service_dir)?;
             if let Some(loki_client) = &mut self.loki_client {
                 let _ = loki_client
                     .fetch_and_dump_logs(
@@ -248,7 +248,7 @@ pub(crate) trait Logger {
 }
 
 /// Creates specified directory path if not already exist
-pub fn create_directory_if_not_exist(dir_path: PathBuf) -> Result<(), std::io::Error> {
+pub fn create_directory_if_not_exist(dir_path: &Path) -> Result<(), std::io::Error> {
     if !dir_path.exists() {
         std::fs::create_dir_all(dir_path)?;
     }

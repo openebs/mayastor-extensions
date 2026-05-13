@@ -1,6 +1,7 @@
 pub use error::ResourceError;
 pub(crate) use traits::Resourcer;
 
+pub mod app_node;
 pub mod error;
 pub mod node;
 pub mod pool;
