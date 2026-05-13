@@ -81,7 +81,7 @@ base:
     enabled: true
     image:
       name: alpine-sh
-      tag: 4.4.0
+      tag: 4.5.0
       pullPolicy: IfNotPresent
       # -- Image registry for init containers
       registry: ""
@@ -651,7 +651,7 @@ etcd:
     image:
       registry: docker.io
       repository: openebs/alpine-bash
-      tag: 4.4.0
+      tag: 4.5.0
       pullSecrets: [ ]
   image:
     registry: docker.io
