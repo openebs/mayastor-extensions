@@ -237,6 +237,12 @@ pub(crate) fn upgrade_job_cluster_role(
                 verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
                 ..Default::default()
             },
+            PolicyRule {
+                api_groups: Some(vec!["security.openshift.io"].into_vec()),
+                resources: Some(vec!["securitycontextconstraints"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
         ]),
         ..Default::default()
     }
