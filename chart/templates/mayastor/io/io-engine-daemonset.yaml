@@ -57,11 +57,25 @@ spec:
           value: "{{ .Values.io_engine.nvme.tcp.maxQpairsPerCtrl }}"
         - name: NVMF_TCP_MAX_QUEUE_DEPTH
           value: "{{ .Values.io_engine.nvme.tcp.maxQueueDepth }}"
+        - name: NVMF_TCP_IN_CAPSULE_DATA_SIZE
+          value: "{{ .Values.io_engine.nvme.tcp.inCapsuleDataSize }}"
+        - name: NVMF_TCP_MAX_IO_SIZE
+          value: "{{ .Values.io_engine.nvme.tcp.maxIoSize }}"
+        - name: NVMF_TCP_IO_UNIT_SIZE
+          value: "{{ .Values.io_engine.nvme.tcp.ioUnitSize }}"
         {{- if .Values.io_engine.target.nvmf.rdma.enabled }}
         - name: NVMF_RDMA_NUM_SHARED_BUF
           value: "{{ .Values.io_engine.nvme.rdma.numSharedBuf }}"
         - name: NVMF_RDMA_BUF_CACHE_SIZE
           value: "{{ .Values.io_engine.nvme.rdma.bufCacheSize }}"
+        - name: NVMF_RDMA_DATA_WR_POOL_SIZE
+          value: "{{ .Values.io_engine.nvme.rdma.dataWrPoolSize }}"
+        - name: NVMF_RDMA_MAX_IO_SIZE
+          value: "{{ .Values.io_engine.nvme.rdma.maxIoSize }}"
+        - name: NVMF_RDMA_IO_UNIT_SIZE
+          value: "{{ .Values.io_engine.nvme.rdma.ioUnitSize }}"
+        - name: NVMF_RDMA_IN_CAPSULE_DATA_SIZE
+          value: "{{ .Values.io_engine.nvme.rdma.inCapsuleDataSize }}"
         {{- end }}
         - name: NVME_TIMEOUT
           value: "{{ .Values.io_engine.nvme.ioTimeout }}"
