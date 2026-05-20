@@ -1959,7 +1959,7 @@ entries:
         - name: kubectl
           image: docker.io/openebs/kubectl:1.25.15
         - name: linux-utils
-          image: docker.io/openebs/linux-utils:4.3.0
+          image: docker.io/openebs/linux-utils:4.5.0
         - name: mayastor-agent-core
           image: docker.io/openebs/mayastor-agent-core:develop
         - name: mayastor-agent-ha-cluster
@@ -1983,7 +1983,7 @@ entries:
         - name: mayastor-operator-diskpool
           image: docker.io/openebs/mayastor-operator-diskpool:develop
         - name: provisioner-localpv
-          image: docker.io/openebs/provisioner-localpv:4.4.0
+          image: docker.io/openebs/provisioner-localpv:4.5.0
         - name: mc
           image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
         - name: minio
@@ -2004,7 +2004,7 @@ entries:
           image: registry.k8s.io/sig-storage/snapshot-controller:v8.2.0
     apiVersion: v2
     appVersion: 0.0.0
-    created: "2026-05-13T15:43:42.479631523Z"
+    created: "2026-05-20T09:40:50.675990624Z"
     dependencies:
     - condition: crds.enabled
       name: crds
@@ -2033,9 +2033,9 @@ entries:
     - condition: localpv-provisioner.enabled
       name: localpv-provisioner
       repository: https://openebs.github.io/dynamic-localpv-provisioner
-      version: 4.4.0
+      version: 4.5.0
     description: Mayastor Helm chart for Kubernetes
-    digest: c65cfbda0939548c60a2286c86171479496a86903688b6e217958f8fb4f90e3a
+    digest: f21f8360d0a5c481dd60de1141154fba3b1940818d8a28a6dcbbcb3045a5fe9d
     home: https://www.openebs.io/
     icon: https://raw.githubusercontent.com/cncf/artwork/HEAD/projects/openebs/icon/color/openebs-icon-color.png
     keywords:
@@ -2083,4 +2083,4 @@ entries:
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2026-05-13T15:43:42.455427202Z"
+generated: "2026-05-20T09:40:50.656876884Z"
