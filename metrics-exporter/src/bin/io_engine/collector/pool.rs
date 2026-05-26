@@ -1,5 +1,6 @@
 use crate::{
     cache::Cache,
+    client::pool::Pools,
     collector::{init_diskpool_alert_reason_gauge_vec, init_diskpool_gauge_vec},
     get_node_name,
 };
@@ -8,15 +9,13 @@ use prometheus::{
     GaugeVec,
 };
 use rpc::v1::pb::PoolAlert;
-use std::{
-    fmt::Debug,
-    ops::{Deref, DerefMut},
-};
+use std::{fmt::Debug, ops::Deref};
 use tracing::error;
 
 /// Collects Pool capacity metrics from cache.
 #[derive(Clone, Debug)]
 pub(crate) struct PoolCapacityCollector {
+    cache: Pools,
     pool_total_size: GaugeVec,
     pool_used_size: GaugeVec,
     pool_committed_size: GaugeVec,
@@ -60,8 +59,17 @@ impl PoolCapacityCollector {
             "Maximum capacity upto which this pool can be expanded, in bytes",
             &mut descs,
         );
+        let cache = match Cache::get_cache().lock() {
+            Ok(cache) => cache,
+            Err(error) => {
+                error!(%error,"Error while getting cache resource");
+                panic!("panic");
+            }
+        };
+        let pools = cache.deref().pool();
 
         Self {
+            cache: pools.clone(),
             pool_total_size,
             pool_used_size,
             pool_committed_size,
@@ -78,15 +86,7 @@ impl Collector for PoolCapacityCollector {
     }
 
     fn collect(&self) -> Vec<prometheus::proto::MetricFamily> {
-        let cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                return Vec::new();
-            }
-        };
-        let cache_deref = cache.deref();
-        let mut metric_family = Vec::with_capacity(5 * cache_deref.pool().pools.capacity());
+        let mut metric_family = Vec::with_capacity(5 * self.cache.pools.capacity());
         let node_name = match get_node_name() {
             Ok(name) => name,
             Err(error) => {
@@ -95,7 +95,7 @@ impl Collector for PoolCapacityCollector {
             }
         };
 
-        for pool in &cache_deref.pool().pools {
+        for pool in self.cache.pools.iter() {
             let pool_total_size = match self
                 .pool_total_size
                 .get_metric_with_label_values(&[node_name.clone().as_str(), pool.name().as_str()])
@@ -173,6 +173,7 @@ impl Collector for PoolCapacityCollector {
 /// Collects pool status info from cache.
 #[derive(Clone, Debug)]
 pub(crate) struct PoolStatusCollector {
+    cache: Pools,
     pool_status: GaugeVec,
     descs: Vec<Desc>,
 }
@@ -188,7 +189,19 @@ impl PoolStatusCollector {
     pub fn new() -> Self {
         let mut descs = Vec::new();
         let pool_status = init_diskpool_gauge_vec("status", "Status of the pool", &mut descs);
-        Self { pool_status, descs }
+        let cache = match Cache::get_cache().lock() {
+            Ok(cache) => cache,
+            Err(error) => {
+                error!(%error,"Error while getting cache resource");
+                panic!("panic");
+            }
+        };
+        let pools = cache.deref().pool();
+        Self {
+            cache: pools.clone(),
+            pool_status,
+            descs,
+        }
     }
 }
 
@@ -197,15 +210,7 @@ impl Collector for PoolStatusCollector {
         self.descs.iter().collect()
     }
     fn collect(&self) -> Vec<prometheus::proto::MetricFamily> {
-        let mut cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                return Vec::new();
-            }
-        };
-        let cache_deref = cache.deref_mut();
-        let mut metric_family = Vec::with_capacity(3 * cache_deref.pool_mut().pools.capacity());
+        let mut metric_family = Vec::with_capacity(3 * self.cache.pools.capacity());
         let node_name = match get_node_name() {
             Ok(name) => name,
             Err(error) => {
@@ -213,7 +218,7 @@ impl Collector for PoolStatusCollector {
                 return metric_family;
             }
         };
-        for pool in &cache_deref.pool_mut().pools {
+        for pool in self.cache.pools.clone() {
             let pool_status = match self
                 .pool_status
                 .get_metric_with_label_values(&[node_name.clone().as_str(), pool.name().as_str()])
@@ -235,6 +240,7 @@ impl Collector for PoolStatusCollector {
 /// Collects pool alerts info from cache.
 #[derive(Clone, Debug)]
 pub(crate) struct PoolAlertCollector {
+    cache: Pools,
     io_error_count: GaugeVec,
     io_error_threshold: GaugeVec,
     io_stalled: GaugeVec,
@@ -313,7 +319,16 @@ impl PoolAlertCollector {
                 String::new()
             }
         };
+        let cache = match Cache::get_cache().lock() {
+            Ok(cache) => cache,
+            Err(error) => {
+                error!(%error,"Error while getting cache resource");
+                panic!("panic");
+            }
+        };
+        let pool = cache.deref().pool();
         Self {
+            cache: pool.clone(),
             io_error_count,
             io_error_threshold,
             io_stalled,
@@ -335,16 +350,8 @@ impl Collector for PoolAlertCollector {
         self.descs.iter().collect()
     }
     fn collect(&self) -> Vec<prometheus::proto::MetricFamily> {
-        let mut cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                return Vec::new();
-            }
-        };
-        let cache_deref = cache.deref_mut();
-        let mut metric_family = Vec::with_capacity(10 * cache_deref.pool_mut().pools.capacity());
-        for pool in &cache_deref.pool_mut().pools {
+        let mut metric_family = Vec::with_capacity(10 * self.cache.pools.capacity());
+        for pool in self.cache.pools.clone() {
             let io_error_count = match self
                 .io_error_count
                 .get_metric_with_label_values(&[self.node_name.as_str(), pool.name().as_str()])
