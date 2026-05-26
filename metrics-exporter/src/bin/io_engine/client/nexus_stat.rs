@@ -50,7 +50,7 @@ impl NexusIoStat {
 }
 
 /// Array of NexusIoStat objects.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct NexusIoStats {
     pub(crate) nexus_stats: Vec<NexusIoStat>,
 }

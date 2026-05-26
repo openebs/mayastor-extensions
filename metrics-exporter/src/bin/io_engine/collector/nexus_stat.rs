@@ -58,17 +58,15 @@ impl NexusIoStatsCollector {
             "Total write latency on the volume in usec",
             &mut descs,
         );
-        let cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                panic!("panic");
-            }
+
+        let nexus_stats = if let Ok(cache) = Cache::get_cache().lock() {
+            cache.deref().nexus_iostat().clone()
+        } else {
+            NexusIoStats::default()
         };
-        let nexus_stat = cache.deref().nexus_iostat();
 
         Self {
-            cache: nexus_stat.clone(),
+            cache: nexus_stats,
             nexus_bytes_read,
             nexus_num_read_ops,
             nexus_bytes_written,
@@ -95,7 +93,7 @@ impl Collector for NexusIoStatsCollector {
             }
         };
 
-        for nexus_stat in self.cache.nexus_stats.clone() {
+        for nexus_stat in self.cache.nexus_stats.iter() {
             let pv_name = "pvc-".to_string() + nexus_stat.name();
             let nexus_bytes_read = match self
                 .nexus_bytes_read

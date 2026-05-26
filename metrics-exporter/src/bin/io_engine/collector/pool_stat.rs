@@ -1,6 +1,5 @@
 use super::init_diskpool_gauge_vec;
 use crate::{cache::Cache, client::pool_stat::PoolIoStats, get_node_name};
-use core::panic;
 use prometheus::{
     core::{Collector, Desc},
     GaugeVec,
@@ -60,17 +59,14 @@ impl PoolIoStatsCollector {
             &mut descs,
         );
 
-        let cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                panic!("panic");
-            }
+        let pool_stats = if let Ok(cache) = Cache::get_cache().lock() {
+            cache.deref().pool_iostat().clone()
+        } else {
+            PoolIoStats::default()
         };
-        let pool_stats = cache.deref().pool_iostat();
 
         Self {
-            cache: pool_stats.clone(),
+            cache: pool_stats,
             pool_bytes_read,
             pool_num_read_ops,
             pool_bytes_written,
@@ -97,7 +93,7 @@ impl Collector for PoolIoStatsCollector {
             }
         };
 
-        for pool_stat in self.cache.pool_stats.clone() {
+        for pool_stat in self.cache.pool_stats.iter() {
             let pool_bytes_read = match self.pool_bytes_read.get_metric_with_label_values(&[
                 node_name.clone().as_str(),
                 pool_stat.name().as_str(),

@@ -59,17 +59,15 @@ impl PoolCapacityCollector {
             "Maximum capacity upto which this pool can be expanded, in bytes",
             &mut descs,
         );
-        let cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                panic!("panic");
-            }
+
+        let pools = if let Ok(cache) = Cache::get_cache().lock() {
+            cache.deref().pool().clone()
+        } else {
+            Pools::default()
         };
-        let pools = cache.deref().pool();
 
         Self {
-            cache: pools.clone(),
+            cache: pools,
             pool_total_size,
             pool_used_size,
             pool_committed_size,
@@ -189,16 +187,13 @@ impl PoolStatusCollector {
     pub fn new() -> Self {
         let mut descs = Vec::new();
         let pool_status = init_diskpool_gauge_vec("status", "Status of the pool", &mut descs);
-        let cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                panic!("panic");
-            }
+        let pools = if let Ok(cache) = Cache::get_cache().lock() {
+            cache.deref().pool().clone()
+        } else {
+            Pools::default()
         };
-        let pools = cache.deref().pool();
         Self {
-            cache: pools.clone(),
+            cache: pools,
             pool_status,
             descs,
         }
@@ -319,16 +314,13 @@ impl PoolAlertCollector {
                 String::new()
             }
         };
-        let cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                panic!("panic");
-            }
+        let pools = if let Ok(cache) = Cache::get_cache().lock() {
+            cache.deref().pool().clone()
+        } else {
+            Pools::default()
         };
-        let pool = cache.deref().pool();
         Self {
-            cache: pool.clone(),
+            cache: pools,
             io_error_count,
             io_error_threshold,
             io_stalled,
@@ -457,7 +449,8 @@ impl Collector for PoolAlertCollector {
                     return metric_family;
                 }
             };
-            io_alert_notice_reason.set(1_f64);
+            let metrics_value = notice_reason_set.metrics_value();
+            io_alert_notice_reason.set(metrics_value);
             let mut metric_vec = io_alert_notice_reason.collect();
             metric_family.extend(metric_vec.pop());
 
@@ -481,7 +474,8 @@ impl Collector for PoolAlertCollector {
                     return metric_family;
                 }
             };
-            io_alert_attention_reason.set(1_f64);
+            let metrics_value = attention_reason_set.metrics_value();
+            io_alert_attention_reason.set(metrics_value);
             let mut metric_vec = io_alert_attention_reason.collect();
             metric_family.extend(metric_vec.pop());
 
@@ -505,7 +499,8 @@ impl Collector for PoolAlertCollector {
                     return metric_family;
                 }
             };
-            io_alert_warning_reason.set(1_f64);
+            let metrics_value = warning_reason_set.metrics_value();
+            io_alert_warning_reason.set(metrics_value);
             let mut metric_vec = io_alert_warning_reason.collect();
             metric_family.extend(metric_vec.pop());
 
@@ -529,7 +524,8 @@ impl Collector for PoolAlertCollector {
                     return metric_family;
                 }
             };
-            io_alert_critical_reason.set(1_f64);
+            let metrics_value = critical_reason_set.metrics_value();
+            io_alert_critical_reason.set(metrics_value);
             let mut metric_vec = io_alert_critical_reason.collect();
             metric_family.extend(metric_vec.pop());
         }
@@ -561,5 +557,13 @@ impl AlertReasons {
                 PoolAlert::IoErrorExc => self.io_error_exc = 1,
             }
         }
+    }
+    fn metrics_value(&self) -> f64 {
+        (self.unknown
+            | self.io_stalled
+            | self.io_stall_intermittent
+            | self.io_stall_intermittent_exc
+            | self.io_error
+            | self.io_error_exc) as f64
     }
 }

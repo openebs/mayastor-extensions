@@ -59,17 +59,14 @@ impl ReplicaIoStatsCollector {
             &mut descs,
         );
 
-        let cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                panic!("panic");
-            }
+        let replica_stats = if let Ok(cache) = Cache::get_cache().lock() {
+            cache.deref().replica_iostat().clone()
+        } else {
+            ReplicaIoStats::default()
         };
-        let replica_stats = cache.deref().replica_iostat();
 
         Self {
-            cache: replica_stats.clone(),
+            cache: replica_stats,
             replica_bytes_read,
             replica_num_read_ops,
             replica_bytes_written,
@@ -96,7 +93,7 @@ impl Collector for ReplicaIoStatsCollector {
             }
         };
 
-        for replica_stat in self.cache.replica_stats.clone() {
+        for replica_stat in self.cache.replica_stats.iter() {
             let pv_name = format!("pvc-{}", replica_stat.entity_id());
             let replica_bytes_read = match self.replica_bytes_read.get_metric_with_label_values(&[
                 node_name.as_str(),
