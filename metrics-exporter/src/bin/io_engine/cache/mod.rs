@@ -8,7 +8,7 @@ use crate::client::{
     replica_stat::ReplicaIoStats,
 };
 use once_cell::sync::OnceCell;
-use std::sync::Mutex;
+use std::{collections::HashMap, sync::Mutex};
 
 /// NOTE: try to reference cache from the Collector.
 static CACHE: OnceCell<Mutex<Cache>> = OnceCell::new();
@@ -36,6 +36,8 @@ pub(crate) struct Data {
     nexus_stats: NexusIoStats,
     /// Contains Replica IOStats data.
     replica_stats: ReplicaIoStats,
+    /// Maps replica name to pool_name.
+    replica_pool_map: HashMap<String, String>,
 }
 
 impl Cache {
@@ -88,6 +90,16 @@ impl Cache {
     pub(crate) fn replica_iostat_mut(&mut self) -> &mut ReplicaIoStats {
         &mut self.data.replica_stats
     }
+
+    /// Get a reference to replica_pool_map.
+    pub(crate) fn replica_pool_map(&self) -> &HashMap<String, String> {
+        &self.data.replica_pool_map
+    }
+
+    /// Get mutable reference to replica_pool_map.
+    pub(crate) fn replica_pool_map_mut(&mut self) -> &mut HashMap<String, String> {
+        &mut self.data.replica_pool_map
+    }
 }
 
 impl Default for Data {
@@ -108,6 +120,7 @@ impl Data {
             replica_stats: ReplicaIoStats {
                 replica_stats: vec![],
             },
+            replica_pool_map: HashMap::new(),
         }
     }
 }
@@ -118,4 +131,37 @@ pub(crate) async fn store_resource_data(client: &GrpcClient) {
     let _ = pool_stat::store_pool_stats_data(client).await;
     let _ = nexus_stat::store_nexus_stats_data(client).await;
     let _ = replica_stat::store_replica_stats_data(client).await;
+    store_replica_pool_map(client).await;
+}
+
+/// Fetches replica list and stores replica name → pool_name mapping in cache.
+/// Only refreshes when new replicas appear that aren't in the existing map.
+async fn store_replica_pool_map(client: &GrpcClient) {
+    let needs_refresh = {
+        let cache = match Cache::get_cache().lock() {
+            Ok(cache) => cache,
+            Err(_) => return,
+        };
+        let map = cache.replica_pool_map();
+        cache
+            .replica_iostat()
+            .replica_stats
+            .iter()
+            .any(|r| !map.contains_key(r.name()))
+    };
+
+    if !needs_refresh {
+        return;
+    }
+
+    match client.list_replicas().await {
+        Ok(new_map) => {
+            if let Ok(mut cache) = Cache::get_cache().lock() {
+                *cache.replica_pool_map_mut() = new_map;
+            }
+        }
+        Err(error) => {
+            tracing::error!(?error, "Error fetching replica list for pool mapping");
+        }
+    }
 }

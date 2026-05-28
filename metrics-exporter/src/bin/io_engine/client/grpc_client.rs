@@ -51,12 +51,14 @@ impl GrpcContext {
 /// The V1 PoolClient.
 type PoolClient = rpc::v1::pool::pool_rpc_client::PoolRpcClient<Channel>;
 type StatsClient = rpc::v1::stats::StatsRpcClient<Channel>;
+type ReplicaClient = rpc::v1::replica::replica_rpc_client::ReplicaRpcClient<Channel>;
 
 /// A wrapper for client for the V1 dataplane interface.
 #[derive(Clone, Debug)]
 pub(crate) struct MayaClientV1 {
     pub(crate) pool: PoolClient,
     pub(crate) stats: StatsClient,
+    pub(crate) replica: ReplicaClient,
 }
 
 /// Dataplane grpc client.
@@ -77,8 +79,9 @@ impl GrpcClient {
             if let Ok(channel) = context.endpoint.connect().await {
                 let pool = PoolClient::new(channel.clone());
                 let stats = StatsClient::new(channel.clone());
+                let replica = ReplicaClient::new(channel.clone());
                 return Ok(Self {
-                    client: Some(MayaClientV1 { pool, stats }),
+                    client: Some(MayaClientV1 { pool, stats, replica }),
                 });
             } else {
                 if num_retires > SILENT_RETRIES {
@@ -199,5 +202,24 @@ impl GrpcClient {
             Err(error) => Err(ExporterError::GrpcResponseError(error.to_string())),
         }?;
         Ok(ReplicaIoStats { replica_stats })
+    }
+
+    /// Lists all replicas to build a replica name → pool_name mapping.
+    pub(crate) async fn list_replicas(
+        &self,
+    ) -> Result<std::collections::HashMap<String, String>, ExporterError> {
+        let replicas = match self
+            .client_v1()?
+            .replica
+            .list_replicas(rpc::v1::replica::ListReplicaOptions::default())
+            .await
+        {
+            Ok(response) => response.into_inner().replicas,
+            Err(error) => return Err(ExporterError::GrpcResponseError(error.to_string())),
+        };
+        Ok(replicas
+            .into_iter()
+            .map(|r| (r.name, r.poolname))
+            .collect())
     }
 }
