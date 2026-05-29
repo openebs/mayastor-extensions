@@ -61,6 +61,7 @@ let
     "call-home"
     "upgrade"
     "constants"
+    "events-aggregator"
     "dependencies/control-plane/Cargo.toml"
     "dependencies/control-plane/openapi/Cargo.toml"
     "dependencies/control-plane/openapi/build.rs"
