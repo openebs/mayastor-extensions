@@ -56,4 +56,4 @@ if [ -z "${NEW_REPOSITORY:-}" ]; then
 fi
 
 yq_ibl ".image.registry = \"$NEW_REGISTRY\"" "$VALUES_YAML"
-yq_ibl ".image.repository = \"$NEW_REPOSITORY\"" "$VALUES_YAML"
+yq_ibl ".image.repo = \"$NEW_REPOSITORY\"" "$VALUES_YAML"
