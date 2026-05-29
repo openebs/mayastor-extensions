@@ -154,7 +154,7 @@ async fn store_replica_pool_map(client: &GrpcClient) {
         return;
     }
 
-    match client.list_replicas().await {
+    match client.fetch_replica_pool_mapping().await {
         Ok(new_map) => {
             if let Ok(mut cache) = Cache::get_cache().lock() {
                 *cache.replica_pool_map_mut() = new_map;

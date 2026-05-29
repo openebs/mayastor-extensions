@@ -204,8 +204,8 @@ impl GrpcClient {
         Ok(ReplicaIoStats { replica_stats })
     }
 
-    /// Lists all replicas to build a replica name → pool_name mapping.
-    pub(crate) async fn list_replicas(
+    /// Fetches all replicas to build a replica name → pool_name mapping.
+    pub(crate) async fn fetch_replica_pool_mapping(
         &self,
     ) -> Result<std::collections::HashMap<String, String>, ExporterError> {
         let replicas = match self
