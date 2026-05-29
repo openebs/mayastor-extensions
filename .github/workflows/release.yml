@@ -138,6 +138,10 @@ jobs:
 
           mv charts-final/mayastor/* chart
 
+      - name: Update the registry and the repository
+        run: |
+          nix-shell --pure --run "./scripts/update-reg-repo.sh --registry docker.io/ --repository ${{ github.repository_owner }}" ./shell.nix
+
       - name: Publish helm chart
         uses: stefanprodan/helm-gh-pages@v1.7.0
         env:
