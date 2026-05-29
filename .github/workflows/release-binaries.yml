@@ -64,7 +64,11 @@ jobs:
 
       - uses: ./.github/actions/setup-nix
       - run: |
-          nix-build -A utils.release.${{ matrix.arch }}.${{ matrix.target }}.kubectl-plugin --arg incremental false ${{ matrix.system }}
+          TAG_ARG=""
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TAG_ARG="--argstr tag ${{ inputs.tag }}"
+          fi
+          nix-build -A utils.release.${{ matrix.arch }}.${{ matrix.target }}.kubectl-plugin --arg incremental false $TAG_ARG
 
       - name: Archive executable
         run: |
