@@ -111,7 +111,7 @@ jobs:
             # Note this does not commit the Chart.yaml changes this the branch
             nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag ${{ inputs.tag }} --override-chart ${{ inputs.tag }} ${{ inputs.tag }}" ./scripts/helm/shell.nix
             nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag "$TAG"" ./scripts/helm/shell.nix
-            nix-shell --pure --run "./scripts/update-reg-repo.sh --registry ghcr.io/ --repository ${{ github.repository_owner }}/mayastor/dev/" ./shell.nix
+            nix-shell --pure --run "./scripts/helm/update-reg-repo.sh --registry ghcr.io/ --repository ${{ github.repository_owner }}/mayastor/dev/" ./shell.nix
             nix-shell --pure --run "./scripts/helm/images.sh generate" ./scripts/helm/shell.nix
             nix-shell --pure --run "./scripts/helm/images.sh patch" ./scripts/helm/shell.nix
 
