@@ -1,5 +1,5 @@
 use super::init_replica_gauge_vec;
-use crate::{cache::Cache, get_node_name};
+use crate::{cache::Cache, client::replica_stat::ReplicaIoStats, get_node_name};
 use prometheus::{
     core::{Collector, Desc},
     GaugeVec,
@@ -10,6 +10,7 @@ use tracing::error;
 /// Collects Replica IoStat metrics from cache.
 #[derive(Clone, Debug)]
 pub(crate) struct ReplicaIoStatsCollector {
+    cache: ReplicaIoStats,
     replica_bytes_read: GaugeVec,
     replica_num_read_ops: GaugeVec,
     replica_bytes_written: GaugeVec,
@@ -58,7 +59,14 @@ impl ReplicaIoStatsCollector {
             &mut descs,
         );
 
+        let replica_stats = if let Ok(cache) = Cache::get_cache().lock() {
+            cache.deref().replica_iostat().clone()
+        } else {
+            ReplicaIoStats::default()
+        };
+
         Self {
+            cache: replica_stats,
             replica_bytes_read,
             replica_num_read_ops,
             replica_bytes_written,
@@ -76,16 +84,7 @@ impl Collector for ReplicaIoStatsCollector {
     }
 
     fn collect(&self) -> Vec<prometheus::proto::MetricFamily> {
-        let cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                return Vec::new();
-            }
-        };
-        let cache_deref = cache.deref();
-        let mut metric_family =
-            Vec::with_capacity(6 * cache_deref.replica_iostat().replica_stats.capacity());
+        let mut metric_family = Vec::with_capacity(6 * self.cache.replica_stats.capacity());
         let node_name = match get_node_name() {
             Ok(name) => name,
             Err(error) => {
@@ -94,7 +93,7 @@ impl Collector for ReplicaIoStatsCollector {
             }
         };
 
-        for replica_stat in &cache_deref.replica_iostat().replica_stats {
+        for replica_stat in self.cache.replica_stats.iter() {
             let pv_name = format!("pvc-{}", replica_stat.entity_id());
             let replica_bytes_read = match self.replica_bytes_read.get_metric_with_label_values(&[
                 node_name.as_str(),

@@ -57,7 +57,7 @@ impl ReplicaIoStat {
 }
 
 /// Array of NexusIoStat objects.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct ReplicaIoStats {
     pub(crate) replica_stats: Vec<ReplicaIoStat>,
 }

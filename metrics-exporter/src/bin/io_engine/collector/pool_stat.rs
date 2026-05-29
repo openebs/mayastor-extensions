@@ -1,5 +1,5 @@
 use super::init_diskpool_gauge_vec;
-use crate::{cache::Cache, get_node_name};
+use crate::{cache::Cache, client::pool_stat::PoolIoStats, get_node_name};
 use prometheus::{
     core::{Collector, Desc},
     GaugeVec,
@@ -10,6 +10,7 @@ use tracing::error;
 /// Collects Pool IoStat metrics from cache.
 #[derive(Clone, Debug)]
 pub(crate) struct PoolIoStatsCollector {
+    cache: PoolIoStats,
     pool_bytes_read: GaugeVec,
     pool_num_read_ops: GaugeVec,
     pool_bytes_written: GaugeVec,
@@ -58,7 +59,14 @@ impl PoolIoStatsCollector {
             &mut descs,
         );
 
+        let pool_stats = if let Ok(cache) = Cache::get_cache().lock() {
+            cache.deref().pool_iostat().clone()
+        } else {
+            PoolIoStats::default()
+        };
+
         Self {
+            cache: pool_stats,
             pool_bytes_read,
             pool_num_read_ops,
             pool_bytes_written,
@@ -76,16 +84,7 @@ impl Collector for PoolIoStatsCollector {
     }
 
     fn collect(&self) -> Vec<prometheus::proto::MetricFamily> {
-        let cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                return Vec::new();
-            }
-        };
-        let cache_deref = cache.deref();
-        let mut metric_family =
-            Vec::with_capacity(6 * cache_deref.pool_iostat().pool_stats.capacity());
+        let mut metric_family = Vec::with_capacity(6 * self.cache.pool_stats.capacity());
         let node_name = match get_node_name() {
             Ok(name) => name,
             Err(error) => {
@@ -94,7 +93,7 @@ impl Collector for PoolIoStatsCollector {
             }
         };
 
-        for pool_stat in &cache_deref.pool_iostat().pool_stats {
+        for pool_stat in self.cache.pool_stats.iter() {
             let pool_bytes_read = match self.pool_bytes_read.get_metric_with_label_values(&[
                 node_name.clone().as_str(),
                 pool_stat.name().as_str(),

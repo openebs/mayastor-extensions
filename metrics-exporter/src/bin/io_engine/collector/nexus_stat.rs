@@ -1,5 +1,5 @@
 use super::init_volume_gauge_vec;
-use crate::{cache::Cache, get_node_name};
+use crate::{cache::Cache, client::nexus_stat::NexusIoStats, get_node_name};
 use prometheus::{
     core::{Collector, Desc},
     GaugeVec,
@@ -10,6 +10,7 @@ use tracing::error;
 /// Collects Nexus IoStat metrics from cache.
 #[derive(Clone, Debug)]
 pub(crate) struct NexusIoStatsCollector {
+    cache: NexusIoStats,
     nexus_bytes_read: GaugeVec,
     nexus_num_read_ops: GaugeVec,
     nexus_bytes_written: GaugeVec,
@@ -58,7 +59,14 @@ impl NexusIoStatsCollector {
             &mut descs,
         );
 
+        let nexus_stats = if let Ok(cache) = Cache::get_cache().lock() {
+            cache.deref().nexus_iostat().clone()
+        } else {
+            NexusIoStats::default()
+        };
+
         Self {
+            cache: nexus_stats,
             nexus_bytes_read,
             nexus_num_read_ops,
             nexus_bytes_written,
@@ -76,16 +84,7 @@ impl Collector for NexusIoStatsCollector {
     }
 
     fn collect(&self) -> Vec<prometheus::proto::MetricFamily> {
-        let cache = match Cache::get_cache().lock() {
-            Ok(cache) => cache,
-            Err(error) => {
-                error!(%error,"Error while getting cache resource");
-                return Vec::new();
-            }
-        };
-        let cache_deref = cache.deref();
-        let mut metric_family =
-            Vec::with_capacity(6 * cache_deref.nexus_iostat().nexus_stats.capacity());
+        let mut metric_family = Vec::with_capacity(6 * self.cache.nexus_stats.capacity());
         let node_name = match get_node_name() {
             Ok(name) => name,
             Err(error) => {
@@ -94,7 +93,7 @@ impl Collector for NexusIoStatsCollector {
             }
         };
 
-        for nexus_stat in &cache_deref.nexus_iostat().nexus_stats {
+        for nexus_stat in self.cache.nexus_stats.iter() {
             let pv_name = "pvc-".to_string() + nexus_stat.name();
             let nexus_bytes_read = match self
                 .nexus_bytes_read
