@@ -8,8 +8,9 @@ use kube::api::GroupVersionKind;
 use openapi::{apis::StatusCode, tower::client::Url};
 use plugin::{
     resources::{
-        node, pool, snapshot, CordonResources, DrainResources, ExpandResources, GetResources,
-        LabelResources, ScaleResources, SetPropertyResources, UnCordonResources, VolumeId,
+        node, pool, snapshot, ClearErrors, CordonResources, DrainResources, ExpandResources,
+        GetResources, LabelResources, ScaleResources, SetPropertyResources, UnCordonResources,
+        VolumeId,
     },
     rest_wrapper::RestClient,
     ExecuteOperation,
@@ -112,6 +113,9 @@ pub enum Operations {
     /// 'Set' resources.
     #[clap(subcommand)]
     Set(SetPropertyResources),
+    /// `ClearError` resources.
+    #[clap(subcommand)]
+    ClearErrors(ClearErrors),
     /// 'Cordon' resources.
     #[clap(subcommand)]
     Cordon(CordonResources),
@@ -220,6 +224,7 @@ impl ExecuteOperation for Operations {
             Operations::Expand(resource) => resource.execute(cli_args).await?,
             Operations::Scale(resource) => resource.execute(cli_args).await?,
             Operations::Set(resource) => resource.execute(cli_args).await?,
+            Operations::ClearErrors(resource) => resource.execute(cli_args).await?,
             Operations::Cordon(resource) => resource.execute(cli_args).await?,
             Operations::Uncordon(resource) => resource.execute(cli_args).await?,
             Operations::Dump(resources) => {
