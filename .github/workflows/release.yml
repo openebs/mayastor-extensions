@@ -111,6 +111,10 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
+      - uses: ./.github/actions/setup-nix
+        with:
+          preFetchNix: ./scripts/helm/shell.nix
+
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -140,7 +144,7 @@ jobs:
 
       - name: Update the registry and the repository
         run: |
-          nix-shell --pure --run "./scripts/helm/update-reg-repo.sh --registry docker.io/ --repository ${{ github.repository_owner }}" ./shell.nix
+          nix-shell --pure --run "./scripts/helm/update-reg-repo.sh --registry docker.io/ --repository ${{ github.repository_owner }}" ./scripts/helm/shell.nix
 
       - name: Publish helm chart
         uses: stefanprodan/helm-gh-pages@v1.7.0
