@@ -144,7 +144,7 @@ jobs:
 
       - name: Update the registry and the repository
         run: |
-          nix-shell --pure --run "./scripts/helm/update-reg-repo.sh --registry docker.io/ --repository ${{ github.repository_owner }}" ./dependencies/control-plane/utils/dependencies/scripts/staging/shell.nix
+          nix-shell --pure --run "./scripts/helm/update-reg-repo.sh --registry docker.io --repository ${{ github.repository_owner }}" ./dependencies/control-plane/utils/dependencies/scripts/staging/shell.nix
 
       - name: Publish helm chart
         uses: stefanprodan/helm-gh-pages@v1.7.0
