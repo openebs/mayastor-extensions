@@ -129,7 +129,7 @@ jobs:
           rm -rf charts
           mkdir -p charts-staged charts-final chart
 
-          CHART_REF=oci://ghcr.io/${IMAGE_ORG}/mayastor/dev/helm/
+          CHART_REF=oci://ghcr.io/${IMAGE_ORG}/mayastor/dev/helm/mayastor
           helm pull "$CHART_REF" \
             --version ${VERSION} \
             --destination charts-staged
