@@ -126,7 +126,7 @@ jobs:
           VERSION=${RAW_TAG#v}
           echo "CHART_VERSION=$VERSION" >> $GITHUB_ENV
 
-          rm -rf charts
+          rm -rf chart
           mkdir -p charts-staged charts-final chart
 
           CHART_REF=oci://ghcr.io/${IMAGE_ORG}/mayastor/dev/helm/mayastor
