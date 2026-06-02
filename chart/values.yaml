@@ -36,7 +36,7 @@ image:
     #       If not specified, 'tag' option provided above will be picked.
     controlPlane: 7cdab90a5949
     dataPlane: 9bdc84037d2a
-    extensions: 37c92484390a
+    extensions: 853ca10ce30a
   # -- ImagePullPolicy for our images
   pullPolicy: IfNotPresent
   # -- docker-secrets required to pull images if the container registry from image.registry is protected
