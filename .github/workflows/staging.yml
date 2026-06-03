@@ -109,17 +109,22 @@ jobs:
       - name: Publish locally in the workspace
         run: |
             # Note this does not commit the Chart.yaml changes this the branch
-            nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag ${{ inputs.tag }} --override-chart ${{ inputs.tag }} ${{ inputs.tag }}" ./scripts/helm/shell.nix
-            nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag "$TAG"" ./scripts/helm/shell.nix
+            nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag ${{ inputs.tag }}" ./scripts/helm/shell.nix
+            nix-shell --pure --run "./scripts/helm/update-reg-repo.sh --registry ghcr.io --repository ${{ github.repository_owner }}/mayastor/dev" ./scripts/helm/shell.nix
             nix-shell --pure --run "./scripts/helm/images.sh generate" ./scripts/helm/shell.nix
             nix-shell --pure --run "./scripts/helm/images.sh patch" ./scripts/helm/shell.nix
+
+      - name: Set Chart Version
+        run: |
+          CHART_VERSION="${{ inputs.tag }}"
+          echo "CHART_VERSION=${CHART_VERSION#v}" >> $GITHUB_ENV
 
       - name: Push chart to staging repo
         uses: appany/helm-oci-chart-releaser@v0.4.2
         with:
           name: mayastor
           repository: ${{ github.repository_owner }}/mayastor/dev/helm
-          tag: ${{ inputs.tag }}
+          tag: ${{ env.CHART_VERSION }}
           path: ./chart
           registry: ghcr.io
           registry_username: ${{ github.actor }}
