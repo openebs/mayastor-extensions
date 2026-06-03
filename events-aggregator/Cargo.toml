@@ -1,21 +1,20 @@
 [package]
 name = "events-aggregator"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
-# Async runtime
 tokio = { workspace = true }
-# NATS client
-async-nats = "0.37"
-# JSON serialization
+async-nats = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-# Logging and Observability
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true, features = ["json"]}
-# Error handling
 anyhow = { workspace = true }
-colored_json = "4"
-futures = { workspace = true }
+parse-size = { workspace = true }
 rand = { workspace = true }
+clap = { workspace = true }
+url = { workspace = true }
+humantime = { workspace = true }
+utils = { path = "../dependencies/control-plane/utils/utils-lib" }
+event-consumer = { path = "../dependencies/control-plane/utils/event-consumer" }
+shutdown = { path = "../dependencies/control-plane/utils/shutdown" }
