@@ -57,7 +57,6 @@ jobs:
       - name: Build and push the release images
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            nix-shell --pure --run "./scripts/helm/publish-chart-yaml.sh --app-tag ${{ inputs.tag }} --override-chart ${{ inputs.tag }} ${{ inputs.tag }}" ./scripts/helm/shell.nix
             ./scripts/release.sh --tag ${{ inputs.tag }} --registry ${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.namespace }}
           elif [[ "${{ github.event_name }}" == "push" ]]; then
             ./scripts/release.sh
