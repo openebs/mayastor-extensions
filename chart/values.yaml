@@ -490,11 +490,25 @@ io_engine:
       numSharedBuf: "2047"
       # -- The number of shared buffers to reserve for each poll group
       bufCacheSize: "64"
+      # -- The max amount of payload data that can be transferred directly within the NVMe-oF Capsule command itself
+      inCapsuleDataSize: "4096"
+      # -- Max I/O size (bytes)
+      maxIoSize: "131072"
+      # -- I/O unit size (bytes)
+      ioUnitSize: "131072"
     rdma:
       # -- The number of pooled data buffers available to the transport
-      numSharedBuf: "2047"
+      numSharedBuf:
       # -- The number of shared buffers to reserve for each poll group
-      bufCacheSize: "64"
+      bufCacheSize:
+      # -- RDMA data WR pool size (RDMA only)
+      dataWrPoolSize: "4095"
+      # -- The max amount of payload data that can be transferred directly within the NVMe-oF Capsule command itself
+      inCapsuleDataSize:
+      # -- Max I/O size (bytes)
+      maxIoSize:
+      # -- I/O unit size (bytes)
+      ioUnitSize: "8192"
   # -- Pass additional arguments to the Environment Abstraction Layer.
   # Example: --set {product}.envcontext=iova-mode=pa
   envcontext: ""

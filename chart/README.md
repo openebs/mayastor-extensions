@@ -200,9 +200,16 @@ This removes all the Kubernetes components associated with the chart and deletes
 | io_engine.&ZeroWidthSpace;logLevel | Log level for the io-engine service | `"info"` |
 | io_engine.&ZeroWidthSpace;nodeSelector | Node selectors to designate storage nodes for diskpool creation Note that if multi-arch images support 'kubernetes.io/arch: amd64' should be removed. | <pre>{<br>"kubernetes.io/arch":"amd64",<br>"openebs.io/engine":"mayastor"<br>}</pre> |
 | io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;ioTimeout | Timeout for IOs The default here is exaggerated for local disks, but we've observed that in shared virtual environments having a higher timeout value is beneficial. Please adjust this according to your hardware and needs. | `"110s"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;bufCacheSize | The number of shared buffers to reserve for each poll group | `"64"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;numSharedBuf | The number of pooled data buffers available to the transport | `"2047"` |
+| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;bufCacheSize | The number of shared buffers to reserve for each poll group | `nil` |
+| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;dataWrPoolSize | RDMA data WR pool size (RDMA only) | `"4095"` |
+| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;inCapsuleDataSize | The max amount of payload data that can be transferred directly within the NVMe-oF Capsule command itself | `nil` |
+| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;ioUnitSize | I/O unit size (bytes) | `"8192"` |
+| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;maxIoSize | Max I/O size (bytes) | `nil` |
+| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;numSharedBuf | The number of pooled data buffers available to the transport | `nil` |
 | io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;bufCacheSize | The number of shared buffers to reserve for each poll group | `"64"` |
+| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;inCapsuleDataSize | The max amount of payload data that can be transferred directly within the NVMe-oF Capsule command itself | `"4096"` |
+| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;ioUnitSize | I/O unit size (bytes) | `"131072"` |
+| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;maxIoSize | Max I/O size (bytes) | `"131072"` |
 | io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;maxQpairsPerCtrl | Max number of IO qpairs per controller | `"32"` |
 | io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;maxQueueDepth | You may need to increase this for a higher outstanding IOs per volume | `"32"` |
 | io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;numSharedBuf | The number of pooled data buffers available to the transport | `"2047"` |
