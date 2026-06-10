@@ -21,7 +21,7 @@ docker.io/openebs/mayastor-metrics-exporter-io-engine:release-2.11
 docker.io/openebs/mayastor-obs-callhome-stats:release-2.11
 docker.io/openebs/mayastor-obs-callhome:release-2.11
 docker.io/openebs/mayastor-operator-diskpool:release-2.11
-docker.io/openebs/provisioner-localpv:4.5.0
+docker.io/openebs/provisioner-localpv:4.5.1
 quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
 quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
 quay.io/prometheus-operator/prometheus-config-reloader:v0.81.0
