@@ -124,7 +124,7 @@ spec:
             defaultMode: 0777
       containers:
         - name: mayastor-pre-upgrade-hook
-          image: {{ default .Values.preUpgradeHook.image.registry .Values.global.imageRegistry }}/{{ .Values.preUpgradeHook.image.repo }}:{{ .Values.preUpgradeHook.image.tag }}
+          image: "{{ default .Values.preUpgradeHook.image.registry .Values.global.imageRegistry }}/{{ .Values.preUpgradeHook.image.repo }}:{{ .Values.preUpgradeHook.image.tag }}"
           imagePullPolicy: {{ default .Values.preUpgradeHook.image.pullPolicy .Values.global.imagePullPolicy }}
           command:
             - "sh"
