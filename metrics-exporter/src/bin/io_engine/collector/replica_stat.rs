@@ -95,11 +95,18 @@ impl Collector for ReplicaIoStatsCollector {
 
         for replica_stat in self.cache.replica_stats.iter() {
             let pv_name = format!("pvc-{}", replica_stat.entity_id());
-            let replica_bytes_read = match self.replica_bytes_read.get_metric_with_label_values(&[
+            let labels = &[
                 node_name.as_str(),
                 replica_stat.name().as_str(),
                 pv_name.as_str(),
-            ]) {
+                replica_stat.pool_name(),
+                replica_stat.pool_uuid(),
+            ];
+
+            let replica_bytes_read = match self
+                .replica_bytes_read
+                .get_metric_with_label_values(labels)
+            {
                 Ok(replica_bytes_read) => replica_bytes_read,
                 Err(error) => {
                     error!(%error, "Error while creating replica_bytes_read counter with label values");
@@ -110,13 +117,10 @@ impl Collector for ReplicaIoStatsCollector {
             let mut metric_vec = replica_bytes_read.collect();
             metric_family.extend(metric_vec.pop());
 
-            let replica_num_read_ops = match self.replica_num_read_ops.get_metric_with_label_values(
-                &[
-                    node_name.as_str(),
-                    replica_stat.name().as_str(),
-                    pv_name.as_str(),
-                ],
-            ) {
+            let replica_num_read_ops = match self
+                .replica_num_read_ops
+                .get_metric_with_label_values(labels)
+            {
                 Ok(replica_num_read_ops) => replica_num_read_ops,
                 Err(error) => {
                     error!(%error, "Error while creating replica_num_read_ops counter with label values");
@@ -129,11 +133,8 @@ impl Collector for ReplicaIoStatsCollector {
 
             let replica_bytes_written = match self
                 .replica_bytes_written
-                .get_metric_with_label_values(&[
-                    node_name.as_str(),
-                    replica_stat.name().as_str(),
-                    pv_name.as_str(),
-                ]) {
+                .get_metric_with_label_values(labels)
+            {
                 Ok(replica_bytes_written) => replica_bytes_written,
                 Err(error) => {
                     error!(%error, "Error while creating replica_bytes_written counter with label values");
@@ -146,11 +147,8 @@ impl Collector for ReplicaIoStatsCollector {
 
             let replica_num_write_ops = match self
                 .replica_num_write_ops
-                .get_metric_with_label_values(&[
-                    node_name.as_str(),
-                    replica_stat.name().as_str(),
-                    pv_name.as_str(),
-                ]) {
+                .get_metric_with_label_values(labels)
+            {
                 Ok(replica_num_write_ops) => replica_num_write_ops,
                 Err(error) => {
                     error!(%error, "Error while creating replica_num_write_ops counter with label values");
@@ -163,11 +161,8 @@ impl Collector for ReplicaIoStatsCollector {
 
             let replica_read_latency_us = match self
                 .replica_read_latency_us
-                .get_metric_with_label_values(&[
-                    node_name.as_str(),
-                    replica_stat.name().as_str(),
-                    pv_name.as_str(),
-                ]) {
+                .get_metric_with_label_values(labels)
+            {
                 Ok(replica_read_latency_us) => replica_read_latency_us,
                 Err(error) => {
                     error!(%error, "Error while creating replica_read_latency counter with label values");
@@ -180,11 +175,8 @@ impl Collector for ReplicaIoStatsCollector {
 
             let replica_write_latency_us = match self
                 .replica_write_latency_us
-                .get_metric_with_label_values(&[
-                    node_name.as_str(),
-                    replica_stat.name().as_str(),
-                    pv_name.as_str(),
-                ]) {
+                .get_metric_with_label_values(labels)
+            {
                 Ok(replica_write_latency_us) => replica_write_latency_us,
                 Err(error) => {
                     error!(%error, "Error while creating replica_write_latency counter with label values");

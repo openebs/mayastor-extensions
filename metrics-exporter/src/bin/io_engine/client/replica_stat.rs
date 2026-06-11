@@ -6,6 +6,8 @@ use crate::error::ExporterError;
 pub(crate) struct ReplicaIoStat {
     name: String,
     entity_id: String,
+    pool_name: String,
+    pool_uuid: String,
     bytes_read: u64,
     num_read_ops: u64,
     bytes_written: u64,
@@ -54,6 +56,16 @@ impl ReplicaIoStat {
     pub(crate) fn entity_id(&self) -> String {
         self.entity_id.clone()
     }
+
+    /// Get pool_name of the replica.
+    pub(crate) fn pool_name(&self) -> &str {
+        &self.pool_name
+    }
+
+    /// Get pool_uuid of the replica.
+    pub(crate) fn pool_uuid(&self) -> &str {
+        &self.pool_uuid
+    }
 }
 
 /// Array of NexusIoStat objects.
@@ -84,6 +96,8 @@ impl TryFrom<rpc::v1::stats::ReplicaIoStats> for ReplicaIoStat {
                     ))
                 }
             },
+            pool_name: value.poolname.unwrap_or_default(),
+            pool_uuid: value.pooluuid.unwrap_or_default(),
             bytes_read: stats.bytes_read,
             num_read_ops: stats.num_read_ops,
             bytes_written: stats.bytes_written,

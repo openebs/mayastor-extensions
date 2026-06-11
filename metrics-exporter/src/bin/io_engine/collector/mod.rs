@@ -75,7 +75,7 @@ fn init_volume_gauge_vec(metric_name: &str, metric_desc: &str, descs: &mut Vec<D
 /// Initializes a GaugeVec metric for replica with the provided metric name, description and
 /// descriptors.
 fn init_replica_gauge_vec(metric_name: &str, metric_desc: &str, descs: &mut Vec<Desc>) -> GaugeVec {
-    let label_refs = vec!["node", "name", "pv_name"];
+    let label_refs = vec!["node", "name", "pv_name", "pool_name", "pool_uuid"];
     let labels: Vec<String> = label_refs.iter().map(|s| s.to_string()).collect();
     let opts = Opts::new(metric_name, metric_desc)
         .subsystem("replica")
