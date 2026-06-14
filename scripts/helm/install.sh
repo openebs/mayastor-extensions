@@ -195,10 +195,10 @@ while [ "$#" -gt 0 ]; do
 done
 
 if [ -n "$VERSION" ] && [ -z "$HOSTED" ]; then
-  die "The ``--version <vers>` option may be used with the `--hosted-chart` option only"
+  die "The ``--version <vers>`` option may be used with the ``--hosted-chart`` option only"
 fi
 if [ -n "$REGISTRY" ] && [ -z "$HOSTED" ]; then
-  die "The ``--registry <url>` option may be used with the `--hosted-chart` option only"
+  die "The ``--registry <url>`` option may be used with the ``--hosted-chart`` option only"
 fi
 
 DEP_UPDATE_ARG=

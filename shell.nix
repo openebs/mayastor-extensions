@@ -66,7 +66,7 @@ pkgs.mkShellNoCC {
     fi
     export EXTENSIONS_SRC=`pwd`
     export CTRL_SRC="$EXTENSIONS_SRC"/dependencies/control-plane
-    export PATH="$PATH:$(pwd)/target/debug"
+    export PATH="$(pwd)/target/debug:$PATH"
 
     ${lib.optionalString (norust) "cowsay ${norust_moth}"}
     ${lib.optionalString (norust) "echo"}
