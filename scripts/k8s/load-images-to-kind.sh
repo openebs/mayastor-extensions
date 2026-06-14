@@ -70,4 +70,8 @@ for image in "${images[@]}"; do
   fi
   load_cmd+=" openebs/mayastor-"$image:$IMAGE_TAG
 done
-eval $load_cmd
+if ! eval $load_cmd; then
+    sleep 5
+    log_error "Failed to load images, trying again..."
+    eval $load_cmd
+fi
