@@ -57,6 +57,7 @@ jobs:
           while [ $error -eq 0 ]; do
             nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
             nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --load --chart ./chart" || error=$?
+            nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh stop"
           done
       - name: Load images to kind cluster
         if: ${{ !inputs.helm-pins }}
