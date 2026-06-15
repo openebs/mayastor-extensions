@@ -1,5 +1,8 @@
 name: K8s CI
 on:
+  push:
+    branches:
+      - kind-update
   workflow_call:
     inputs:
       helm-pins:
@@ -127,7 +130,7 @@ jobs:
           name: k8s-dump
           path: dump
       # debugging
-  #      - name: Setup tmate session
-  #        if: ${{ failure() }}
-  #        timeout-minutes: 120
-  #        uses: mxschmitt/action-tmate@v3
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        timeout-minutes: 120
+        uses: mxschmitt/action-tmate@v3
