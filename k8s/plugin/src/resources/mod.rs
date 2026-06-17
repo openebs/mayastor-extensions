@@ -5,7 +5,10 @@ use anyhow::anyhow;
 use clap::Parser;
 use k8s_openapi::api::core::v1 as core_v1;
 use kube::api::GroupVersionKind;
-use openapi::{apis::StatusCode, tower::client::Url};
+use openapi::{
+    apis::StatusCode,
+    tower::client::{configuration::ClientSecurity, Url},
+};
 use plugin::{
     resources::{
         node, pool, snapshot, ClearErrors, CordonResources, DrainResources, ExpandResources,
@@ -514,7 +517,8 @@ impl From<kube_proxy::Error> for Error {
 pub async fn init_rest(cli_args: &CliArgs) -> Result<(), Error> {
     // Use the supplied URL if there is one otherwise obtain one from the kubeconfig file.
     match cli_args.rest.clone() {
-        Some(url) => RestClient::init(url, false, *cli_args.timeout).map_err(Error::RestClient),
+        Some(url) => RestClient::init(url, false, *cli_args.timeout, ClientSecurity::default())
+            .map_err(Error::RestClient),
         None => {
             let config = kube_proxy::ConfigBuilder::default_api_rest()
                 .with_kube_config(cli_args.kubeconfig.clone())
