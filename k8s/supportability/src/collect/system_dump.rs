@@ -129,6 +129,7 @@ impl SystemDumper {
             .with_context(config.kube_config_opts().context.clone())
             .with_timeout(Some((*config.timeout()).into()))
             .with_target_mod(|t| t.with_namespace(config.namespace()))
+            .with_scheme(kube_proxy::Scheme::HTTPS(config.client_security()))
             .build()
             .await
         {

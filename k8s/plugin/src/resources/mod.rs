@@ -45,6 +45,22 @@ pub struct CliArgs {
     #[clap(skip)]
     pub context: Option<String>,
 
+    /// Path to the TLS CA certificate bundle used to validate REST server certificates.
+    #[clap(global = true, long)]
+    pub tls_ca_file: Option<PathBuf>,
+
+    /// Path to the client TLS certificate chain file (PEM) for mTLS.
+    #[clap(global = true, long, requires = "tls_key_file")]
+    pub tls_cert_file: Option<PathBuf>,
+
+    /// Path to the client TLS private key file (PEM) for mTLS.
+    #[clap(global = true, long, requires = "tls_cert_file")]
+    pub tls_key_file: Option<PathBuf>,
+
+    /// Path to a file containing the JWT bearer token for REST authentication.
+    #[clap(global = true, long)]
+    pub jwt: Option<PathBuf>,
+
     #[clap(flatten)]
     pub cli_args: plugin::CliArgs,
 }
@@ -77,6 +93,21 @@ impl CliArgs {
             &self.snap_content(),
         ))
     }
+    /// Get the [`ClientSecurity`] for the REST client, based on the CLI args.
+    pub async fn security(&self) -> Result<ClientSecurity, Error> {
+        let tls = kube_proxy::TlsMode::new(
+            self.tls_ca_file.as_ref(),
+            self.tls_cert_file.as_ref(),
+            self.tls_key_file.as_ref(),
+        )
+        .map_err(|error| {
+            Error::RestClient(anyhow::anyhow!("Failed to create TLS config: {error}"))
+        })?;
+        let client_security = ClientSecurity::try_new(&self.jwt, tls).map_err(|error| {
+            Error::RestClient(anyhow::anyhow!("Failed to read JWT file: {error}"))
+        })?;
+        Ok(client_security)
+    }
 }
 
 impl Deref for CliArgs {
@@ -97,6 +128,7 @@ pub enum GetResourcesK8s {
 
 /// The types of operations that are supported.
 #[derive(Parser, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum Operations {
     /// 'Drain' resources.
     #[clap(subcommand)]
@@ -238,6 +270,8 @@ impl ExecuteOperation for Operations {
                             path: cli_args.kubeconfig.clone(),
                             opts: Default::default(),
                         },
+                        // todo: store security to avoid re-reading the TLS certs and JWT file.
+                        rest_security: cli_args.security().await?,
                     })
                     .await
                     .inspect_err(|_| {
@@ -255,6 +289,7 @@ impl ExecuteOperation for Operations {
                     cli_args.timeout,
                     resources,
                     &client,
+                    cli_args.security().await?,
                 )
                 .await?;
                 resources.execute(&cli_args.namespace, &client).await?
@@ -515,9 +550,11 @@ impl From<kube_proxy::Error> for Error {
 
 /// Initialise the REST client.
 pub async fn init_rest(cli_args: &CliArgs) -> Result<(), Error> {
+    let client_security = cli_args.security().await?;
+
     // Use the supplied URL if there is one otherwise obtain one from the kubeconfig file.
     match cli_args.rest.clone() {
-        Some(url) => RestClient::init(url, false, *cli_args.timeout, ClientSecurity::default())
+        Some(url) => RestClient::init(url, false, *cli_args.timeout, client_security)
             .map_err(Error::RestClient),
         None => {
             let config = kube_proxy::ConfigBuilder::default_api_rest()
@@ -525,6 +562,7 @@ pub async fn init_rest(cli_args: &CliArgs) -> Result<(), Error> {
                 .with_context(cli_args.context.clone())
                 .with_timeout(*cli_args.timeout)
                 .with_target_mod(|t| t.with_namespace(&cli_args.namespace))
+                .with_scheme(kube_proxy::Scheme::HTTPS(client_security))
                 .build()
                 .await?;
             RestClient::init_with_config(config)?;

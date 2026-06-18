@@ -11,6 +11,7 @@ use kube::Client;
 use openapi::{
     clients::tower::{self, Configuration},
     models::CordonDrainState,
+    tower::client::configuration::ClientSecurity,
 };
 use semver::Version;
 use serde::Deserialize;
@@ -27,6 +28,7 @@ pub async fn preflight_check(
     timeout: humantime::Duration,
     resources: &UpgradeArgs,
     client: &Client,
+    client_security: ClientSecurity,
 ) -> error::Result<()> {
     console_logger::info(user_prompt::UPGRADE_WARNING, "");
     // Initialise the REST client.
@@ -35,6 +37,7 @@ pub async fn preflight_check(
         .with_context(context)
         .with_timeout(*timeout)
         .with_target_mod(|t| t.with_namespace(namespace))
+        .with_scheme(kube_proxy::Scheme::HTTPS(client_security))
         .build()
         .await
         .context(error::OpenapiClientConfiguration)?;

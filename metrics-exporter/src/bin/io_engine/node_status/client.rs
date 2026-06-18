@@ -1,7 +1,7 @@
 use openapi::{
     clients::tower::Error,
     models::{Node, RestJsonError},
-    tower::client::{ApiClient, Configuration},
+    tower::client::{configuration::ClientSecurity, ApiClient, Configuration},
 };
 use std::time::Duration;
 use tracing::trace;
@@ -14,12 +14,17 @@ pub(crate) struct NodeStatusClient {
 
 impl NodeStatusClient {
     /// Create a new NodeStatusClient.
-    pub(crate) fn new(endpoint: &str, timeout: Duration) -> anyhow::Result<Self> {
+    pub(crate) fn new(
+        endpoint: &str,
+        timeout: Duration,
+        security: ClientSecurity,
+    ) -> anyhow::Result<Self> {
         let url = url::Url::parse(endpoint)
             .map_err(|e| anyhow::anyhow!("Invalid REST endpoint URL '{endpoint}': {e}"))?;
         let config = Configuration::builder()
             .with_timeout(timeout)
             .with_tracing(false)
+            .with_client_security(Some(security))
             .build_url(url)
             .map_err(|e| anyhow::anyhow!("Failed to create openapi configuration: {e:?}"))?;
         let client = ApiClient::new(config);
