@@ -1,6 +1,7 @@
 use crate::collect::error::Error;
 
 use chrono::Local;
+use openapi::tower::client::configuration::ClientSecurity;
 
 /// DumpConfig helps to create new instance of Dumper
 #[derive(Debug)]
@@ -25,6 +26,8 @@ pub struct DumpConfig {
     tenant_id: String,
     /// Logging label selectors.
     logging_label_selectors: String,
+    /// Client security configuration for REST API connections.
+    client_security: ClientSecurity,
 }
 
 impl DumpConfig {
@@ -54,6 +57,7 @@ impl DumpConfig {
         output_format: OutputFormat,
         tenant_id: String,
         logging_label_selectors: String,
+        client_security: ClientSecurity,
     ) -> Self {
         Self {
             output_directory,
@@ -66,6 +70,7 @@ impl DumpConfig {
             output_format,
             tenant_id,
             logging_label_selectors,
+            client_security,
         }
     }
 
@@ -127,6 +132,11 @@ impl DumpConfig {
     /// Returns the logging label selectors used to filter logs.
     pub fn logging_label_selectors(&self) -> &str {
         &self.logging_label_selectors
+    }
+
+    /// Returns the client security configuration for REST API connections.
+    pub fn client_security(&self) -> ClientSecurity {
+        self.client_security.clone()
     }
 
     /// Sets the output format (e.g., tar, stdout).

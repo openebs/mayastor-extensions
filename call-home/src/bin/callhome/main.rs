@@ -15,10 +15,14 @@ use crate::{
 use clap::Parser;
 use collector::report_models::{MayastorManagedDisks, Nexus, StorageMedia, StorageNodes};
 use obs::common::constants::*;
-use openapi::tower::client::{ApiClient, Configuration};
+use openapi::tower::client::{
+    configuration::{ClientSecurity, TlsMode},
+    ApiClient, Configuration,
+};
 use sha256::digest;
 use std::{
     collections::{HashMap, VecDeque},
+    path::PathBuf,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -51,6 +55,22 @@ struct CliArgs {
     /// The endpoint to fetch events stats.
     #[clap(long, short)]
     aggregator_url: Option<Url>,
+
+    /// Path to the TLS CA certificate bundle used to validate REST server certificates.
+    #[clap(long)]
+    tls_ca_file: Option<PathBuf>,
+
+    /// Path to the client TLS certificate chain file (PEM) for mTLS.
+    #[clap(long, requires = "tls_key_file")]
+    tls_cert_file: Option<PathBuf>,
+
+    /// Path to the client TLS private key file (PEM) for mTLS.
+    #[clap(long, requires = "tls_cert_file")]
+    tls_key_file: Option<PathBuf>,
+
+    /// Path to a file containing the JWT bearer token for REST authentication.
+    #[clap(long)]
+    jwt: Option<PathBuf>,
 }
 impl CliArgs {
     fn args() -> Self {
@@ -85,6 +105,10 @@ async fn run(logs: Arc<Mutex<VecDeque<LogEntry>>>) -> anyhow::Result<()> {
     let aggregator_url = args.aggregator_url;
     let send_report = args.send_report;
     let namespace = digest(args.namespace);
+    let tls_ca_file = args.tls_ca_file;
+    let tls_cert_file = args.tls_cert_file;
+    let tls_key_file = args.tls_key_file;
+    let jwt = args.jwt;
     let frequency = call_home_frequency();
     let encryption_dir = encryption_dir();
     let key_filepath = key_filepath();
@@ -92,26 +116,36 @@ async fn run(logs: Arc<Mutex<VecDeque<LogEntry>>>) -> anyhow::Result<()> {
     // Generate kubernetes client.
     let k8s_client = K8sClient::new()
         .await
-        .map_err(|error| anyhow::anyhow!("failed to generate kubernetes client: {:?}", error))?;
+        .map_err(|error| anyhow::anyhow!("failed to generate kubernetes client: {error:?}"))?;
 
     // Generate SHA256 hash of kube-system namespace UID.
-    let k8s_cluster_id = digest(k8s_client.get_cluster_id().await.map_err(|error| {
-        anyhow::anyhow!("failed to generate kubernetes cluster ID: {:?}", error)
-    })?);
+    let k8s_cluster_id =
+        digest(k8s_client.get_cluster_id().await.map_err(|error| {
+            anyhow::anyhow!("failed to generate kubernetes cluster ID: {error:?}")
+        })?);
 
     // Generate receiver API client.
     let receiver = client::Receiver::new(&k8s_cluster_id)
         .await
         .map_err(|error| {
-            anyhow::anyhow!("failed to generate metrics receiver client: {:?}", error)
+            anyhow::anyhow!("failed to generate metrics receiver client: {error:?}")
         })?;
 
     // Generate Mayastor REST client.
+    let tls = TlsMode::new(
+        tls_ca_file.as_ref(),
+        tls_cert_file.as_ref(),
+        tls_key_file.as_ref(),
+    )
+    .map_err(|error| anyhow::anyhow!("Failed to create TLS config: {error}"))?;
+    let security = ClientSecurity::try_new(&jwt, tls)
+        .map_err(|error| anyhow::anyhow!("Failed to read JWT file: {error}"))?;
     let config = Configuration::builder()
         .with_timeout(Duration::from_secs(30))
         .with_tracing(true)
+        .with_client_security(Some(security))
         .build_url(endpoint)
-        .map_err(|error| anyhow::anyhow!("failed to create openapi configuration: {:?}", error))?;
+        .map_err(|error| anyhow::anyhow!("failed to create openapi configuration: {error:?}"))?;
     let client = openapi::clients::tower::ApiClient::new(config);
 
     // using an interval ensures we don't drift across reports.

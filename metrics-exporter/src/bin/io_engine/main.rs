@@ -7,9 +7,11 @@ use crate::{
 use actix_web::{middleware, HttpServer};
 use clap::Parser;
 use once_cell::sync::OnceCell;
+use openapi::tower::client::configuration::{ClientSecurity, TlsMode};
 use std::{
     env,
     net::{IpAddr, SocketAddr},
+    path::PathBuf,
 };
 use tracing::{info, warn};
 use utils::tracing_telemetry::{FmtLayer, FmtStyle};
@@ -72,6 +74,22 @@ pub(crate) struct Cli {
     /// Timeout for node status REST requests.
     #[clap(long, default_value = "10s", env = "MAYASTOR_SCRAPE_TIMEOUT")]
     scrape_timeout: humantime::Duration,
+
+    /// Path to the TLS CA certificate bundle used to validate REST server certificates.
+    #[clap(long)]
+    tls_ca_file: Option<PathBuf>,
+
+    /// Path to the client TLS certificate chain file (PEM) for mTLS.
+    #[clap(long, requires = "tls_key_file")]
+    tls_cert_file: Option<PathBuf>,
+
+    /// Path to the client TLS private key file (PEM) for mTLS.
+    #[clap(long, requires = "tls_cert_file")]
+    tls_key_file: Option<PathBuf>,
+
+    /// Path to a file containing the JWT bearer token for REST authentication.
+    #[clap(long)]
+    jwt: Option<PathBuf>,
 }
 
 static GRPC_CLIENT: OnceCell<GrpcClient> = OnceCell::new();
@@ -123,10 +141,25 @@ async fn main() -> Result<(), ExporterError> {
     // Initialize node status REST client if endpoint is configured.
     if let Some(ref endpoint) = args.rest_endpoint {
         info!("Initializing node status REST client with endpoint: {endpoint}");
-        let node_client = NodeStatusClient::new(&endpoint.to_string(), *args.scrape_timeout)
-            .map_err(|e| {
-                ExporterError::HttpServerError(format!("Failed to create node status client: {e}"))
-            })?;
+        let tls = TlsMode::new(
+            args.tls_ca_file.as_ref(),
+            args.tls_cert_file.as_ref(),
+            args.tls_key_file.as_ref(),
+        )
+        .map_err(|error| {
+            ExporterError::HttpServerError(format!("Failed to create TLS config: {error}"))
+        })?;
+        let security = ClientSecurity::try_new(&args.jwt, tls).map_err(|error| {
+            ExporterError::HttpServerError(format!("Failed to read JWT file: {error}"))
+        })?;
+        let node_client = NodeStatusClient::new(
+            &endpoint.to_string(),
+            *args.scrape_timeout,
+            security,
+        )
+        .map_err(|error| {
+            ExporterError::HttpServerError(format!("Failed to create node status client: {error}"))
+        })?;
         NODE_STATUS_CLIENT
             .set(node_client)
             .expect("Node status client should be initialised only once");
@@ -141,12 +174,14 @@ async fn main() -> Result<(), ExporterError> {
     };
     HttpServer::new(app)
         .bind(args.metrics_endpoint)
-        .map_err(|_| {
-            ExporterError::HttpBindError("Failed to bind endpoint to http server".to_string())
+        .map_err(|error| {
+            ExporterError::HttpBindError(format!("Failed to bind endpoint to http server: {error}"))
         })?
         .workers(1)
         .run()
         .await
-        .map_err(|_| ExporterError::HttpServerError("Failed to start http Service".to_string()))?;
+        .map_err(|error| {
+            ExporterError::HttpServerError(format!("Failed to start http Service: {error}"))
+        })?;
     Ok(())
 }

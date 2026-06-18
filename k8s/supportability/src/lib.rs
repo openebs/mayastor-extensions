@@ -4,6 +4,7 @@ use collect::{
     error::Error,
     utils::log,
 };
+use openapi::tower::client::configuration::ClientSecurity;
 use operations::Resource;
 use plugin::ExecuteOperation;
 
@@ -125,6 +126,7 @@ async fn execute_resource_dump(cli_args: SupportArgs, resource: Resource) -> Res
         OutputFormat::Tar,
         cli_args.tenant_id,
         cli_args.logging_label_selectors,
+        cli_args.ctx.rest_security.clone(),
     );
     let mut errors = Vec::new();
     match resource {
@@ -217,4 +219,6 @@ pub struct K8sCtxArgs {
     /// This is necessary because the existing code uses these directly, even though the
     /// initial connection and context namespace is retrieved at the start.
     pub kubeconfig: KubeConfigArgs,
+    /// Client security configuration for REST API communication.
+    pub rest_security: ClientSecurity,
 }
