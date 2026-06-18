@@ -289,9 +289,9 @@ apis:
         # -- Frequency for the agent-core liveness probe.
         agentCoreProbeFreq: "20s"
         # -- No. of failures the readiness probe will tolerate.
-        failureThreshold: 2
+        failureThreshold: 3
         # -- No. of seconds of delay before checking the readiness status.
-        initialDelaySeconds: 0
+        initialDelaySeconds: 1
         # -- No. of seconds between readiness probe checks.
         periodSeconds: 20
         # -- No. of seconds of timeout tolerance.
@@ -300,9 +300,9 @@ apis:
         # -- Toggle liveness probe.
         enabled: true
         # -- No. of failures the liveness probe will tolerate.
-        failureThreshold: 1
+        failureThreshold: 3
         # -- No. of seconds of delay before checking the liveness status.
-        initialDelaySeconds: 0
+        initialDelaySeconds: 1
         # -- No. of seconds between liveness probe checks.
         periodSeconds: 30
         # -- No. of seconds of timeout tolerance.
