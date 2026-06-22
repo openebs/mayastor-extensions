@@ -38,6 +38,19 @@ let
         };
       };
     };
+    events = rec{
+      recurseForDerivations = true;
+      events_builder = { buildType, builder, cargoBuildFlags ? [ "-p events-aggregator" ] }: builder.build { inherit buildType cargoBuildFlags; };
+      events_installer = { pname, src }: installer { inherit pname src; };
+      aggregator = events_installer {
+        src =
+          if allInOne then
+            events_builder { inherit buildType builder; }
+          else
+            events_builder { inherit buildType builder; cargoBuildFlags = [ "--bin events-aggregator" ]; };
+        pname = "events-aggregator";
+      };
+    };
     upgrade = rec {
       recurseForDerivations = true;
       upgrade_builder = { buildType, builder, cargoBuildFlags ? [ "-p upgrade" ] }: builder.build { inherit buildType cargoBuildFlags; };

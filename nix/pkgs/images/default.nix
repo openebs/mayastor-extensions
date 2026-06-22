@@ -88,6 +88,12 @@ let
         Env = [ "CORE_CHART_DIR=/chart" ];
       };
     };
+  build-events-image = { buildType, name }:
+    build-extensions-image rec{
+      inherit buildType;
+      package = extensions.${buildType}.events.${name};
+      pname = package.pname;
+    };
   build-obs-callhome-image = { buildType }:
     build-extensions-image rec{
       inherit buildType;
@@ -127,6 +133,12 @@ let
       name = "job";
     };
   };
+  build-events-images = { buildType }: {
+    aggregator = build-events-image {
+      inherit buildType;
+      name = "aggregator";
+    };
+  };
   build-obs-images = { buildType }: {
     callhome = build-obs-callhome-image {
       inherit buildType;
@@ -144,6 +156,9 @@ let
       recurseForDerivations = true;
     };
     upgrade = build-upgrade-images { inherit buildType; } // {
+      recurseForDerivations = true;
+    };
+    events = build-events-images { inherit buildType; } // {
       recurseForDerivations = true;
     };
     obs = build-obs-images { inherit buildType; } // {
