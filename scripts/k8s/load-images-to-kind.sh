@@ -62,7 +62,7 @@ else
 fi
 # This list is static and is bound to fall out of date.
 # TODO: generate the list of container images at run time from build assets.
-images=("upgrade-job" "obs-callhome" "obs-callhome-stats" "metrics-exporter-io-engine")
+images=("upgrade-job" "obs-callhome" "obs-callhome-stats" "metrics-exporter-io-engine" "eventing-aggregator")
 load_cmd="kind load docker-image"
 for image in "${images[@]}"; do
   if [ "$TRIM_DEBUG_SUFFIX" = 1 ]; then

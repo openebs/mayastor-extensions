@@ -949,6 +949,35 @@ alloy:
 # Eventing which enables or disables eventing-related components.
 eventing:
   enabled: true
+  aggregator:
+    # -- Enable the eventing-aggregator deployment. Requires eventing.enabled to be true.
+    enabled: true
+    # -- Log level for eventing-aggregator
+    logLevel: "info"
+    # -- Maximum total size of event files including rotated history. Used when loki.enabled is false.
+    dirSizeLimit: "100Mi"
+    resources:
+      limits:
+        # -- Cpu limits for eventing-aggregator
+        cpu: "100m"
+        # -- Memory limits for eventing-aggregator
+        memory: "32Mi"
+      requests:
+        # -- Cpu requests for eventing-aggregator
+        cpu: "50m"
+        # -- Memory requests for eventing-aggregator
+        memory: "16Mi"
+    # -- Set tolerations, overrides global
+    tolerations: []
+    # -- Set nodeSelector, overrides global
+    nodeSelector: {}
+    # -- Set PriorityClass, overrides global
+    priorityClassName: ""
+    initContainers:
+      enabled: true
+      containers:
+        - name: nats-probe
+          command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-nats 4222; do date; echo "Waiting for NATS..."; sleep 1; done;' ]
 # Configuration for the nats message-bus. This is an eventing component, and is enabled when
 # 'eventing.enabled' is set to 'true'.
 nats:

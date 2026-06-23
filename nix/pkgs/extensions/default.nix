@@ -38,17 +38,17 @@ let
         };
       };
     };
-    events = rec{
+    eventing = rec{
       recurseForDerivations = true;
-      events_builder = { buildType, builder, cargoBuildFlags ? [ "-p events-aggregator" ] }: builder.build { inherit buildType cargoBuildFlags; };
-      events_installer = { pname, src }: installer { inherit pname src; };
-      aggregator = events_installer {
+      eventing_builder = { buildType, builder, cargoBuildFlags ? [ "-p eventing-aggregator" ] }: builder.build { inherit buildType cargoBuildFlags; };
+      eventing_installer = { pname, src }: installer { inherit pname src; };
+      aggregator = eventing_installer {
         src =
           if allInOne then
-            events_builder { inherit buildType builder; }
+            eventing_builder { inherit buildType builder; }
           else
-            events_builder { inherit buildType builder; cargoBuildFlags = [ "--bin events-aggregator" ]; };
-        pname = "events-aggregator";
+            eventing_builder { inherit buildType builder; cargoBuildFlags = [ "--bin eventing-aggregator" ]; };
+        pname = "eventing-aggregator";
       };
     };
     upgrade = rec {

@@ -14,7 +14,7 @@ if [ ! -f "$SOURCE_REL" ] && [ -z "$CI" ]; then
   git submodule update --init --recursive
 fi
 
-IMAGES="metrics.exporter.io-engine obs.callhome stats.aggregator upgrade.job events.aggregator"
+IMAGES="metrics.exporter.io-engine obs.callhome stats.aggregator upgrade.job eventing.aggregator"
 HELM_DEPS_IMAGES="upgrade.job"
 
 if [[ -z "${HELM_CHART_DIR:-}" ]]; then

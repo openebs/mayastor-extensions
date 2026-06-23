@@ -1,0 +1,76 @@
+{{- if and .Values.eventing.enabled .Values.eventing.aggregator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-eventing-aggregator
+  labels:
+    app: eventing-aggregator
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: eventing-aggregator
+      {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: eventing-aggregator
+        {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+        {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+        {{ include "label_prefix" . }}/logging: "true"
+    spec:
+      serviceAccountName: {{ .Release.Name }}-service-account
+      imagePullSecrets:
+        {{- include "base_pull_secrets" . }}
+      {{- if $pcName := include "priority_class" (dict "template" . "localPriorityClass" .Values.eventing.aggregator.priorityClassName) }}
+      priorityClassName: {{ $pcName }}
+      {{- end }}
+      {{- if $nodeSelector := include "node_selector" (dict "template" . "localNodeSelector" .Values.eventing.aggregator.nodeSelector) }}
+      nodeSelector: {{ $nodeSelector }}
+      {{- end }}
+      {{- if $tolerations := include "tolerations" (dict "template" . "localTolerations" .Values.eventing.aggregator.tolerations) }}
+      tolerations: {{ $tolerations }}
+      {{- end }}
+      {{- if (.Values.eventing.aggregator.initContainers).enabled }}
+      initContainers:
+        {{- include "render_init_containers" (dict "value" .Values.eventing.aggregator.initContainers.containers "context" $) | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: eventing-aggregator
+          image: "{{ default .Values.image.registry .Values.global.imageRegistry }}/{{ .Values.image.repo }}/{{ include "image_prefix" . }}-eventing-aggregator:{{ default .Values.image.tag .Values.image.repoTags.extensions }}"
+          args:
+            - "--nats-url=nats://{{ .Release.Name }}-nats:4222"
+            - "--jetstream-enabled={{ .Values.nats.nats.jetstream.enabled }}"
+            - "--loki-enabled={{ .Values.loki.enabled }}"
+            - "--subject-filter=events.>"
+            {{- if not .Values.loki.enabled }}
+            - "--events-dir=/var/events"
+            - "--dir-size-limit={{ .Values.eventing.aggregator.dirSizeLimit }}"
+            {{- end }}
+          env:
+            - name: RUST_LOG
+              value: {{ .Values.eventing.aggregator.logLevel }}
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.global.imagePullPolicy }}
+          resources:
+            limits:
+              cpu: {{ .Values.eventing.aggregator.resources.limits.cpu | quote }}
+              memory: {{ .Values.eventing.aggregator.resources.limits.memory | quote }}
+            requests:
+              cpu: {{ .Values.eventing.aggregator.resources.requests.cpu | quote }}
+              memory: {{ .Values.eventing.aggregator.resources.requests.memory | quote }}
+          {{- if not .Values.loki.enabled }}
+          volumeMounts:
+            - name: events-store
+              mountPath: /var/events
+          {{- end }}
+      {{- if not .Values.loki.enabled }}
+      volumes:
+        - name: events-store
+          emptyDir:
+            sizeLimit: {{ .Values.eventing.aggregator.dirSizeLimit }}
+      {{- end }}
+{{- end }}
