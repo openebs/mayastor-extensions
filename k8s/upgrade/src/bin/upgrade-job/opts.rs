@@ -1,14 +1,14 @@
 use clap::Parser;
 use std::path::PathBuf;
 use upgrade::common::constants::product_train;
-use utils::{package_description, tracing_telemetry::FmtStyle, version_info_str};
+use utils::{package_description, tracing_telemetry::FmtStyle, version_info_string};
 
 /// Validate input whose validation depends on other inputs.
 pub(crate) mod validators;
 
 /// These are the supported cli configuration options for upgrade.
 #[derive(Parser)]
-#[command(name = package_description!(), version = version_info_str!())]
+#[command(name = package_description!(), version = version_info_string!())]
 #[command(about = format!("Upgrades {}", product_train()), long_about = None)]
 pub(crate) struct CliArgs {
     /// This is the URL for the storage REST API server.
