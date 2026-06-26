@@ -17,4 +17,5 @@ url = { workspace = true }
 humantime = { workspace = true }
 utils = { path = "../dependencies/control-plane/utils/utils-lib" }
 event-consumer = { path = "../dependencies/control-plane/utils/event-consumer" }
+events-api = { path = "../dependencies/control-plane/utils/dependencies/apis/events" }
 shutdown = { path = "../dependencies/control-plane/utils/shutdown" }
