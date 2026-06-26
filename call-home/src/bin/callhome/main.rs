@@ -35,10 +35,10 @@ use tracing_subscriber::{
     layer::Context, prelude::__tracing_subscriber_SubscriberExt, EnvFilter, Layer,
 };
 use url::Url;
-use utils::{package_description, version_info_str};
+use utils::{package_description, version_info_string};
 
 #[derive(Parser)]
-#[command(name = package_description!(), version = version_info_str!())]
+#[command(name = package_description!(), version = version_info_string!())]
 struct CliArgs {
     /// An URL endpoint to the control plane's rest endpoint.
     #[arg(short, long, default_value = "http://mayastor-api-rest:8081")]

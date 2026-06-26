@@ -29,7 +29,7 @@ mod exporter;
 mod store;
 
 #[derive(Parser, Debug)]
-#[clap(name = utils::package_description!(), version = utils::version_info_str!())]
+#[clap(name = utils::package_description!(), version = utils::version_info_string!())]
 struct Cli {
     /// Events message-bus endpoint url.
     #[clap(long, short)]

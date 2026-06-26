@@ -10,7 +10,7 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 use url::Url;
-use utils::{package_description, tracing_telemetry::TracingTelemetry, version_info_str};
+use utils::{package_description, tracing_telemetry::TracingTelemetry, version_info_string};
 
 /// Result of message processing.
 /// `Ok` = successfully processed, ACK the message
@@ -24,7 +24,7 @@ enum ProcessingResult {
 }
 
 #[derive(Parser)]
-#[command(name = package_description!(), version = version_info_str!())]
+#[command(name = package_description!(), version = version_info_string!())]
 struct CliArgs {
     /// NATS server URL.
     #[arg(long, short, default_value = "nats://mayastor-nats:4222")]
