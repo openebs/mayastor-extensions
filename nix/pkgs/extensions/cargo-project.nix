@@ -61,7 +61,7 @@ let
     "call-home"
     "upgrade"
     "constants"
-    "events-aggregator"
+    "eventing-aggregator"
     "dependencies/control-plane/Cargo.toml"
     "dependencies/control-plane/openapi/Cargo.toml"
     "dependencies/control-plane/openapi/build.rs"
@@ -167,7 +167,7 @@ in
 
   build = { buildType, cargoBuildFlags ? [ ] }:
     if buildAllInOne then
-      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p metrics-exporter" "-p call-home" "-p upgrade" "-p kubectl-plugin" "-p events-aggregator" ]; }
+      builder { inherit buildType; cargoBuildFlags = [ "-p rpc" "-p metrics-exporter" "-p call-home" "-p upgrade" "-p kubectl-plugin" "-p eventing-aggregator" ]; }
     else
       builder { inherit buildType cargoBuildFlags; };
 }

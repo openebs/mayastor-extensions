@@ -100,6 +100,8 @@ annotations:
       image: docker.io/openebs/mayastor-csi-controller:develop
     - name: mayastor-csi-node
       image: docker.io/openebs/mayastor-csi-node:develop
+    - name: mayastor-eventing-aggregator
+      image: docker.io/openebs/mayastor-eventing-aggregator:develop
     - name: mayastor-io-engine
       image: docker.io/openebs/mayastor-io-engine:develop
     - name: mayastor-metrics-exporter-io-engine

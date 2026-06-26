@@ -11,7 +11,10 @@ pub const BATCH_TIMEOUT_MS: u64 = 10000; // 10 seconds
 pub const MAX_RETRIES: usize = 3;
 
 /// Default service name used for tracing and application identification.
-pub const SERVICE_NAME: &str = "events-aggregator";
+pub const SERVICE_NAME: &str = "eventing-aggregator";
+
+/// Durable name for the JetStream pull consumer.
+pub const JETSTREAM_CONSUMER_NAME: &str = "eventing-aggregator-consumer";
 
 /// Base filename for the local event export file.
 pub const EVENTS_JSON_FILE: &str = "events.json";

@@ -16,6 +16,7 @@ docker.io/openebs/mayastor-agent-ha-node:develop
 docker.io/openebs/mayastor-api-rest:develop
 docker.io/openebs/mayastor-csi-controller:develop
 docker.io/openebs/mayastor-csi-node:develop
+docker.io/openebs/mayastor-eventing-aggregator:develop
 docker.io/openebs/mayastor-io-engine:develop
 docker.io/openebs/mayastor-metrics-exporter-io-engine:develop
 docker.io/openebs/mayastor-obs-callhome-stats:develop

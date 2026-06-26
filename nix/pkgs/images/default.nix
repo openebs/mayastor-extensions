@@ -91,7 +91,7 @@ let
   build-events-image = { buildType, name }:
     build-extensions-image rec{
       inherit buildType;
-      package = extensions.${buildType}.events.${name};
+      package = extensions.${buildType}.eventing.${name};
       pname = package.pname;
     };
   build-obs-callhome-image = { buildType }:
@@ -158,7 +158,7 @@ let
     upgrade = build-upgrade-images { inherit buildType; } // {
       recurseForDerivations = true;
     };
-    events = build-events-images { inherit buildType; } // {
+    eventing = build-events-images { inherit buildType; } // {
       recurseForDerivations = true;
     };
     obs = build-obs-images { inherit buildType; } // {

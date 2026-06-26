@@ -88,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
         subject_filter: cli_args.subject_filter.clone(),
         connection_timeout: cli_args.nats_connection_timeout,
         request_timeout: cli_args.nats_request_timeout,
-        jetstream_consumer_name: "events-aggregator-consumer".into(),
+        jetstream_consumer_name: constant::JETSTREAM_CONSUMER_NAME.to_string(),
         ..ConsumerConfig::default()
     };
 
