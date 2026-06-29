@@ -387,23 +387,39 @@ Renders init containers. If unset it sets the container image.
     {{- $image := .context.Values.base.initContainers.image }}
     {{- $values_image := .context.Values.image }}
     {{- $global := .context.Values.global }}
+    {{- $ctx := .context }}
     {{- range .value -}}
-        {{ $container := . }}
-        {{- if not (hasKey . "imagePullPolicy") }}
+        {{ $container := deepCopy . }}
+        {{- if hasKey $container "command" }}
+          {{- $renderedCmd := list }}
+            {{- range $container.command }}
+              {{- $renderedCmd = append $renderedCmd (tpl . $ctx) }}
+            {{- end }}
+           {{- $_ := set $container "command" $renderedCmd }}
+        {{- end }}
+        {{- if not (hasKey $container "imagePullPolicy") }}
             {{- $pullPolicy := $global.imagePullPolicy | default $image.pullPolicy | default $values_image.pullPolicy }}
             {{- $_ := set $container "imagePullPolicy" $pullPolicy }}
         {{- end }}
-        {{- if or (not $image) (not (hasKey . "image")) }}
-            {{- $registry := $global.imageRegistry | default $image.registry | default $values_image.registry }}
-            {{- $namespace := $image.namespace | default $values_image.repo }}
-            {{- $name := $image.name | default "alpine-sh" }}
-            {{- $tag := $image.tag | default "4.1.0" }}
-            {{- $_ := set $container "image" (printf "%s/%s/%s:%s" $registry $namespace $name $tag) }}
+        {{- if not (hasKey $container "image") }}
+            {{- $_ := set $container "image" (include "render_init_container_image" $ctx ) }}
         {{- end }}
         {{- $containers = append $containers $container }}
     {{- end -}}
-    {{- tpl ($containers | toYaml) .context }}
+    {{- $containers | toYaml }}
 {{- end -}}
+
+{{- define "render_init_container_image" -}}
+{{- $image := .Values.base.initContainers.image }}
+{{- $values_image := .Values.image }}
+{{- $global := .Values.global }}
+{{- $registry := $global.imageRegistry | default $image.registry | default $values_image.registry }}
+{{- $namespace := $image.namespace | default $values_image.repo }}
+{{- $name := $image.name | default "alpine-sh" }}
+{{- $tag := $image.tag | default "4.1.0" }}
+{{- printf "%s/%s/%s:%s" $registry $namespace $name $tag }}
+{{- end -}}
+
 
 {{/*
 Get the Events Jetstream Replica Count
