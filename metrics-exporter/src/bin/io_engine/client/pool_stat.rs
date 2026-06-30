@@ -50,7 +50,7 @@ impl PoolIoStat {
 }
 
 /// Array of PoolIoStat objects.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct PoolIoStats {
     pub(crate) pool_stats: Vec<PoolIoStat>,
 }

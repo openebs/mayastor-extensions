@@ -110,7 +110,7 @@ impl PoolInfo {
 }
 
 /// Array of PoolInfo objects.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct Pools {
     pub(crate) pools: Vec<PoolInfo>,
 }
