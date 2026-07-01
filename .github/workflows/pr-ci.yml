@@ -28,7 +28,7 @@ jobs:
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test')
     uses: ./.github/workflows/k8s-ci.yml
     secrets: inherit
-  bors-ci:
+  ci:
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test')) }}
     needs:
       - lint-ci
@@ -47,7 +47,7 @@ jobs:
   remove-label:
     if: ${{ always() && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci/test') }}
     needs:
-      - bors-ci
+      - ci
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
