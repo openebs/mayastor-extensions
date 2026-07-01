@@ -1,9 +1,6 @@
 name: ImageBuild CI
 on:
   workflow_call:
-  push:
-    branches:
-      - linter-pr
 
 env:
   CARGO_TERM_COLOR: always
