@@ -17,19 +17,30 @@ jobs:
     uses: ./.github/workflows/helm-chart.yml
     secrets: inherit
     with:
-      trigger: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci/test') && 'labeled' || github.event_name }}
+      trigger: >-
+            ${{
+              startsWith(github.head_ref, 'mergify/merge-queue/')
+                && 'merge_group'
+                || (
+                  github.event_name == 'pull_request'
+                  && contains(github.event.pull_request.labels.*.name, 'ci/test')
+                  && 'labeled'
+                  || github.event_name
+                )
+            }}
+
   int-ci:
     if: github.event.action != 'labeled'
     uses: ./.github/workflows/unit-int.yml
   image-ci:
-    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test')
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test') || startsWith(github.head_ref, 'mergify/merge-queue/')
     uses: ./.github/workflows/image-pr.yml
   k8s-ci:
-    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test')
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test') || startsWith(github.head_ref, 'mergify/merge-queue/')
     uses: ./.github/workflows/k8s-ci.yml
     secrets: inherit
-  bors-ci:
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test')) }}
+  ci:
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test')) || startsWith(github.head_ref, 'mergify/merge-queue/') }}
     needs:
       - lint-ci
       - helm-ci
@@ -45,9 +56,9 @@ jobs:
           fi
           exit 0
   remove-label:
-    if: ${{ always() && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci/test') }}
+    if: ${{ always() && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci/test') && startsWith(github.head_ref, 'mergify/merge-queue/')}}
     needs:
-      - bors-ci
+      - ci
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

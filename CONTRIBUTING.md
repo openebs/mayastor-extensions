@@ -37,9 +37,9 @@ excellent place to derive your issue description from.
 
 ### Committing
 
-Start work off the `develop` branch. **Not `master`.**
+Start work off the `develop` branch.
 
-[bors][bors] will merge your commits. We do not do [_squash merges_][squash-merges].
+[mergify][mergify] will merge your commits. We do not do [_squash merges_][squash-merges].
 
 Each commit message must adhere to [Conventional Commits][conventional-commits]. You can use
 [`convco`][tools-convco] if you would prefer a tool to help.
@@ -49,15 +49,16 @@ of your pull requests.
 
 ### Reviews
 
-The review process is governed by [bors][bors].
+The review process is governed by github actions and [mergify][mergify].
 
 Pull requests require at least 1 approval from maintainer or SIG member.
 
 Once review is given, Maintainers and SIG members may indicate merge readiness with the comment
-`bors merge`.
+`@mergify queue`.
 
-**Please do not hit the 'Update Branch' button.** The commit message is not conventional,
-[bors][bors] will yell at you. Let [bors][bors] handle it, or rebase it yourself.
+If the commit message is not conventional, then you can't even queue the pull request.
+
+**Please do not hit the 'Update Branch' button.**  Let [mergify][mergify] handle it, or rebase it yourself.
 
 ### Development Environment
 
@@ -117,12 +118,10 @@ If you're only modifying the helm chart we recomment you enter nix-shell from th
 > ```
 
 [mayastor-slack]: https://kubernetes.slack.com/messages/openebs
-[mayastor-dev-slack]: https://kubernetes.slack.com/messages/openebs-dev
 [mayastor-slack-inviter]: https://slack.k8s.io/
-[mayastor-discord]: https://discord.gg/nhpyMeJCHE
 [rust-rfc-template]: https://github.com/rust-lang/rfcs/blob/master/0000-template.md
 [issue-bug-report]: https://github.com/openebs/Mayastor/issues/new?labels=new&template=bug_report.md
-[bors]: https://bors.tech/
+[mergify]: https://mergify.com
 [squash-merges]: https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges#squash-and-merge-your-pull-request-commits
 [conventional-commits]: https://www.conventionalcommits.org/en/v1.0.0/
 [tools-convco]: https://convco.github.io/
