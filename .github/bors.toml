@@ -1,4 +1,4 @@
-status = [ "bors-ci" ]
+status = [ "ci" ]
 pr_status = [ "helm-ci / helm-chart-test", "helm-ci / helm-images-pr", "submodule-branch", "commitlint", "DCO" ]
 timeout_sec = 10000
 required_approvals = 2
