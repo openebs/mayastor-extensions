@@ -1,0 +1,28 @@
+name: Update Merge Queue Ruleset on Release Branch
+
+on:
+  # No branch filter here — we filter in the job condition,
+  # because the `create` event doesn't support branch patterns
+  create:
+
+jobs:
+  update-ruleset:
+    # Only run when a branch (not a tag) matching release/* is created
+    if: |
+      github.event.ref_type == 'branch' &&
+      startsWith(github.event.ref, 'release/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Add branch to merge queue ruleset
+        env:
+          # Token with Administration R/W or classic repo scope
+          GH_TOKEN: ${{ secrets.RULESET_ADMIN_TOKEN }}
+          RULESET_NAME: ${{ vars.MERGE_QUEUE_RULESET_NAME }}
+          BRANCH_NAME: ${{ github.event.ref }}
+          REPO: ${{ github.repository }}
+        run: |
+          .github/scripts/enable-merge-q-rule.sh
