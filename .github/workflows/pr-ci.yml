@@ -1,46 +1,45 @@
 name: CI
 on:
   workflow_call:
+    inputs:
+      trigger:
+        required: false
+        type: string
+        default: "merge_group"
   push:
     branches:
       - staging
       - trying
   pull_request:
-    types: ['opened', 'edited', 'reopened', 'synchronize', 'labeled']
+    types: ['opened', 'edited', 'reopened', 'synchronize']
   merge_group:
 
 jobs:
   lint-ci:
-    if: github.event.action != 'labeled'
+    if: inputs.trigger != 'try'
     uses: ./.github/workflows/lint.yml
+
   helm-ci:
     uses: ./.github/workflows/helm-chart.yml
     secrets: inherit
     with:
-      trigger: >-
-            ${{
-              startsWith(github.head_ref, 'mergify/merge-queue/')
-                && 'merge_group'
-                || (
-                  github.event_name == 'pull_request'
-                  && contains(github.event.pull_request.labels.*.name, 'ci/test')
-                  && 'labeled'
-                  || github.event_name
-                )
-            }}
+      trigger: ${{  inputs.trigger == 'try' && 'try' ||  startsWith(github.head_ref, 'mergify/merge-queue/') && 'merge_group' ||  github.event_name}}
 
   int-ci:
-    if: github.event.action != 'labeled'
+    if: inputs.trigger != 'try'
     uses: ./.github/workflows/unit-int.yml
+
   image-ci:
-    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test') || startsWith(github.head_ref, 'mergify/merge-queue/')
+    if: github.event_name != 'pull_request' || inputs.trigger == 'try' || startsWith(github.head_ref, 'mergify/merge-queue/')
     uses: ./.github/workflows/image-pr.yml
+
   k8s-ci:
-    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test') || startsWith(github.head_ref, 'mergify/merge-queue/')
+    if: github.event_name != 'pull_request' || inputs.trigger == 'try' || startsWith(github.head_ref, 'mergify/merge-queue/')
     uses: ./.github/workflows/k8s-ci.yml
     secrets: inherit
+
   ci:
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci/test')) || startsWith(github.head_ref, 'mergify/merge-queue/') }}
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || inputs.trigger == 'try' || startsWith(github.head_ref, 'mergify/merge-queue/')) }}
     needs:
       - lint-ci
       - helm-ci
@@ -55,31 +54,3 @@ jobs:
             exit 1
           fi
           exit 0
-  remove-label:
-    if: ${{ always() && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci/test') && startsWith(github.head_ref, 'mergify/merge-queue/')}}
-    needs:
-      - ci
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - name: Remove ci/test label
-        uses: actions/github-script@v7
-        with:
-          script: |
-            try {
-              await github.rest.issues.removeLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                name: 'ci/test',
-              });
-            } catch (error) {
-              const status = error.status || error.response?.status;
-              if (status === 403 || status === 404) {
-                const reason = status === 403 ? 'insufficient permissions' : 'label not found';
-                console.log(`Skipping ci/test label removal due to ${reason}: ${error.message}`);
-                return;
-              }
-              throw error;
-            }

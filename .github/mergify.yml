@@ -2,7 +2,12 @@ queue_rules:
   - name: default
     update_method: rebase
     branch_protection_injection_mode: merge
-    update_bot_account: openebs-ci
+    commit_message_format:
+      title: inherit
+      body: pr-body
+      trailers:
+        - co-authored-by
+    batch_size: 3
     merge_conditions:
       - check-success = ci
       - check-success = submodule-branch
@@ -14,7 +19,7 @@ queue_rules:
       - check-success = int-ci / int-tests
       - check-success = lint-ci / linter
 merge_queue:
-  max_parallel_checks: 1
+  max_parallel_checks: 2
 merge_protections_settings:
   reporting_method: check-runs
 pull_request_rules:

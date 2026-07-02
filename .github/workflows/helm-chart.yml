@@ -14,6 +14,7 @@ env:
 
 jobs:
   helm-chart-test:
+    if: ${{ inputs.trigger != 'try' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
