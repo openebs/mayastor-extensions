@@ -32,6 +32,9 @@ struct CliArgs {
     /// Use namespace from the current `kubeconfig` context.
     #[clap(global = true, long, hide = true, default_value = "false")]
     namespace_from_context: bool,
+
+    #[clap(global = true, long, hide = true)]
+    debug_error: bool,
 }
 
 impl CliArgs {
@@ -62,21 +65,33 @@ impl Deref for CliArgs {
 
 #[tokio::main]
 async fn main() {
+    fn fmt_err(e: &(impl std::fmt::Debug + std::fmt::Display), debug: bool) -> String {
+        if debug {
+            format!("{e:?}")
+        } else {
+            format!("{e}")
+        }
+    }
+
     let mut exit_code = 1;
     match CliArgs::args().await {
         Ok(cli_args) => {
             let _tracer_flusher = cli_args.init_tracing();
+            let debug_error = cli_args.debug_error;
             if let Err(error) = cli_args.execute().await {
                 match error {
-                    Error::RestPlugin(error) => eprintln!("{error}"),
-                    Error::RestClient(error) => {
-                        eprintln!("Failed to initialise the REST client. Error {error}")
+                    Error::RestPlugin(e) => eprintln!("{}", fmt_err(&e, debug_error)),
+                    Error::RestClient(e) => {
+                        eprintln!(
+                            "Failed to initialise the REST client. Error {}",
+                            fmt_err(&e, debug_error)
+                        )
                     }
-                    Error::Upgrade(error) => {
-                        eprintln!("{error}");
-                        exit_code = error.into();
+                    Error::Upgrade(e) => {
+                        eprintln!("{}", fmt_err(&e, debug_error));
+                        exit_code = e.into();
                     }
-                    Error::Generic(error) => eprintln!("{error}"),
+                    Error::Generic(e) => eprintln!("{}", fmt_err(&e, debug_error)),
                 }
                 std::process::exit(exit_code);
             }

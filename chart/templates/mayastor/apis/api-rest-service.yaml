@@ -19,6 +19,7 @@ spec:
       {{- if eq .Values.apis.rest.service.type "NodePort" }}
       nodePort: {{ .Values.apis.rest.service.nodePorts.https }}
       {{- end }}
+    {{- if not .Values.security.tls.enabled }}
     - port: 8081
       name: http
       targetPort: 8081
@@ -26,3 +27,4 @@ spec:
       {{- if eq .Values.apis.rest.service.type "NodePort" }}
       nodePort: {{ .Values.apis.rest.service.nodePorts.http }}
       {{- end }}
+    {{- end }}

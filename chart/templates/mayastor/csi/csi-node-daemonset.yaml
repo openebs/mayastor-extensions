@@ -86,7 +86,7 @@ spec:
         args:
         - "--csi-socket={{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--node-name=$(MY_NODE_NAME)"
-        - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"{{ if .Values.csi.node.restClient.enabled }}
+        - "--rest-endpoint={{ include "rest_api_endpoint" . }}"{{ if .Values.csi.node.restClient.enabled }}
         - "--enable-rest"{{ end }}
         - "--enable-registration"
         - "--grpc-ip=$(MY_POD_IP)"
@@ -105,6 +105,7 @@ spec:
         {{- end }}
         - "--fmt-style={{ include "logFormat" . }}"
         - "--ansi-colors={{ .Values.base.logging.color }}"
+        {{- include "rest_api_tls_client_args" . | nindent 8 }}
         volumeMounts:
         - name: device
           mountPath: /dev
@@ -117,6 +118,7 @@ spec:
         - name: kubelet-dir
           mountPath: {{ .Values.csi.node.kubeletDir }}
           mountPropagation: "Bidirectional"
+        {{- include "rest_api_tls_client_volume_mount" . | nindent 8 }}
         resources:
           limits:
             cpu: {{ .Values.csi.node.resources.limits.cpu | quote }}
@@ -172,3 +174,4 @@ spec:
         hostPath:
           path: {{ .Values.csi.node.kubeletDir }}
           type: Directory
+      {{- include "rest_api_tls_client_volume" (dict "ctx" . "secretName" (include "rest_api_tls_csi_node_client_secret_name" .)) | nindent 6 }}
