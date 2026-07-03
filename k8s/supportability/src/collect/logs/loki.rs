@@ -14,7 +14,7 @@ const ENDPOINT: &str = "/loki/api/v1/query_range";
 
 const SERVICE_NAME: &str = "loki";
 
-/// Possible errors can occur while interacting with Loki service
+/// Possible errors can occur while interacting with Loki service.
 #[derive(Debug)]
 #[allow(unused)]
 pub enum LokiError {
@@ -74,7 +74,7 @@ struct Data {
     result: Vec<StreamContent>,
 }
 
-// Response structure obtained from Loki after making http request
+// Response structure obtained from Loki after making http request.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct LokiResponse {
     status: String,
@@ -103,7 +103,7 @@ impl LokiResponse {
     }
 }
 
-// Determines the sort order of logs
+// Determines the sort order of logs.
 #[derive(Debug, Clone)]
 enum LogDirection {
     Forward,
@@ -118,28 +118,28 @@ impl LogDirection {
 }
 
 /// Http client to interact with Loki (a log management system)
-/// to fetch historical log information
+/// to fetch historical log information.
 #[derive(Debug)]
 pub(crate) struct LokiClient {
-    /// Address of Loki service
+    /// Address of Loki service.
     uri: String,
     /// Loki client
     inner_client: kube_proxy::LokiClient,
-    /// Endpoint of Loki logs service
+    /// Endpoint of Loki logs service.
     logs_endpoint: String,
-    /// Defines period from which logs needs to collect
+    /// Defines period from which logs needs to collect.
     since: SinceTime,
     /// Determines the sort order of logs. Supported values are "forward" or "backward".
     /// Defaults to forward
     direction: LogDirection,
-    /// maximum number of entries to return on one http call
+    /// Maximum number of entries to return on one http call.
     limit: u64,
     /// Tenant id to be used for querying.
     tenant_id: String,
 }
 
 impl LokiClient {
-    /// Instantiate new instance of Http Loki client
+    /// Instantiate new instance of Http Loki client.
     pub(crate) async fn new(
         uri: Option<String>,
         kubeconfig_args: crate::KubeConfigArgs,
