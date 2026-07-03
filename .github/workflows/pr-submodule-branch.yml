@@ -14,14 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'merge_group'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         env:
           checkout_token: ${{ secrets.ORG_CI_GITHUB }}
         if: ${{ env.checkout_token == '' }}
         with:
           fetch-depth: 0
           submodules: recursive
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         env:
           checkout_token: ${{ secrets.ORG_CI_GITHUB }}
         if: ${{ env.checkout_token != '' }}

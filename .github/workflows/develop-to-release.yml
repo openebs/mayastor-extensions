@@ -7,7 +7,7 @@ jobs:
   prepareReleaseBranch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-nix
         with:
           preFetchNix: ./scripts/helm/shell.nix
@@ -27,7 +27,7 @@ jobs:
           nix-shell ./scripts/helm/shell.nix --pure --run "./scripts/helm/images.sh patch"
       - name: Create Pull Request
         id: cpr
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "chore(ci): update helm chart versions and/or git submodules"
           committer: GitHub <noreply@github.com>
