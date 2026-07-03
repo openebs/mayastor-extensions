@@ -30,6 +30,7 @@ const SPEC: &str = "spec";
 pub enum K8sResourceError {
     ClientConfigError(kube::config::KubeconfigError),
     InferConfigError(kube::config::InferConfigError),
+    InClusterError(kube::config::InClusterError),
     ClientError(kube::Error),
     ResourceError(Box<dyn std::error::Error>),
     CustomError(String),
@@ -44,6 +45,12 @@ impl From<kube::config::KubeconfigError> for K8sResourceError {
 impl From<kube::config::InferConfigError> for K8sResourceError {
     fn from(e: kube::config::InferConfigError) -> K8sResourceError {
         K8sResourceError::InferConfigError(e)
+    }
+}
+
+impl From<kube::config::InClusterError> for K8sResourceError {
+    fn from(e: kube::config::InClusterError) -> K8sResourceError {
+        K8sResourceError::InClusterError(e)
     }
 }
 
@@ -91,7 +98,13 @@ impl ClientSet {
                     .map_err(|e| -> K8sResourceError { e.into() })?;
                 kube::Config::from_custom_kubeconfig(kube_config, &kubeconfig.opts).await?
             }
-            None => kube::Config::from_kubeconfig(&kubeconfig.opts).await?,
+            None => {
+                if std::env::var("KUBERNETES_SERVICE_HOST").is_ok() {
+                    kube::Config::incluster()?
+                } else {
+                    kube::Config::from_kubeconfig(&kubeconfig.opts).await?
+                }
+            }
         };
         let client = Client::try_from(config)?;
         Ok(Self { client, namespace })
