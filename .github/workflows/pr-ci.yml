@@ -11,7 +11,7 @@ on:
       - staging
       - trying
   pull_request:
-    types: ['opened', 'edited', 'reopened', 'synchronize']
+    types: ['opened', 'reopened', 'synchronize']
   merge_group:
 
 jobs:

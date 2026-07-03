@@ -1,0 +1,9 @@
+name: CI
+on:
+  pull_request:
+    types: ['edited']
+
+jobs:
+  ci:
+    if: github.actor != 'mergify[bot]'
+    uses: ./.github/workflows/pr-ci.yml
