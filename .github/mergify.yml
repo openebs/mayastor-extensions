@@ -11,6 +11,7 @@ queue_rules:
     merge_conditions:
       - check-success = ci
       - check-success = submodule-branch
+      - -label ~= do-not-merge
     queue_conditions:
       - check-success = commitlint
       - check-success = submodule-branch
@@ -18,8 +19,13 @@ queue_rules:
       - check-success = helm-ci / helm-chart-test
       - check-success = int-ci / int-tests
       - check-success = lint-ci / linter
+      - -label ~= do-not-merge
+      - -draft
+      - check-success = DCO
+    batch_max_wait_time: 15s
 merge_queue:
   max_parallel_checks: 2
+  status_comments: outcomes
 merge_protections_settings:
   reporting_method: check-runs
 pull_request_rules:
