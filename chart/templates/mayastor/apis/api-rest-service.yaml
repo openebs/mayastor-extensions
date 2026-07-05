@@ -7,6 +7,7 @@ metadata:
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
     {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
 spec:
+  {{- include "service_ip_family" . | nindent 2 }}
   type: {{ .Values.apis.rest.service.type }}
   selector:
     app: api-rest

@@ -65,6 +65,8 @@ earlyEvictionTolerations:
 # If any component has tolerations set, then it would override this value.
 # For external components like etcd, jaeger and loki, tolerations can only be set at component level.
 tolerations: [ ]
+# -- IP family for services and bind addresses. Valid values: "ipv4", "ipv6", "both" (default).
+ipFamily: "both"
 base:
   # -- Request timeout for rest & core agents
   default_req_timeout: 5s
