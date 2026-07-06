@@ -2,6 +2,7 @@ queue_rules:
   - name: default
     update_method: rebase
     branch_protection_injection_mode: merge
+    update_bot_account: openebs-ci
     commit_message_format:
       title: inherit
       body: pr-body
