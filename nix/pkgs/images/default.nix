@@ -21,7 +21,7 @@ let
       enableFakechroot = fakeRootCommands != "";
       created = "now";
       name = "${repo-org}/${img_prefix}-${pname}${image_suffix.${buildType}}";
-      contents = [ package ] ++ copyToRoot;
+      contents = [ package pkgs.cacert ] ++ copyToRoot;
       config = {
         Entrypoint = [ package.binary ];
       } // config;
