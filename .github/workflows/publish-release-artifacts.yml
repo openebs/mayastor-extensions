@@ -16,7 +16,7 @@ jobs:
           echo "Latest published version:$LATEST_VERSION"
           echo "ShouldUpdateKrew:"${{ !github.event.release.prerelease && (steps.latest-release.outputs.latestTag == github.event.release.tag_name) }}
           echo "latestTag=$LATEST_VERSION" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Download Artifacts
         run: |
           echo "Release Tag: ${{ github.event.release.tag_name }}"
@@ -31,4 +31,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.ORG_CI_GITHUB }}
       - name: Update krew index
         if: ${{ !github.event.release.prerelease && (steps.latest-release.outputs.latestTag == github.event.release.tag_name) }}
-        uses: rajatjindal/krew-release-bot@v0.0.47
+        uses: rajatjindal/krew-release-bot@v0.0.51
