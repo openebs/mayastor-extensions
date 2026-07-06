@@ -50,7 +50,7 @@ spec:
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.global.imagePullPolicy }}
           args:
             - "--csi-socket=/var/lib/csi/sockets/pluginproxy/csi.sock"
-            - "--rest-endpoint=http://{{ .Release.Name }}-api-rest:8081"{{ if .Values.base.jaeger.enabled }}
+            - "--rest-endpoint={{ include "rest_api_endpoint" . }}"{{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ include "jaeger_url" . }}"{{ end }}
             {{- range $key, $val := .Values.csi.node.topology.segments }}
             - "--node-selector={{ $key }}={{ $val }}"
@@ -59,6 +59,7 @@ spec:
             - "--fmt-style={{ include "logFormat" . }}"
             - "--create-volume-limit={{ .Values.csi.controller.maxCreateVolume }}"
             - "--enable-orphan-vol-gc={{- .Values.csi.controller.enableDangerousRetainGC | default false }}"
+            {{- include "rest_api_tls_client_args" . | nindent 12 }}
           env:
             - name: RUST_LOG
               value: {{ .Values.csi.controller.logLevel }}
@@ -69,6 +70,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+            {{- include "rest_api_tls_client_volume_mount" . | nindent 12 }}
         - name: csi-provisioner
           image: "{{ default .Values.csi.image.registry .Values.global.imageRegistry }}/{{ .Values.csi.image.repo }}/csi-provisioner:{{ .Values.csi.image.provisionerTag }}"
           args:
@@ -140,3 +142,4 @@ spec:
       volumes:
         - name: socket-dir
           emptyDir:
+        {{- include "rest_api_tls_client_volume" (dict "ctx" . "secretName" (include "rest_api_tls_csi_controller_client_secret_name" .)) | nindent 8 }}
