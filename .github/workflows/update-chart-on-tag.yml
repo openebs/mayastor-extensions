@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.ref_type == 'tag' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-nix
@@ -30,7 +30,7 @@ jobs:
           nix-shell --pure --run "SKIP_GIT=1 ./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix
       - name: Create Pull Request
         id: cpr
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "chore(ci): update future helm chart versions"
           committer: GitHub <noreply@github.com>

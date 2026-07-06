@@ -39,7 +39,7 @@ jobs:
             arch: x86_64
             suffix: .exe
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         env:
           checkout_token: ${{ secrets.ORG_CI_GITHUB }}
         if: ${{ env.checkout_token == '' }}
@@ -47,7 +47,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         env:
           checkout_token: ${{ secrets.ORG_CI_GITHUB }}
         if: ${{ env.checkout_token != '' }}
@@ -75,7 +75,7 @@ jobs:
           # NOTE: Update the .krew.yaml file (if required) when making changes here.
           tar -czvf kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.tar.gz LICENSE -C result/bin kubectl-mayastor${{ matrix.suffix }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}
           path: kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.tar.gz

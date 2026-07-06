@@ -17,7 +17,7 @@ jobs:
     if: ${{ inputs.trigger != 'try' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: 'recursive'
       - uses: ./.github/actions/setup-nix
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.trigger == 'pull_request' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - uses: ./.github/actions/setup-nix
@@ -51,7 +51,7 @@ jobs:
     runs-on: oracle-vm-8cpu-32gb-x86-64
     if: ${{ inputs.trigger != 'pull_request' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - uses: ./.github/actions/setup-nix
@@ -60,7 +60,7 @@ jobs:
       - name: Generate image list
         run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh generate --dependency-update --exit-code"
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         if: ${{ env.DOCKERHUB_USERNAME != '' }}
