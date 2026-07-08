@@ -47,6 +47,7 @@ spec:
             - "--jetstream-enabled={{ .Values.nats.nats.jetstream.enabled }}"
             - "--loki-enabled={{ .Values.loki.enabled }}"
             - "--subject-filter=events.>"
+            - "--events-replicas={{ include "events_replicas" . }}"
             {{- if not .Values.loki.enabled }}
             - "--events-dir=/var/events"
             - "--dir-size-limit={{ .Values.eventing.aggregator.dirSizeLimit }}"

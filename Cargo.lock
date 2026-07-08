@@ -1161,6 +1161,7 @@ dependencies = [
  "async-nats",
  "clap",
  "event-consumer",
+ "events-api",
  "humantime",
  "parse-size",
  "rand",

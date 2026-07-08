@@ -4,13 +4,17 @@ use async_nats::jetstream::message::AckKind;
 use clap::Parser;
 use constant::CHANNEL_CAPACITY;
 use event_consumer::{ConsumerConfig, ConsumerError, NatsConsumer, UnifiedMessage};
+use events_api::event::EventMessage;
 use exporter::{dir_size_limit, LogEvent};
-use serde_json::Value;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 use url::Url;
-use utils::{package_description, tracing_telemetry::TracingTelemetry, version_info_string};
+use utils::{
+    package_description,
+    tracing_telemetry::{FmtStyle, TracingTelemetry},
+    version_info_string,
+};
 
 /// Result of message processing.
 /// `Ok` = successfully processed, ACK the message
@@ -60,6 +64,14 @@ struct CliArgs {
     /// Timeout for NATS request/response operations.
     #[arg(long, default_value = "10s", value_parser = humantime::parse_duration)]
     nats_request_timeout: Duration,
+
+    /// Timeout for each JetStream setup probe (stream/consumer discovery during startup).
+    #[arg(long, default_value = "3s", value_parser = humantime::parse_duration)]
+    jetstream_setup_timeout: Duration,
+
+    /// Number of JetStream stream replicas. Must match the NATS cluster size.
+    #[arg(long, default_value_t = 1)]
+    events_replicas: usize,
 }
 
 impl CliArgs {
@@ -70,7 +82,9 @@ impl CliArgs {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    TracingTelemetry::builder().init(constant::SERVICE_NAME);
+    TracingTelemetry::builder()
+        .with_style(FmtStyle::Compact)
+        .init(constant::SERVICE_NAME);
     let cli_args = CliArgs::args();
 
     let (tx, rx) = mpsc::channel::<UnifiedMessage>(CHANNEL_CAPACITY);
@@ -89,6 +103,8 @@ async fn main() -> anyhow::Result<()> {
         connection_timeout: cli_args.nats_connection_timeout,
         request_timeout: cli_args.nats_request_timeout,
         jetstream_consumer_name: constant::JETSTREAM_CONSUMER_NAME.to_string(),
+        jetstream_setup_timeout: cli_args.jetstream_setup_timeout,
+        jetstream_stream_replicas: cli_args.events_replicas,
         ..ConsumerConfig::default()
     };
 
@@ -213,10 +229,17 @@ fn process_message(
     payload_bytes: &[u8],
     tx_exporter: Option<&mpsc::Sender<LogEvent>>,
 ) -> ProcessingResult {
-    let json_payload = match serde_json::from_slice::<Value>(payload_bytes) {
+    let event_message = match serde_json::from_slice::<EventMessage>(payload_bytes) {
         Ok(v) => v,
         Err(e) => {
             warn!(subject = %subject_str, error = %e, "Received non-JSON event payload; discarding");
+            return ProcessingResult::PermanentFailure;
+        }
+    };
+    let json_payload = match serde_json::to_value(&event_message) {
+        Ok(v) => v,
+        Err(e) => {
+            warn!(subject = %subject_str, error = %e, "Failed to re-serialize event message");
             return ProcessingResult::PermanentFailure;
         }
     };
