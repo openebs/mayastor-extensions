@@ -17,7 +17,7 @@ on:
 
 jobs:
   k8s-ci:
-    runs-on: oracle-vm-8cpu-32gb-x86-64
+    runs-on: cncf-ubuntu-8-32-x86
     steps:
       - uses: actions/checkout@v7
         with:
