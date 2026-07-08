@@ -13,6 +13,8 @@ use std::path::PathBuf;
 pub mod collect;
 pub mod operations;
 
+pub use collect::logs::{LokiClient, LokiError};
+
 /// Collects state & log information of mayastor services running in the system and dump them.
 #[derive(Debug, Clone, clap::Args)]
 pub struct SupportArgs {

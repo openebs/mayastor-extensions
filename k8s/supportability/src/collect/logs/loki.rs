@@ -120,7 +120,7 @@ impl LogDirection {
 /// Http client to interact with Loki (a log management system)
 /// to fetch historical log information.
 #[derive(Debug)]
-pub(crate) struct LokiClient {
+pub struct LokiClient {
     /// Address of Loki service.
     uri: String,
     /// Loki client
@@ -132,15 +132,18 @@ pub(crate) struct LokiClient {
     /// Determines the sort order of logs. Supported values are "forward" or "backward".
     /// Defaults to forward
     direction: LogDirection,
-    /// Maximum number of entries to return on one http call.
+    /// Maximum number of entries to return per HTTP request (page size).
     limit: u64,
     /// Tenant id to be used for querying.
     tenant_id: String,
+    /// LogQL pipeline filter expressions appended after the stream selector,
+    /// e.g. `vec!["| json", "| payload_category=\"Volume\""]`.
+    logql_filters: Vec<String>,
 }
 
 impl LokiClient {
     /// Instantiate new instance of Http Loki client.
-    pub(crate) async fn new(
+    pub async fn new(
         uri: Option<String>,
         kubeconfig_args: crate::KubeConfigArgs,
         namespace: String,
@@ -205,7 +208,80 @@ impl LokiClient {
             direction: LogDirection::Forward,
             limit: 3000,
             tenant_id,
+            logql_filters: vec![],
         })
+    }
+
+    /// Set LogQL pipeline filter expressions appended after the stream selector.
+    /// Each entry is a full pipeline stage string, e.g. `"| json"` or
+    /// `"| payload_category=\"Volume\""`. Stages are appended in order.
+    pub fn with_logql_filters(mut self, filters: Vec<String>) -> Self {
+        self.logql_filters = filters;
+        self
+    }
+
+    /// Override the per-request page size (default: 3000).
+    /// This controls how many log entries Loki returns in a single HTTP call.
+    /// Use `fetch_lines()` to enforce a total result cap across pages.
+    pub fn with_page_size(mut self, page_size: u64) -> Self {
+        self.limit = page_size;
+        self
+    }
+
+    /// Fetch raw log lines from Loki for the given label selector and container,
+    /// applying any `logql_filters` set via `with_logql_filters()`.
+    ///
+    /// Paginates automatically using the per-request page size set on this client
+    /// (default 3000, overridable via `with_page_size()`).
+    ///
+    /// `limit` is the maximum total number of lines to return across all pages —
+    /// it is a caller-enforced ceiling, not the Loki page size. Pass `0` to
+    /// fetch all available lines with no cap.
+    ///
+    /// Returns one string per log line, in forward time order.
+    pub async fn fetch_lines(
+        &mut self,
+        label_selector: String,
+        container_name: String,
+        limit: usize,
+    ) -> Result<Vec<String>, LokiError> {
+        let label_filters = label_selector_to_logql(&label_selector);
+
+        let mut query_field = format!("{{{label_filters},container=\"{container_name}\"}}");
+        for filter in &self.logql_filters {
+            query_field.push_str(filter);
+        }
+
+        let encoded_query = urlencoding::encode(&query_field).into_owned();
+
+        let mut poller = LokiPoll {
+            uri: self.uri.clone(),
+            endpoint: self.logs_endpoint.clone(),
+            since: self.since,
+            encoded_query,
+            page_size: self.limit,
+            next_start_epoch_timestamp: 0,
+            client: self,
+        };
+
+        let mut lines = Vec::with_capacity(limit);
+        loop {
+            if limit > 0 {
+                // Cap the page size to how many lines we still need so we don't
+                // ask Loki for more entries than the caller wants.
+                poller.page_size = poller.page_size.min((limit - lines.len()) as u64);
+            }
+            match poller.poll_next().await? {
+                Some(batch) => {
+                    lines.extend(batch);
+                    if limit > 0 && lines.len() >= limit {
+                        return Ok(lines);
+                    }
+                }
+                None => break,
+            }
+        }
+        Ok(lines)
     }
 
     /// fetch_and_dump_logs will do the following steps:
@@ -219,21 +295,7 @@ impl LokiClient {
         host_name: Option<String>,
         service_dir: PathBuf,
     ) -> Result<(), LokiError> {
-        // Build query params: Convert label selector into Loki supported query field
-        // Below snippet convert app=mayastor,openebs.io/storage=mayastor into
-        //  app="mayastor",openebs_io_storage="mayastor"(Loki supported values)
-        let mut label_filters: String = label_selector
-            .split(',')
-            .map(|key_value_pair| {
-                let pairs = key_value_pair.split('=').collect::<Vec<&str>>();
-                format!("{}=\"{}\",", pairs[0], pairs[1])
-                    .replace('.', "_")
-                    .replace('/', "_")
-            })
-            .collect::<String>();
-        if !label_filters.is_empty() {
-            label_filters.pop();
-        }
+        let label_filters = label_selector_to_logql(&label_selector);
         let (file_name, new_query_field) = match host_name {
             Some(host_name) => {
                 let file_name = format!("{host_name}-{SERVICE_NAME}-{container_name}.log");
@@ -248,19 +310,14 @@ impl LokiClient {
                 (file_name, new_query_field)
             }
         };
-        let encoded_query = urlencoding::encode(&new_query_field);
-        let query_params = format!(
-            "?query={}&limit={}&direction={}",
-            encoded_query,
-            self.limit,
-            self.direction.as_string()
-        );
+        let encoded_query = urlencoding::encode(&new_query_field).into_owned();
 
         let mut poller = LokiPoll {
             uri: self.uri.clone(),
             endpoint: self.logs_endpoint.clone(),
             since: self.since,
-            query_params,
+            encoded_query,
+            page_size: self.limit,
             next_start_epoch_timestamp: 0,
             client: self,
         };
@@ -297,6 +354,20 @@ impl LokiClient {
     }
 }
 
+/// Convert a Kubernetes label selector string into a comma-separated list of
+/// Loki label matchers, e.g. `"app=io-engine,openebs.io/logging=true"` becomes
+/// `app="io-engine",openebs_io_logging="true"`.
+fn label_selector_to_logql(selector: &str) -> String {
+    selector
+        .split(',')
+        .filter_map(|kv| {
+            let (k, v) = kv.split_once('=')?;
+            Some(format!("{}=\"{}\"", k.replace(['.', '/'], "_"), v))
+        })
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
 fn get_epoch_unix_time(since: humantime::Duration) -> SinceTime {
     // should be ok for ~584 years since epoch
     let timestamp = Utc::now()
@@ -310,7 +381,11 @@ struct LokiPoll<'a> {
     uri: String,
     endpoint: String,
     since: SinceTime,
-    query_params: String,
+    /// URL-encoded LogQL expression (without limit/direction).
+    encoded_query: String,
+    /// Number of entries to request from Loki per HTTP call.
+    /// Updated before each call in `fetch_lines` to avoid over-fetching.
+    page_size: u64,
     next_start_epoch_timestamp: SinceTime,
 }
 
@@ -325,9 +400,15 @@ impl<'a> LokiPoll<'a> {
         if self.next_start_epoch_timestamp != 0 {
             start_time = self.since;
         }
+        let query_params = format!(
+            "?query={}&limit={}&direction={}",
+            self.encoded_query,
+            self.page_size,
+            self.client.direction.as_string(),
+        );
         let request_str = format!(
             "{}{}{}&start={}",
-            self.uri, self.endpoint, self.query_params, start_time
+            self.uri, self.endpoint, query_params, start_time
         );
 
         // TODO: Test timeouts when Loki service is dropped unexpectedly
