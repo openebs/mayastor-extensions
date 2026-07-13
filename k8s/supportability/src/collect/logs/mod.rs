@@ -1,6 +1,8 @@
 mod k8s_log;
 mod loki;
 
+pub use loki::{LokiClient, LokiError};
+
 use crate::collect::{
     k8s_resources::client::{ClientSet, K8sResourceError},
     logs::k8s_log::{K8sLoggerClient, K8sLoggerError},
