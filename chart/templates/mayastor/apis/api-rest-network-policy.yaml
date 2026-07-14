@@ -1,4 +1,4 @@
-{{- if .Values.security.tls.enabled }}
+{{- if .Values.security.networkPolicy.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -15,7 +15,14 @@ spec:
   policyTypes:
     - Ingress
   ingress:
+    # Allow inbound traffic
     - ports:
+        # Allow HTTPS traffic
         - port: 8080
           protocol: TCP
+    {{- if not .Values.security.tls.enabled }}
+        # Allow HTTP traffic
+        - port: 8081
+          protocol: TCP
+    {{- end }}
 {{- end }}

@@ -87,6 +87,10 @@ security:
         # -- Default renewal window for leaf certificates.
         # Can be overridden per service (e.g. apis.rest.security.tls.certManager.renewBefore).
         renewBefore: "360h"
+  networkPolicy:
+    # -- Enables Kubernetes NetworkPolicy for the REST API service.
+    # -- When enabled, the NetworkPolicy will block all HTTP traffic to the REST API service.
+    enabled: true
 
 # -- Node labels for pod assignment
 # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
@@ -176,7 +180,7 @@ base:
     enabled: true
     initContainer:
       - name: api-rest-probe
-        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-api-rest 8081; do date; echo "Waiting for REST API endpoint to become available"; sleep 1; done;' ]
+        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-api-rest {{ if .Values.security.tls.enabled }}8080{{ else }}8081{{ end }}; do date; echo "Waiting for REST API endpoint to become available"; sleep 1; done;' ]
 
 operators:
   pool:
