@@ -1,5 +1,8 @@
 mod diskpool_cleanup;
+mod events;
 mod io_engine_label_check;
+
+pub use events::EventsArgs;
 
 use anyhow::anyhow;
 use clap::Parser;
@@ -124,6 +127,8 @@ pub enum GetResourcesK8s {
     Rest(GetResources),
     /// Get upgrade status
     UpgradeStatus(GetUpgradeArgs),
+    /// Get events from the events-aggregator (Loki source)
+    Events(EventsArgs),
 }
 
 /// The types of operations that are supported.
@@ -252,6 +257,16 @@ impl ExecuteOperation for Operations {
                     // todo: use generic execute trait
                     let client = cli_args.client().await?;
                     resources.get_upgrade(&cli_args.namespace, &client).await?
+                }
+                GetResourcesK8s::Events(args) => {
+                    args.get_events(
+                        &cli_args.namespace,
+                        cli_args.kubeconfig.clone(),
+                        cli_args.context.clone(),
+                        cli_args.timeout,
+                        &cli_args.output,
+                    )
+                    .await?
                 }
             },
             Operations::Drain(resource) => resource.execute(cli_args).await?,
