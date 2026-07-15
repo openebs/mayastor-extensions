@@ -78,3 +78,5 @@ prometheus = "0.13.4"
 mime = "0.3.17"
 prometheus-parse = "0.2.5"
 heck = "0.5.0"
+events-api = { path = "dependencies/control-plane/utils/dependencies/apis/events" }
+prettytable-rs = "0.10.0"

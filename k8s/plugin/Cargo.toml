@@ -24,6 +24,9 @@ constants = { path = "../../constants" }
 rest-plugin = { path = "../../dependencies/control-plane/control-plane/plugin", default-features = false }
 supportability = { path = "../supportability" }
 upgrade = { path = "../upgrade" }
+events-api = { workspace = true }
+prettytable-rs = { workspace = true }
+strum = { workspace = true }
 shutdown = { path = "../../dependencies/control-plane/utils/shutdown" }
 
 kube = { workspace = true, features = ["derive", "runtime"] }
