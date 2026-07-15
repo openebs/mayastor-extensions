@@ -1,4 +1,4 @@
-mod diskpool_cleanup;
+pub mod diskpool_cleanup;
 mod events;
 mod io_engine_label_check;
 
@@ -175,14 +175,14 @@ pub enum Operations {
 pub struct DeleteArgs {
     /// Ignore error if resource is not found.
     #[clap(long, short, global = true)]
-    ignore_not_found: bool,
+    pub ignore_not_found: bool,
 
     /// Automatically confirm and assume yes for all prompts.
     #[clap(long, short, global = true)]
     pub yes: bool,
 
     #[clap(subcommand)]
-    resource: DeleteResources,
+    pub resource: DeleteResources,
 }
 
 /// The type of resources which support the delete operation.
@@ -216,6 +216,12 @@ pub struct CleanupDspArgs {
     /// Timeout per DiskPool CR deletion when using --cleanup-dsp.
     #[clap(long, default_value = "60s")]
     pub cleanup_dsp_timeout: humantime::Duration,
+
+    /// Skip the DiskPool CR cleanup step.
+    /// When set, the REST pool/node delete still runs but the DiskPool CR deletion is skipped.
+    /// Intended for downstream plugins that handle CR cleanup themselves.
+    #[clap(skip)]
+    pub skip_dsp_cr_cleanup: bool,
 }
 
 /// Arguments for deleting a pool.
@@ -225,10 +231,10 @@ pub struct CleanupDspArgs {
 #[derive(Debug, Clone, clap::Args)]
 pub struct PoolDeleteArgs {
     #[clap(flatten)]
-    rest_args: pool::DeletePoolArgs,
+    pub rest_args: pool::DeletePoolArgs,
 
     #[clap(flatten)]
-    cleanup: CleanupDspArgs,
+    pub cleanup: CleanupDspArgs,
 }
 
 /// Arguments for deleting a node.
@@ -239,10 +245,10 @@ pub struct PoolDeleteArgs {
 #[derive(Debug, Clone, clap::Args)]
 pub struct NodeDeleteArgs {
     #[clap(flatten)]
-    rest_args: node::DeleteNodeArgs,
+    pub rest_args: node::DeleteNodeArgs,
 
     #[clap(flatten)]
-    cleanup: CleanupDspArgs,
+    pub cleanup: CleanupDspArgs,
 }
 
 #[async_trait::async_trait(?Send)]
@@ -349,16 +355,19 @@ impl ExecuteOperation for Operations {
                             }) if source.status() == Some(StatusCode::NOT_FOUND) => false,
                             _ => return rest_result.map_err(Into::into),
                         };
-                        let client = cli_args.client().await?;
-                        diskpool_cleanup::cleanup_dsp(
-                            client,
-                            &cli_args.namespace,
-                            &pool_args.rest_args.pool_id,
-                            pool_args.cleanup.cleanup_dsp_timeout,
-                            pool_deleted,
-                            args.ignore_not_found,
-                        )
-                        .await?;
+
+                        if !pool_args.cleanup.skip_dsp_cr_cleanup {
+                            let client = cli_args.client().await?;
+                            diskpool_cleanup::cleanup_dsp(
+                                client,
+                                &cli_args.namespace,
+                                &pool_args.rest_args.pool_id,
+                                pool_args.cleanup.cleanup_dsp_timeout,
+                                pool_deleted,
+                                args.ignore_not_found,
+                            )
+                            .await?;
+                        }
                     }
                     DeleteResources::Node(node_args) if !node_args.cleanup.cleanup_dsp => {
                         // Pre-flight: refuse if the io-engine DaemonSet would
@@ -422,44 +431,48 @@ impl ExecuteOperation for Operations {
                         // List DiskPool CRs directly from Kubernetes so the
                         // lookup works even when the node spec or pool specs
                         // are already gone from the control plane.
-                        let pool_ids = diskpool_cleanup::list_diskpool_ids_for_node(
-                            client.clone(),
-                            &cli_args.namespace,
-                            node_id,
-                        )
-                        .await
-                        .map_err(|e| {
-                            anyhow!("Failed to list DiskPool CR(s) for node {node_id}: {e}")
-                        })?;
+                        if !node_args.cleanup.skip_dsp_cr_cleanup {
+                            let pool_ids = diskpool_cleanup::list_diskpool_ids_for_node(
+                                client.clone(),
+                                &cli_args.namespace,
+                                node_id,
+                            )
+                            .await
+                            .map_err(|e| {
+                                anyhow!("Failed to list DiskPool CR(s) for node {node_id}: {e}")
+                            })?;
 
-                        // Spawn one task per pool so all DSP CR deletions run
-                        // concurrently. kube::Client is Arc-backed, cheap to clone.
-                        let namespace = cli_args.namespace.clone();
-                        let timeout = node_args.cleanup.cleanup_dsp_timeout;
-                        let ignore_not_found = args.ignore_not_found;
-                        let mut tasks = tokio::task::JoinSet::new();
+                            // Spawn one task per pool so all DSP CR deletions run
+                            // concurrently. kube::Client is Arc-backed, cheap to clone.
+                            let namespace = cli_args.namespace.clone();
+                            let timeout = node_args.cleanup.cleanup_dsp_timeout;
+                            let ignore_not_found = args.ignore_not_found;
+                            let mut tasks = tokio::task::JoinSet::new();
 
-                        for pool_id in pool_ids {
-                            let client = client.clone();
-                            let namespace = namespace.clone();
-                            tasks.spawn(async move {
-                                diskpool_cleanup::cleanup_dsp(
-                                    client,
-                                    &namespace,
-                                    pool_id.as_str(),
-                                    timeout,
-                                    node_deleted,
-                                    ignore_not_found,
-                                )
-                                .await
-                            });
-                        }
+                            for pool_id in pool_ids {
+                                let client = client.clone();
+                                let namespace = namespace.clone();
+                                tasks.spawn(async move {
+                                    diskpool_cleanup::cleanup_dsp(
+                                        client,
+                                        &namespace,
+                                        pool_id.as_str(),
+                                        timeout,
+                                        node_deleted,
+                                        ignore_not_found,
+                                    )
+                                    .await
+                                });
+                            }
 
-                        // Collect all results; first error cancels the rest.
-                        while let Some(result) = tasks.join_next().await {
-                            result.map_err(|e| {
-                                anyhow!("Failed to delete DiskPool CR(s) for node {node_id}: {e}")
-                            })??;
+                            // Collect all results; first error cancels the rest.
+                            while let Some(result) = tasks.join_next().await {
+                                result.map_err(|e| {
+                                    anyhow!(
+                                        "Failed to delete DiskPool CR(s) for node {node_id}: {e}"
+                                    )
+                                })??;
+                            }
                         }
                     }
                     DeleteResources::Volume { id } => {
