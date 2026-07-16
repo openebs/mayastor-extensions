@@ -11,6 +11,7 @@ serde_json = { workspace = true }
 tracing = { workspace = true }
 anyhow = { workspace = true }
 parse-size = { workspace = true }
+chrono = { workspace = true }
 rand = { workspace = true }
 clap = { workspace = true }
 url = { workspace = true }

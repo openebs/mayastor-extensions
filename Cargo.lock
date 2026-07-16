@@ -1159,6 +1159,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-nats",
+ "chrono",
  "clap",
  "event-consumer",
  "events-api",
@@ -2255,6 +2256,7 @@ dependencies = [
  "tokio",
  "upgrade",
  "utils",
+ "uuid",
 ]
 
 [[package]]

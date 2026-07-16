@@ -29,7 +29,7 @@ prettytable-rs = { workspace = true }
 strum = { workspace = true }
 shutdown = { path = "../../dependencies/control-plane/utils/shutdown" }
 
-kube = { workspace = true, features = ["derive", "runtime"] }
+kube = { workspace = true, features = ["derive", "runtime", "ws"] }
 k8s-openapi = { workspace = true }
 kube-proxy = { path = "../../dependencies/control-plane/k8s/proxy" }
 kube-forward = { path = "../../dependencies/control-plane/k8s/forward" }
@@ -48,4 +48,5 @@ parse-size = { workspace = true }
 strum_macros = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+uuid = { workspace = true }
 schemars = { workspace = true }
