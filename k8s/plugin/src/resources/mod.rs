@@ -220,6 +220,10 @@ pub struct CleanupDspArgs {
     /// Skip the DiskPool CR cleanup step.
     /// When set, the REST pool/node delete still runs but the DiskPool CR deletion is skipped.
     /// Intended for downstream plugins that handle CR cleanup themselves.
+    /// # Note
+    /// The downstream plugin also owns the not-found semantics: a REST delete NOT_FOUND is
+    /// propagated out of `execute()` (rather than swallowed), letting the caller map it to
+    /// "resource spec already deleted" and carry on with its own CR cleanup.
     #[clap(skip)]
     pub skip_dsp_cr_cleanup: bool,
 }
@@ -322,7 +326,11 @@ impl ExecuteOperation for Operations {
                         let client = cli_args.client().await?;
                         res.delete(&cli_args.namespace, &client).await?
                     }
-                    DeleteResources::Pool(pool_args) if !pool_args.cleanup.cleanup_dsp => {
+                    // --show-impact only reports what a purge would do, so never
+                    // follow it up with the DiskPool CR cleanup.
+                    DeleteResources::Pool(pool_args)
+                        if !pool_args.cleanup.cleanup_dsp || pool_args.rest_args.show_impact =>
+                    {
                         // No cleanup — delegate entirely like Volume/VolumeSnapshot.
                         plugin::resources::DeleteArgs {
                             ignore_not_found: args.ignore_not_found,
@@ -349,10 +357,16 @@ impl ExecuteOperation for Operations {
 
                         let pool_deleted = match &rest_result {
                             Ok(()) => true,
+                            // When a downstream plugin owns the CR cleanup, it also owns the
+                            // not-found semantics — propagate the NOT_FOUND to it.
                             Err(plugin::resources::error::Error::DeletePoolError {
                                 source,
                                 ..
-                            }) if source.status() == Some(StatusCode::NOT_FOUND) => false,
+                            }) if source.status() == Some(StatusCode::NOT_FOUND)
+                                && !pool_args.cleanup.skip_dsp_cr_cleanup =>
+                            {
+                                false
+                            }
                             _ => return rest_result.map_err(Into::into),
                         };
 
@@ -369,7 +383,11 @@ impl ExecuteOperation for Operations {
                             .await?;
                         }
                     }
-                    DeleteResources::Node(node_args) if !node_args.cleanup.cleanup_dsp => {
+                    // --show-impact only reports what a purge would do, so never
+                    // follow it up with the DiskPool CR cleanup.
+                    DeleteResources::Node(node_args)
+                        if !node_args.cleanup.cleanup_dsp || node_args.rest_args.show_impact =>
+                    {
                         // Pre-flight: refuse if the io-engine DaemonSet would
                         // still schedule onto this Kubernetes Node.
                         io_engine_label_check::ensure_node_unlabelled(
@@ -421,10 +439,16 @@ impl ExecuteOperation for Operations {
 
                         let node_deleted = match &rest_result {
                             Ok(()) => true,
+                            // When a downstream plugin owns the CR cleanup, it also owns the
+                            // not-found semantics — propagate the NOT_FOUND to it.
                             Err(plugin::resources::error::Error::DeleteNodeError {
                                 source,
                                 ..
-                            }) if source.status() == Some(StatusCode::NOT_FOUND) => false,
+                            }) if source.status() == Some(StatusCode::NOT_FOUND)
+                                && !node_args.cleanup.skip_dsp_cr_cleanup =>
+                            {
+                                false
+                            }
                             _ => return rest_result.map_err(Into::into),
                         };
 
