@@ -128,7 +128,7 @@ pub enum GetResourcesK8s {
     /// Get upgrade status
     UpgradeStatus(GetUpgradeArgs),
     /// Get events from the events-aggregator (Loki source)
-    Events(EventsArgs),
+    Events(Box<EventsArgs>),
 }
 
 /// The types of operations that are supported.
@@ -255,6 +255,13 @@ pub struct NodeDeleteArgs {
     pub cleanup: CleanupDspArgs,
 }
 
+impl Operations {
+    /// Returns true if this operation requires the REST client to be initialised.
+    pub fn needs_rest_init(&self) -> bool {
+        !matches!(self, Operations::Get(GetResourcesK8s::Events(_)))
+    }
+}
+
 #[async_trait::async_trait(?Send)]
 impl ExecuteOperation for Operations {
     type Args = CliArgs;
@@ -269,10 +276,15 @@ impl ExecuteOperation for Operations {
                     resources.get_upgrade(&cli_args.namespace, &client).await?
                 }
                 GetResourcesK8s::Events(args) => {
+                    let kube_client = cli_args.client().await?;
+                    let kubeconfig_args = supportability::KubeConfigArgs {
+                        path: cli_args.kubeconfig.clone(),
+                        opts: kube_proxy::kubeconfig_options_from_context(cli_args.context.clone()),
+                    };
                     args.get_events(
                         &cli_args.namespace,
-                        cli_args.kubeconfig.clone(),
-                        cli_args.context.clone(),
+                        kube_client,
+                        kubeconfig_args,
                         cli_args.timeout,
                         &cli_args.output,
                     )

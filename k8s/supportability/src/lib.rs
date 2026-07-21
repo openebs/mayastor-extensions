@@ -13,7 +13,10 @@ use std::path::PathBuf;
 pub mod collect;
 pub mod operations;
 
-pub use collect::logs::{LokiClient, LokiError};
+pub use collect::{
+    logs::{LokiClient, LokiError},
+    utils::init_no_log_file,
+};
 
 /// Collects state & log information of mayastor services running in the system and dump them.
 #[derive(Debug, Clone, clap::Args)]

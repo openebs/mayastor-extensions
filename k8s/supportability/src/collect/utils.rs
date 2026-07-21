@@ -38,7 +38,7 @@ pub(crate) fn init_tool_log_file(file_path: PathBuf) -> Result<(), std::io::Erro
     Ok(())
 }
 /// Method to initialise the TOOL_LOG_FILE once cell without a log file.
-pub(crate) fn init_no_log_file() {
+pub fn init_no_log_file() {
     TOOL_LOG_FILE
         .set(None)
         .expect("Expect to be initialised only once");

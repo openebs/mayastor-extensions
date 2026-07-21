@@ -1,5 +1,5 @@
 use plugin::ExecuteOperation;
-use resources::{init_rest, Error, Operations};
+use resources::{Error, Operations};
 
 use clap::Parser;
 use std::{env, ops::Deref, path::PathBuf};
@@ -105,9 +105,9 @@ async fn main() {
 
 impl CliArgs {
     async fn execute(self) -> Result<(), Error> {
-        // Initialise the REST client.
-        init_rest(&self.args).await?;
-
+        if self.operations.needs_rest_init() {
+            resources::init_rest(&self.args).await?;
+        }
         tokio::select! {
             shutdown = shutdown::Shutdown::wait_sig() => {
                 Err(anyhow::anyhow!("Interrupted by {shutdown:?}").into())
