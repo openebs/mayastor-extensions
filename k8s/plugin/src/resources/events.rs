@@ -314,7 +314,10 @@ impl EventsArgs {
         // Sort newest-first.
         records.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
 
-        let truncated = self.limit > 0 && records.len() >= self.limit;
+        let truncated = self.limit > 0 && records.len() > self.limit;
+        if truncated {
+            records.truncate(self.limit);
+        }
 
         if records.is_empty() && output.none() {
             if raw_count == 0 {
