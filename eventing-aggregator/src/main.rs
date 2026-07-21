@@ -6,7 +6,7 @@ use constant::CHANNEL_CAPACITY;
 use event_consumer::{ConsumerConfig, ConsumerError, NatsConsumer, UnifiedMessage};
 use events_api::event::EventMessage;
 use exporter::{dir_size_limit, LogEvent};
-use std::time::Duration;
+use std::{io::BufRead, time::Duration};
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 use url::Url;
@@ -72,6 +72,16 @@ struct CliArgs {
     /// Number of JetStream stream replicas. Must match the NATS cluster size.
     #[arg(long, default_value_t = 1)]
     events_replicas: usize,
+
+    /// Print stored events from --events-dir to stdout and exit.
+    /// No NATS connection is made in this mode. Used by the kubectl plugin to read
+    /// events from the container.
+    #[arg(long, default_value_t = false, requires = "events_dir")]
+    print_events: bool,
+
+    /// Skip events older than this RFC 3339 timestamp. Only used with --print-events.
+    #[arg(long, requires = "print_events")]
+    since: Option<String>,
 }
 
 impl CliArgs {
@@ -82,10 +92,58 @@ impl CliArgs {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let cli_args = CliArgs::args();
+
+    if cli_args.print_events {
+        use chrono::DateTime;
+        use std::hash::{DefaultHasher, Hash, Hasher};
+
+        // requires = "events_dir" guarantees events_dir is Some when print_events is true.
+        let events_dir = cli_args.events_dir.as_deref().unwrap();
+
+        let cutoff: Option<chrono::DateTime<chrono::Utc>> = cli_args
+            .since
+            .as_deref()
+            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+            .map(|t| t.to_utc());
+
+        // HashSet<u64> stores a SipHash of each line rather than the full content,
+        // keeping dedup overhead at ~8 bytes/line regardless of event size.
+        let mut seen = std::collections::HashSet::<u64>::new();
+
+        // Read the active file first: if rotation renames it mid-read, the open fd still
+        // drains the original inode. Then read the rotated file for older events.
+        // In a rotation race the two files may share the same inode; dedup handles it.
+        for filename in [
+            constant::EVENTS_JSON_FILE,
+            constant::EVENTS_JSON_ROTATED_FILE,
+        ] {
+            let path = std::path::Path::new(events_dir).join(filename);
+            if let Ok(file) = std::fs::File::open(&path) {
+                for line in std::io::BufReader::new(file).lines().map_while(Result::ok) {
+                    if let Some(cutoff) = &cutoff {
+                        let ts = extract_timestamp(&line);
+                        if ts.map(|t| t < *cutoff).unwrap_or(false) {
+                            continue;
+                        }
+                    }
+                    let h = {
+                        let mut s = DefaultHasher::new();
+                        line.hash(&mut s);
+                        s.finish()
+                    };
+                    if seen.insert(h) {
+                        println!("{line}");
+                    }
+                }
+            }
+        }
+        return Ok(());
+    }
+
     TracingTelemetry::builder()
         .with_style(FmtStyle::Compact)
         .init(constant::SERVICE_NAME);
-    let cli_args = CliArgs::args();
 
     let (tx, rx) = mpsc::channel::<UnifiedMessage>(CHANNEL_CAPACITY);
 
@@ -279,4 +337,14 @@ fn process_message(
             ProcessingResult::PermanentFailure
         }
     }
+}
+
+// Extract the RFC 3339 timestamp from a stored event line.
+// Lines have the shape: {"type":"mbus_event","payload":{"metadata":{"timestamp":"..."}}}
+fn extract_timestamp(line: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+    let v: serde_json::Value = serde_json::from_str(line).ok()?;
+    let ts_str = v["payload"]["metadata"]["timestamp"].as_str()?;
+    chrono::DateTime::parse_from_rfc3339(ts_str)
+        .ok()
+        .map(|t| t.to_utc())
 }
