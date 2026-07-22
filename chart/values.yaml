@@ -620,6 +620,10 @@ io_engine:
   # -- Pass additional arguments to the Environment Abstraction Layer.
   # Example: --set {product}.envcontext=iova-mode=pa
   envcontext: ""
+  # -- Additional environment variables for the io-engine container.
+  # Uses the Kubernetes EnvVar format.
+  # Do not redefine environment variables already managed by the chart.
+  extraEnv: []
   reactorFreezeDetection:
     enabled: false
   # -- SPDK interrupt mode for io-engine reactors.
