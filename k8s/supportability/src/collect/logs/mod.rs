@@ -233,6 +233,10 @@ impl Logger for LogCollection {
 
         self.get_logging_resources(pods).await
     }
+
+    fn loki_client_mut(&mut self) -> Option<&mut LokiClient> {
+        self.loki_client.as_mut()
+    }
 }
 
 /// Logger contains functionality to interact with service and fetch logs for requested service
@@ -247,6 +251,9 @@ pub(crate) trait Logger {
         &self,
         logging_label_selectors: String,
     ) -> Result<HashSet<LogResource>, LogError>;
+    /// Return a mutable reference to the inner Loki client, if one was successfully connected
+    /// at construction time. Returns `None` when Loki was not found or could not be reached.
+    fn loki_client_mut(&mut self) -> Option<&mut LokiClient>;
 }
 
 /// Creates specified directory path if not already exist

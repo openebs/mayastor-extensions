@@ -28,6 +28,7 @@ constants = { path = "../../constants" }
 
 futures = { workspace = true }
 async-trait = { workspace = true }
+tokio = { workspace = true }
 
 kube = { workspace = true, features = ["derive"] }
 k8s-openapi = { workspace = true }

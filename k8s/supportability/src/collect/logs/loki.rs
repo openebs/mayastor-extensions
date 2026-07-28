@@ -24,6 +24,7 @@ pub enum LokiError {
     Serde(serde_json::Error),
     Hyper(hyper::Error),
     IOError(std::io::Error),
+    InvalidLabelSelector(String),
 }
 
 impl From<http::Error> for LokiError {
@@ -220,6 +221,12 @@ impl LokiClient {
         self
     }
 
+    /// Set LogQL filter expressions appended to every query.
+    /// Replaces any filters set via [`with_logql_filters`](Self::with_logql_filters).
+    pub fn set_logql_filters(&mut self, filters: Vec<String>) {
+        self.logql_filters = filters;
+    }
+
     /// Override the per-request page size (default: 3000).
     /// This controls how many log entries Loki returns in a single HTTP call.
     /// Use `fetch_lines()` to enforce a total result cap across pages.
@@ -245,7 +252,7 @@ impl LokiClient {
         container_name: String,
         limit: usize,
     ) -> Result<Vec<String>, LokiError> {
-        let label_filters = label_selector_to_logql(&label_selector);
+        let label_filters = label_selector_to_logql(&label_selector)?;
 
         let mut query_field = format!("{{{label_filters},container=\"{container_name}\"}}");
         for filter in &self.logql_filters {
@@ -284,6 +291,42 @@ impl LokiClient {
         Ok(lines)
     }
 
+    /// Paginate through all matching log lines and invoke `on_page` for each batch,
+    /// without accumulating the full result set in memory.
+    ///
+    /// Applies any `logql_filters` set via `with_logql_filters()`.
+    /// The callback receives a slice of raw log lines per Loki page and can write them
+    /// directly to disk. The callback's error type must be convertible to `LokiError`.
+    pub async fn fetch_lines_paged<F>(
+        &mut self,
+        label_selector: String,
+        container_name: String,
+        mut on_page: F,
+    ) -> Result<(), LokiError>
+    where
+        F: FnMut(&[String]) -> Result<(), LokiError>,
+    {
+        let label_filters = label_selector_to_logql(&label_selector)?;
+        let mut query_field = format!("{{{label_filters},container=\"{container_name}\"}}");
+        for filter in &self.logql_filters {
+            query_field.push_str(filter);
+        }
+        let encoded_query = urlencoding::encode(&query_field).into_owned();
+        let mut poller = LokiPoll {
+            uri: self.uri.clone(),
+            endpoint: self.logs_endpoint.clone(),
+            since: self.since,
+            encoded_query,
+            page_size: self.limit,
+            next_start_epoch_timestamp: 0,
+            client: self,
+        };
+        while let Some(batch) = poller.poll_next().await? {
+            on_page(&batch)?;
+        }
+        Ok(())
+    }
+
     /// fetch_and_dump_logs will do the following steps:
     /// 1. Creates poller to interact with Loki service based on provided arguments 1.1. Use poller
     ///    to fetch all available logs 1.2. Write fetched logs into file Continue above steps till
@@ -295,7 +338,7 @@ impl LokiClient {
         host_name: Option<String>,
         service_dir: PathBuf,
     ) -> Result<(), LokiError> {
-        let label_filters = label_selector_to_logql(&label_selector);
+        let label_filters = label_selector_to_logql(&label_selector)?;
         let (file_name, new_query_field) = match host_name {
             Some(host_name) => {
                 let file_name = format!("{host_name}-{SERVICE_NAME}-{container_name}.log");
@@ -357,15 +400,20 @@ impl LokiClient {
 /// Convert a Kubernetes label selector string into a comma-separated list of
 /// Loki label matchers, e.g. `"app=io-engine,openebs.io/logging=true"` becomes
 /// `app="io-engine",openebs_io_logging="true"`.
-fn label_selector_to_logql(selector: &str) -> String {
+/// Returns an error if any entry is missing the `=` separator.
+fn label_selector_to_logql(selector: &str) -> Result<String, LokiError> {
     selector
         .split(',')
-        .filter_map(|kv| {
-            let (k, v) = kv.split_once('=')?;
-            Some(format!("{}=\"{}\"", k.replace(['.', '/'], "_"), v))
+        .map(|kv| {
+            let (k, v) = kv.split_once('=').ok_or_else(|| {
+                LokiError::InvalidLabelSelector(format!(
+                    "malformed label selector entry (missing '='): {kv:?}"
+                ))
+            })?;
+            Ok(format!("{}=\"{}\"", k.replace(['.', '/'], "_"), v))
         })
-        .collect::<Vec<_>>()
-        .join(",")
+        .collect::<Result<Vec<_>, _>>()
+        .map(|parts| parts.join(","))
 }
 
 fn get_epoch_unix_time(since: humantime::Duration) -> SinceTime {
