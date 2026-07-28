@@ -3,6 +3,7 @@ use crate::{
         archive, common,
         common::DumpConfig,
         error::Error,
+        events,
         k8s_resources::{client::ClientSet, k8s_resource_dump::K8sResourceDumperClient},
         logs::{LogCollection, Logger},
         persistent_store::etcd::EtcdStore,
@@ -33,6 +34,7 @@ pub struct SystemDumper {
     k8s_resource_dumper: K8sResourceDumperClient,
     etcd_dumper: Option<EtcdStore>,
     logging_label_selectors: String,
+    since: humantime::Duration,
 }
 
 impl SystemDumper {
@@ -148,6 +150,7 @@ impl SystemDumper {
             k8s_resource_dumper,
             etcd_dumper,
             logging_label_selectors: config.logging_label_selectors().to_string(),
+            since: *config.since(),
         }
     }
 
@@ -245,6 +248,10 @@ impl SystemDumper {
         }
 
         if let Err(e) = self.dump_mayastor_etcd(&path).await {
+            errors.push(e);
+        }
+
+        if let Err(e) = self.dump_mayastor_events(&path).await {
             errors.push(e);
         }
 
@@ -388,6 +395,17 @@ impl SystemDumper {
         self.k8s_resource_dumper
             .dump_mayastor_k8s_resources(path, None)
             .await?;
+        Ok(())
+    }
+
+    /// Collects events into `path/events.ndjson`.
+    /// Uses Loki when available; falls back to the eventing-aggregator pod volume otherwise.
+    pub(crate) async fn dump_mayastor_events(&mut self, path: &Path) -> Result<(), Error> {
+        // Access the two fields directly so the borrow checker sees them as disjoint:
+        // self.logger (mut) and self.k8s_resource_dumper (shared) are different fields.
+        let loki_client = self.logger.loki_client_mut();
+        let k8s_client = self.k8s_resource_dumper.client_set();
+        events::collect_events_to_file(loki_client, k8s_client, path, self.since).await?;
         Ok(())
     }
 
