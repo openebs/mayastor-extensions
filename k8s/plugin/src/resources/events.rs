@@ -4,6 +4,7 @@ use clap::builder::TypedValueParser;
 use events_api::event::{
     Component, EventAction, EventCategory, EventDetails, EventMessage, RebuildStatus,
 };
+use futures::{Stream, StreamExt};
 use k8s_openapi::api::core::v1::Pod;
 use kube::{
     api::{AttachParams, ListParams},
@@ -12,6 +13,7 @@ use kube::{
 use plugin::resources::utils::{optional_cell, print_table, CreateRow, GetHeaderRow, OutputFormat};
 use prettytable::{row, Row};
 use serde::Serialize;
+use std::path::PathBuf;
 use strum::IntoEnumIterator;
 use supportability::KubeConfigArgs;
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, BufReader};
@@ -25,7 +27,7 @@ const EVENTS_VOLUME_DIR: &str = "/var/events";
 /// Args for `kubectl mayastor get events`.
 #[derive(Debug, clap::Args)]
 pub struct EventsArgs {
-    /// Loki base URL. If omitted, Loki is auto-discovered via the K8s service;
+    /// Loki base URL. If omitted, Loki is auto-discovered via the K8s service;{n}
     /// if discovery also fails, events are read from the eventing-aggregator pod volume.
     #[arg(long)]
     loki_endpoint: Option<String>,
@@ -70,11 +72,10 @@ pub struct EventsArgs {
     #[arg(long)]
     state: Option<String>,
 
-    /// Filter by JSON field path and pattern: path=value (repeatable, AND logic).
-    /// Path is relative to the event payload, e.g.
-    /// --filter "metadata.source.eventDetails.replicaDetails.poolUuid=abc*".
-    /// Supports leading/trailing * wildcards. Events with an unknown or absent path
-    /// are excluded.
+    /// Filter by JSON field path and pattern: path=value (repeatable, AND logic).{n}
+    /// Path is relative to the event payload,{n}
+    /// e.g. --filter "metadata.source.eventDetails.replicaDetails.poolUuid=abc*".{n}
+    /// Supports leading/trailing * wildcards. Events with an unknown or absent path are excluded.
     #[arg(long = "filter")]
     filters: Vec<String>,
 
@@ -89,6 +90,11 @@ pub struct EventsArgs {
     /// Loki tenant ID / X-Scope-OrgID header (loki source only).
     #[arg(long, default_value = "openebs")]
     tenant_id: String,
+
+    /// Read events from a local NDJSON file (e.g. extracted from a system dump archive){n}
+    /// instead of querying a live cluster. All other filters work normally.
+    #[arg(long, value_name = "PATH", conflicts_with = "loki_endpoint")]
+    from_file: Option<PathBuf>,
 }
 
 /// A single parsed event record.
@@ -226,26 +232,35 @@ pub fn parse_line(line: &str) -> Option<EventRecord> {
     Some(record)
 }
 
-/// Stream NDJSON lines from any async reader, parse each into an `EventRecord` immediately.
-/// Used by the volume fallback (exec stdout) and `--from-file` (file handle).
-/// Raw JSON strings are never accumulated — each line is parsed and dropped.
-pub async fn read_events_from_reader<R: AsyncBufRead + Unpin>(reader: R) -> Vec<EventRecord> {
-    let mut lines = reader.lines();
-    let mut records = Vec::new();
-    while let Ok(Some(line)) = lines.next_line().await {
-        if let Some(record) = parse_line(&line) {
-            records.push(record);
+/// Lazily parse NDJSON lines from any async reader, yielding one `EventRecord` at a time.
+/// Unparseable lines are silently skipped. The caller decides how many records to accumulate,
+/// enabling inline filtering and bounded memory use for large inputs.
+pub fn events_from_reader<R: AsyncBufRead + Unpin>(reader: R) -> impl Stream<Item = EventRecord> {
+    futures::stream::unfold(reader.lines(), |mut lines| async move {
+        loop {
+            match lines.next_line().await {
+                Ok(Some(line)) => {
+                    if let Some(record) = parse_line(&line) {
+                        return Some((record, lines));
+                    }
+                }
+                _ => return None,
+            }
         }
-    }
-    records
+    })
 }
 
 impl EventsArgs {
+    /// Returns true when --from-file is set and no cluster connection is needed.
+    pub fn is_from_file(&self) -> bool {
+        self.from_file.is_some()
+    }
+
     /// Fetch and print events according to the output format.
     pub async fn get_events(
         &self,
         namespace: &str,
-        kube_client: kube::Client,
+        kube_client: Option<kube::Client>,
         kubeconfig_args: KubeConfigArgs,
         timeout: humantime::Duration,
         output: &OutputFormat,
@@ -253,6 +268,27 @@ impl EventsArgs {
         // Silence the "LogFile not initialised" noise from supportability's log()
         // utility — that subsystem is only wired up in system-dump context.
         supportability::init_no_log_file();
+
+        // --from-file: read a local NDJSON dump; no cluster connection needed.
+        if let Some(path) = &self.from_file {
+            let file = tokio::fs::File::open(path)
+                .await
+                .map_err(|e| anyhow!("Cannot open {}: {e}", path.display()))?;
+            let since_cutoff =
+                Utc::now() - chrono::Duration::from_std(*self.since).unwrap_or_default();
+            let records: Vec<EventRecord> = events_from_reader(BufReader::new(file))
+                .filter(move |r| {
+                    std::future::ready(
+                        DateTime::parse_from_rfc3339(&r.timestamp)
+                            .map(|t| t.to_utc() >= since_cutoff)
+                            .unwrap_or(true),
+                    )
+                })
+                .collect()
+                .await;
+            let source_label = path.display().to_string();
+            return self.finalize_and_print(records, &source_label, output);
+        }
 
         let maybe_client = supportability::LokiClient::new(
             self.loki_endpoint.clone(),
@@ -277,7 +313,7 @@ impl EventsArgs {
                     .map_err(|e| anyhow!("Failed to fetch events from Loki: {e:?}"))?;
                 let records: Vec<EventRecord> =
                     lines.iter().filter_map(|l| parse_line(l)).collect();
-                (records, "Loki")
+                (records, "Loki".to_string())
             }
             None if self.loki_endpoint.is_some() => {
                 return Err(anyhow!(
@@ -291,9 +327,12 @@ impl EventsArgs {
                         "Loki not found in cluster; falling back to eventing-aggregator pod volume."
                     );
                 }
+                let client = kube_client.ok_or_else(|| {
+                    anyhow!("No cluster connection available for volume fallback")
+                })?;
                 let since_cutoff =
                     Utc::now() - chrono::Duration::from_std(*self.since).unwrap_or_default();
-                let records = fetch_from_volume(kube_client, since_cutoff)
+                let records = fetch_from_volume(client, since_cutoff)
                     .await?
                     .into_iter()
                     .filter(|r| {
@@ -302,14 +341,23 @@ impl EventsArgs {
                             .unwrap_or(true)
                     })
                     .collect();
-                (records, "eventing-aggregator volume")
+                (records, "eventing-aggregator volume".to_string())
             }
         };
 
-        let raw_count = records.len();
-        let mut records = records;
+        self.finalize_and_print(records, &source_label, output)
+    }
 
-        records = apply_filters(records, self);
+    /// Apply filters, sort, truncate, and print. Called by all sources after records are fetched
+    /// and time-filtered. `source_label` is used only in human-readable error messages.
+    fn finalize_and_print(
+        &self,
+        records: Vec<EventRecord>,
+        source_label: &str,
+        output: &OutputFormat,
+    ) -> anyhow::Result<()> {
+        let raw_count = records.len();
+        let mut records = apply_filters(records, self);
 
         // Sort newest-first.
         records.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
@@ -327,7 +375,7 @@ impl EventsArgs {
                 );
             } else {
                 eprintln!(
-                    "No events matched the applied filters ({raw_count} lines read from {source_label}). \
+                    "No events matched the applied filters ({raw_count} events read from {source_label}). \
                      Try relaxing filters."
                 );
             }
@@ -411,7 +459,7 @@ async fn fetch_from_volume(
         .stdout()
         .ok_or_else(|| anyhow!("No stdout from pod exec"))?;
 
-    Ok(read_events_from_reader(BufReader::new(stdout)).await)
+    Ok(events_from_reader(BufReader::new(stdout)).collect().await)
 }
 
 fn category_parser() -> impl clap::builder::TypedValueParser<Value = EventCategory> {
