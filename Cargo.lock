@@ -2235,6 +2235,7 @@ dependencies = [
  "clap",
  "constants",
  "events-api",
+ "futures",
  "http 1.1.0",
  "humantime",
  "k8s-openapi",

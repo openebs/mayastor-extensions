@@ -43,6 +43,7 @@ snafu = { workspace = true }
 
 # The DiskPool resource is used in this crate via the include! macro.
 # These dependencies are required to build that file.
+futures = { workspace = true }
 chrono = { workspace = true }
 parse-size = { workspace = true }
 strum_macros = { workspace = true }

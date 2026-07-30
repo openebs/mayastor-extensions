@@ -276,10 +276,14 @@ impl ExecuteOperation for Operations {
                     resources.get_upgrade(&cli_args.namespace, &client).await?
                 }
                 GetResourcesK8s::Events(args) => {
-                    let kube_client = cli_args.client().await?;
                     let kubeconfig_args = supportability::KubeConfigArgs {
                         path: cli_args.kubeconfig.clone(),
                         opts: kube_proxy::kubeconfig_options_from_context(cli_args.context.clone()),
+                    };
+                    let kube_client = if args.is_from_file() {
+                        None
+                    } else {
+                        Some(cli_args.client().await?)
                     };
                     args.get_events(
                         &cli_args.namespace,
