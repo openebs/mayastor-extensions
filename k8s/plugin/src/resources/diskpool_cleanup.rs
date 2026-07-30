@@ -11,7 +11,7 @@
 /// The DiskPool definition.
 #[allow(dead_code)]
 #[allow(clippy::empty_line_after_outer_attr)]
-mod crd {
+pub mod crd {
     include!(
         "../../../../dependencies/control-plane/k8s/operators/src/pool/diskpool/crd/v1beta3.rs"
     );
