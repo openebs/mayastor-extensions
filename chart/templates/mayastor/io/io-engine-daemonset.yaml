@@ -111,6 +111,10 @@ spec:
         - name: NVME_IOQ_POLL_PERIOD
           value: {{ .Values.io_engine.interruptMode.nvmeIoQueuePollPeriod | quote }}
         {{- end }}
+        {{- if .Values.io_engine.pool.diskHandleRescan.enabled }}
+        - name: POOL_HANDLE_RESCAN_PERIOD
+          value: {{ default "5m" .Values.io_engine.pool.diskHandleRescan.period | quote }}
+        {{- end }}
         args:
         # The -l argument accepts cpu-list. Indexing starts at zero.
         # For example -l 1,2,10-20 means use core 1, 2, 10 to 20.
