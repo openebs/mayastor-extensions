@@ -44,7 +44,7 @@ jobs:
           delete-branch: true
           base: ${{ env.BASE_BRANCH }}
           branch: "update-chart-${{ env.BASE_BRANCH }}"
-          token: ${{ secrets.ORG_CI_GITHUB }}
+          token: ${{ secrets.CI_BOT_1_RAISE_PRS }}
       - name: Approve Pull Request by CI Bot
         if: ${{ steps.cpr.outputs.pull-request-number }}
         run: |
@@ -56,10 +56,10 @@ jobs:
         run: |
           gh pr review ${{ steps.cpr.outputs.pull-request-number }} --approve
         env:
-          GH_TOKEN: ${{ secrets.ORG_CI_GITHUB_2 }}
+          GH_TOKEN: ${{ secrets.CI_BOT_2_RAISE_PRS }}
       - name: Queue Pull Request
         if: ${{ steps.cpr.outputs.pull-request-number }}
         run: |
           gh pr comment ${{ steps.cpr.outputs.pull-request-number }} --body "@mergify queue"
         env:
-          GH_TOKEN: ${{ secrets.ORG_CI_GITHUB }}
+          GH_TOKEN: ${{ secrets.CI_BOT_1_RAISE_PRS }}

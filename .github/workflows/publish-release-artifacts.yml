@@ -22,13 +22,13 @@ jobs:
           echo "Release Tag: ${{ github.event.release.tag_name }}"
           ./scripts/github/release-artifacts.sh --tag "${{ github.event.release.tag_name }}" --workflow "Release Artifacts" --repo-org "${{ github.repository_owner }}" download
         env:
-          GITHUB_TOKEN: ${{ secrets.ORG_CI_GITHUB }}
+          GITHUB_TOKEN: ${{ secrets.GH_ARTIFACT_UP_DOWN }}
       - name: Upload Artifacts
         run: |
           repos="mayastor-extensions mayastor-control-plane mayastor"
           ./scripts/github/release-artifacts.sh --tag "${{ github.event.release.tag_name }}" --repo-org "${{ github.repository_owner }}" --upload "$repos" upload
         env:
-          GITHUB_TOKEN: ${{ secrets.ORG_CI_GITHUB }}
+          GITHUB_TOKEN: ${{ secrets.GH_ARTIFACT_UP_DOWN }}
       - name: Update krew index
         if: ${{ !github.event.release.prerelease && (steps.latest-release.outputs.latestTag == github.event.release.tag_name) }}
         uses: rajatjindal/krew-release-bot@v0.0.51
