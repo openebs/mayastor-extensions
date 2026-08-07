@@ -33,7 +33,7 @@ jobs:
         env:
           TMPDIR: /tmp
         with:
-          token: ${{ secrets.ORG_CI_GITHUB }}
+          token: ${{ secrets.CI_BOT_1_RAISE_PRS }}
           charts_dir: .
           repository: mayastor-chart-donotuse
           branch: gh-pages
