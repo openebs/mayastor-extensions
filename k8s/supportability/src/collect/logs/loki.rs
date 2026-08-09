@@ -85,22 +85,15 @@ struct LokiResponse {
 type SinceTime = u128;
 
 impl LokiResponse {
-    // fetch last stream log epoch timestamp in nanoseconds
+    // Returns the maximum log entry timestamp (nanoseconds) across ALL streams.
     fn get_last_stream_unix_time(&self) -> SinceTime {
-        let unix_time = match self.data.result.last() {
-            Some(last_stream) => last_stream
-                .values
-                .last()
-                .unwrap_or(&vec![])
-                .first()
-                .unwrap_or(&"0".to_string())
-                .parse::<SinceTime>()
-                .unwrap_or(0),
-            None => {
-                return 0;
-            }
-        };
-        unix_time
+        self.data
+            .result
+            .iter()
+            .flat_map(|s| s.values.iter())
+            .filter_map(|v| v.first()?.parse::<SinceTime>().ok())
+            .max()
+            .unwrap_or(0)
     }
 }
 
