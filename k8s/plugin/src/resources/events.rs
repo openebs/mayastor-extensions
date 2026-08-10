@@ -23,6 +23,7 @@ const EVENTS_LABEL_SELECTOR: &str = "app=eventing-aggregator";
 const MBUS_EVENT_TYPE: &str = "mbus_event";
 const DEFAULT_LIMIT: usize = 1000;
 const EVENTS_VOLUME_DIR: &str = "/var/events";
+const NATS_STREAM: &str = "events-stream";
 
 /// Args for `kubectl mayastor get events`.
 #[derive(Debug, clap::Args)]
@@ -95,6 +96,17 @@ pub struct EventsArgs {
     /// instead of querying a live cluster. All other filters work normally.
     #[arg(long, value_name = "PATH", conflicts_with = "loki_endpoint")]
     from_file: Option<PathBuf>,
+
+    /// Read events directly from NATS JetStream instead of Loki or the eventing-aggregator pod volume.{n}
+    /// Pass without a value to auto-discover the NATS service via the K8s cluster,{n}
+    /// or pass a URL (e.g. nats://host:4222) to connect directly.
+    #[arg(
+        long,
+        num_args = 0..=1,
+        default_missing_value = "",
+        conflicts_with_all = ["loki_endpoint", "from_file"],
+    )]
+    nats_endpoint: Option<String>,
 }
 
 /// A single parsed event record.
@@ -290,6 +302,21 @@ impl EventsArgs {
             return self.finalize_and_print(records, &source_label, output);
         }
 
+        // --nats-endpoint: read events directly from NATS JetStream.
+        if let Some(nats_endpoint) = &self.nats_endpoint {
+            let since_cutoff =
+                Utc::now() - chrono::Duration::from_std(*self.since).unwrap_or_default();
+
+            let url = if nats_endpoint.is_empty() {
+                discover_nats_url(kubeconfig_args.clone(), namespace.to_string()).await?
+            } else {
+                nats_endpoint.clone()
+            };
+
+            let records = fetch_from_nats(&url, since_cutoff).await?;
+            return self.finalize_and_print(records, "NATS JetStream", output);
+        }
+
         let maybe_client = supportability::LokiClient::new(
             self.loki_endpoint.clone(),
             kubeconfig_args.clone(),
@@ -460,6 +487,101 @@ async fn fetch_from_volume(
         .ok_or_else(|| anyhow!("No stdout from pod exec"))?;
 
     Ok(events_from_reader(BufReader::new(stdout)).collect().await)
+}
+
+/// Port-forward to the NATS service discovered via K8s service label.
+/// Auto-discovers the NATS service via K8s port-forward and returns a `nats://` URL.
+async fn discover_nats_url(
+    kubeconfig_args: KubeConfigArgs,
+    namespace: String,
+) -> anyhow::Result<String> {
+    let uri = kube_proxy::ConfigBuilder::default_nats()
+        .with_kube_config(kubeconfig_args.path)
+        .with_context(kubeconfig_args.opts.context)
+        .with_target_mod(|t| t.with_namespace(namespace))
+        .build()
+        .await
+        .map_err(|e| anyhow!("NATS service not found in cluster: {e}"))?;
+    Ok(uri.to_string())
+}
+
+/// Fetch events from NATS JetStream starting at `since_cutoff`.
+///
+/// Creates an ephemeral push consumer with `DeliverPolicy::ByStartTime` so the
+/// NATS server only delivers messages after the cutoff — equivalent to the
+/// server-side `--since` filter used in the Loki path.
+///
+/// NATS messages are raw `EventMessage` JSON (no outer envelope). The envelope
+/// `{"type":"mbus_event","payload":{…}}` is added here so `--filter` dot-path
+/// traversal works identically to the Loki and file paths.
+///
+/// Dropping the returned `Messages` subscription closes the consumer;
+/// NATS removes the ephemeral consumer after its inactivity threshold.
+async fn fetch_from_nats(
+    url: &str,
+    since_cutoff: DateTime<Utc>,
+) -> anyhow::Result<Vec<EventRecord>> {
+    use async_nats::jetstream::{
+        self,
+        consumer::{push, AckPolicy, DeliverPolicy},
+    };
+
+    let client = async_nats::connect(url)
+        .await
+        .map_err(|e| anyhow!("Failed to connect to NATS at {url}: {e}"))?;
+
+    let js = jetstream::new(client.clone());
+
+    let stream = js
+        .get_stream(NATS_STREAM)
+        .await
+        .map_err(|e| anyhow!("NATS stream '{NATS_STREAM}' not found: {e}"))?;
+
+    let start_time = time::OffsetDateTime::from_unix_timestamp(since_cutoff.timestamp())
+        .unwrap_or(time::OffsetDateTime::UNIX_EPOCH);
+
+    let consumer = stream
+        .create_consumer(push::Config {
+            deliver_subject: client.new_inbox(),
+            deliver_policy: DeliverPolicy::ByStartTime { start_time },
+            ack_policy: AckPolicy::None,
+            ..Default::default()
+        })
+        .await
+        .map_err(|e| anyhow!("Failed to create NATS consumer: {e}"))?;
+
+    let mut messages = consumer
+        .messages()
+        .await
+        .map_err(|e| anyhow!("Failed to subscribe to NATS events: {e}"))?;
+
+    let mut records = Vec::new();
+
+    while let Some(msg) = messages.next().await {
+        let msg = msg.map_err(|e| anyhow!("NATS message error: {e}"))?;
+        let pending = msg
+            .info()
+            .map_err(|e| anyhow!("Failed to read message metadata: {e}"))?
+            .pending;
+
+        if let Ok(event_msg) = serde_json::from_slice::<EventMessage>(&msg.payload) {
+            let mut record = EventRecord::from_event_message(event_msg);
+            if let Ok(payload_val) = serde_json::from_slice::<serde_json::Value>(&msg.payload) {
+                record.raw = serde_json::json!({
+                    "type": MBUS_EVENT_TYPE,
+                    "payload": payload_val,
+                });
+            }
+            records.push(record);
+        }
+
+        if pending == 0 {
+            break;
+        }
+    }
+
+    // `messages` is dropped here — subscription closed, ephemeral consumer cleaned up by NATS.
+    Ok(records)
 }
 
 fn category_parser() -> impl clap::builder::TypedValueParser<Value = EventCategory> {
