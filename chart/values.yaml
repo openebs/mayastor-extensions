@@ -691,6 +691,11 @@ io_engine:
       # -- Time window during which stall ↔ resume state transitions are tracked for flakiness
       # detection.
       stallTransitionWindow: "3h"
+    diskHandleRescan:
+      # -- Periodic rescan of the diskpool backend storage file handles.
+      # This is used for hot-remove detection without ongoing I/O, as well as updating the disk size
+      enabled: true
+      period: "5m"
 
 etcd:
   # -- Disable when using an external etcd cluster.
