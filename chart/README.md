@@ -161,257 +161,460 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 
 ## Values
 
-| Key | Description | Default |
-|:----|:------------|:--------|
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;allowNonPersistentDevlink | Allow using non-persistent kernel devpaths for pool disks. Enabling this will let users to use the kernel devpaths e.g /dev/sda, for diskpools. However, this comes with associated risks if the devpaths get swapped among disks, resulting in total data loss especially if encryption is being used. | `false` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;capacity.&ZeroWidthSpace;thin.&ZeroWidthSpace;poolCommitment | The allowed pool commitment limit when dealing with thin provisioned volumes. Example: If the commitment is 250 and the pool is 10GiB we can overcommit the pool up to 25GiB (create 2 10GiB and 1 5GiB volume) but no further. | `"250%"` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;capacity.&ZeroWidthSpace;thin.&ZeroWidthSpace;snapshotCommitment | When creating snapshots for an existing volume, each replica pool must have at least this much free space percentage of the volume size. Example: if this value is 40, the pool has 40GiB free, then the max volume size allowed to be snapped on the pool is 100GiB. | `"40%"` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;capacity.&ZeroWidthSpace;thin.&ZeroWidthSpace;volumeCommitment | When creating replicas for an existing volume, each replica pool must have at least this much free space percentage of the volume size. Example: if this value is 40, the pool has 40GiB free, then the max volume size allowed to be created on the pool is 100GiB. | `"40%"` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;capacity.&ZeroWidthSpace;thin.&ZeroWidthSpace;volumeCommitmentInitial | Same as the `volumeCommitment` argument, but applicable only when creating replicas for a new volume. | `"40%"` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;encryptedPoolsSoftScheduling | Prefer encrypted pools for volume replicas. If a volume wasn't provisioned with a encryption storageclass, we try to place the replicas of such volume on best-effort basis onto encrypted pools, if this global is set. This is effective subject to volume spec already modified via plugin to request encryption. | `false` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;logLevel | Log level for the core service | `"info"` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;minTimeouts | Enable minimal timeouts | `true` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;poolClusterSize | Default blobstore cluster size for diskpools, in bytes. This value is used as a default value of blobstore cluster size on diskpools. This is set to 4MiB internally by default, if nothing specified here. The value is also configurable via Diskpool CR, which takes precedence over this setting. This is an advanced configuration, please refer documentation to understand the usage and implications of this. | `""` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global. If both local and global are not set, the final deployment manifest has a mayastor custom critical priority class assigned to the pod by default. Refer the `templates/_helpers.tpl` and `templates/mayastor/agents/core/agent-core-deployment.yaml` for more details. | `""` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;rebuild.&ZeroWidthSpace;maxConcurrent | The maximum number of system-wide rebuilds permitted at any given time. If set to an empty string, there are no limits. | `""` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;rebuild.&ZeroWidthSpace;partial.&ZeroWidthSpace;enabled | Partial rebuild uses a log of missed IO to rebuild replicas which have become temporarily faulted, hence a bit faster, depending on the log size. | `true` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;rebuild.&ZeroWidthSpace;partial.&ZeroWidthSpace;waitPeriod | If a faulted replica comes back online within this time period then it will be rebuilt using the partial rebuild capability. Otherwise, the replica will be fully rebuilt. A blank value "" means internally derived value will be used. | `""` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;requestTimeout | Request timeout for core agents Default value is defined in .base.default_req_timeout | `nil` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for core agents | `"1000m"` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for core agents | `"128Mi"` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for core agents | `"500m"` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for core agents | `"32Mi"` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| agents.&ZeroWidthSpace;core.&ZeroWidthSpace;volumeHealth | Enable extended volume health information, which helps generate the volume status more accurately. | `true` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;cluster.&ZeroWidthSpace;logLevel | Log level for the ha cluster service | `"info"` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;cluster.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for ha cluster agent | `"100m"` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;cluster.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for ha cluster agent | `"64Mi"` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;cluster.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for ha cluster agent | `"100m"` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;cluster.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for ha cluster agent | `"16Mi"` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;logLevel | Log level for the ha node service | `"info"` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;port | Container port for the ha-node service | `50053` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for ha node agent | `"100m"` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for ha node agent | `"64Mi"` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for ha node agent | `"100m"` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for ha node agent | `"64Mi"` |
-| agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| alloy.&ZeroWidthSpace;logging_config.&ZeroWidthSpace;labels | Labels to enable scraping on, at-least one of these labels should be present. | <pre>{<br>"openebs.io/logging":true<br>}</pre> |
-| alloy.&ZeroWidthSpace;logging_config.&ZeroWidthSpace;tenant_id | X-Scope-OrgID to pe populated which pushing logs. Make sure the caller also uses the same. | `"openebs"` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;liveness.&ZeroWidthSpace;enabled | Toggle liveness probe. | `true` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;liveness.&ZeroWidthSpace;failureThreshold | No. of failures the liveness probe will tolerate. | `3` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;liveness.&ZeroWidthSpace;initialDelaySeconds | No. of seconds of delay before checking the liveness status. | `1` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;liveness.&ZeroWidthSpace;periodSeconds | No. of seconds between liveness probe checks. | `30` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;liveness.&ZeroWidthSpace;timeoutSeconds | No. of seconds of timeout tolerance. | `5` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;readiness.&ZeroWidthSpace;agentCoreProbeFreq | Frequency for the agent-core liveness probe. | `"20s"` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;readiness.&ZeroWidthSpace;enabled | Toggle readiness probe. | `true` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;readiness.&ZeroWidthSpace;failureThreshold | No. of failures the readiness probe will tolerate. | `3` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;readiness.&ZeroWidthSpace;initialDelaySeconds | No. of seconds of delay before checking the readiness status. | `1` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;readiness.&ZeroWidthSpace;periodSeconds | No. of seconds between readiness probe checks. | `20` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;readiness.&ZeroWidthSpace;timeoutSeconds | No. of seconds of timeout tolerance. | `5` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;logLevel | Log level for the rest service | `"info"` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global. If both local and global are not set, the final deployment manifest has a mayastor custom critical priority class assigned to the pod by default. Refer the `templates/_helpers.tpl` and `templates/mayastor/apis/rest/api-rest-deployment.yaml` for more details. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;replicaCount | Number of replicas of rest | `1` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for rest | `"100m"` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for rest | `"64Mi"` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for rest | `"50m"` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for rest | `"32Mi"` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;certManager.&ZeroWidthSpace;secretName | Secret name for the REST API server TLS certificate. Defaults to {release}-api-rest-crt. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients | Per-client TLS overrides. Each client can point at a pre-existing secret (when autoGenerated.enabled is false) or customise the cert-manager secret name. | <pre>{<br>"callhome":{<br>"certManager":{<br>"secretName":""<br>},<br>"existingSecret":""<br>},<br>"csiController":{<br>"certManager":{<br>"secretName":""<br>},<br>"existingSecret":""<br>},<br>"csiNode":{<br>"certManager":{<br>"secretName":""<br>},<br>"existingSecret":""<br>},<br>"diskpoolOperator":{<br>"certManager":{<br>"secretName":""<br>},<br>"existingSecret":""<br>},<br>"metricsExporter":{<br>"certManager":{<br>"secretName":""<br>},<br>"existingSecret":""<br>},<br>"plugin":{<br>"certManager":{<br>"secretName":""<br>},<br>"existingSecret":""<br>}<br>}</pre> |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;callhome.&ZeroWidthSpace;certManager.&ZeroWidthSpace;secretName | cert-manager secret name for the callhome client cert. Defaults to {release}-api-rest-callhome-crt. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;callhome.&ZeroWidthSpace;existingSecret | Pre-existing Secret for the callhome client cert. Required when autoGenerated.enabled is false and mutualAuth is true. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;csiController.&ZeroWidthSpace;certManager.&ZeroWidthSpace;secretName | cert-manager secret name for the CSI controller client cert. Defaults to {release}-api-rest-csi-controller-crt. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;csiController.&ZeroWidthSpace;existingSecret | Pre-existing Secret for the CSI controller client cert. Required when autoGenerated.enabled is false and mutualAuth is true. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;csiNode.&ZeroWidthSpace;certManager.&ZeroWidthSpace;secretName | cert-manager secret name for the CSI node client cert. Defaults to {release}-api-rest-csi-node-crt. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;csiNode.&ZeroWidthSpace;existingSecret | Pre-existing Secret for the CSI node client cert. Required when autoGenerated.enabled is false and mutualAuth is true. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;diskpoolOperator.&ZeroWidthSpace;certManager.&ZeroWidthSpace;secretName | cert-manager secret name for the diskpool-operator client cert. Defaults to {release}-api-rest-diskpool-operator-crt. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;diskpoolOperator.&ZeroWidthSpace;existingSecret | Pre-existing Secret for the diskpool-operator client cert. Required when autoGenerated.enabled is false and mutualAuth is true. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;metricsExporter.&ZeroWidthSpace;certManager.&ZeroWidthSpace;secretName | cert-manager secret name for the metrics-exporter client cert. Defaults to {release}-api-rest-metrics-exporter-crt. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;metricsExporter.&ZeroWidthSpace;existingSecret | Pre-existing Secret for the metrics-exporter client cert. Required when autoGenerated.enabled is false and mutualAuth is true. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;plugin.&ZeroWidthSpace;certManager.&ZeroWidthSpace;secretName | cert-manager secret name for the kubectl plugin client cert. Defaults to {release}-api-rest-plugin-crt. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;clients.&ZeroWidthSpace;plugin.&ZeroWidthSpace;existingSecret | Pre-existing Secret for the kubectl plugin client cert. Required when autoGenerated.enabled is false and mutualAuth is true. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;security.&ZeroWidthSpace;tls.&ZeroWidthSpace;existingSecret | Pre-existing TLS Secret to use when tls.autoGenerated.enabled is false. Must contain tls.crt, tls.key, and ca.crt. The chart mounts it but does not manage it. | `""` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;service.&ZeroWidthSpace;type | Rest K8s service type | `"ClusterIP"` |
-| apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| base.&ZeroWidthSpace;cache_poll_period | Cache timeout for core agent & diskpool deployment | `"30s"` |
-| base.&ZeroWidthSpace;default_req_timeout | Request timeout for rest & core agents | `"5s"` |
-| base.&ZeroWidthSpace;initContainers.&ZeroWidthSpace;image.&ZeroWidthSpace;registry | Image registry for init containers | `""` |
-| base.&ZeroWidthSpace;logging.&ZeroWidthSpace;color | Enable ansi color code for Pod StdOut/StdErr | `true` |
-| base.&ZeroWidthSpace;logging.&ZeroWidthSpace;format | Valid values for format are pretty, json and compact | `"pretty"` |
-| base.&ZeroWidthSpace;logging.&ZeroWidthSpace;silenceLevel | Silence specific module components | `nil` |
-| base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;enabled | Enable the metrics exporter | `true` |
-| base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;port | Container port for the metrics exporter service | `9502` |
-| crds.&ZeroWidthSpace;csi.&ZeroWidthSpace;volumeSnapshots.&ZeroWidthSpace;enabled | Install Volume Snapshot CRDs | `true` |
-| crds.&ZeroWidthSpace;enabled | Disables the installation of all CRDs if set to false | `true` |
-| csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;logLevel | Log level for the csi controller | `"info"` |
-| csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
-| csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;preventVolumeModeConversion | Prevent modifying the volume mode when creating a PVC from an existing VolumeSnapshot | `true` |
-| csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
-| csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for csi controller | `"32m"` |
-| csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for csi controller | `"128Mi"` |
-| csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for csi controller | `"16m"` |
-| csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for csi controller | `"64Mi"` |
-| csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;attacherTag | csi-attacher image release tag | `"v4.8.1"` |
-| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;provisionerTag | csi-provisioner image release tag | `"v5.2.0"` |
-| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;pullPolicy | imagePullPolicy for all CSI Sidecar images | `"IfNotPresent"` |
-| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;registrarTag | csi-node-driver-registrar image release tag | `"v2.13.0"` |
-| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;registry | Image registry to pull all CSI Sidecar images | `"registry.k8s.io"` |
-| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;repo | Image registry's namespace | `"sig-storage"` |
-| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;resizerTag | csi-resizer image release tag | `"v1.13.2"` |
-| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;snapshotControllerTag | csi-snapshot-controller image release tag | `"v8.2.0"` |
-| csi.&ZeroWidthSpace;image.&ZeroWidthSpace;snapshotterTag | csi-snapshotter image release tag | `"v8.2.0"` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;kubeletDir | The kubeletDir directory for the csi-node plugin | `"/var/lib/kubelet"` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nvme.&ZeroWidthSpace;ctrl_loss_tmo | The ctrl_loss_tmo (controller loss timeout) in seconds | `"1980"` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcpFallback | Fallback to nvme-tcp if nvme-rdma is enabled for Mayastor but rdma is not available on a particular csi-node | `true` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;port | Container port for the csi-node service | `10199` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for csi node plugin | `"100m"` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for csi node plugin | `"128Mi"` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for csi node plugin | `"100m"` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for csi node plugin | `"64Mi"` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;topology.&ZeroWidthSpace;nodeSelector | Add topology segments to the csi-node and agent-ha-node daemonset node selector | `false` |
-| etcd.&ZeroWidthSpace;autoCompactionMode | AutoCompaction Since etcd keeps an exact history of its keyspace, this history should be periodically compacted to avoid performance degradation and eventual storage space exhaustion. Auto compaction mode. Valid values: "periodic", "revision". - 'periodic' for duration based retention, defaulting to hours if no time unit is provided (e.g. 5m). - 'revision' for revision number based retention. | `"revision"` |
-| etcd.&ZeroWidthSpace;autoCompactionRetention | Auto compaction retention length. 0 means disable auto compaction. | `"100"` |
-| etcd.&ZeroWidthSpace;clusterDomain | Kubernetes Cluster Domain | `"cluster.local"` |
-| etcd.&ZeroWidthSpace;enabled | Disable when using an external etcd cluster. | `true` |
-| etcd.&ZeroWidthSpace;externalUrl | Url of the external etcd cluster. Note, etcd.enable must be set to false. | `""` |
-| etcd.&ZeroWidthSpace;extraEnvVars[0] | Raise alarms when backend size exceeds the given quota. | <pre>{<br>"name":"ETCD_QUOTA_BACKEND_BYTES",<br>"value":"8589934592"<br>}</pre> |
-| etcd.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;basePath | Host path where local etcd data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/etcd"` |
-| etcd.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of etcd's localpv hostpath storage class. | `"Delete"` |
-| etcd.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;volumeBindingMode | VolumeBindingMode of etcd's localpv hostpath storage class. | `"WaitForFirstConsumer"` |
-| etcd.&ZeroWidthSpace;metrics.&ZeroWidthSpace;enabled | Expose etcd metrics. | `true` |
-| etcd.&ZeroWidthSpace;metrics.&ZeroWidthSpace;useSeparateEndpoint | Use a separate endpoint for exposing metrics, override the default port (9090) by setting containerPorts.metrics. | `true` |
-| etcd.&ZeroWidthSpace;persistence.&ZeroWidthSpace;enabled | If true, use a Persistent Volume Claim. If false, use emptyDir. | `true` |
-| etcd.&ZeroWidthSpace;persistence.&ZeroWidthSpace;size | Volume size | `"2Gi"` |
-| etcd.&ZeroWidthSpace;persistence.&ZeroWidthSpace;storageClass | Will define which storageClass to use in etcd's StatefulSets. Options: <p> - `"manual"` - Will provision a hostpath PV on the same node. <br> - `""` (empty) - Will use the default StorageClass on the cluster. </p> | `"mayastor-etcd-localpv"` |
-| etcd.&ZeroWidthSpace;persistentVolumeClaimRetentionPolicy.&ZeroWidthSpace;enabled | PVC's reclaimPolicy | `false` |
-| etcd.&ZeroWidthSpace;podAntiAffinityPreset | Pod anti-affinity preset Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity | `"hard"` |
-| etcd.&ZeroWidthSpace;removeMemberOnContainerTermination | Use a PreStop hook to remove the etcd members from the etcd cluster on container termination Ignored if lifecycleHooks is set or replicaCount=1 | `false` |
-| etcd.&ZeroWidthSpace;replicaCount | Number of replicas of etcd | `3` |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;dirSizeLimit | Maximum total size of event files including rotated history. Used when loki.enabled is false. | `"100Mi"` |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;enabled | Enable the eventing-aggregator deployment. Requires eventing.enabled to be true. | `true` |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;logLevel | Log level for eventing-aggregator | `"info"` |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for eventing-aggregator | `"100m"` |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for eventing-aggregator | `"32Mi"` |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for eventing-aggregator | `"50m"` |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for eventing-aggregator | `"16Mi"` |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| global.&ZeroWidthSpace;analytics.&ZeroWidthSpace;enabled | Global overide for call home | `nil` |
-| global.&ZeroWidthSpace;imagePullPolicy | Global overide for image pull policy | `""` |
-| global.&ZeroWidthSpace;imagePullSecrets | Global override for image pull secrets - secret | `[]` |
-| global.&ZeroWidthSpace;imageRegistry | Global override for image registry | `""` |
-| image.&ZeroWidthSpace;pullPolicy | ImagePullPolicy for our images | `"Always"` |
-| image.&ZeroWidthSpace;pullSecrets | docker-secrets required to pull images if the container registry from image.registry is protected | `[]` |
-| image.&ZeroWidthSpace;registry | Image registry to pull our product images | `"docker.io"` |
-| image.&ZeroWidthSpace;repo | Image registry's namespace | `"openebs"` |
-| image.&ZeroWidthSpace;tag | Release tag for our images | `"develop"` |
-| io_engine.&ZeroWidthSpace;coreList | If not empty, overrides the cpuCount and explicitly sets the list of cores. Example: --set='io_engine.coreList={30,31}' | `[]` |
-| io_engine.&ZeroWidthSpace;cpuCount | The number of cores that each io-engine instance will bind to. | `"2"` |
-| io_engine.&ZeroWidthSpace;envcontext | Pass additional arguments to the Environment Abstraction Layer. Example: --set {product}.envcontext=iova-mode=pa | `""` |
-| io_engine.&ZeroWidthSpace;interruptMode | SPDK interrupt mode for io-engine reactors. When enabled, reactors sleep on epoll/timerfd instead of busy-polling, which dramatically reduces idle CPU usage. NVMe I/O queues are still polled, but on a periodic timer rather than continuously. | <pre>{<br>"enabled":false,<br>"nvmeIoQueuePollPeriod":"100us"<br>}</pre> |
-| io_engine.&ZeroWidthSpace;interruptMode.&ZeroWidthSpace;enabled | Enable interrupt mode by setting ENABLE_INTERRUPT_MODE=true on the io-engine container (equivalent to passing the --enable-interrupt-mode CLI flag). | `false` |
-| io_engine.&ZeroWidthSpace;interruptMode.&ZeroWidthSpace;nvmeIoQueuePollPeriod | NVMe I/O queue poll period (SPDK NVME_IOQ_POLL_PERIOD). A value of "0" disables timed polling (busy poll). Typical values: "100us", "1000us". Higher values reduce CPU further at the cost of latency. | `"100us"` |
-| io_engine.&ZeroWidthSpace;logLevel | Log level for the io-engine service | `"info"` |
-| io_engine.&ZeroWidthSpace;nodeSelector | Node selectors to designate storage nodes for diskpool creation Note that if multi-arch images support 'kubernetes.io/arch: amd64' should be removed. | <pre>{<br>"kubernetes.io/arch":"amd64",<br>"openebs.io/engine":"mayastor"<br>}</pre> |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;ioTimeout | Timeout for IOs The default here is exaggerated for local disks, but we've observed that in shared virtual environments having a higher timeout value is beneficial. Please adjust this according to your hardware and needs. | `"110s"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;bufCacheSize | The number of shared buffers to reserve for each poll group | `nil` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;dataWrPoolSize | RDMA data WR pool size (RDMA only) | `"4095"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;inCapsuleDataSize | The max amount of payload data that can be transferred directly within the NVMe-oF Capsule command itself | `nil` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;ioUnitSize | I/O unit size (bytes) | `"8192"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;maxIoSize | Max I/O size (bytes) | `nil` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;numSharedBuf | The number of pooled data buffers available to the transport | `nil` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;bufCacheSize | The number of shared buffers to reserve for each poll group | `"64"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;inCapsuleDataSize | The max amount of payload data that can be transferred directly within the NVMe-oF Capsule command itself | `"4096"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;ioUnitSize | I/O unit size (bytes) | `"131072"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;maxIoSize | Max I/O size (bytes) | `"131072"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;maxQpairsPerCtrl | Max number of IO qpairs per controller | `"32"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;maxQueueDepth | You may need to increase this for a higher outstanding IOs per volume | `"32"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcp.&ZeroWidthSpace;numSharedBuf | The number of pooled data buffers available to the transport | `"2047"` |
-| io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;transportTos | NVMe Transport Type of Service (ToS) value for RDMA QoS/DSCP marking. When using NVMe-oF over RDMA (RoCEv2), set this to mark target (responder) side RDMA traffic with a DSCP value (e.g. 104 for DSCP 26 / AF31) so that switches and NICs can classify storage traffic into a Priority Flow Control (PFC) enabled queue for lossless transport. A value of 0 (the default) means no marking (best-effort QoS). | `""` |
-| io_engine.&ZeroWidthSpace;pool.&ZeroWidthSpace;ioAlerts.&ZeroWidthSpace;errorThreshold | After this many errors a pool alert is raised as Warning. | `64` |
-| io_engine.&ZeroWidthSpace;pool.&ZeroWidthSpace;ioAlerts.&ZeroWidthSpace;stallDeadline | If an I/O is stuck longer than this period, then the pool is considered stalled and a Critical alert is raised. The pool disk will also be reset and the stall will be cleared once complete and I/O flows again. default: .Values.io_engine.nvme.ioTimeout * 2 | `nil` |
-| io_engine.&ZeroWidthSpace;pool.&ZeroWidthSpace;ioAlerts.&ZeroWidthSpace;stallTransitionThreshold | After this many transitions within the stallTransitionWindow, a pool alert is raised as Warning. | `3` |
-| io_engine.&ZeroWidthSpace;pool.&ZeroWidthSpace;ioAlerts.&ZeroWidthSpace;stallTransitionWindow | Time window during which stall ↔ resume state transitions are tracked for flakiness detection. | `"3h"` |
-| io_engine.&ZeroWidthSpace;port | Container port for the io-engine service | `10124` |
-| io_engine.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
-| io_engine.&ZeroWidthSpace;pstorRetries | Number of retries for pstor persistence before the volume target self shutdowns | `300` |
-| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for the io-engine | `""` |
-| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;hugepages1Gi | Hugepage memory in 1GiB chunks | `nil` |
-| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;hugepages2Mi | Hugepage memory in 2MiB chunks | `"2Gi"` |
-| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for the io-engine | `"1Gi"` |
-| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for the io-engine | `""` |
-| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;hugepages1Gi | Hugepage memory in 1GiB chunks | `nil` |
-| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;hugepages2Mi | Hugepage memory in 2MiB chunks | `"2Gi"` |
-| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for the io-engine | `"1Gi"` |
-| io_engine.&ZeroWidthSpace;runtimeClassName | Runtime class to use. Defaults to cluster standard | `""` |
-| io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;iface | NVMF target interface (ip, mac, name or subnet) If RDMA is enabled, please set iface to an RDMA capable netdev name from host network. Example, if an rdma device mlx5_0 is available on a netdev eth0 on RNIC, as can be seen from `rdma link` command output, then this field should be set to eth0. | `""` |
-| io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;maxNamespaces | Maximum number of NVMe namespaces which a given io-engine node can expose. As of today, there's a 1-1 mapping of namespaces to volume targets. | `4096` |
-| io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;ptpl | Reservations Persist Through Power Loss State | `true` |
-| io_engine.&ZeroWidthSpace;target.&ZeroWidthSpace;nvmf.&ZeroWidthSpace;rdma | Enable RDMA Capability of Mayastor nvmf target to take RDMA connections if the cluster nodes have RDMA device(s) configured from RNIC. | <pre>{<br>"enabled":false<br>}</pre> |
-| io_engine.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| localpv-provisioner.&ZeroWidthSpace;enabled | Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki storage class accordingly. | `true` |
-| localpv-provisioner.&ZeroWidthSpace;hostpathClass.&ZeroWidthSpace;enabled | Enable default hostpath localpv StorageClass. | `false` |
-| localpv-provisioner.&ZeroWidthSpace;localpv.&ZeroWidthSpace;priorityClassName | Set the PriorityClass for the LocalPV Hostpath provisioner Deployment. | `"{{ .Release.Name }}-cluster-critical"` |
-| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;loki.&ZeroWidthSpace;basePath | Host path where local loki data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/loki"` |
-| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;loki.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of loki's localpv hostpath storage class. | `"Delete"` |
-| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;loki.&ZeroWidthSpace;volumeBindingMode | VolumeBindingMode of loki's localpv hostpath storage class. | `"WaitForFirstConsumer"` |
-| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;basePath | Host path where local minio data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/minio"` |
-| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of minio's localpv hostpath storage class. | `"Delete"` |
-| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;volumeBindingMode | VolumeBindingMode of minio's localpv hostpath storage class. | `"WaitForFirstConsumer"` |
-| nodeSelector | Node labels for pod assignment ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ Note that if multi-arch images support 'kubernetes.io/arch: amd64' should be removed and set 'nodeSelector' to empty '{}' as default value. | <pre>{<br>"kubernetes.io/arch":"amd64"<br>}</pre> |
-| obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;enabled | Enable callhome | `true` |
-| obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;logLevel | Log level for callhome | `"info"` |
-| obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
-| obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
-| obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for callhome | `"100m"` |
-| obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for callhome | `"32Mi"` |
-| obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for callhome | `"50m"` |
-| obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for callhome | `"16Mi"` |
-| obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| obs.&ZeroWidthSpace;stats.&ZeroWidthSpace;logLevel | Log level for stats | `"info"` |
-| obs.&ZeroWidthSpace;stats.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for stats | `"100m"` |
-| obs.&ZeroWidthSpace;stats.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for stats | `"32Mi"` |
-| obs.&ZeroWidthSpace;stats.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for stats | `"50m"` |
-| obs.&ZeroWidthSpace;stats.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for stats | `"16Mi"` |
-| obs.&ZeroWidthSpace;stats.&ZeroWidthSpace;service.&ZeroWidthSpace;type | Rest K8s service type | `"ClusterIP"` |
-| operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;logLevel | Log level for diskpool operator service | `"info"` |
-| operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
-| operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
-| operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for diskpool operator | `"100m"` |
-| operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for diskpool operator | `"32Mi"` |
-| operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for diskpool operator | `"50m"` |
-| operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for diskpool operator | `"16Mi"` |
-| operators.&ZeroWidthSpace;pool.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
-| preUpgradeHook.&ZeroWidthSpace;enabled | Enable/Disable mayastor pre-upgrade hook | `true` |
-| preUpgradeHook.&ZeroWidthSpace;image.&ZeroWidthSpace;pullPolicy | The imagePullPolicy for the container | `"IfNotPresent"` |
-| preUpgradeHook.&ZeroWidthSpace;image.&ZeroWidthSpace;registry | The container image registry URL for the hook job | `"docker.io"` |
-| preUpgradeHook.&ZeroWidthSpace;image.&ZeroWidthSpace;repo | The container repository for the hook job | `"openebs/kubectl"` |
-| preUpgradeHook.&ZeroWidthSpace;image.&ZeroWidthSpace;tag | The container image tag for the hook job | `"1.25.15"` |
-| preUpgradeHook.&ZeroWidthSpace;imagePullSecrets | Optional array of imagePullSecrets containing private registry credentials # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/ | `[]` |
-| preUpgradeHook.&ZeroWidthSpace;rolloutTimeout | Set how long we should wait for the Etcd cluster to finish rolling out before giving up. | `"600s"` |
-| preUpgradeHook.&ZeroWidthSpace;tolerations | Node tolerations for server scheduling to nodes with taints # Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ # | `[]` |
-| priorityClassName | Pod scheduling priority. Setting this value will apply to all components except the external Chart dependencies. If any component has `priorityClassName` set, then this value would be overridden for that component. For external components like etcd, jaeger or loki, PriorityClass can only be set at component level. | `""` |
-| security.&ZeroWidthSpace;networkPolicy.&ZeroWidthSpace;enabled | When enabled, the NetworkPolicy will block all HTTP traffic to the REST API service. | `true` |
-| security.&ZeroWidthSpace;tls | TLS configuration shared across all service endpoints. The CA, issuer, engine, and per-certificate defaults are cluster-scoped infrastructure common to all services (REST, gRPC, …). Individual services may override leaf-cert settings (mutualAuth, duration, renewBefore) in their own tls block. | <pre>{<br>"autoGenerated":{<br>"certManager":{<br>"caDuration":"87600h",<br>"duration":"2160h",<br>"existingIssuer":"",<br>"existingIssuerKind":"",<br>"keyAlgorithm":"RSA",<br>"keySize":2048,<br>"renewBefore":"360h"<br>},<br>"enabled":true,<br>"engine":"pod",<br>"helm":{<br>"caCertDuration":3650,<br>"certDuration":365<br>}<br>},<br>"enabled":false,<br>"mutualAuth":false<br>}</pre> |
-| security.&ZeroWidthSpace;tls.&ZeroWidthSpace;autoGenerated.&ZeroWidthSpace;certManager.&ZeroWidthSpace;caDuration | Duration of the shared CA certificate. | `"87600h"` |
-| security.&ZeroWidthSpace;tls.&ZeroWidthSpace;autoGenerated.&ZeroWidthSpace;certManager.&ZeroWidthSpace;duration | Default validity period for leaf certificates issued by cert-manager. Can be overridden per service (e.g. apis.rest.security.tls.certManager.duration). | `"2160h"` |
-| security.&ZeroWidthSpace;tls.&ZeroWidthSpace;autoGenerated.&ZeroWidthSpace;certManager.&ZeroWidthSpace;existingIssuer | Optional reference to an existing cert-manager Issuer or ClusterIssuer. When set, the chart uses this issuer instead of creating a self-signed one. Shared across all services — REST and gRPC will use the same issuer. | `""` |
-| security.&ZeroWidthSpace;tls.&ZeroWidthSpace;autoGenerated.&ZeroWidthSpace;certManager.&ZeroWidthSpace;keySize | Key algorithm and size used for all leaf certificates. | `2048` |
-| security.&ZeroWidthSpace;tls.&ZeroWidthSpace;autoGenerated.&ZeroWidthSpace;certManager.&ZeroWidthSpace;renewBefore | Default renewal window for leaf certificates. Can be overridden per service (e.g. apis.rest.security.tls.certManager.renewBefore). | `"360h"` |
-| security.&ZeroWidthSpace;tls.&ZeroWidthSpace;autoGenerated.&ZeroWidthSpace;enabled | Enable automatic certificate generation/management. When false, each service's security.tls.existingSecret must point to a pre-existing TLS Secret. | `true` |
-| security.&ZeroWidthSpace;tls.&ZeroWidthSpace;autoGenerated.&ZeroWidthSpace;engine | Certificate engine (shared across all services): pod:          server generates a transient cert at startup (--auto-tls). No k8s Secrets               are created. Cannot be combined with mutualAuth. helm:         chart generates self-signed certificates stored in k8s Secrets. cert-manager: cert-manager provisions and rotates certificates. cert-manager must be installed. | `"pod"` |
-| security.&ZeroWidthSpace;tls.&ZeroWidthSpace;autoGenerated.&ZeroWidthSpace;helm.&ZeroWidthSpace;caCertDuration | Validity period in days for the helm-generated CA certificate. | `3650` |
-| security.&ZeroWidthSpace;tls.&ZeroWidthSpace;autoGenerated.&ZeroWidthSpace;helm.&ZeroWidthSpace;certDuration | Default validity period in days for helm-generated leaf certificates. Can be overridden per service (e.g. apis.rest.security.tls.helm.certDuration). | `365` |
-| security.&ZeroWidthSpace;tls.&ZeroWidthSpace;enabled | Enable TLS for all service endpoints. When false, all services use plain-text. | `false` |
-| security.&ZeroWidthSpace;tls.&ZeroWidthSpace;mutualAuth | Default: enable mutual TLS (clients verify the server and present their own certificate). Can be overridden per service (e.g. apis.rest.security.tls.mutualAuth). Has no effect when engine=pod, which uses server-only transient TLS. | `false` |
-| storageClass.&ZeroWidthSpace;allowVolumeExpansion | Enable volume expansion for the default StorageClass. | `true` |
-| tolerations | Tolerations to be applied to all components except external Chart dependencies. If any component has tolerations set, then it would override this value. For external components like etcd, jaeger and loki, tolerations can only be set at component level. | `[]` |
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| agents.core.allowNonPersistentDevlink | bool | `false` | Allow using non-persistent kernel devpaths for pool disks. Enabling this will let users to use the kernel devpaths e.g /dev/sda, for diskpools. However, this comes with associated risks if the devpaths get swapped among disks, resulting in total data loss especially if encryption is being used. |
+| agents.core.capacity.thin.poolCommitment | string | `"250%"` | The allowed pool commitment limit when dealing with thin provisioned volumes. Example: If the commitment is 250 and the pool is 10GiB we can overcommit the pool up to 25GiB (create 2 10GiB and 1 5GiB volume) but no further. |
+| agents.core.capacity.thin.snapshotCommitment | string | `"40%"` | When creating snapshots for an existing volume, each replica pool must have at least this much free space percentage of the volume size. Example: if this value is 40, the pool has 40GiB free, then the max volume size allowed to be snapped on the pool is 100GiB. |
+| agents.core.capacity.thin.volumeCommitment | string | `"40%"` | When creating replicas for an existing volume, each replica pool must have at least this much free space percentage of the volume size. Example: if this value is 40, the pool has 40GiB free, then the max volume size allowed to be created on the pool is 100GiB. |
+| agents.core.capacity.thin.volumeCommitmentInitial | string | `"40%"` | Same as the `volumeCommitment` argument, but applicable only when creating replicas for a new volume. |
+| agents.core.encryptedPoolsSoftScheduling | bool | `false` | Prefer encrypted pools for volume replicas. If a volume wasn't provisioned with a encryption storageclass, we try to place the replicas of such volume on best-effort basis onto encrypted pools, if this global is set. This is effective subject to volume spec already modified via plugin to request encryption. |
+| agents.core.logLevel | string | `"info"` | Log level for the core service |
+| agents.core.maxCreateVolume | int | `10` |  |
+| agents.core.minTimeouts | bool | `true` | Enable minimal timeouts |
+| agents.core.nodeSelector | object | `{}` | Set nodeSelector, overrides global |
+| agents.core.poolClusterSize | string | `""` | Default blobstore cluster size for diskpools, in bytes. This value is used as a default value of blobstore cluster size on diskpools. This is set to 4MiB internally by default, if nothing specified here. The value is also configurable via Diskpool CR, which takes precedence over this setting. This is an advanced configuration, please refer documentation to understand the usage and implications of this. |
+| agents.core.priorityClassName | string | `""` | Set PriorityClass, overrides global. If both local and global are not set, the final deployment manifest has a mayastor custom critical priority class assigned to the pod by default. Refer the `templates/_helpers.tpl` and `templates/mayastor/agents/core/agent-core-deployment.yaml` for more details. |
+| agents.core.rebuild.maxConcurrent | string | `""` | The maximum number of system-wide rebuilds permitted at any given time. If set to an empty string, there are no limits. |
+| agents.core.rebuild.partial.enabled | bool | `true` | Partial rebuild uses a log of missed IO to rebuild replicas which have become temporarily faulted, hence a bit faster, depending on the log size. |
+| agents.core.rebuild.partial.waitPeriod | string | `""` | If a faulted replica comes back online within this time period then it will be rebuilt using the partial rebuild capability. Otherwise, the replica will be fully rebuilt. A blank value "" means internally derived value will be used. |
+| agents.core.requestTimeout | string | `nil` | Request timeout for core agents Default value is defined in .base.default_req_timeout |
+| agents.core.resources.limits.cpu | string | `"1000m"` | Cpu limits for core agents |
+| agents.core.resources.limits.memory | string | `"128Mi"` | Memory limits for core agents |
+| agents.core.resources.requests.cpu | string | `"500m"` | Cpu requests for core agents |
+| agents.core.resources.requests.memory | string | `"32Mi"` | Memory requests for core agents |
+| agents.core.tolerations | list | `[]` | Set tolerations, overrides global |
+| agents.core.volumeHealth | bool | `true` | Enable extended volume health information, which helps generate the volume status more accurately. |
+| agents.ha.cluster.logLevel | string | `"info"` | Log level for the ha cluster service |
+| agents.ha.cluster.resources.limits.cpu | string | `"100m"` | Cpu limits for ha cluster agent |
+| agents.ha.cluster.resources.limits.memory | string | `"64Mi"` | Memory limits for ha cluster agent |
+| agents.ha.cluster.resources.requests.cpu | string | `"100m"` | Cpu requests for ha cluster agent |
+| agents.ha.cluster.resources.requests.memory | string | `"16Mi"` | Memory requests for ha cluster agent |
+| agents.ha.enabled | bool | `true` |  |
+| agents.ha.node.logLevel | string | `"info"` | Log level for the ha node service |
+| agents.ha.node.nodeSelector | object | `{}` | Set nodeSelector, overrides global |
+| agents.ha.node.port | int | `50053` | Container port for the ha-node service |
+| agents.ha.node.priorityClassName | string | `""` | Set PriorityClass, overrides global |
+| agents.ha.node.resources.limits.cpu | string | `"100m"` | Cpu limits for ha node agent |
+| agents.ha.node.resources.limits.memory | string | `"64Mi"` | Memory limits for ha node agent |
+| agents.ha.node.resources.requests.cpu | string | `"100m"` | Cpu requests for ha node agent |
+| agents.ha.node.resources.requests.memory | string | `"64Mi"` | Memory requests for ha node agent |
+| agents.ha.node.tolerations | list | `[]` | Set tolerations, overrides global |
+| alloy.alloy.configMap.content | string | `"{{- $releaseName := .Release.Name | replace \"-\" \"_\" -}}\n\nlivedebugging {\n  enabled = {{ .Values.logging_config.debugging }}\n}\n\ndiscovery.kubernetes \"{{ $releaseName }}_pods_name\" {\n  role = \"pod\"\n}\n\ndiscovery.relabel \"{{ $releaseName }}_pods_name\" {\n  targets = discovery.kubernetes.{{ $releaseName }}_pods_name.targets\n\n  {{- $labels := .Values.logging_config.labels }}\n  {{- if $labels }}\n  {{- $keys := (keys $labels | sortAlpha) }}\n\n  rule {\n    source_labels = [\n      {{- range $key := $keys }}\n      \"__meta_kubernetes_pod_label_{{ $key | replace \".\" \"_\" | replace \"/\" \"_\" }}\",\n      {{- end }}\n    ]\n    separator     = \";\"\n    regex         = \"^{{ include \"regex_or\" (dict \"labels\" $labels \"keys\" $keys) }}$\"\n    action        = \"keep\"\n  }\n\n  {{- end }}\n\n  rule {\n    regex  = \"__meta_kubernetes_pod_label_(.+)\"\n    action = \"labelmap\"\n  }\n\n  rule {\n    regex  = \"__meta_kubernetes_pod_label_(.+)\"\n    action = \"labelmap\"\n  }\n\n  rule {\n    source_labels = [\"__meta_kubernetes_namespace\"]\n    separator     = \"/\"\n    target_label  = \"job\"\n  }\n\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_name\"]\n    target_label  = \"pod\"\n  }\n\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_container_name\"]\n    target_label  = \"container\"\n  }\n\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_node_name\"]\n    target_label  = \"hostname\"\n  }\n\n  rule {\n    source_labels = [\"__meta_kubernetes_pod_uid\", \"__meta_kubernetes_pod_container_name\"]\n    separator     = \"/\"\n    target_label  = \"__path__\"\n    replacement   = \"/var/log/pods/*$1/*.log\"\n  }\n}\n\nlocal.file_match \"{{ $releaseName }}_pod_files\" {\n  path_targets = discovery.relabel.{{ $releaseName }}_pods_name.output\n}\n\nloki.source.file \"{{ $releaseName }}_pod_logs\" {\n  targets    = local.file_match.{{ $releaseName }}_pod_files.targets\n  forward_to = [loki.process.{{ $releaseName }}_process_logs.receiver]\n}\n\nloki.process \"{{ $releaseName }}_process_logs\" {\n  forward_to = [loki.write.default.receiver]\n\n  stage.docker { }\n\n  stage.replace {\n    expression = \"(\\\\n)\"\n    replace = \"\"\n  }\n\n  stage.multiline {\n    firstline = \"^  \\\\x1b\\\\[2m(\\\\d{4})-(\\\\d{2})-(\\\\d{2})T(\\\\d{2}):(\\\\d{2}):(\\\\d{2}).(\\\\d{6})Z\"\n  }\n\n  stage.multiline {\n    firstline = \"^  (\\\\d{4})-(\\\\d{2})-(\\\\d{2})T(\\\\d{2}):(\\\\d{2}):(\\\\d{2}).(\\\\d{6})Z\"\n  }\n}\n\nloki.write \"default\" {\n    endpoint {\n    url       = \"http://{{ .Release.Name }}-loki:3100/loki/api/v1/push\"\n    tenant_id = \"{{ .Values.logging_config.tenant_id }}\"\n  }\n  external_labels = {}\n}\n\n{{- define \"regex_or\" -}}\n{{- $labels := .labels -}}\n{{- $keys := .keys -}}\n{{- $numKeys := len $keys -}}\n{{- $regexParts := list -}}\n{{- range $i, $key := $keys -}}\n{{- $part := list -}}\n{{- range $j := until $numKeys -}}\n{{- if eq $j $i -}}\n{{- $part = append $part (get $labels $key) -}}\n{{- else -}}\n{{- $part = append $part \".*\" -}}\n{{- end -}}\n{{- end -}}\n{{- $regexParts = append $regexParts (join \";\" $part) -}}\n{{- end -}}\n{{- join \"|\" $regexParts -}}\n{{- end -}}\n"` |  |
+| alloy.alloy.configMap.create | bool | `true` |  |
+| alloy.alloy.mounts.varlog | bool | `true` |  |
+| alloy.enabled | bool | `true` |  |
+| alloy.logging_config.debugging | bool | `false` |  |
+| alloy.logging_config.labels | object | `{"openebs.io/logging":true}` | Labels to enable scraping on, at-least one of these labels should be present. |
+| alloy.logging_config.tenant_id | string | `"openebs"` | X-Scope-OrgID to pe populated which pushing logs. Make sure the caller also uses the same. |
+| apis.rest.healthProbes.liveness.enabled | bool | `true` | Toggle liveness probe. |
+| apis.rest.healthProbes.liveness.failureThreshold | int | `3` | No. of failures the liveness probe will tolerate. |
+| apis.rest.healthProbes.liveness.initialDelaySeconds | int | `1` | No. of seconds of delay before checking the liveness status. |
+| apis.rest.healthProbes.liveness.periodSeconds | int | `30` | No. of seconds between liveness probe checks. |
+| apis.rest.healthProbes.liveness.timeoutSeconds | int | `5` | No. of seconds of timeout tolerance. |
+| apis.rest.healthProbes.readiness.agentCoreProbeFreq | string | `"20s"` | Frequency for the agent-core liveness probe. |
+| apis.rest.healthProbes.readiness.enabled | bool | `true` | Toggle readiness probe. |
+| apis.rest.healthProbes.readiness.failureThreshold | int | `3` | No. of failures the readiness probe will tolerate. |
+| apis.rest.healthProbes.readiness.initialDelaySeconds | int | `1` | No. of seconds of delay before checking the readiness status. |
+| apis.rest.healthProbes.readiness.periodSeconds | int | `20` | No. of seconds between readiness probe checks. |
+| apis.rest.healthProbes.readiness.timeoutSeconds | int | `5` | No. of seconds of timeout tolerance. |
+| apis.rest.logLevel | string | `"info"` | Log level for the rest service |
+| apis.rest.nodeSelector | object | `{}` | Set nodeSelector, overrides global |
+| apis.rest.priorityClassName | string | `""` | Set PriorityClass, overrides global. If both local and global are not set, the final deployment manifest has a mayastor custom critical priority class assigned to the pod by default. Refer the `templates/_helpers.tpl` and `templates/mayastor/apis/rest/api-rest-deployment.yaml` for more details. |
+| apis.rest.replicaCount | int | `1` | Number of replicas of rest |
+| apis.rest.resources.limits.cpu | string | `"100m"` | Cpu limits for rest |
+| apis.rest.resources.limits.memory | string | `"64Mi"` | Memory limits for rest |
+| apis.rest.resources.requests.cpu | string | `"50m"` | Cpu requests for rest |
+| apis.rest.resources.requests.memory | string | `"32Mi"` | Memory requests for rest |
+| apis.rest.security.tls.certManager.secretName | string | `""` | Secret name for the REST API server TLS certificate. Defaults to {release}-api-rest-crt. |
+| apis.rest.security.tls.clients | object | `{"callhome":{"certManager":{"secretName":""},"existingSecret":""},"csiController":{"certManager":{"secretName":""},"existingSecret":""},"csiNode":{"certManager":{"secretName":""},"existingSecret":""},"diskpoolOperator":{"certManager":{"secretName":""},"existingSecret":""},"metricsExporter":{"certManager":{"secretName":""},"existingSecret":""},"plugin":{"certManager":{"secretName":""},"existingSecret":""}}` | Per-client TLS overrides. Each client can point at a pre-existing secret (when autoGenerated.enabled is false) or customise the cert-manager secret name. |
+| apis.rest.security.tls.clients.callhome.certManager.secretName | string | `""` | cert-manager secret name for the callhome client cert. Defaults to {release}-api-rest-callhome-crt. |
+| apis.rest.security.tls.clients.callhome.existingSecret | string | `""` | Pre-existing Secret for the callhome client cert. Required when autoGenerated.enabled is false and mutualAuth is true. |
+| apis.rest.security.tls.clients.csiController.certManager.secretName | string | `""` | cert-manager secret name for the CSI controller client cert. Defaults to {release}-api-rest-csi-controller-crt. |
+| apis.rest.security.tls.clients.csiController.existingSecret | string | `""` | Pre-existing Secret for the CSI controller client cert. Required when autoGenerated.enabled is false and mutualAuth is true. |
+| apis.rest.security.tls.clients.csiNode.certManager.secretName | string | `""` | cert-manager secret name for the CSI node client cert. Defaults to {release}-api-rest-csi-node-crt. |
+| apis.rest.security.tls.clients.csiNode.existingSecret | string | `""` | Pre-existing Secret for the CSI node client cert. Required when autoGenerated.enabled is false and mutualAuth is true. |
+| apis.rest.security.tls.clients.diskpoolOperator.certManager.secretName | string | `""` | cert-manager secret name for the diskpool-operator client cert. Defaults to {release}-api-rest-diskpool-operator-crt. |
+| apis.rest.security.tls.clients.diskpoolOperator.existingSecret | string | `""` | Pre-existing Secret for the diskpool-operator client cert. Required when autoGenerated.enabled is false and mutualAuth is true. |
+| apis.rest.security.tls.clients.metricsExporter.certManager.secretName | string | `""` | cert-manager secret name for the metrics-exporter client cert. Defaults to {release}-api-rest-metrics-exporter-crt. |
+| apis.rest.security.tls.clients.metricsExporter.existingSecret | string | `""` | Pre-existing Secret for the metrics-exporter client cert. Required when autoGenerated.enabled is false and mutualAuth is true. |
+| apis.rest.security.tls.clients.plugin.certManager.secretName | string | `""` | cert-manager secret name for the kubectl plugin client cert. Defaults to {release}-api-rest-plugin-crt. |
+| apis.rest.security.tls.clients.plugin.existingSecret | string | `""` | Pre-existing Secret for the kubectl plugin client cert. Required when autoGenerated.enabled is false and mutualAuth is true. |
+| apis.rest.security.tls.existingSecret | string | `""` | Pre-existing TLS Secret to use when tls.autoGenerated.enabled is false. Must contain tls.crt, tls.key, and ca.crt. The chart mounts it but does not manage it. |
+| apis.rest.service.nodePorts.http | int | `30011` |  |
+| apis.rest.service.nodePorts.https | int | `30010` |  |
+| apis.rest.service.type | string | `"ClusterIP"` | Rest K8s service type |
+| apis.rest.tolerations | list | `[]` | Set tolerations, overrides global |
+| base.cache_poll_period | string | `"30s"` | Cache timeout for core agent & diskpool deployment |
+| base.default_req_timeout | string | `"5s"` | Request timeout for rest & core agents |
+| base.initContainers.containers[0].command[0] | string | `"sh"` |  |
+| base.initContainers.containers[0].command[1] | string | `"-c"` |  |
+| base.initContainers.containers[0].command[2] | string | `"trap \"exit 1\" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50051; do date; echo \"Waiting for agent-core-grpc services...\"; sleep 1; done;"` |  |
+| base.initContainers.containers[0].name | string | `"agent-core-grpc-probe"` |  |
+| base.initContainers.containers[1].command[0] | string | `"sh"` |  |
+| base.initContainers.containers[1].command[1] | string | `"-c"` |  |
+| base.initContainers.containers[1].command[2] | string | `"trap \"exit 1\" TERM; until nc -vzw 5 {{ include \"etcdUrl\" . }} {{ .Values.etcd.service.ports.client }}; do date; echo \"Waiting for etcd...\"; sleep 1; done;"` |  |
+| base.initContainers.containers[1].name | string | `"etcd-probe"` |  |
+| base.initContainers.enabled | bool | `true` |  |
+| base.initContainers.image.name | string | `"alpine-sh"` |  |
+| base.initContainers.image.pullPolicy | string | `"IfNotPresent"` |  |
+| base.initContainers.image.registry | string | `""` | Image registry for init containers |
+| base.initContainers.image.tag | string | `"4.5.0"` |  |
+| base.initCoreContainers.containers[0].command[0] | string | `"sh"` |  |
+| base.initCoreContainers.containers[0].command[1] | string | `"-c"` |  |
+| base.initCoreContainers.containers[0].command[2] | string | `"trap \"exit 1\" TERM; until nc -vzw 5 {{ include \"etcdUrl\" . }} {{ .Values.etcd.service.ports.client }}; do date; echo \"Waiting for etcd...\"; sleep 1; done;"` |  |
+| base.initCoreContainers.containers[0].name | string | `"etcd-probe"` |  |
+| base.initCoreContainers.enabled | bool | `true` |  |
+| base.initHaNodeContainers.containers[0].command[0] | string | `"sh"` |  |
+| base.initHaNodeContainers.containers[0].command[1] | string | `"-c"` |  |
+| base.initHaNodeContainers.containers[0].command[2] | string | `"trap \"exit 1\" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50052; do date; echo \"Waiting for agent-cluster-grpc services...\"; sleep 1; done;"` |  |
+| base.initHaNodeContainers.containers[0].name | string | `"agent-cluster-grpc-probe"` |  |
+| base.initHaNodeContainers.enabled | bool | `true` |  |
+| base.initRestContainer.enabled | bool | `true` |  |
+| base.initRestContainer.initContainer[0].command[0] | string | `"sh"` |  |
+| base.initRestContainer.initContainer[0].command[1] | string | `"-c"` |  |
+| base.initRestContainer.initContainer[0].command[2] | string | `"trap \"exit 1\" TERM; until nc -vzw 5 {{ .Release.Name }}-api-rest {{ if .Values.security.tls.enabled }}8080{{ else }}8081{{ end }}; do date; echo \"Waiting for REST API endpoint to become available\"; sleep 1; done;"` |  |
+| base.initRestContainer.initContainer[0].name | string | `"api-rest-probe"` |  |
+| base.jaeger.agent.initContainer[0].command[0] | string | `"sh"` |  |
+| base.jaeger.agent.initContainer[0].command[1] | string | `"-c"` |  |
+| base.jaeger.agent.initContainer[0].command[2] | string | `"trap \"exit 1\" TERM; until nc -vzw 5 -u {{.Values.base.jaeger.agent.name}} {{.Values.base.jaeger.agent.port}}; do date; echo \"Waiting for jaeger...\"; sleep 1; done;"` |  |
+| base.jaeger.agent.initContainer[0].name | string | `"jaeger-probe"` |  |
+| base.jaeger.agent.name | string | `"jaeger-agent"` |  |
+| base.jaeger.agent.port | int | `6831` |  |
+| base.jaeger.collector.initContainer[0].command[0] | string | `"sh"` |  |
+| base.jaeger.collector.initContainer[0].command[1] | string | `"-c"` |  |
+| base.jaeger.collector.initContainer[0].command[2] | string | `"trap \"exit 1\" TERM; until nc -vzw 5 -u {{.Values.base.jaeger.collector.name}} {{.Values.base.jaeger.collector.port}}; do date; echo \"Waiting for jaeger...\"; sleep 1; done;"` |  |
+| base.jaeger.collector.initContainer[0].name | string | `"jaeger-probe"` |  |
+| base.jaeger.collector.name | string | `"jaeger-collector"` |  |
+| base.jaeger.collector.port | int | `4317` |  |
+| base.jaeger.enabled | bool | `false` |  |
+| base.jaeger.initContainer | bool | `true` |  |
+| base.logging.color | bool | `true` | Enable ansi color code for Pod StdOut/StdErr |
+| base.logging.format | string | `"pretty"` | Valid values for format are pretty, json and compact |
+| base.logging.silenceLevel | string | `nil` | Silence specific module components |
+| base.metrics.enabled | bool | `true` | Enable the metrics exporter |
+| base.metrics.port | int | `9502` | Container port for the metrics exporter service |
+| crds.csi.volumeSnapshots.enabled | bool | `true` | Install Volume Snapshot CRDs |
+| crds.enabled | bool | `true` | Disables the installation of all CRDs if set to false |
+| csi.controller.enableDangerousRetainGC | bool | `false` |  |
+| csi.controller.logLevel | string | `"info"` | Log level for the csi controller |
+| csi.controller.maxCreateVolume | int | `10` |  |
+| csi.controller.nodeSelector | object | `{}` | Set nodeSelector, overrides global |
+| csi.controller.preventVolumeModeConversion | bool | `true` | Prevent modifying the volume mode when creating a PVC from an existing VolumeSnapshot |
+| csi.controller.priorityClassName | string | `""` | Set PriorityClass, overrides global |
+| csi.controller.resources.limits.cpu | string | `"32m"` | Cpu limits for csi controller |
+| csi.controller.resources.limits.memory | string | `"128Mi"` | Memory limits for csi controller |
+| csi.controller.resources.requests.cpu | string | `"16m"` | Cpu requests for csi controller |
+| csi.controller.resources.requests.memory | string | `"64Mi"` | Memory requests for csi controller |
+| csi.controller.tolerations | list | `[]` | Set tolerations, overrides global |
+| csi.image.attacherTag | string | `"v4.8.1"` | csi-attacher image release tag |
+| csi.image.provisionerTag | string | `"v5.2.0"` | csi-provisioner image release tag |
+| csi.image.pullPolicy | string | `"IfNotPresent"` | imagePullPolicy for all CSI Sidecar images |
+| csi.image.registrarTag | string | `"v2.13.0"` | csi-node-driver-registrar image release tag |
+| csi.image.registry | string | `"registry.k8s.io"` | Image registry to pull all CSI Sidecar images |
+| csi.image.repo | string | `"sig-storage"` | Image registry's namespace |
+| csi.image.resizerTag | string | `"v1.13.2"` | csi-resizer image release tag |
+| csi.image.snapshotControllerTag | string | `"v8.2.0"` | csi-snapshot-controller image release tag |
+| csi.image.snapshotterTag | string | `"v8.2.0"` | csi-snapshotter image release tag |
+| csi.node.initContainers.containers[0].command[0] | string | `"sh"` |  |
+| csi.node.initContainers.containers[0].command[1] | string | `"-c"` |  |
+| csi.node.initContainers.containers[0].command[2] | string | `"trap \"exit 1\" TERM; until [ -d /sys/module/nvme_tcp ]; do [ -z \"$WARNED\" ] && echo \"nvme_tcp module not loaded...\"; WARNED=1; sleep 60; done;"` |  |
+| csi.node.initContainers.containers[0].name | string | `"nvme-tcp-probe"` |  |
+| csi.node.initContainers.enabled | bool | `false` |  |
+| csi.node.kubeletDir | string | `"/var/lib/kubelet"` | The kubeletDir directory for the csi-node plugin |
+| csi.node.logLevel | string | `"info"` |  |
+| csi.node.mkfs_args.xfs | string | `""` |  |
+| csi.node.nodeSelector | object | `{}` | Set nodeSelector, overrides global |
+| csi.node.nvme.ctrl_loss_tmo | string | `"1980"` | The ctrl_loss_tmo (controller loss timeout) in seconds |
+| csi.node.nvme.io_timeout | string | `""` |  |
+| csi.node.nvme.keep_alive_tmo | string | `""` |  |
+| csi.node.nvme.tcpFallback | bool | `true` | Fallback to nvme-tcp if nvme-rdma is enabled for Mayastor but rdma is not available on a particular csi-node |
+| csi.node.pluginMountPath | string | `"/csi"` |  |
+| csi.node.port | int | `10199` | Container port for the csi-node service |
+| csi.node.priorityClassName | string | `""` | Set PriorityClass, overrides global |
+| csi.node.resources.limits.cpu | string | `"100m"` | Cpu limits for csi node plugin |
+| csi.node.resources.limits.memory | string | `"128Mi"` | Memory limits for csi node plugin |
+| csi.node.resources.requests.cpu | string | `"100m"` | Cpu requests for csi node plugin |
+| csi.node.resources.requests.memory | string | `"64Mi"` | Memory requests for csi node plugin |
+| csi.node.restClient.enabled | bool | `true` |  |
+| csi.node.socketPath | string | `"csi.sock"` |  |
+| csi.node.tolerations | list | `[]` | Set tolerations, overrides global |
+| csi.node.topology.nodeSelector | bool | `false` | Add topology segments to the csi-node and agent-ha-node daemonset node selector |
+| csi.node.topology.segments."openebs.io/csi-node" | string | `"mayastor"` |  |
+| earlyEvictionTolerations[0].effect | string | `"NoExecute"` |  |
+| earlyEvictionTolerations[0].key | string | `"node.kubernetes.io/unreachable"` |  |
+| earlyEvictionTolerations[0].operator | string | `"Exists"` |  |
+| earlyEvictionTolerations[0].tolerationSeconds | int | `5` |  |
+| earlyEvictionTolerations[1].effect | string | `"NoExecute"` |  |
+| earlyEvictionTolerations[1].key | string | `"node.kubernetes.io/not-ready"` |  |
+| earlyEvictionTolerations[1].operator | string | `"Exists"` |  |
+| earlyEvictionTolerations[1].tolerationSeconds | int | `5` |  |
+| etcd.auth.client.secureTransport | bool | `false` |  |
+| etcd.auth.peer.secureTransport | bool | `false` |  |
+| etcd.auth.rbac.allowNoneAuthentication | bool | `true` |  |
+| etcd.auth.rbac.create | bool | `false` |  |
+| etcd.autoCompactionMode | string | `"revision"` | AutoCompaction Since etcd keeps an exact history of its keyspace, this history should be periodically compacted to avoid performance degradation and eventual storage space exhaustion. Auto compaction mode. Valid values: "periodic", "revision". - 'periodic' for duration based retention, defaulting to hours if no time unit is provided (e.g. 5m). - 'revision' for revision number based retention. |
+| etcd.autoCompactionRetention | string | `"100"` | Auto compaction retention length. 0 means disable auto compaction. |
+| etcd.clusterDomain | string | `"cluster.local"` | Kubernetes Cluster Domain |
+| etcd.enabled | bool | `true` | Disable when using an external etcd cluster. |
+| etcd.externalUrl | string | `""` | Url of the external etcd cluster. Note, etcd.enable must be set to false. |
+| etcd.extraEnvVars[0] | object | `{"name":"ETCD_QUOTA_BACKEND_BYTES","value":"8589934592"}` | Raise alarms when backend size exceeds the given quota. |
+| etcd.image.debug | bool | `false` |  |
+| etcd.image.registry | string | `"docker.io"` |  |
+| etcd.image.repository | string | `"openebs/etcd"` |  |
+| etcd.localpvScConfig.basePath | string | `"/var/local/{{ .Release.Name }}/localpv-hostpath/etcd"` | Host path where local etcd data is stored in. |
+| etcd.localpvScConfig.enabled | bool | `true` |  |
+| etcd.localpvScConfig.name | string | `"mayastor-etcd-localpv"` |  |
+| etcd.localpvScConfig.reclaimPolicy | string | `"Delete"` | ReclaimPolicy of etcd's localpv hostpath storage class. |
+| etcd.localpvScConfig.volumeBindingMode | string | `"WaitForFirstConsumer"` | VolumeBindingMode of etcd's localpv hostpath storage class. |
+| etcd.metrics.enabled | bool | `true` | Expose etcd metrics. |
+| etcd.metrics.useSeparateEndpoint | bool | `true` | Use a separate endpoint for exposing metrics, override the default port (9090) by setting containerPorts.metrics. |
+| etcd.nodeSelector | object | `{}` |  |
+| etcd.persistence.enabled | bool | `true` | If true, use a Persistent Volume Claim. If false, use emptyDir. |
+| etcd.persistence.size | string | `"2Gi"` | Volume size |
+| etcd.persistence.storageClass | string | `"mayastor-etcd-localpv"` | Will define which storageClass to use in etcd's StatefulSets. Options: <p> - `"manual"` - Will provision a hostpath PV on the same node. <br> - `""` (empty) - Will use the default StorageClass on the cluster. </p> |
+| etcd.persistentVolumeClaimRetentionPolicy.enabled | bool | `false` | PVC's reclaimPolicy |
+| etcd.persistentVolumeClaimRetentionPolicy.whenDeleted | string | `"Retain"` |  |
+| etcd.persistentVolumeClaimRetentionPolicy.whenScaled | string | `"Retain"` |  |
+| etcd.podAntiAffinityPreset | string | `"hard"` | Pod anti-affinity preset Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity |
+| etcd.podLabels."openebs.io/logging" | string | `"true"` |  |
+| etcd.podLabels.app | string | `"etcd"` |  |
+| etcd.preUpgradeJob.annotations."helm.sh/hook-delete-policy" | string | `"hook-succeeded,before-hook-creation"` |  |
+| etcd.priorityClassName | string | `""` |  |
+| etcd.removeMemberOnContainerTermination | bool | `false` | Use a PreStop hook to remove the etcd members from the etcd cluster on container termination Ignored if lifecycleHooks is set or replicaCount=1 |
+| etcd.replicaCount | int | `3` | Number of replicas of etcd |
+| etcd.service.nodePorts.client | int | `31379` |  |
+| etcd.service.nodePorts.peer | string | `""` |  |
+| etcd.service.ports.client | int | `2379` |  |
+| etcd.service.type | string | `"ClusterIP"` |  |
+| etcd.tolerations | list | `[]` |  |
+| etcd.volumePermissions.enabled | bool | `true` |  |
+| etcd.volumePermissions.image.pullSecrets | list | `[]` |  |
+| etcd.volumePermissions.image.registry | string | `"docker.io"` |  |
+| etcd.volumePermissions.image.repository | string | `"openebs/alpine-bash"` |  |
+| etcd.volumePermissions.image.tag | string | `"4.5.0"` |  |
+| eventing.aggregator.dirSizeLimit | string | `"100Mi"` | Maximum total size of event files including rotated history. Used when loki.enabled is false. |
+| eventing.aggregator.enabled | bool | `true` | Enable the eventing-aggregator deployment. Requires eventing.enabled to be true. |
+| eventing.aggregator.initContainers.containers[0].command[0] | string | `"sh"` |  |
+| eventing.aggregator.initContainers.containers[0].command[1] | string | `"-c"` |  |
+| eventing.aggregator.initContainers.containers[0].command[2] | string | `"trap \"exit 1\" TERM; until nc -vzw 5 {{ .Release.Name }}-nats 4222; do date; echo \"Waiting for NATS...\"; sleep 1; done;"` |  |
+| eventing.aggregator.initContainers.containers[0].name | string | `"nats-probe"` |  |
+| eventing.aggregator.initContainers.enabled | bool | `true` |  |
+| eventing.aggregator.logLevel | string | `"info"` | Log level for eventing-aggregator |
+| eventing.aggregator.nodeSelector | object | `{}` | Set nodeSelector, overrides global |
+| eventing.aggregator.priorityClassName | string | `""` | Set PriorityClass, overrides global |
+| eventing.aggregator.resources.limits.cpu | string | `"100m"` | Cpu limits for eventing-aggregator |
+| eventing.aggregator.resources.limits.memory | string | `"32Mi"` | Memory limits for eventing-aggregator |
+| eventing.aggregator.resources.requests.cpu | string | `"50m"` | Cpu requests for eventing-aggregator |
+| eventing.aggregator.resources.requests.memory | string | `"16Mi"` | Memory requests for eventing-aggregator |
+| eventing.aggregator.tolerations | list | `[]` | Set tolerations, overrides global |
+| eventing.enabled | bool | `true` |  |
+| global.analytics.enabled | string | `nil` | Global overide for call home |
+| global.imagePullPolicy | string | `""` | Global overide for image pull policy |
+| global.imagePullSecrets | list | `[]` | Global override for image pull secrets - secret |
+| global.imageRegistry | string | `""` | Global override for image registry |
+| global.security.allowInsecureImages | bool | `true` |  |
+| image.pullPolicy | string | `"Always"` | ImagePullPolicy for our images |
+| image.pullSecrets | list | `[]` | docker-secrets required to pull images if the container registry from image.registry is protected |
+| image.registry | string | `"docker.io"` | Image registry to pull our product images |
+| image.repo | string | `"openebs"` | Image registry's namespace |
+| image.repoTags.controlPlane | string | `""` |  |
+| image.repoTags.dataPlane | string | `""` |  |
+| image.repoTags.extensions | string | `""` |  |
+| image.tag | string | `"develop"` | Release tag for our images |
+| io_engine.api | string | `"v1"` |  |
+| io_engine.coreList | list | `[]` | If not empty, overrides the cpuCount and explicitly sets the list of cores. Example: --set='io_engine.coreList={30,31}' |
+| io_engine.cpuCount | string | `"2"` | The number of cores that each io-engine instance will bind to. |
+| io_engine.envcontext | string | `""` | Pass additional arguments to the Environment Abstraction Layer. Example: --set {product}.envcontext=iova-mode=pa |
+| io_engine.extraEnv | list | `[]` | Additional environment variables for the io-engine container. Uses the Kubernetes EnvVar format. Do not redefine environment variables already managed by the chart. |
+| io_engine.interruptMode | object | `{"enabled":false,"nvmeIoQueuePollPeriod":"100us"}` | SPDK interrupt mode for io-engine reactors. When enabled, reactors sleep on epoll/timerfd instead of busy-polling, which dramatically reduces idle CPU usage. NVMe I/O queues are still polled, but on a periodic timer rather than continuously. |
+| io_engine.interruptMode.enabled | bool | `false` | Enable interrupt mode by setting ENABLE_INTERRUPT_MODE=true on the io-engine container (equivalent to passing the --enable-interrupt-mode CLI flag). |
+| io_engine.interruptMode.nvmeIoQueuePollPeriod | string | `"100us"` | NVMe I/O queue poll period (SPDK NVME_IOQ_POLL_PERIOD). A value of "0" disables timed polling (busy poll). Typical values: "100us", "1000us". Higher values reduce CPU further at the cost of latency. |
+| io_engine.logLevel | string | `"info"` | Log level for the io-engine service |
+| io_engine.nodeSelector | object | `{"kubernetes.io/arch":"amd64","openebs.io/engine":"mayastor"}` | Node selectors to designate storage nodes for diskpool creation Note that if multi-arch images support 'kubernetes.io/arch: amd64' should be removed. |
+| io_engine.nvme.adminTimeout | string | `"30s"` |  |
+| io_engine.nvme.ioTimeout | string | `"110s"` | Timeout for IOs The default here is exaggerated for local disks, but we've observed that in shared virtual environments having a higher timeout value is beneficial. Please adjust this according to your hardware and needs. |
+| io_engine.nvme.keepAliveTimeout | string | `"10s"` |  |
+| io_engine.nvme.rdma.bufCacheSize | string | `nil` | The number of shared buffers to reserve for each poll group |
+| io_engine.nvme.rdma.dataWrPoolSize | string | `"4095"` | RDMA data WR pool size (RDMA only) |
+| io_engine.nvme.rdma.inCapsuleDataSize | string | `nil` | The max amount of payload data that can be transferred directly within the NVMe-oF Capsule command itself |
+| io_engine.nvme.rdma.ioUnitSize | string | `"8192"` | I/O unit size (bytes) |
+| io_engine.nvme.rdma.maxIoSize | string | `nil` | Max I/O size (bytes) |
+| io_engine.nvme.rdma.numSharedBuf | string | `nil` | The number of pooled data buffers available to the transport |
+| io_engine.nvme.tcp.bufCacheSize | string | `"64"` | The number of shared buffers to reserve for each poll group |
+| io_engine.nvme.tcp.inCapsuleDataSize | string | `"4096"` | The max amount of payload data that can be transferred directly within the NVMe-oF Capsule command itself |
+| io_engine.nvme.tcp.ioUnitSize | string | `"131072"` | I/O unit size (bytes) |
+| io_engine.nvme.tcp.maxIoSize | string | `"131072"` | Max I/O size (bytes) |
+| io_engine.nvme.tcp.maxQpairsPerCtrl | string | `"32"` | Max number of IO qpairs per controller |
+| io_engine.nvme.tcp.maxQueueDepth | string | `"32"` | You may need to increase this for a higher outstanding IOs per volume |
+| io_engine.nvme.tcp.numSharedBuf | string | `"2047"` | The number of pooled data buffers available to the transport |
+| io_engine.nvme.transportTos | string | `""` | NVMe Transport Type of Service (ToS) value for RDMA QoS/DSCP marking. When using NVMe-oF over RDMA (RoCEv2), set this to mark target (responder) side RDMA traffic with a DSCP value (e.g. 104 for DSCP 26 / AF31) so that switches and NICs can classify storage traffic into a Priority Flow Control (PFC) enabled queue for lossless transport. A value of 0 (the default) means no marking (best-effort QoS). |
+| io_engine.pool.ioAlerts.errorThreshold | int | `64` | After this many errors a pool alert is raised as Warning. |
+| io_engine.pool.ioAlerts.stallDeadline | string | `nil` | If an I/O is stuck longer than this period, then the pool is considered stalled and a Critical alert is raised. The pool disk will also be reset and the stall will be cleared once complete and I/O flows again. default: .Values.io_engine.nvme.ioTimeout * 2 |
+| io_engine.pool.ioAlerts.stallTransitionThreshold | int | `3` | After this many transitions within the stallTransitionWindow, a pool alert is raised as Warning. |
+| io_engine.pool.ioAlerts.stallTransitionWindow | string | `"3h"` | Time window during which stall ↔ resume state transitions are tracked for flakiness detection. |
+| io_engine.port | int | `10124` | Container port for the io-engine service |
+| io_engine.priorityClassName | string | `""` | Set PriorityClass, overrides global |
+| io_engine.pstorRetries | int | `300` | Number of retries for pstor persistence before the volume target self shutdowns |
+| io_engine.reactorFreezeDetection.enabled | bool | `false` |  |
+| io_engine.resources.limits.cpu | string | `""` | Cpu limits for the io-engine |
+| io_engine.resources.limits.hugepages1Gi | string | `nil` | Hugepage memory in 1GiB chunks |
+| io_engine.resources.limits.hugepages2Mi | string | `"2Gi"` | Hugepage memory in 2MiB chunks |
+| io_engine.resources.limits.memory | string | `"1Gi"` | Memory limits for the io-engine |
+| io_engine.resources.requests.cpu | string | `""` | Cpu requests for the io-engine |
+| io_engine.resources.requests.hugepages1Gi | string | `nil` | Hugepage memory in 1GiB chunks |
+| io_engine.resources.requests.hugepages2Mi | string | `"2Gi"` | Hugepage memory in 2MiB chunks |
+| io_engine.resources.requests.memory | string | `"1Gi"` | Memory requests for the io-engine |
+| io_engine.runtimeClassName | string | `""` | Runtime class to use. Defaults to cluster standard |
+| io_engine.target.nvmf.hostCmdRetryDelay.crdt1 | int | `30` |  |
+| io_engine.target.nvmf.iface | string | `""` | NVMF target interface (ip, mac, name or subnet) If RDMA is enabled, please set iface to an RDMA capable netdev name from host network. Example, if an rdma device mlx5_0 is available on a netdev eth0 on RNIC, as can be seen from `rdma link` command output, then this field should be set to eth0. |
+| io_engine.target.nvmf.maxNamespaces | int | `4096` | Maximum number of NVMe namespaces which a given io-engine node can expose. As of today, there's a 1-1 mapping of namespaces to volume targets. |
+| io_engine.target.nvmf.ptpl | bool | `true` | Reservations Persist Through Power Loss State |
+| io_engine.target.nvmf.rdma | object | `{"enabled":false}` | Enable RDMA Capability of Mayastor nvmf target to take RDMA connections if the cluster nodes have RDMA device(s) configured from RNIC. |
+| io_engine.tolerations | list | `[]` | Set tolerations, overrides global |
+| jaeger-operator.jaeger.collector.service.otlp.grpc | bool | `true` |  |
+| jaeger-operator.jaeger.create | bool | `false` |  |
+| jaeger-operator.name | string | `"{{ .Release.Name }}"` |  |
+| jaeger-operator.priorityClassName | string | `""` |  |
+| jaeger-operator.rbac.clusterRole | bool | `true` |  |
+| jaeger-operator.tolerations | list | `[]` |  |
+| localpv-provisioner.analytics.enabled | bool | `true` |  |
+| localpv-provisioner.enabled | bool | `true` | Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki storage class accordingly. |
+| localpv-provisioner.globalImageRegistryOverride | bool | `true` |  |
+| localpv-provisioner.helperPod.image.registry | string | `"docker.io"` |  |
+| localpv-provisioner.hostpathClass.enabled | bool | `false` | Enable default hostpath localpv StorageClass. |
+| localpv-provisioner.localpv.image.registry | string | `"docker.io"` |  |
+| localpv-provisioner.localpv.priorityClassName | string | `"{{ .Release.Name }}-cluster-critical"` | Set the PriorityClass for the LocalPV Hostpath provisioner Deployment. |
+| loki.backend.replicas | int | `0` |  |
+| loki.bloomCompactor.replicas | int | `0` |  |
+| loki.bloomGateway.replicas | int | `0` |  |
+| loki.chunksCache.enabled | bool | `false` |  |
+| loki.compactor.replicas | int | `0` |  |
+| loki.deploymentMode | string | `"SingleBinary"` |  |
+| loki.distributor.replicas | int | `0` |  |
+| loki.enabled | bool | `true` |  |
+| loki.gateway.enabled | bool | `false` |  |
+| loki.indexGateway.replicas | int | `0` |  |
+| loki.ingester.replicas | int | `0` |  |
+| loki.localpvScConfig.enabled | bool | `true` |  |
+| loki.localpvScConfig.loki.basePath | string | `"/var/local/{{ .Release.Name }}/localpv-hostpath/loki"` | Host path where local loki data is stored in. |
+| loki.localpvScConfig.loki.name | string | `"mayastor-loki-localpv"` |  |
+| loki.localpvScConfig.loki.reclaimPolicy | string | `"Delete"` | ReclaimPolicy of loki's localpv hostpath storage class. |
+| loki.localpvScConfig.loki.volumeBindingMode | string | `"WaitForFirstConsumer"` | VolumeBindingMode of loki's localpv hostpath storage class. |
+| loki.localpvScConfig.minio.basePath | string | `"/var/local/{{ .Release.Name }}/localpv-hostpath/minio"` | Host path where local minio data is stored in. |
+| loki.localpvScConfig.minio.name | string | `"mayastor-minio-localpv"` |  |
+| loki.localpvScConfig.minio.reclaimPolicy | string | `"Delete"` | ReclaimPolicy of minio's localpv hostpath storage class. |
+| loki.localpvScConfig.minio.volumeBindingMode | string | `"WaitForFirstConsumer"` | VolumeBindingMode of minio's localpv hostpath storage class. |
+| loki.loki.commonConfig.replication_factor | int | `3` |  |
+| loki.loki.ingester.chunk_encoding | string | `"snappy"` |  |
+| loki.loki.limits_config.ingestion_burst_size_mb | int | `1000` |  |
+| loki.loki.limits_config.ingestion_rate_mb | int | `10000` |  |
+| loki.loki.limits_config.max_label_names_per_series | int | `20` |  |
+| loki.loki.podLabels.app | string | `"loki"` |  |
+| loki.loki.querier.max_concurrent | int | `1` |  |
+| loki.loki.schemaConfig.configs[0].from | string | `"2024-04-01"` |  |
+| loki.loki.schemaConfig.configs[0].index.period | string | `"24h"` |  |
+| loki.loki.schemaConfig.configs[0].index.prefix | string | `"loki_index_"` |  |
+| loki.loki.schemaConfig.configs[0].object_store | string | `"s3"` |  |
+| loki.loki.schemaConfig.configs[0].schema | string | `"v13"` |  |
+| loki.loki.schemaConfig.configs[0].store | string | `"tsdb"` |  |
+| loki.loki.serviceLabels.app | string | `"loki"` |  |
+| loki.loki.tracing.enabled | bool | `true` |  |
+| loki.lokiCanary.enabled | bool | `false` |  |
+| loki.minio.drivesPerNode | int | `1` |  |
+| loki.minio.enabled | bool | `true` |  |
+| loki.minio.mode | string | `"distributed"` |  |
+| loki.minio.persistence.size | string | `"2Gi"` |  |
+| loki.minio.persistence.storageClass | string | `"mayastor-loki-localpv"` |  |
+| loki.minio.replicas | int | `3` |  |
+| loki.querier.replicas | int | `0` |  |
+| loki.queryFrontend.replicas | int | `0` |  |
+| loki.queryScheduler.replicas | int | `0` |  |
+| loki.read.replicas | int | `0` |  |
+| loki.resultsCache.enabled | bool | `false` |  |
+| loki.sidecar.image.repository | string | `"docker.io/kiwigrid/k8s-sidecar"` |  |
+| loki.singleBinary.drivesPerNode | int | `1` |  |
+| loki.singleBinary.persistence.accessModes[0] | string | `"ReadWriteOnce"` |  |
+| loki.singleBinary.persistence.enabled | bool | `true` |  |
+| loki.singleBinary.persistence.size | string | `"2Gi"` |  |
+| loki.singleBinary.persistence.storageClass | string | `"mayastor-loki-localpv"` |  |
+| loki.singleBinary.replicas | int | `3` |  |
+| loki.test.enabled | bool | `false` |  |
+| loki.write.replicas | int | `0` |  |
+| nats.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchLabels."app.kubernetes.io/name" | string | `"nats"` |  |
+| nats.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey | string | `"kubernetes.io/hostname"` |  |
+| nats.cluster.enabled | bool | `true` |  |
+| nats.cluster.replicas | int | `3` |  |
+| nats.exporter.image.registry | string | `"docker.io"` |  |
+| nats.nats.image.pullPolicy | string | `"IfNotPresent"` |  |
+| nats.nats.image.registry | string | `"docker.io"` |  |
+| nats.nats.jetstream.enabled | bool | `true` |  |
+| nats.nats.jetstream.fileStorage.enabled | bool | `false` |  |
+| nats.nats.jetstream.memStorage.enabled | bool | `true` |  |
+| nats.nats.jetstream.memStorage.size | string | `"5Mi"` |  |
+| nats.natsbox.enabled | bool | `false` |  |
+| nats.natsbox.image.registry | string | `"docker.io"` |  |
+| nats.reloader.image.registry | string | `"docker.io"` |  |
+| nats.statefulSetPodLabels."openebs.io/logging" | string | `"true"` |  |
+| nats.statefulSetPodLabels.app | string | `"nats"` |  |
+| nats.useFQDN | bool | `false` |  |
+| nodeSelector | object | `{"kubernetes.io/arch":"amd64"}` | Node labels for pod assignment ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ Note that if multi-arch images support 'kubernetes.io/arch: amd64' should be removed and set 'nodeSelector' to empty '{}' as default value. |
+| obs.callhome.enabled | bool | `true` | Enable callhome |
+| obs.callhome.logLevel | string | `"info"` | Log level for callhome |
+| obs.callhome.nodeSelector | object | `{}` | Set nodeSelector, overrides global |
+| obs.callhome.priorityClassName | string | `""` | Set PriorityClass, overrides global |
+| obs.callhome.resources.limits.cpu | string | `"100m"` | Cpu limits for callhome |
+| obs.callhome.resources.limits.memory | string | `"32Mi"` | Memory limits for callhome |
+| obs.callhome.resources.requests.cpu | string | `"50m"` | Cpu requests for callhome |
+| obs.callhome.resources.requests.memory | string | `"16Mi"` | Memory requests for callhome |
+| obs.callhome.sendReport | bool | `true` |  |
+| obs.callhome.tolerations | list | `[]` | Set tolerations, overrides global |
+| obs.stats.logLevel | string | `"info"` | Log level for stats |
+| obs.stats.resources.limits.cpu | string | `"100m"` | Cpu limits for stats |
+| obs.stats.resources.limits.memory | string | `"32Mi"` | Memory limits for stats |
+| obs.stats.resources.requests.cpu | string | `"50m"` | Cpu requests for stats |
+| obs.stats.resources.requests.memory | string | `"16Mi"` | Memory requests for stats |
+| obs.stats.service.nodePorts.http | int | `90011` |  |
+| obs.stats.service.nodePorts.https | int | `90010` |  |
+| obs.stats.service.type | string | `"ClusterIP"` | Rest K8s service type |
+| operators.pool.logLevel | string | `"info"` | Log level for diskpool operator service |
+| operators.pool.nodeSelector | object | `{}` | Set nodeSelector, overrides global |
+| operators.pool.priorityClassName | string | `""` | Set PriorityClass, overrides global |
+| operators.pool.resources.limits.cpu | string | `"100m"` | Cpu limits for diskpool operator |
+| operators.pool.resources.limits.memory | string | `"32Mi"` | Memory limits for diskpool operator |
+| operators.pool.resources.requests.cpu | string | `"50m"` | Cpu requests for diskpool operator |
+| operators.pool.resources.requests.memory | string | `"16Mi"` | Memory requests for diskpool operator |
+| operators.pool.tolerations | list | `[]` | Set tolerations, overrides global |
+| preUpgradeHook.annotations."helm.sh/hook-delete-policy" | string | `"hook-succeeded,before-hook-creation"` |  |
+| preUpgradeHook.enabled | bool | `true` | Enable/Disable mayastor pre-upgrade hook |
+| preUpgradeHook.image.pullPolicy | string | `"IfNotPresent"` | The imagePullPolicy for the container |
+| preUpgradeHook.image.registry | string | `"docker.io"` | The container image registry URL for the hook job |
+| preUpgradeHook.image.repo | string | `"openebs/kubectl"` | The container repository for the hook job |
+| preUpgradeHook.image.tag | string | `"1.25.15"` | The container image tag for the hook job |
+| preUpgradeHook.imagePullSecrets | list | `[]` | Optional array of imagePullSecrets containing private registry credentials # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/ |
+| preUpgradeHook.podLabels."openebs.io/logging" | string | `"true"` |  |
+| preUpgradeHook.rolloutTimeout | string | `"600s"` | Set how long we should wait for the Etcd cluster to finish rolling out before giving up. |
+| preUpgradeHook.tolerations | list | `[]` | Node tolerations for server scheduling to nodes with taints # Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ # |
+| priorityClassName | string | `""` | Pod scheduling priority. Setting this value will apply to all components except the external Chart dependencies. If any component has `priorityClassName` set, then this value would be overridden for that component. For external components like etcd, jaeger or loki, PriorityClass can only be set at component level. |
+| security.networkPolicy.enabled | bool | `true` | When enabled, the NetworkPolicy will block all HTTP traffic to the REST API service. |
+| security.tls | object | `{"autoGenerated":{"certManager":{"caDuration":"87600h","duration":"2160h","existingIssuer":"","existingIssuerKind":"","keyAlgorithm":"RSA","keySize":2048,"renewBefore":"360h"},"enabled":true,"engine":"pod","helm":{"caCertDuration":3650,"certDuration":365}},"enabled":false,"mutualAuth":false}` | TLS configuration shared across all service endpoints. The CA, issuer, engine, and per-certificate defaults are cluster-scoped infrastructure common to all services (REST, gRPC, …). Individual services may override leaf-cert settings (mutualAuth, duration, renewBefore) in their own tls block. |
+| security.tls.autoGenerated.certManager.caDuration | string | `"87600h"` | Duration of the shared CA certificate. |
+| security.tls.autoGenerated.certManager.duration | string | `"2160h"` | Default validity period for leaf certificates issued by cert-manager. Can be overridden per service (e.g. apis.rest.security.tls.certManager.duration). |
+| security.tls.autoGenerated.certManager.existingIssuer | string | `""` | Optional reference to an existing cert-manager Issuer or ClusterIssuer. When set, the chart uses this issuer instead of creating a self-signed one. Shared across all services — REST and gRPC will use the same issuer. |
+| security.tls.autoGenerated.certManager.keySize | int | `2048` | Key algorithm and size used for all leaf certificates. |
+| security.tls.autoGenerated.certManager.renewBefore | string | `"360h"` | Default renewal window for leaf certificates. Can be overridden per service (e.g. apis.rest.security.tls.certManager.renewBefore). |
+| security.tls.autoGenerated.enabled | bool | `true` | Enable automatic certificate generation/management. When false, each service's security.tls.existingSecret must point to a pre-existing TLS Secret. |
+| security.tls.autoGenerated.engine | string | `"pod"` | Certificate engine (shared across all services): pod:          server generates a transient cert at startup (--auto-tls). No k8s Secrets               are created. Cannot be combined with mutualAuth. helm:         chart generates self-signed certificates stored in k8s Secrets. cert-manager: cert-manager provisions and rotates certificates. cert-manager must be installed. |
+| security.tls.autoGenerated.helm.caCertDuration | int | `3650` | Validity period in days for the helm-generated CA certificate. |
+| security.tls.autoGenerated.helm.certDuration | int | `365` | Default validity period in days for helm-generated leaf certificates. Can be overridden per service (e.g. apis.rest.security.tls.helm.certDuration). |
+| security.tls.enabled | bool | `false` | Enable TLS for all service endpoints. When false, all services use plain-text. |
+| security.tls.mutualAuth | bool | `false` | Default: enable mutual TLS (clients verify the server and present their own certificate). Can be overridden per service (e.g. apis.rest.security.tls.mutualAuth). Has no effect when engine=pod, which uses server-only transient TLS. |
+| storageClass.allowVolumeExpansion | bool | `true` | Enable volume expansion for the default StorageClass. |
+| storageClass.default | bool | `false` |  |
+| storageClass.enabled | bool | `true` |  |
+| storageClass.nameSuffix | string | `"single-replica"` |  |
+| storageClass.parameters.protocol | string | `"nvmf"` |  |
+| storageClass.parameters.repl | int | `1` |  |
+| tolerations | list | `[]` | Tolerations to be applied to all components except external Chart dependencies. If any component has tolerations set, then it would override this value. For external components like etcd, jaeger and loki, tolerations can only be set at component level. |
+
 
