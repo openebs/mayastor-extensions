@@ -45,6 +45,8 @@ snafu = { workspace = true }
 # These dependencies are required to build that file.
 futures = { workspace = true }
 chrono = { workspace = true }
+async-nats = { workspace = true }
+time = { workspace = true }
 parse-size = { workspace = true }
 strum_macros = { workspace = true }
 serde = { workspace = true }
