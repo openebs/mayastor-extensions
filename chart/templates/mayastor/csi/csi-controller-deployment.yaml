@@ -117,6 +117,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
+        {{- if .Values.csi.controller.snapshotController.enabled }}
         - name: csi-snapshot-controller
           args:
             - "--v=2"
@@ -126,6 +127,7 @@ spec:
             {{- end }}
           image: "{{ default .Values.csi.image.registry .Values.global.imageRegistry }}/{{ .Values.csi.image.repo }}/snapshot-controller:{{ .Values.csi.image.snapshotControllerTag }}"
           imagePullPolicy: {{ default .Values.csi.image.pullPolicy .Values.global.imagePullPolicy }}
+        {{- end }}
         - name: csi-resizer
           args:
             - "--v=2"
