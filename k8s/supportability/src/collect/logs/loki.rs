@@ -388,6 +388,39 @@ impl LokiClient {
         }
         Ok(())
     }
+
+    /// Fetches Loki's own `/config` endpoint and extracts
+    /// `limits_config.max_query_length` - the actual configured max
+    /// query-time-range, reflecting whatever the cluster's Loki Helm values
+    /// currently set rather than a number hardcoded elsewhere. Uses the same
+    /// TLS-aware `inner_client` as every other request this type makes, so a
+    /// caller never has to build its own connection to Loki just to ask this.
+    /// Returns `None` (not an error) if Loki isn't reachable, doesn't respond
+    /// successfully, or the field is missing/unparseable - callers should
+    /// treat that as "can't tell", not fail on it.
+    pub async fn max_query_length(&mut self) -> Result<Option<String>, LokiError> {
+        let request = http::Request::builder()
+            .method("GET")
+            .uri(format!("{}/config", self.uri))
+            .body(hyper_body::Body::empty())?;
+
+        let response = self.inner_client.ready().await?.call(request).await?;
+        if !response.status().is_success() {
+            return Ok(None);
+        }
+
+        let body_bytes = response.into_body().collect().await?.to_bytes();
+        let config: serde_yaml::Value = match serde_yaml::from_slice(&body_bytes) {
+            Ok(value) => value,
+            Err(_) => return Ok(None),
+        };
+
+        Ok(config
+            .get("limits_config")
+            .and_then(|v| v.get("max_query_length"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string()))
+    }
 }
 
 /// Convert a Kubernetes label selector string into a comma-separated list of

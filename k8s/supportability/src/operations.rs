@@ -28,6 +28,13 @@ pub(crate) enum Resource {
 
     /// Collects the Loki logs from the product's components
     Loki,
+
+    /// Reports Loki's own configured max query-time-range limit, as JSON
+    /// (`{"maxQueryLength":"<duration>"}`, or `null` if it can't be determined).
+    /// Uses the same TLS-aware discovery/connection as every other Loki
+    /// operation this tool performs - a caller wanting this value should use
+    /// this instead of building its own connection to Loki.
+    LokiLimit,
 }
 
 impl SystemDumpArgs {

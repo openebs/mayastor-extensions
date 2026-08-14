@@ -29,10 +29,13 @@ pub struct SupportArgs {
     #[clap(global = true, long, short, default_value = "24h")]
     since: humantime::Duration,
 
-    /// Endpoint of LOKI service, if left empty then it will try to parse endpoint
-    /// from Loki service(K8s service resource), if the tool is unable to parse
-    /// from service then logs will be collected using Kube-apiserver
-    #[clap(global = true, short, long)]
+    /// Endpoint of LOKI service. If left empty, falls back to the LOKI_ENDPOINT
+    /// environment variable (set by the Helm chart on the ops-agent pod, which
+    /// already knows the Service's address at deploy time); if that's not set
+    /// either, tries to discover it from the Loki Service (K8s service
+    /// resource) via a port-forward, and if that also fails, logs are
+    /// collected using the Kube-apiserver directly.
+    #[clap(global = true, short, long, env = "LOKI_ENDPOINT")]
     loki_endpoint: Option<String>,
 
     /// Endpoint of ETCD service, if left empty then will be parsed from the internal service name
@@ -120,6 +123,30 @@ impl ExecuteOperation for Resource {
 pub(crate) const ARCHIVE_PREFIX: &str = "mayastor";
 
 async fn execute_resource_dump(cli_args: SupportArgs, resource: Resource) -> Result<(), Error> {
+    // Handled before DumpConfig::new below, which otherwise moves several of
+    // these same SupportArgs fields for the archive-producing operations -
+    // this one never builds an archive, so it has no use for DumpConfig at all.
+    if matches!(resource, Resource::LokiLimit) {
+        let mut client = LokiClient::new(
+            cli_args.loki_endpoint,
+            cli_args.ctx.kubeconfig,
+            cli_args.ctx.namespace,
+            cli_args.since,
+            cli_args.timeout,
+            cli_args.tenant_id,
+        )
+        .await;
+        let max_query_length = match client.as_mut() {
+            Some(client) => client.max_query_length().await.unwrap_or(None),
+            None => None,
+        };
+        match max_query_length {
+            Some(limit) => println!("{{\"maxQueryLength\":\"{limit}\"}}"),
+            None => println!("{{\"maxQueryLength\":null}}"),
+        }
+        return Ok(());
+    }
+
     let mut config = DumpConfig::new(
         cli_args.output_directory_path,
         cli_args.ctx.namespace,
@@ -186,6 +213,7 @@ async fn execute_resource_dump(cli_args: SupportArgs, resource: Resource) -> Res
                 errors.push(e);
             }
         }
+        Resource::LokiLimit => unreachable!("handled above, before DumpConfig is built"),
     }
     if !errors.is_empty() {
         log("Failed to dump system state");
