@@ -9,7 +9,13 @@ env:
 
 jobs:
   image-build-test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -20,4 +26,4 @@ jobs:
       - name: Test building the release images
         run: RUSTFLAGS="-C debuginfo=0 -C strip=debuginfo" ./scripts/release.sh --skip-publish --build-bins --debug --no-static-linking
       - name: Test building the static binaries
-        run: nix-build -A utils.debug.x86_64.linux-musl.kubectl-plugin --arg incremental false
+        run: nix-build -A utils.debug.linux-musl.kubectl-plugin --arg incremental false
