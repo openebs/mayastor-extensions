@@ -18,10 +18,7 @@ jobs:
       - uses: ./.github/actions/setup-nix
         with:
           preFetchNix: ./shell.nix
-      - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@v2
-        with:
-          save-if: ${{ startsWith(github.ref_name, 'release/') || github.ref_name == 'develop' }}
+          rustCache: true
       - name: Build the binaries
         run: nix-shell --run "cargo build --bins"
       - name: Build the tests
