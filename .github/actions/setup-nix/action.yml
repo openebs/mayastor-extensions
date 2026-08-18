@@ -22,8 +22,9 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Runner Info
+    - name: Linux Runner Info
       shell: bash
+      if: ${{ runner.os == 'Linux' }}
       run: |
         lscpu
         free -h
