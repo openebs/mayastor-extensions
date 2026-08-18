@@ -13,7 +13,12 @@ let
     "You have requested an environment for rustup, you should provide it!";
   channel = import ./nix/lib/rust.nix { inherit pkgs; };
   rust_chan = channel.default_src;
-  rust = rust_chan.${rust-profile};
+  rust = rust_chan.${rust-profile}.overrideAttrs (oldAttrs: {
+    # don't propagate any build inputs - this allows us to set cc in stdenv below
+    propagatedBuildInputs = [ ];
+    depsHostHostPropagated = [ pkgs.clang ];
+    depsTargetTargetPropagated = [ ];
+  });
   usePreCommit = builtins.getEnv "IN_NIX_SHELL" == "impure" && builtins.getEnv "CI" != "1";
   pre-commit = pkgs.runCommand "pre-commit" { } ''
     mkdir -p $out/bin
