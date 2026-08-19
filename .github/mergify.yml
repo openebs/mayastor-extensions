@@ -18,7 +18,7 @@ queue_rules:
       - check-success = submodule-branch
       - check-success = helm-ci / helm-images-pr
       - check-success = helm-ci / helm-chart-test
-      - check-success = int-ci / int-tests
+      - check-success ~= ^int-ci / int-tests
       - check-success = lint-ci / linter
       - -label ~= do-not-merge
       - -draft
