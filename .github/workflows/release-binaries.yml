@@ -22,10 +22,10 @@ jobs:
       matrix:
         include:
           # NOTE: Update the .krew.yaml file (if required) when making changes here.
-          - os: oracle-vm-8cpu-32gb-x86-64
+          - os: cncf-ubuntu-8-32-x86
             target: linux-musl
             arch: x86_64
-          - os: oracle-vm-8cpu-32gb-x86-64
+          - os: cncf-ubuntu-8-32-arm
             target: linux-musl
             arch: aarch64
           - os: macos-15
@@ -34,7 +34,7 @@ jobs:
           - os: macos-15-intel
             target: apple-darwin
             arch: x86_64
-          - os: oracle-vm-8cpu-32gb-x86-64
+          - os: cncf-ubuntu-8-32-x86
             target: windows-gnu
             arch: x86_64
             suffix: .exe
