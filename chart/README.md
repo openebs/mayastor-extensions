@@ -157,7 +157,7 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | https://grafana.github.io/helm-charts | loki | 6.29.0 |
 | https://jaegertracing.github.io/helm-charts | jaeger-operator | 2.50.1 |
 | https://nats-io.github.io/k8s/helm/charts/ | nats | 0.19.14 |
-| https://openebs.github.io/dynamic-localpv-provisioner | localpv-provisioner | 4.5.1 |
+| https://openebs.github.io/dynamic-localpv-provisioner | localpv-provisioner | 4.6.0 |
 
 ## Values
 
