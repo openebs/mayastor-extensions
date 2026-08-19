@@ -2427,15 +2427,15 @@ entries:
         - name: prometheus-nats-exporter
           image: docker.io/natsio/prometheus-nats-exporter:0.11.0
         - name: alpine-bash
-          image: docker.io/openebs/alpine-bash:4.5.0
+          image: docker.io/openebs/alpine-bash:4.6.0
         - name: alpine-sh
-          image: docker.io/openebs/alpine-sh:4.5.0
+          image: docker.io/openebs/alpine-sh:4.6.0
         - name: etcd
           image: docker.io/openebs/etcd:3.6.4-debian-12-r0
         - name: kubectl
           image: docker.io/openebs/kubectl:1.25.15
         - name: linux-utils
-          image: docker.io/openebs/linux-utils:4.5.0
+          image: docker.io/openebs/linux-utils:4.6.0
         - name: mayastor-agent-core
           image: docker.io/openebs/mayastor-agent-core:develop
         - name: mayastor-agent-ha-cluster
@@ -2461,7 +2461,7 @@ entries:
         - name: mayastor-operator-diskpool
           image: docker.io/openebs/mayastor-operator-diskpool:develop
         - name: provisioner-localpv
-          image: docker.io/openebs/provisioner-localpv:4.5.1
+          image: docker.io/openebs/provisioner-localpv:4.6.0
         - name: mc
           image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
         - name: minio
@@ -2482,7 +2482,7 @@ entries:
           image: registry.k8s.io/sig-storage/snapshot-controller:v8.2.0
     apiVersion: v2
     appVersion: 0.0.0
-    created: "2026-08-12T07:11:32.899799962Z"
+    created: "2026-08-19T08:36:13.214774028Z"
     dependencies:
     - condition: crds.enabled
       name: crds
@@ -2511,9 +2511,9 @@ entries:
     - condition: localpv-provisioner.enabled
       name: localpv-provisioner
       repository: https://openebs.github.io/dynamic-localpv-provisioner
-      version: 4.5.1
+      version: 4.6.0
     description: Mayastor Helm chart for Kubernetes
-    digest: fdc8d6eb202f4e214e91167a33c8b12ef7e4d807f426fe38c0626ca94d0f6e64
+    digest: 2bf3dc8a88e2d3afad78318fadd59bd3aff8bcc0129aafff8a2c59a9764370d3
     home: https://www.openebs.io/
     icon: https://raw.githubusercontent.com/cncf/artwork/HEAD/projects/openebs/icon/color/openebs-icon-color.png
     keywords:
@@ -2561,4 +2561,4 @@ entries:
     urls:
     - https://openebs.github.io/mayastor-extensions/mayastor-0.0.0-main.tgz
     version: 0.0.0-main
-generated: "2026-08-12T07:11:32.876612334Z"
+generated: "2026-08-19T08:36:13.189378185Z"
