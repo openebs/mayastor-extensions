@@ -29,4 +29,7 @@ pytest.log
 /chart/kubectl-plugin
 /report.xml
 /.vscode/
+/scripts/k8s/talos/controlplane.yaml
+/scripts/k8s/talos/worker.yaml
+/scripts/k8s/talos/.generated/
 

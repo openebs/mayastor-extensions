@@ -1,0 +1,47 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-rwx
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/domain: vm-rwx
+    spec:
+      evictionStrategy: LiveMigrate
+      terminationGracePeriodSeconds: 30
+      networks:
+      - name: default
+        pod: {}
+      domain:
+        cpu:
+          cores: 1
+        devices:
+          interfaces:
+          - name: default
+            masquerade: {}
+          disks:
+          - disk:
+              bus: virtio
+            name: disk0
+        machine:
+          type: q35
+        resources:
+          requests:
+            memory: 512Mi
+      volumes:
+      - name: disk0
+        persistentVolumeClaim:
+          claimName: ubuntu-rwx-block
+      - name: cloudinitdisk
+        cloudInitNoCloud:
+          userData: |
+            #cloud-config
+            hostname: vm1
+            password: a
+            disable_root: false
+            ssh_pwauth: true
+            chpasswd:
+              expire: false
+

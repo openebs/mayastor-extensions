@@ -1,0 +1,33 @@
+apiVersion: kubevirt.io/v1
+kind: KubeVirt
+metadata:
+  name: kubevirt
+  namespace: kubevirt
+spec:
+  infra:
+    nodePlacement: {}
+  configuration:
+    migrations:
+      # Give migrations more slack before KubeVirt aborts them. On a
+      # resource-constrained dev box, the destination virt-handler/libvirtd
+      # can be slow enough during migration setup to trip libvirt's
+      # "cannot acquire state change lock (held by
+      # monitor=remoteDispatchDomainMigratePrepare3Params)" error; a low
+      # timeout just means it fails faster instead of eventually succeeding.
+      progressTimeout: 300
+      completionTimeoutPerGiB: 1600
+  customizeComponents:
+    patches:
+      - resourceType: Deployment
+        resourceName: virt-api
+        patch: '{"spec":{"template":{"spec":{"containers":[{"name":"virt-api","resources":{"requests":{"memory":"100Mi"}}}]}}}}'
+        type: strategic
+      - resourceType: Deployment
+        resourceName: virt-controller
+        patch: '{"spec":{"template":{"spec":{"containers":[{"name":"virt-controller","resources":{"requests":{"memory":"100Mi"}}}]}}}}'
+        type: strategic
+      - resourceType: DaemonSet
+        resourceName: virt-handler
+        patch: '{"spec":{"template":{"spec":{"containers":[{"name":"virt-handler","resources":{"requests":{"memory":"100Mi"}}}]}}}}'
+        type: strategic
+
