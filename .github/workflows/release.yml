@@ -163,6 +163,7 @@ jobs:
           tar -xzf charts-staged/mayastor-"$VERSION".tgz -C charts-final
 
           mv charts-final/mayastor/* chart
+          git restore chart/shell.nix
 
       - name: Update the registry and the repository
         run: |
