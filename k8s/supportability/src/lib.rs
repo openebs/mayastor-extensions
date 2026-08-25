@@ -22,7 +22,7 @@ pub use collect::{
 #[derive(Debug, Clone, clap::Args)]
 pub struct SupportArgs {
     /// Specifies the timeout value to interact with other modules of system
-    #[clap(global = true, long, short, default_value = "10s")]
+    #[clap(global = true, long, short, default_value = "30s")]
     timeout: humantime::Duration,
 
     /// Period states to collect all logs from last specified duration
