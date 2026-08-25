@@ -147,10 +147,17 @@ impl LokiClient {
     ) -> Option<Self> {
         let (uri, client) = match uri {
             None => {
+                // Without this, ConfigBuilder's own Default impl applies a
+                // hardcoded 5s timeout here regardless of the CLI's --timeout
+                // value - fine for a short --since window, but Loki
+                // genuinely needs longer than that to search a large one
+                // (e.g. 30d), so every query timed out well before Loki
+                // could respond.
                 let (uri, svc) = match kube_proxy::ConfigBuilder::default_loki()
                     .with_kube_config(kubeconfig_args.path.clone())
                     .with_context(kubeconfig_args.opts.context.clone())
                     .with_target_mod(|t| t.with_namespace(namespace))
+                    .with_timeout(*timeout)
                     .build()
                     .await
                 {
