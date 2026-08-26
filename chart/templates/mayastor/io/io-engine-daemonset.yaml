@@ -192,6 +192,10 @@ spec:
           - containerPort: {{ default 9502 .Values.base.metrics.port }}
             protocol: TCP
             name: metrics
+          {{- if .Values.base.metrics.resources }}
+          resources:
+          {{ toYaml .Values.base.metrics.resources | indent 12 }}
+          {{- end }}
         args:
           - "--metrics-endpoint=[::]:{{ default 9502 .Values.base.metrics.port }}"
           - "--grpc-port={{ default 10124 .Values.io_engine.port }}"
