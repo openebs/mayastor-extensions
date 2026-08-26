@@ -138,6 +138,13 @@ base:
       pullPolicy: IfNotPresent
       # -- Image registry for init containers
       registry: ""
+    # -- Resources applied to io-engine init containers which do not define
+    # their own. Init containers without resources force the pod to QoS class
+    # Burstable, which disqualifies it from exclusive CPUs under the static
+    # CPU manager policy.
+    # Scope is limited to the io-engine DaemonSet: the shared helper receives
+    # these defaults explicitly from that call site only.
+    defaultResources: {}
     containers:
       - name: agent-core-grpc-probe
         command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50051; do date; echo "Waiting for agent-core-grpc services..."; sleep 1; done;' ]
@@ -158,6 +165,11 @@ base:
     enabled: true
     # -- Container port for the metrics exporter service
     port: 9502
+    # -- Resources for the metrics exporter sidecar. Required for the io-engine
+    # pod to qualify as QoS class Guaranteed when metrics are enabled: a
+    # container without matching requests and limits keeps the whole pod in
+    # Burstable.
+    resources: {}
   jaeger:
     # Enable jaeger tracing (for development only).
     # Since version 1.31 the Jaeger Operator uses webhooks to validate Jaeger custom resources (CRs).
