@@ -655,6 +655,16 @@ io_engine:
   # -- If not empty, overrides the cpuCount and explicitly sets the list of cores.
   # Example: --set='io_engine.coreList={30,31}'
   coreList: [ ]
+  # -- Derive the reactor cores from the cgroup cpuset assigned by the kubelet
+  # CPU manager instead of a statically configured core list. The -l flag is
+  # then omitted from the rendered args and computed at container start, which
+  # keeps SPDK reactors aligned with the cores Kubernetes actually granted.
+  # Requires kubelet cpuManagerPolicy=static and a QoS class Guaranteed pod with
+  # an integer CPU count, otherwise the container refuses to start.
+  cpuManagerAware: false
+  # -- Upper bound on the number of reactors accepted in cpuManagerAware mode.
+  # Guards against a misconfigured pod inheriting the whole shared CPU pool.
+  maxReactors: 8
   # -- Node selectors to designate storage nodes for diskpool creation
   # Note that if multi-arch images support 'kubernetes.io/arch: amd64'
   # should be removed.

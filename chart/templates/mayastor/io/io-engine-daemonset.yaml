@@ -1,3 +1,4 @@
+{{- include "validateCpuManagerAware" . }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -120,12 +121,16 @@ spec:
         # For example -l 1,2,10-20 means use core 1, 2, 10 to 20.
         # Note: Ensure that the CPU resources are updated accordingly.
         #       If you use 2 CPUs, the CPU: field should also read 2.
+        # When cpuManagerAware is enabled the flag is omitted entirely and the
+        # core list is derived at runtime from the cgroup cpuset.
         - "--grpc-ip=$(MY_POD_IP)"
         - "--grpc-port={{ default 10124 .Values.io_engine.port }}"
         - "-N$(MY_NODE_NAME)"
         - "-Rhttps://{{ .Release.Name }}-agent-core:50051"
         - "-y/var/local/{{ .Release.Name }}/io-engine/config.yaml"
+        {{- if not .Values.io_engine.cpuManagerAware }}
         - "-l{{ include "cpuFlag" . }}"
+        {{- end }}
         - "-p={{ include "etcdUrl" . }}"{{ if .Values.io_engine.target.nvmf.ptpl }}
         - "--ptpl-dir=/var/local/{{ .Release.Name }}/io-engine/ptpl/"{{ end }}
         - "--api-versions={{ .Values.io_engine.api }}"{{ if .Values.io_engine.target.nvmf.rdma.enabled }}
@@ -141,8 +146,40 @@ spec:
         - "--pool-io-stall-deadline={{ default (printf "%s%s" .Values.io_engine.nvme.ioTimeout .Values.io_engine.nvme.ioTimeout) .Values.io_engine.pool.ioAlerts.stallDeadline }}"
         - "--pool-io-stall-transition-threshold={{ default 3 .Values.io_engine.pool.ioAlerts.stallTransitionThreshold }}"
         - "--pool-io-stall-transition-window={{ default "3h" .Values.io_engine.pool.ioAlerts.stallTransitionWindow }}"
+        {{- if .Values.io_engine.cpuManagerAware }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Derive the reactor core list from the cgroup cpuset granted by
+          # the kubelet CPU manager. Reading the process affinity works in
+          # privileged containers, where /sys/fs/cgroup exposes the host view.
+          CORES=$(grep Cpus_allowed_list /proc/self/status | awk '{print $2}')
+          if [ -z "$CORES" ]; then
+            echo "io-engine: FATAL: unable to read Cpus_allowed_list" >&2
+            exit 1
+          fi
+          # The cgroup reports ranges ("2-3,10"); -l expects a plain list.
+          LIST=$(echo "$CORES" | tr ',' '\n' | awk -F- '
+            NF==2 { for (i = $1; i <= $2; i++) { printf "%s%s", sep, i; sep = "," } ; next }
+            NF==1 && $1 != "" { printf "%s%s", sep, $1; sep = "," }
+            END { print "" }')
+          N=$(echo "$LIST" | tr ',' '\n' | grep -c .)
+          MAX={{ default 8 .Values.io_engine.maxReactors }}
+          if [ "$N" -eq 0 ] || [ "$N" -gt "$MAX" ]; then
+            echo "io-engine: FATAL: detected $N cores ($CORES), expected 1..$MAX." >&2
+            echo "  The pod is likely not QoS class Guaranteed and inherited the" >&2
+            echo "  shared CPU pool. Refusing to start to avoid spawning a reactor" >&2
+            echo "  on every core." >&2
+            exit 1
+          fi
+          echo "io-engine: using CPU set $LIST ($N cores) from cgroup cpuset"
+          exec io-engine -l"$LIST" "$@"
+        - --
+        {{- else }}
         command:
         - io-engine
+        {{- end }}
         securityContext:
           privileged: true
         volumeMounts:
@@ -193,8 +230,7 @@ spec:
             protocol: TCP
             name: metrics
           {{- if .Values.base.metrics.resources }}
-          resources:
-          {{ toYaml .Values.base.metrics.resources | indent 12 }}
+          resources: {{ toYaml .Values.base.metrics.resources | nindent 10 }}
           {{- end }}
         args:
           - "--metrics-endpoint=[::]:{{ default 9502 .Values.base.metrics.port }}"

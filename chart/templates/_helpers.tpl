@@ -175,14 +175,46 @@ Usage:
 {{- end -}}
 
 {{/* Generate Core list specification (-l param of io-engine) */}}
+{{/*
+Core list for the io-engine -l flag.
+Empty when cpuManagerAware is enabled: the cores are then derived at runtime
+from the cgroup cpuset granted by the kubelet CPU manager.
+*/}}
 {{- define "cpuFlag" -}}
+{{- if .Values.io_engine.cpuManagerAware -}}
+{{- else -}}
 {{- include "coreListUniq" . -}}
 {{- end -}}
+{{- end }}
 
 {{/* Get the number of cores from the coreList */}}
 {{- define "coreCount" -}}
 {{- include "coreListUniq" . | split "," | len -}}
 {{- end -}}
+
+{{/*
+Validates the configuration required by cpuManagerAware mode.
+Fails the render rather than producing a pod that silently lands in the shared
+CPU pool and spawns a reactor on every core.
+*/}}
+{{- define "validateCpuManagerAware" -}}
+{{- if .Values.io_engine.cpuManagerAware -}}
+  {{- $req := .Values.io_engine.resources.requests.cpu -}}
+  {{- $lim := .Values.io_engine.resources.limits.cpu -}}
+  {{- if or (empty $req) (empty $lim) -}}
+    {{- fail "io_engine.cpuManagerAware requires explicit io_engine.resources.requests.cpu and limits.cpu (an integer, e.g. 2)" -}}
+  {{- end -}}
+  {{- if ne (printf "%v" $req) (printf "%v" $lim) -}}
+    {{- fail (printf "io_engine.cpuManagerAware requires requests.cpu == limits.cpu (got %v and %v)" $req $lim) -}}
+  {{- end -}}
+  {{- if not (regexMatch "^[0-9]+$" (printf "%v" $req)) -}}
+    {{- fail (printf "io_engine.cpuManagerAware requires an integer CPU value, got %v (millicores are not eligible for exclusive CPUs)" $req) -}}
+  {{- end -}}
+  {{- if and .Values.io_engine.envcontext (regexMatch "(^|--)(lcores|l=|c=)" .Values.io_engine.envcontext) -}}
+    {{- fail (printf "io_engine.cpuManagerAware conflicts with core selection in io_engine.envcontext (%v): EAL rejects more than one of --lcores, -l and -c" .Values.io_engine.envcontext) -}}
+  {{- end -}}
+{{- end -}}
+{{- end }}
 
 {{- define "logFormat" -}}
 {{- if (regexMatch "^((json|pretty|compact))$" .Values.base.logging.format) -}}
