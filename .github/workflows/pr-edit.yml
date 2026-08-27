@@ -4,6 +4,6 @@ on:
     types: ['edited']
 
 jobs:
-  ci:
+  pr-ci:
     if: github.actor != 'mergify[bot]'
     uses: ./.github/workflows/pr-ci.yml
