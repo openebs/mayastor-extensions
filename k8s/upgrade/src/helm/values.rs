@@ -3,10 +3,11 @@ use crate::{
         constants::{
             TWO_DOT_EIGHT, TWO_DOT_FIVE, TWO_DOT_FOUR, TWO_DOT_ONE, TWO_DOT_O_RC_ONE,
             TWO_DOT_SEVEN_DOT_THREE, TWO_DOT_SEVEN_DOT_TWO, TWO_DOT_SIX, TWO_DOT_TEN,
-            TWO_DOT_THREE,
+            TWO_DOT_THREE, TWO_DOT_TWELVE_DOT_ONE,
         },
         error::{
-            DeserializePromtailExtraConfig, Result, SemverParse, SerializeBaseInitContainersToJson,
+            DeserializePromtailExtraConfig, Result, SemverParse, SerializeAlloyExtraMountToJson,
+            SerializeAlloyExtraVolumeToJson, SerializeBaseInitContainersToJson,
             SerializeBaseInitCoreContainersToJson, SerializeBaseInitHaNodeContainersToJson,
             SerializeBaseInitRestContainerToJson, SerializeCsiNodeInitContainersToJson,
             SerializeJaegerAgentInitContainerToJson, SerializeJaegerCollectorInitContainerToJson,
@@ -722,6 +723,71 @@ where
                 upgrade_values_file.path(),
             )?;
         }
+    }
+
+    // Special-case values for 2.12.1.
+    if source_version.ge(&two_dot_o_rc_one) && source_version.lt(&TWO_DOT_TWELVE_DOT_ONE) {
+        // The alloy configuration is owned by this chart, and it is not a value which users
+        // are expected to customise. It gained a write-ahead log for the loki.write
+        // component, and a node-scoped pod discovery selector, neither of which would reach
+        // an upgraded release, because the merge prefers the source's (older) value.
+        yq.set_quoted_string_value(
+            YamlKey::try_from(".alloy.alloy.configMap.content")?,
+            target_values.alloy_config_map_content(),
+            upgrade_values_file.path(),
+        )?;
+
+        // The loki.write component writes its write-ahead log to a sub-directory of alloy's
+        // data directory. The data directory has to be moved to the path which the
+        // write-ahead log's volume is mounted at.
+        yq.set_quoted_string_value(
+            YamlKey::try_from(".alloy.alloy.storagePath")?,
+            target_values.alloy_storage_path(),
+            upgrade_values_file.path(),
+        )?;
+
+        // The volume which backs the write-ahead log, and its mount. Arrays are not merged,
+        // so the source's empty arrays win over the target's. They are replaced with the
+        // target's.
+        {
+            let alloy_extra_mounts_key = YamlKey::try_from(".alloy.alloy.mounts.extra")?;
+
+            yq.delete_object(alloy_extra_mounts_key.clone(), upgrade_values_file.path())?;
+
+            for mount in target_values.alloy_extra_mounts() {
+                let mount_val =
+                    serde_json::to_string(mount).context(SerializeAlloyExtraMountToJson {
+                        object: mount.clone(),
+                    })?;
+                yq.append_to_array(
+                    alloy_extra_mounts_key.clone(),
+                    mount_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        {
+            let alloy_extra_volumes_key = YamlKey::try_from(".alloy.controller.volumes.extra")?;
+
+            yq.delete_object(alloy_extra_volumes_key.clone(), upgrade_values_file.path())?;
+
+            for volume in target_values.alloy_controller_extra_volumes() {
+                let volume_val =
+                    serde_json::to_string(volume).context(SerializeAlloyExtraVolumeToJson {
+                        object: volume.clone(),
+                    })?;
+                yq.append_to_array(
+                    alloy_extra_volumes_key.clone(),
+                    volume_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        // '.alloy.logging_config.walEnabled' is not set here. It is absent from every source
+        // which this block covers, so the merge already picks up the target's value, which
+        // is what a fresh install of the target gets too.
     }
 
     // Default options.
