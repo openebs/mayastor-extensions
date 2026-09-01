@@ -1,6 +1,6 @@
 apiVersion: v2
 name: crds
-version: 2.13.0-main-unstable-2026-08-30-22-45-29
+version: 2.13.0-main-unstable-2026-09-01-08-41-14
 description: |
   A Helm chart that collects CustomResourceDefinitions (CRDs) from Mayastor.
 
