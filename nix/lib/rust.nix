@@ -93,6 +93,7 @@ rec {
     CARGO_BUILD_TARGET = rustBuildOpts.targetPlatform;
     "CARGO_TARGET_${rustBuildOpts.targetUpper}_LINKER" = with rustBuildOpts.pkgsTarget.stdenv;
       if (rustBuildOpts.check_assert) then "${cc}/bin/${cc.targetPrefix}cc" else null;
+    "CC_${builtins.replaceStrings [ "-" ] [ "_" ] rustBuildOpts.hostPlatform}" = "${pkgs.musl.dev}/bin/musl-gcc";
     #${if pkgs.hostPlatform.isDarwin then "LIBCLANG_PATH" else null} = "${rustBuildOpts.pkgsTarget.llvmPackages.libclang.lib}/lib";
   };
 }
