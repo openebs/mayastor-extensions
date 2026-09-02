@@ -147,21 +147,17 @@ impl EventRecorderBuilder {
         let (tx, mut rx) = mpsc::unbounded_channel::<Event>();
         let k8s_client = KubeClient::client().await?;
         let event_loop_handle = tokio::spawn(async move {
-            let event_handler = Recorder::new(k8s_client, pod_owner.name.into(), job_obj_ref);
+            let event_handler = Recorder::new(k8s_client, pod_owner.name.into());
 
             // Function exits when 'None'. Avoids panics.
             let mut current_event = rx.recv().await;
 
             while let Some(event) = &current_event {
-                // Hacky clone for the Event.
-                let event = Event {
-                    type_: event.type_,
-                    reason: event.reason.clone(),
-                    note: event.note.clone(),
-                    action: event.action.clone(),
-                    secondary: event.secondary.clone(),
-                };
-                if let Err(error) = event_handler.publish(event).await.context(EventPublish) {
+                if let Err(error) = event_handler
+                    .publish(event, &job_obj_ref)
+                    .await
+                    .context(EventPublish)
+                {
                     error!(%error);
                 }
 

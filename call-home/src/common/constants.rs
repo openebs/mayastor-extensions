@@ -89,7 +89,7 @@ pub fn encryption_dir() -> PathBuf {
             match path.exists() && path.is_dir() {
                 true => path.to_path_buf(),
                 false => {
-                    panic!("validation failed for {} value \"{}\": path must exist and must be that of a directory", KEY, &input);
+                    panic!("validation failed for {KEY} value \"{input}\": path must exist and must be that of a directory");
                 }
             }
         }
@@ -110,7 +110,7 @@ pub fn key_filepath() -> PathBuf {
             match path.exists() && path.is_file() {
                 true => path.to_path_buf(),
                 false => {
-                    panic!("validation failed for {} value \"{}\": path must exist and must be that of a file", KEY, &input);
+                    panic!("validation failed for {KEY} value \"{input}\": path must exist and must be that of a file");
                 }
             }
         }
