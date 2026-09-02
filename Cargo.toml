@@ -61,10 +61,10 @@ strum_macros = "0.26.4"
 time = "0.3"
 
 # http
-tonic = "0.12.3"
-reqwest = "0.12.9"
-reqwest-middleware = "0.3.3"
-reqwest-retry = "0.6.1"
+tonic = "0.13.1"
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+reqwest-middleware = "0.5"
+reqwest-retry = "0.9"
 url = "2.5.4"
 hyper = { version = "1.5.0", features = ["client", "http1", "http2"] }
 hyper-util = "0.1.10"
