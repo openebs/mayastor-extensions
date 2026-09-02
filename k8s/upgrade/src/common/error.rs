@@ -5,7 +5,7 @@ use crate::{
     events::event_recorder::EventNote,
     helm::chart::PromtailConfigClient,
 };
-use k8s_openapi::api::core::v1::Container;
+use k8s_openapi::api::core::v1::{Container, Volume, VolumeMount};
 use snafu::Snafu;
 use std::path::PathBuf;
 use url::Url;
@@ -491,6 +491,20 @@ pub enum Error {
     SerializeLokiInitContainersToJson {
         source: serde_json::Error,
         object: Box<Container>,
+    },
+
+    /// Error in serializing an element of the alloy container's extra volumeMounts.
+    #[snafu(display("Failed to serialize .alloy.alloy.mounts.extra {object:?}: {source}"))]
+    SerializeAlloyExtraMountToJson {
+        source: serde_json::Error,
+        object: Box<VolumeMount>,
+    },
+
+    /// Error in serializing an element of the alloy controller Pods' extra volumes.
+    #[snafu(display("Failed to serialize .alloy.controller.volumes.extra {object:?}: {source}"))]
+    SerializeAlloyExtraVolumeToJson {
+        source: serde_json::Error,
+        object: Box<Volume>,
     },
 
     /// Error for when there are too many io-engine Pods in one single node;
