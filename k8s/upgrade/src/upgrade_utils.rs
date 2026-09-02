@@ -41,7 +41,7 @@ pub(crate) async fn rebuild_result(
 
             volume_over_nodes.insert(target.node.as_str());
 
-            for (_, topology) in volume.state.replica_topology.iter() {
+            for topology in volume.state.replica_topology.values() {
                 if let Some(node) = topology.node.as_ref() {
                     volume_over_nodes.insert(node);
                 }

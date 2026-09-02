@@ -250,18 +250,11 @@ fn create_app_configurations<T: EntityName>(
 /// kubectl's way of ensuring we always have a time to be used for sorting
 /// ref: https://github.com/kubernetes/kubectl/blob/f0ce177e80077eb167dd17febe4b9a6c157c5684/pkg/cmd/events/events.go#L294-L319
 fn event_time(event: &Event) -> MicroTime {
-    if event.series.is_some() {
-        return event
-            .series
-            .as_ref()
-            .unwrap()
-            .last_observed_time
-            .as_ref()
-            .unwrap()
-            .clone();
+    if let Some(series) = &event.series {
+        return series.last_observed_time.as_ref().unwrap().clone();
     }
-    if event.last_timestamp.is_some() {
-        return MicroTime(event.last_timestamp.as_ref().unwrap().0);
+    if let Some(ts) = &event.last_timestamp {
+        return MicroTime(ts.0);
     }
     event.event_time.as_ref().unwrap().clone()
 }
