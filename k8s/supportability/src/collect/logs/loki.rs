@@ -144,6 +144,7 @@ impl LokiClient {
         since: humantime::Duration,
         timeout: humantime::Duration,
         tenant_id: String,
+        quiet: bool,
     ) -> Option<Self> {
         let (uri, client) = match uri {
             None => {
@@ -162,7 +163,7 @@ impl LokiClient {
                     .await
                 {
                     Ok(result) => result,
-                    Err(error) => {
+                    Err(error) if !quiet => {
                         match matches!(
                             error,
                             kube_proxy::Error::Forward {
@@ -176,6 +177,7 @@ impl LokiClient {
                         }
                         return None;
                     }
+                    Err(_) => return None,
                 };
                 (uri.to_string(), svc)
             }
