@@ -949,6 +949,10 @@ alloy:
 
         discovery.kubernetes "{{ $releaseName }}_pods_name" {
           role = "pod"
+          selectors {
+            role  = "pod"
+            field = "spec.nodeName=" + env("NODE_NAME")
+          }
         }
 
         discovery.relabel "{{ $releaseName }}_pods_name" {
@@ -1064,6 +1068,12 @@ alloy:
         {{- end -}}
         {{- join "|" $regexParts -}}
         {{- end -}}
+    extraEnv:
+      # -- Expose the node name so the alloy config can scope discovery to this node only.
+      - name: NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName
 # Eventing which enables or disables eventing-related components.
 eventing:
   enabled: true
