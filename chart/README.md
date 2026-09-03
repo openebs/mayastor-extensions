@@ -199,6 +199,9 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for ha node agent | `"64Mi"` |
 | agents.&ZeroWidthSpace;ha.&ZeroWidthSpace;node.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
 | alloy.&ZeroWidthSpace;alloy.&ZeroWidthSpace;extraEnv[0] | Expose the node name so the alloy config can scope discovery to this node only. | <pre>{<br>"name":"NODE_NAME",<br>"valueFrom":{<br>"fieldRef":{<br>"fieldPath":"spec.nodeName"<br>}<br>}<br>}</pre> |
+| alloy.&ZeroWidthSpace;alloy.&ZeroWidthSpace;stabilityLevel | Minimum stability level of components to enable. Set to "experimental" when walEnabled is true, as loki.write WAL is an experimental feature. | `"generally-available"` |
+| alloy.&ZeroWidthSpace;alloy.&ZeroWidthSpace;storagePath | Path inside the container where alloy WAL data is stored. | `"/var/lib/alloy/wal"` |
+| alloy.&ZeroWidthSpace;controller.&ZeroWidthSpace;volumes.&ZeroWidthSpace;extra[0] | emptyDir volume for alloy WAL; survives pod restarts within the same pod lifecycle. | <pre>{<br>"emptyDir":{<br>"sizeLimit":"200Mi"<br>},<br>"name":"alloy-wal"<br>}</pre> |
 | alloy.&ZeroWidthSpace;logging_config.&ZeroWidthSpace;labels | Labels to enable scraping on, at-least one of these labels should be present. | <pre>{<br>"openebs.io/logging":true<br>}</pre> |
 | alloy.&ZeroWidthSpace;logging_config.&ZeroWidthSpace;tenant_id | X-Scope-OrgID to pe populated which pushing logs. Make sure the caller also uses the same. | `"openebs"` |
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;healthProbes.&ZeroWidthSpace;liveness.&ZeroWidthSpace;enabled | Toggle liveness probe. | `true` |
