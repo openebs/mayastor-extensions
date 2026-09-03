@@ -9,7 +9,6 @@
 , clang
 , libxfs
 , llvmPackages
-, openssl
 , git
 , gitVersions
 , paperclip
@@ -82,6 +81,7 @@ let
     "dependencies/control-plane/utils/dependencies/tracing-filter"
     "dependencies/control-plane/utils/dependencies/version-info"
     "dependencies/control-plane/utils/utils-lib"
+    "dependencies/control-plane/utils/cert-watcher"
     "dependencies/control-plane/utils/event-consumer"
     "dependencies/control-plane/utils/hyper-body"
     "dependencies/control-plane/utils/shutdown"
@@ -94,9 +94,6 @@ let
     "k8s"
   ];
   src = sourcer.whitelistSource ../../../. src_list;
-  static_ssl = (pkgs.pkgsStatic.openssl.override {
-    static = true;
-  });
   hostTarget = channel.makeRustTarget pkgs.hostPlatform;
   buildProps = rec {
     name = "extensions-${version}";
@@ -105,7 +102,7 @@ let
     GIT_VERSION = "${gitVersions.tag_or_long}";
 
     nativeBuildInputs = [ clang pkg-config git paperclip which protobuf ];
-    buildInputs = [ llvmPackages.libclang openssl utillinux ];
+    buildInputs = [ llvmPackages.libclang utillinux ];
     doCheck = false;
   };
   release_build = { "release" = true; "debug" = false; };
@@ -139,9 +136,6 @@ let
       '' + pkgs.lib.optionalString (static) ''
         # the rust builder from nixpkgks does not parse target and just uses the host target...
         export NIX_CC_WRAPPER_TARGET_HOST_${builtins.replaceStrings [ "-" ] [ "_" ] hostTarget}=
-        export OPENSSL_STATIC=1
-        export OPENSSL_LIB_DIR=${static_ssl.out}/lib
-        export OPENSSL_INCLUDE_DIR=${static_ssl.dev}/include
       '';
       ${if flags == [ ] then null else "RUSTFLAGS"} = flags;
       cargoLock = {
