@@ -42,7 +42,7 @@ Usage:
 */}}
 {{- define "base_init_containers" -}}
     {{- if .Values.base.initContainers.enabled }}
-    {{- include "render_init_containers" (dict "value" .Values.base.initContainers.containers "context" $) | nindent 8 }}
+    {{- include "render_init_containers" (dict "value" .Values.base.initContainers.containers "context" $ "defaultResources" .Values.base.initContainers.defaultResources) | nindent 8 }}
     {{- end }}
     {{- include "jaeger_collector_init_container" . }}
 {{- end -}}
@@ -388,6 +388,7 @@ Renders init containers. If unset it sets the container image.
     {{- $values_image := .context.Values.image }}
     {{- $global := .context.Values.global }}
     {{- $ctx := .context }}
+    {{- $defaultResources := .defaultResources }}
     {{- range .value -}}
         {{ $container := deepCopy . }}
         {{- if hasKey $container "command" }}
@@ -403,6 +404,9 @@ Renders init containers. If unset it sets the container image.
         {{- end }}
         {{- if not (hasKey $container "image") }}
             {{- $_ := set $container "image" (include "render_init_container_image" $ctx ) }}
+        {{- end }}
+        {{- if and (not (hasKey $container "resources")) $defaultResources }}
+            {{- $_ := set $container "resources" $defaultResources }}
         {{- end }}
         {{- $containers = append $containers $container }}
     {{- end -}}
