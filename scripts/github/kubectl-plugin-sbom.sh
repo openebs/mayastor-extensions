@@ -19,9 +19,41 @@ ROOT_DIR="$(realpath "$SCRIPT_DIR/../..")"
 # shellcheck source-path=SCRIPTDIR source=../utils/log.sh
 source "$SCRIPT_DIR/../utils/log.sh"
 
+NIX_SOURCES="$ROOT_DIR/nix/sources.nix"
+SYFT=${SYFT:-"syft"}
+JQ=${JQ:-"jq"}
+
 BINARY=
 OUTPUT=
 ALLOW_EMPTY=
+
+nix_experimental() {
+  if (nix eval 2>&1 || true) | grep "extra-experimental-features" 1>/dev/null; then
+    echo -n " --extra-experimental-features nix-command "
+  else
+    echo -n " "
+  fi
+}
+
+# Take the tool from the pinned nixpkgs, so there is nothing to install on the
+# runner and every platform scans with the same version. This is what the
+# release script's fetch_nix_bin does; it is not reused by sourcing that script
+# because it insists on a docker-compatible CLI before it defines anything, and
+# the macOS runners this also runs on have none.
+fetch_nix_bin() {
+  local package="$1"
+  local bin="$2"
+
+  [ -f "$NIX_SOURCES" ] || log_fatal "$bin binary missing and no $NIX_SOURCES to fetch it from"
+  # shellcheck disable=SC2046 # the flags must word-split
+  nix shell --impure $(nix_experimental) \
+    --expr "(import (import $NIX_SOURCES).nixpkgs { }).$package" \
+    -c bash -c "type -P $bin"
+}
+
+binary_check() {
+  "$1" "${2:-"--version"}" &>/dev/null
+}
 
 help() {
   cat <<EOF
@@ -69,21 +101,14 @@ done
 [ -n "$OUTPUT" ] || { help; log_fatal "--output is required"; }
 [ -f "$BINARY" ] || log_fatal "No such binary: $BINARY"
 
-# syft and jq are pulled from the pinned nixpkgs, the same way the release
-# script fetches the tools it needs, so there is nothing to install on the
-# runner and every platform gets the same versions.
-if [ -z "${IN_NIX_TOOLS_SHELL:-}" ] && ! { command -v syft && command -v jq; } >/dev/null 2>&1; then
-  export IN_NIX_TOOLS_SHELL="yes"
-  exec nix shell --impure --extra-experimental-features nix-command \
-    --expr "let pkgs = import (import $ROOT_DIR/nix/sources.nix).nixpkgs { }; in [ pkgs.syft pkgs.jq ]" \
-    --command "$(realpath "${BASH_SOURCE[0]:-"$0"}")" \
-    --binary "$BINARY" --output "$OUTPUT" ${ALLOW_EMPTY:+--allow-empty}
-fi
+NIX_SOURCES=$(realpath "$NIX_SOURCES")
+binary_check "$SYFT" || SYFT=$(fetch_nix_bin "syft" "syft")
+binary_check "$JQ" || JQ=$(fetch_nix_bin "jq" "jq")
 
 log "Generating the SBOM of $BINARY ..."
-syft scan "file:$BINARY" -o cyclonedx-json="$OUTPUT" -q
+$SYFT scan "file:$BINARY" -o cyclonedx-json="$OUTPUT" -q
 
-crates=$(jq '[ .components[]? | select((.purl // "") | startswith("pkg:cargo/")) ] | length' "$OUTPUT")
+crates=$($JQ '[ .components[]? | select((.purl // "") | startswith("pkg:cargo/")) ] | length' "$OUTPUT")
 log "$OUTPUT: $crates crate(s)"
 
 if [ "$crates" -eq 0 ]; then
