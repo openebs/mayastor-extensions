@@ -28,6 +28,11 @@ pytest.log
 #/tests/bdd/chart-vnext/
 /chart/kubectl-plugin
 /report.xml
+/sbom/
+*.cdx.json
+# never commit a signing key
+cosign.key
+cosign.pub
 /.vscode/
 /scripts/k8s/talos/controlplane.yaml
 /scripts/k8s/talos/worker.yaml

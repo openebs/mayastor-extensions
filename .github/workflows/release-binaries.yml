@@ -17,6 +17,8 @@ jobs:
     permissions:
       id-token: "write"
       contents: "read"
+      # Required to record the build provenance of the archives.
+      attestations: "write"
     strategy:
       fail-fast: false
       matrix:
@@ -64,8 +66,28 @@ jobs:
           # NOTE: Update the .krew.yaml file (if required) when making changes here.
           tar -czvf kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.tar.gz LICENSE -C result/bin kubectl-mayastor${{ matrix.suffix }}
 
+      - name: Generate the SBOM
+        run: |
+          ./scripts/github/kubectl-plugin-sbom.sh \
+            --binary result/bin/kubectl-mayastor${{ matrix.suffix }} \
+            --output kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.cdx.json
+
+      # Binds the archive to the workflow, repository and commit which built it,
+      # keylessly, and is verified with "gh attestation verify".
+      # Only when called with a tag, ie for a staging release: a push build is
+      # never published, so there is nothing for its provenance to say.
+      - name: Attest the build provenance
+        if: inputs.tag != ''
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.tar.gz
+
+      # The SBOM travels with the archive: staging bundles whatever is here into
+      # the OCI artifact, which the release then mirrors into the release assets.
       - uses: actions/upload-artifact@v7
         with:
           name: kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}
-          path: kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.tar.gz
+          path: |
+            kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.tar.gz
+            kubectl-mayastor-${{ matrix.arch }}-${{ matrix.target }}.cdx.json
           if-no-files-found: error

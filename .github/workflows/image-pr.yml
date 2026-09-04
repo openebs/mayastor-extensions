@@ -24,6 +24,9 @@ jobs:
         with:
           gc: true
       - name: Test building the release images
-        run: RUSTFLAGS="-C debuginfo=0 -C strip=debuginfo" ./scripts/release.sh --skip-publish --build-bins --debug --no-static-linking
+        # SBOMs are generated here too so a break in the SBOM path is caught
+        # pre-merge rather than on the develop push. Nothing is signed, since
+        # nothing is published.
+        run: RUSTFLAGS="-C debuginfo=0 -C strip=debuginfo" ./scripts/release.sh --skip-publish --build-bins --debug --no-static-linking --sbom
       - name: Test building the static binaries
         run: nix-build -A utils.debug.linux-musl.kubectl-plugin --arg incremental false
