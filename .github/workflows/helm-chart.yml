@@ -78,3 +78,9 @@ jobs:
         run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh verify"
       - name: Patch chart/Chart.yaml
         run: nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/images.sh patch --exit-code"
+      - name: Collect logs
+        if: ${{ failure() }}
+        run: |
+          nix-shell ./scripts/k8s/shell.nix --run "kubectl get pods -A -o wide"
+          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l openebs.io/release=mayastor --all-containers=true --tail=-1"
+          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l app=upgrade --all-containers=true --tail=-1"
