@@ -78,12 +78,23 @@ rec {
     addNativeBuildInputs = [ ];
     buildInputs = if (rustPlatformDeps.pkgsTarget.hostPlatform.isWindows) then with rustPlatformDeps.pkgsTargetNative.windows; [ mingw_w64_pthreads pthreads ] else [ ];
   };
-  rustPackageBuilder = { rustBuildOpts, name, src, release, version, singleStep, GIT_VERSION, GIT_VERSION_LONG }: rustBuildOpts.naersk.buildPackage {
+  # cargo-auditable records the crates a binary was built from in the binary
+  # itself, which is what an SBOM scan of it reads back. nixpkgs does this by
+  # default in buildRustPackage, as used for the container images, but naersk
+  # has no such thing, so the build command asks for it here. Only the release
+  # binaries are published, and so scanned, so only those pay for it.
+  auditableBuild = release: lib.optionalAttrs release {
+    # naersk's default is "cargo $cargo_options build ...", so this only slips
+    # the subcommand in front of it.
+    cargoBuild = default: "cargo auditable" + lib.removePrefix "cargo" default;
+  };
+  rustPackageBuilder = { rustBuildOpts, name, src, release, version, singleStep, GIT_VERSION, GIT_VERSION_LONG }: rustBuildOpts.naersk.buildPackage (auditableBuild release // {
     inherit name release src version singleStep GIT_VERSION_LONG GIT_VERSION;
 
     preBuild = rustBuildOpts.preBuild + rustBuildOpts.addPreBuild;
     cargoBuildOptions = attrs: attrs ++ rustBuildOpts.buildOptions;
-    nativeBuildInputs = rustBuildOpts.nativeBuildInputs ++ rustBuildOpts.addNativeBuildInputs;
+    nativeBuildInputs = rustBuildOpts.nativeBuildInputs ++ rustBuildOpts.addNativeBuildInputs
+      ++ lib.optional release pkgs.cargo-auditable;
     buildInputs = rustBuildOpts.buildInputs;
 
     doCheck = false;
@@ -95,5 +106,5 @@ rec {
       if (rustBuildOpts.check_assert) then "${cc}/bin/${cc.targetPrefix}cc" else null;
     ${if pkgs.hostPlatform.isDarwin then null else "CC_${builtins.replaceStrings [ "-" ] [ "_" ] rustBuildOpts.hostPlatform}"} = "${pkgs.musl.dev}/bin/musl-gcc";
     #${if pkgs.hostPlatform.isDarwin then "LIBCLANG_PATH" else null} = "${rustBuildOpts.pkgsTarget.llvmPackages.libclang.lib}/lib";
-  };
+  });
 }
