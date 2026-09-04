@@ -102,6 +102,7 @@ impl LogCollection {
                 since,
                 timeout,
                 tenant_id,
+                false,
             )
             .await,
             k8s_logger_client: K8sLoggerClient::new(client_set),
