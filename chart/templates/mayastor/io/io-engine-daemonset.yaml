@@ -156,6 +156,8 @@ spec:
           mountPath: /var/local/{{ .Release.Name }}/io-engine/
         - name: hugepages-2mi
           mountPath: /dev/hugepages-2mi
+        - name: kubelet-dir
+          mountPath: /var/lib/kubelet
         {{- if .Values.io_engine.resources.requests.hugepages1Gi }}
         - name: hugepages-1gi
           mountPath: /dev/hugepages-1gi
@@ -230,3 +232,7 @@ spec:
           path: /var/local/{{ .Release.Name }}/io-engine/
           type: DirectoryOrCreate
       {{- include "rest_api_tls_client_volume" (dict "ctx" . "secretName" (include "rest_api_tls_metrics_exporter_client_secret_name" .)) | nindent 6 }}
+      - name: kubelet-dir
+        hostPath:
+          path: {{ .Values.csi.node.kubeletDir }}
+          type: Directory
