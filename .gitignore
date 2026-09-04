@@ -29,6 +29,7 @@ pytest.log
 /chart/kubectl-plugin
 /report.xml
 /sbom/
+*.cdx.json
 # never commit a signing key
 cosign.key
 cosign.pub
