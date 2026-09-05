@@ -655,6 +655,9 @@ io_engine:
   # -- If not empty, overrides the cpuCount and explicitly sets the list of cores.
   # Example: --set='io_engine.coreList={30,31}'
   coreList: [ ]
+  # -- Derive the io-engine core list from the pod's cgroup cpuset instead of
+  # cpuCount/coreList. See: https://github.com/openebs/mayastor/issues/1458
+  coresFromCgroup: false
   # -- Node selectors to designate storage nodes for diskpool creation
   # Note that if multi-arch images support 'kubernetes.io/arch: amd64'
   # should be removed.
