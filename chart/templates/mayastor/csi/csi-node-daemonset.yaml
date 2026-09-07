@@ -90,6 +90,7 @@ spec:
         - "--enable-rest"{{ end }}
         - "--enable-registration"
         - "--grpc-ip=$(MY_POD_IP)"
+        {{- include "grpc_auto_tls_arg" . | nindent 8 }}
         - "--grpc-port={{ default 10199 .Values.csi.node.port }}"{{ if .Values.csi.node.nvme.io_timeout }}
         - "--nvme-io-timeout={{ .Values.csi.node.nvme.io_timeout }}"
         - "--nvme-core-io-timeout={{ .Values.csi.node.nvme.io_timeout }}"{{ else }}

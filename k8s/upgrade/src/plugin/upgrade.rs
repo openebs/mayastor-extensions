@@ -996,8 +996,8 @@ pub(crate) async fn create_config_map_data(
 ) -> error::Result<(BTreeMap<String, String>, HashMap<String, String>)> {
     let mut data_map = BTreeMap::new();
     let mut upgrade_map = HashMap::new();
-    let mut index = 1;
-    for file in &upgrade_args.set_file {
+    for (index, file) in upgrade_args.set_file.iter().enumerate() {
+        let index = index + 1;
         let data: Vec<_> = file.split('=').collect();
         let [_key, filepath] = data[..] else {
             return error::InvalidSetFileArguments {
@@ -1014,7 +1014,6 @@ pub(crate) async fn create_config_map_data(
         // This is used to create set fiel arguments.
         // Key:value = file absolute path:index ( example: /root/tolerations.yaml:1 )
         upgrade_map.insert(filepath.to_string(), index.to_string());
-        index += 1;
     }
     Ok((data_map, upgrade_map))
 }

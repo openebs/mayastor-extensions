@@ -13,7 +13,7 @@ use kube::{
 use plugin::resources::utils::{optional_cell, print_table, CreateRow, GetHeaderRow, OutputFormat};
 use prettytable::{row, Row};
 use serde::Serialize;
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 use strum::IntoEnumIterator;
 use supportability::KubeConfigArgs;
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, BufReader};
@@ -118,6 +118,8 @@ pub struct EventsArgs {
 pub struct EventRecord {
     // Table-display fields — skipped when serialising to JSON/YAML.
     #[serde(skip)]
+    pub id: String,
+    #[serde(skip)]
     pub timestamp: String,
     #[serde(skip)]
     pub category: String,
@@ -141,12 +143,19 @@ impl EventRecord {
     /// Build an `EventRecord` from a deserialized `EventMessage`.
     /// Used by all event sources (Loki, pod exec, file, NATS).
     pub fn from_event_message(msg: EventMessage) -> Self {
-        let (timestamp, node, component) = match &msg.metadata {
+        let (id, timestamp, node, component) = match &msg.metadata {
             Some(meta) => {
+                let id = meta.id.clone();
                 let ts = meta
                     .timestamp
                     .as_ref()
-                    .map(|t| t.to_string())
+                    .map(|t| {
+                        let raw = t.to_string();
+                        match DateTime::<Utc>::from_str(&raw) {
+                            Ok(dt) => dt.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                            Err(_) => raw,
+                        }
+                    })
                     .unwrap_or_default();
                 let (node, component) = match &meta.source {
                     Some(src) => {
@@ -157,9 +166,9 @@ impl EventRecord {
                     }
                     None => (String::new(), String::new()),
                 };
-                (ts, node, component)
+                (id, ts, node, component)
             }
-            None => (String::new(), String::new(), String::new()),
+            None => (String::new(), String::new(), String::new(), String::new()),
         };
 
         let category = EventCategory::try_from(msg.category)
@@ -173,6 +182,7 @@ impl EventRecord {
         let target = msg.target.clone();
 
         Self {
+            id,
             timestamp,
             category,
             action,
@@ -188,6 +198,7 @@ impl EventRecord {
 impl GetHeaderRow for EventRecord {
     fn get_header_row(&self) -> Row {
         row![
+            "ID",
             "TIMESTAMP",
             "CATEGORY",
             "ACTION",
@@ -201,6 +212,7 @@ impl GetHeaderRow for EventRecord {
 impl CreateRow for EventRecord {
     fn row(&self) -> Row {
         row![
+            self.id,
             self.timestamp,
             self.category,
             self.action,
@@ -298,8 +310,7 @@ impl EventsArgs {
                 })
                 .collect()
                 .await;
-            let source_label = path.display().to_string();
-            return self.finalize_and_print(records, &source_label, output);
+            return self.finalize_and_print(records, output);
         }
 
         // --nats-endpoint: read events directly from NATS JetStream.
@@ -314,7 +325,7 @@ impl EventsArgs {
             };
 
             let records = fetch_from_nats(&url, since_cutoff).await?;
-            return self.finalize_and_print(records, "NATS JetStream", output);
+            return self.finalize_and_print(records, output);
         }
 
         let maybe_client = supportability::LokiClient::new(
@@ -324,10 +335,11 @@ impl EventsArgs {
             self.since,
             timeout,
             self.tenant_id.clone(),
+            true,
         )
         .await;
 
-        let (records, source_label) = match maybe_client {
+        let records = match maybe_client {
             Some(client) => {
                 let lines = client
                     .with_logql_filters(build_logql_filters())
@@ -338,9 +350,7 @@ impl EventsArgs {
                     )
                     .await
                     .map_err(|e| anyhow!("Failed to fetch events from Loki: {e:?}"))?;
-                let records: Vec<EventRecord> =
-                    lines.iter().filter_map(|l| parse_line(l)).collect();
-                (records, "Loki".to_string())
+                lines.iter().filter_map(|l| parse_line(l)).collect()
             }
             None if self.loki_endpoint.is_some() => {
                 return Err(anyhow!(
@@ -349,17 +359,12 @@ impl EventsArgs {
                 ));
             }
             None => {
-                if output.none() {
-                    eprintln!(
-                        "Loki not found in cluster; falling back to eventing-aggregator pod volume."
-                    );
-                }
                 let client = kube_client.ok_or_else(|| {
                     anyhow!("No cluster connection available for volume fallback")
                 })?;
                 let since_cutoff =
                     Utc::now() - chrono::Duration::from_std(*self.since).unwrap_or_default();
-                let records = fetch_from_volume(client, since_cutoff)
+                fetch_from_volume(client, since_cutoff)
                     .await?
                     .into_iter()
                     .filter(|r| {
@@ -367,59 +372,35 @@ impl EventsArgs {
                             .map(|t| t.to_utc() >= since_cutoff)
                             .unwrap_or(true)
                     })
-                    .collect();
-                (records, "eventing-aggregator volume".to_string())
+                    .collect()
             }
         };
 
-        self.finalize_and_print(records, &source_label, output)
+        self.finalize_and_print(records, output)
     }
 
-    /// Apply filters, sort, truncate, and print. Called by all sources after records are fetched
-    /// and time-filtered. `source_label` is used only in human-readable error messages.
+    /// Apply filters, sort, truncate, and print.
     fn finalize_and_print(
         &self,
         records: Vec<EventRecord>,
-        source_label: &str,
         output: &OutputFormat,
     ) -> anyhow::Result<()> {
-        let raw_count = records.len();
         let mut records = apply_filters(records, self);
 
-        // Sort newest-first.
-        records.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        records.sort_by_key(|r| {
+            r.event_message
+                .metadata
+                .as_ref()
+                .and_then(|m| m.timestamp.as_ref())
+                .map(|t| (t.seconds, t.nanos))
+                .unwrap_or((0, 0))
+        });
 
-        let truncated = self.limit > 0 && records.len() > self.limit;
-        if truncated {
+        if self.limit > 0 && records.len() > self.limit {
             records.truncate(self.limit);
         }
 
-        if records.is_empty() && output.none() {
-            if raw_count == 0 {
-                eprintln!(
-                    "No events found in {source_label}. \
-                     Verify the eventing-aggregator pod is running and has written events."
-                );
-            } else {
-                eprintln!(
-                    "No events matched the applied filters ({raw_count} events read from {source_label}). \
-                     Try relaxing filters."
-                );
-            }
-            return Ok(());
-        }
-
-        // Table: use the display fields via CreateRow / GetHeaderRow.
-        // JSON / YAML: EventRecord serialises via #[serde(flatten)] on event_message,
-        // so print_table produces the full EventMessage structure for those formats.
         print_table(output, records);
-
-        if truncated && output.none() {
-            eprintln!(
-                "(output truncated at {} events; use --limit to increase)",
-                self.limit
-            );
-        }
 
         Ok(())
     }

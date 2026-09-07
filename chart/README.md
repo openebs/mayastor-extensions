@@ -238,12 +238,14 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | apis.&ZeroWidthSpace;rest.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
 | base.&ZeroWidthSpace;cache_poll_period | Cache timeout for core agent & diskpool deployment | `"30s"` |
 | base.&ZeroWidthSpace;default_req_timeout | Request timeout for rest & core agents | `"5s"` |
+| base.&ZeroWidthSpace;initContainers.&ZeroWidthSpace;defaultResources | Resources applied to io-engine init containers which do not define their own. Init containers without resources force the pod to QoS class Burstable, which disqualifies it from exclusive CPUs under the static CPU manager policy. Scope is limited to the io-engine DaemonSet: the shared helper receives these defaults explicitly from that call site only. | <pre>{<br><br>}</pre> |
 | base.&ZeroWidthSpace;initContainers.&ZeroWidthSpace;image.&ZeroWidthSpace;registry | Image registry for init containers | `""` |
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;color | Enable ansi color code for Pod StdOut/StdErr | `true` |
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;format | Valid values for format are pretty, json and compact | `"pretty"` |
 | base.&ZeroWidthSpace;logging.&ZeroWidthSpace;silenceLevel | Silence specific module components | `nil` |
 | base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;enabled | Enable the metrics exporter | `true` |
 | base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;port | Container port for the metrics exporter service | `9502` |
+| base.&ZeroWidthSpace;metrics.&ZeroWidthSpace;resources | Resources for the metrics exporter sidecar. Required for the io-engine pod to qualify as QoS class Guaranteed when metrics are enabled: a container without matching requests and limits keeps the whole pod in Burstable. | <pre>{<br><br>}</pre> |
 | crds.&ZeroWidthSpace;csi.&ZeroWidthSpace;volumeSnapshots.&ZeroWidthSpace;enabled | Install Volume Snapshot CRDs | `true` |
 | crds.&ZeroWidthSpace;enabled | Disables the installation of all CRDs if set to false | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;logLevel | Log level for the csi controller | `"info"` |

@@ -13,7 +13,6 @@ path = "src/lib.rs"
 default = ["rls"]
 openapi = []
 rls = ["openapi/tower-client-rls"]
-tls = ["openapi/tower-client-tls"]
 
 [dependencies]
 pstor = { path = "../../dependencies/control-plane/utils/pstor" }

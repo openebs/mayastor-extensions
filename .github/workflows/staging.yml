@@ -73,6 +73,15 @@ jobs:
         with:
           preFetchNix: ./dependencies/control-plane/utils/dependencies/scripts/staging/shell.nix
 
+      # oras logs itself in below; this is what leaves the credentials where
+      # cosign can find them when it signs what oras pushed.
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Download kubectl artifacts
         uses: actions/download-artifact@v8
         with:
@@ -87,6 +96,16 @@ jobs:
             --namespace ${{ github.repository_owner }}/mayastor/dev/plugin \
             --username ${{ github.actor }} \
             --password ${{ secrets.GITHUB_TOKEN }}" ./dependencies/control-plane/utils/dependencies/scripts/staging/shell.nix
+
+      # Not run under "nix-shell --pure": keyless signing needs the runner's OIDC
+      # environment, and cosign the registry credentials. The tools it uses are
+      # fetched from the pinned nixpkgs by the script itself.
+      - name: Sign the kubectl bundle and attest its SBOMs
+        run: |
+          ./scripts/github/attest-kubectl-oci.sh \
+            --tag ${TAG} \
+            --namespace ${{ github.repository_owner }}/mayastor/dev/plugin \
+            --sbom-dir artifacts
 
   release-staging-chart:
     runs-on: ubuntu-latest

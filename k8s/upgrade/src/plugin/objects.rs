@@ -401,10 +401,10 @@ pub(crate) fn upgrade_job(
                     volumes: Some(vec![Volume {
                         name: UPGRADE_CONFIG_MAP.to_string(),
                         config_map: Some(ConfigMapVolumeSource {
-                            name: Some(upgrade_name_concat(
+                            name: upgrade_name_concat(
                                 &release_name,
                                 UPGRADE_CONFIG_MAP_NAME_SUFFIX,
-                            )),
+                            ),
                             ..Default::default()
                         }),
                         ..Default::default()

@@ -14,8 +14,8 @@ resolver = "1"
 
 [workspace.dependencies]
 # k8s
-kube = { version = "0.94.2", features = ["runtime", "derive"] }
-k8s-openapi = { version = "0.22.0", features = ["v1_24"] }
+k8s-openapi = { version = "0.24.0", default-features = false, features = ["v1_28", "schemars"] }
+kube = { version = "0.99.0", default-features = false, features = ["runtime", "derive", "client", "rustls-tls", "aws-lc-rs"] }
 schemars = { version = "0.8.21" }
 
 # async
@@ -23,7 +23,7 @@ tokio = { version = "1.41.0", features = ["full"] }
 tokio-retry = "0.3"
 futures = "0.3"
 async-trait = "0.1.83"
-async-nats = "0.37.0"
+async-nats = { version = "0.47.0", default-features = false, features = ["aws-lc-rs", "jetstream"] }
 
 # tracing
 tracing = "0.1.40"
@@ -61,10 +61,10 @@ strum_macros = "0.26.4"
 time = "0.3"
 
 # http
-tonic = "0.12.3"
-reqwest = "0.12.9"
-reqwest-middleware = "0.3.3"
-reqwest-retry = "0.6.1"
+tonic = "0.13.1"
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+reqwest-middleware = "0.5"
+reqwest-retry = "0.9"
 url = "2.5.4"
 hyper = { version = "1.5.0", features = ["client", "http1", "http2"] }
 hyper-util = "0.1.10"
@@ -74,7 +74,7 @@ urlencoding = "2.1.3"
 http-body-util = "0.1.2"
 
 # exporter
-actix-web = { version = "4.9.0", features = ["rustls-0_21"] }
+actix-web = { version = "4.9.0", features = ["rustls-0_23"] }
 prometheus = "0.13.4"
 mime = "0.3.17"
 prometheus-parse = "0.2.5"

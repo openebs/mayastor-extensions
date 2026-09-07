@@ -71,8 +71,9 @@ spec:
         - "--node-name=$(MY_NODE_NAME)"
         - "--csi-socket={{ default .Values.csi.node.pluginMountPath .Values.csi.node.pluginMounthPath }}/{{ .Values.csi.node.socketPath }}"
         - "--grpc-ip=$(MY_POD_IP)"
+        {{- include "grpc_auto_tls_arg" . | nindent 8 }}
         - "--grpc-port={{ default 50053 .Values.agents.ha.node.port }}"
-        - "--cluster-agent=https://{{ .Release.Name }}-agent-core:50052"{{ if .Values.base.jaeger.enabled }}
+        - "--cluster-agent={{ include "grpc_scheme" . }}://{{ .Release.Name }}-agent-core:50052"{{ if .Values.base.jaeger.enabled }}
         - "--jaeger={{ include "jaeger_url" . }}"{{ end }}{{ if .Values.eventing.enabled }}
         - "--events-url=nats://{{ .Release.Name }}-nats:4222"
         - "--events-replicas={{ include "events_replicas" . }}"{{ end }}

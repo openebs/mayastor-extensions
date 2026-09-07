@@ -14,8 +14,6 @@ path = "src/main.rs"
 default = ["rls"]
 openapi = []
 rls = ["openapi/tower-client-rls", "rest-plugin/rls"]
-tls = ["openapi/tower-client-tls", "rest-plugin/tls"]
-
 
 [dependencies]
 openapi = { path = "../../dependencies/control-plane/openapi", default-features = false, features = ["tower-trace"] }

@@ -196,7 +196,7 @@ pub async fn latest_controller_revision_hash(
     );
 
     // Sort non-ascending by revision no.
-    ctrl_revs.sort_unstable_by(|a, b| b.revision.cmp(&a.revision));
+    ctrl_revs.sort_unstable_by_key(|b| std::cmp::Reverse(b.revision));
 
     ctrl_revs[0]
         .labels()
