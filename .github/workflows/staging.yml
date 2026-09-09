@@ -149,3 +149,70 @@ jobs:
           registry_username: ${{ github.actor }}
           registry_password: ${{ secrets.GITHUB_TOKEN }}
           update_dependencies: 'false'
+
+  chart-sboms:
+    runs-on: ubuntu-latest
+    needs: [release-staging-chart]
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: ./.github/actions/setup-nix
+        with:
+          preFetchNix: ./dependencies/control-plane/utils/dependencies/scripts/staging/shell.nix
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set Chart Version
+        run: echo "CHART_VERSION=${TAG#v}" >> $GITHUB_ENV
+
+      # --verify requires that every attestation found - on the chart's images,
+      # ours or third-party, and on the kubectl bundle - verifies against an
+      # openebs workflow identity; one signed by anybody else fails the run. An
+      # image with no SBOM yet, or an unsigned one, is reported rather than
+      # fatal - several of ours are still in that state, so gating on it would
+      # be red every time. The default shell has no pipefail, and without it
+      # the status below would be tee's, never the script's.
+      - name: Collect the SBOMs of everything the chart deploys
+        run: |
+          set -o pipefail
+          {
+            echo '### Chart SBOM coverage'
+            echo
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          rc=0
+          ./scripts/github/chart-sboms.sh \
+            --chart oci://ghcr.io/${{ github.repository_owner }}/mayastor/dev/helm/mayastor \
+            --version "${CHART_VERSION}" \
+            --registry ghcr.io \
+            --namespace ${{ github.repository_owner }}/mayastor/dev/plugin \
+            --tag "${TAG}" \
+            --verify | tee -a "$GITHUB_STEP_SUMMARY" || rc=$?
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      - name: Upload the SBOMs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sboms-${{ inputs.tag }}
+          path: sboms
+          if-no-files-found: error
