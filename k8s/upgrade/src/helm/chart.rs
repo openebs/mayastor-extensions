@@ -1,5 +1,5 @@
 use crate::common::error::{ReadingFile, U8VectorToString, YamlParseFromFile, YamlParseFromSlice};
-use k8s_openapi::api::core::v1::{Container, EnvVar, Probe};
+use k8s_openapi::api::core::v1::{Container, EnvVar, Probe, Volume, VolumeMount};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
@@ -237,9 +237,28 @@ impl CoreValues {
         self.csi.deprecated_node_csi_mount_path()
     }
 
+    /// This is a getter for the alloy container's data directory, which is the value of
+    /// its '--storage.path' argument. The loki.write component's write-ahead log is written
+    /// to a sub-directory of this path.
+    pub(crate) fn alloy_storage_path(&self) -> &str {
+        self.alloy.storage_path()
+    }
+
     /// This is a getter for the alloy configuration, which is a helm template.
     pub(crate) fn alloy_config_map_content(&self) -> &str {
         self.alloy.config_map_content()
+    }
+
+    /// This is a getter for the volumeMounts which are added to the alloy container, over
+    /// and above the ones which the alloy helm chart adds based on its own toggles.
+    pub(crate) fn alloy_extra_mounts(&self) -> &[VolumeMount] {
+        self.alloy.extra_mounts()
+    }
+
+    /// This is a getter for the volumes which are added to the alloy controller's Pods, over
+    /// and above the ones which the alloy helm chart adds based on its own toggles.
+    pub(crate) fn alloy_controller_extra_volumes(&self) -> &[Volume] {
+        self.alloy.controller_extra_volumes()
     }
 
     /// This is a getter for the environment variables which are added to the alloy
@@ -1095,9 +1114,17 @@ impl CsiNodeNvme {
 struct Alloy {
     /// This is the yaml object which contains the alloy container's configuration.
     alloy: AlloyAgent,
+    /// This is the yaml object which contains the configuration of the workload which the
+    /// alloy helm chart generates, i.e. a DaemonSet, by default.
+    controller: AlloyController,
 }
 
 impl Alloy {
+    /// This is a getter for the alloy container's data directory.
+    fn storage_path(&self) -> &str {
+        self.alloy.storage_path()
+    }
+
     /// This is a getter for the alloy configuration, which is a helm template.
     fn config_map_content(&self) -> &str {
         self.alloy.config_map_content()
@@ -1107,22 +1134,43 @@ impl Alloy {
     fn extra_env(&self) -> &[EnvVar] {
         self.alloy.extra_env()
     }
+
+    /// This is a getter for the alloy container's extra volumeMounts.
+    fn extra_mounts(&self) -> &[VolumeMount] {
+        self.alloy.extra_mounts()
+    }
+
+    /// This is a getter for the alloy controller Pods' extra volumes.
+    fn controller_extra_volumes(&self) -> &[Volume] {
+        self.controller.extra_volumes()
+    }
 }
 
 /// This is used to deserialize the yaml object 'alloy.alloy'.
 #[derive(Default, Deserialize)]
 #[serde(default)]
 struct AlloyAgent {
+    /// This is the alloy container's data directory, which is the value of its
+    /// '--storage.path' argument.
+    #[serde(rename(deserialize = "storagePath"))]
+    storage_path: String,
     /// These are the environment variables which are added to the alloy container, over and
     /// above the ones which the alloy helm chart adds by itself.
     #[serde(rename(deserialize = "extraEnv"))]
     extra_env: Vec<EnvVar>,
+    /// This is the yaml object which contains the alloy container's volume mounts.
+    mounts: AlloyAgentMounts,
     /// This is the yaml object which contains the alloy configuration.
     #[serde(rename(deserialize = "configMap"))]
     config_map: AlloyAgentConfigMap,
 }
 
 impl AlloyAgent {
+    /// This is a getter for the alloy container's data directory.
+    fn storage_path(&self) -> &str {
+        self.storage_path.as_str()
+    }
+
     /// This is a getter for the alloy configuration, which is a helm template.
     fn config_map_content(&self) -> &str {
         self.config_map.content()
@@ -1131,6 +1179,27 @@ impl AlloyAgent {
     /// This is a getter for the alloy container's extra environment variables.
     fn extra_env(&self) -> &[EnvVar] {
         self.extra_env.as_slice()
+    }
+
+    /// This is a getter for the alloy container's extra volumeMounts.
+    fn extra_mounts(&self) -> &[VolumeMount] {
+        self.mounts.extra()
+    }
+}
+
+/// This is used to deserialize the yaml object 'alloy.alloy.mounts'.
+#[derive(Default, Deserialize)]
+#[serde(default)]
+struct AlloyAgentMounts {
+    /// These are the volumeMounts which are added to the alloy container, over and above
+    /// the ones which the alloy helm chart adds based on its own toggles.
+    extra: Vec<VolumeMount>,
+}
+
+impl AlloyAgentMounts {
+    /// This is a getter for the alloy container's extra volumeMounts.
+    fn extra(&self) -> &[VolumeMount] {
+        self.extra.as_slice()
     }
 }
 
@@ -1146,6 +1215,37 @@ impl AlloyAgentConfigMap {
     /// This is a getter for the alloy configuration, which is a helm template.
     fn content(&self) -> &str {
         self.content.as_str()
+    }
+}
+
+/// This is used to deserialize the yaml object 'alloy.controller'.
+#[derive(Default, Deserialize)]
+#[serde(default)]
+struct AlloyController {
+    /// This is the yaml object which contains the alloy controller Pods' volumes.
+    volumes: AlloyControllerVolumes,
+}
+
+impl AlloyController {
+    /// This is a getter for the alloy controller Pods' extra volumes.
+    fn extra_volumes(&self) -> &[Volume] {
+        self.volumes.extra()
+    }
+}
+
+/// This is used to deserialize the yaml object 'alloy.controller.volumes'.
+#[derive(Default, Deserialize)]
+#[serde(default)]
+struct AlloyControllerVolumes {
+    /// These are the volumes which are added to the alloy controller's Pods, over and above
+    /// the ones which the alloy helm chart adds based on its own toggles.
+    extra: Vec<Volume>,
+}
+
+impl AlloyControllerVolumes {
+    /// This is a getter for the alloy controller Pods' extra volumes.
+    fn extra(&self) -> &[Volume] {
+        self.extra.as_slice()
     }
 }
 
