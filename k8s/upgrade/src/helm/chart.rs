@@ -1,5 +1,5 @@
 use crate::common::error::{ReadingFile, U8VectorToString, YamlParseFromFile, YamlParseFromSlice};
-use k8s_openapi::api::core::v1::{Container, Probe};
+use k8s_openapi::api::core::v1::{Container, EnvVar, Probe};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
@@ -111,6 +111,9 @@ pub(crate) struct CoreValues {
     /// The contains the values for the jaegertracing/jaeger-operator chart.
     #[serde(default, rename(deserialize = "jaeger-operator"))]
     jaeger_operator: JaegerOperator,
+    /// This contains the sub-chart values for the grafana/alloy helm chart.
+    #[serde(default)]
+    alloy: Alloy,
     /// This contains loki-stack details.
     #[serde(default, rename(deserialize = "loki-stack"))]
     loki_stack: LokiStack,
@@ -232,6 +235,17 @@ impl CoreValues {
     /// This returns the value of the removed key for CSI socket mount path.
     pub(crate) fn deprecated_node_csi_mount_path(&self) -> &str {
         self.csi.deprecated_node_csi_mount_path()
+    }
+
+    /// This is a getter for the alloy configuration, which is a helm template.
+    pub(crate) fn alloy_config_map_content(&self) -> &str {
+        self.alloy.config_map_content()
+    }
+
+    /// This is a getter for the environment variables which are added to the alloy
+    /// container, over and above the ones which the alloy helm chart adds by itself.
+    pub(crate) fn alloy_extra_env(&self) -> &[EnvVar] {
+        self.alloy.extra_env()
     }
 
     /// This is a getter for the grafana/loki container image tag.
@@ -1072,6 +1086,66 @@ impl CsiNodeNvme {
     /// This is a getter for the IO timeout configuration.
     fn io_timeout(&self) -> &str {
         self.io_timeout.as_str()
+    }
+}
+
+/// This is used to deserialize the yaml object 'alloy'.
+#[derive(Default, Deserialize)]
+#[serde(default)]
+struct Alloy {
+    /// This is the yaml object which contains the alloy container's configuration.
+    alloy: AlloyAgent,
+}
+
+impl Alloy {
+    /// This is a getter for the alloy configuration, which is a helm template.
+    fn config_map_content(&self) -> &str {
+        self.alloy.config_map_content()
+    }
+
+    /// This is a getter for the alloy container's extra environment variables.
+    fn extra_env(&self) -> &[EnvVar] {
+        self.alloy.extra_env()
+    }
+}
+
+/// This is used to deserialize the yaml object 'alloy.alloy'.
+#[derive(Default, Deserialize)]
+#[serde(default)]
+struct AlloyAgent {
+    /// These are the environment variables which are added to the alloy container, over and
+    /// above the ones which the alloy helm chart adds by itself.
+    #[serde(rename(deserialize = "extraEnv"))]
+    extra_env: Vec<EnvVar>,
+    /// This is the yaml object which contains the alloy configuration.
+    #[serde(rename(deserialize = "configMap"))]
+    config_map: AlloyAgentConfigMap,
+}
+
+impl AlloyAgent {
+    /// This is a getter for the alloy configuration, which is a helm template.
+    fn config_map_content(&self) -> &str {
+        self.config_map.content()
+    }
+
+    /// This is a getter for the alloy container's extra environment variables.
+    fn extra_env(&self) -> &[EnvVar] {
+        self.extra_env.as_slice()
+    }
+}
+
+/// This is used to deserialize the yaml object 'alloy.alloy.configMap'.
+#[derive(Default, Deserialize)]
+#[serde(default)]
+struct AlloyAgentConfigMap {
+    /// This is the alloy configuration, which is a helm template.
+    content: String,
+}
+
+impl AlloyAgentConfigMap {
+    /// This is a getter for the alloy configuration, which is a helm template.
+    fn content(&self) -> &str {
+        self.content.as_str()
     }
 }
 
