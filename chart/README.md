@@ -317,6 +317,7 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | image.&ZeroWidthSpace;repo | Image registry's namespace | `"openebs"` |
 | image.&ZeroWidthSpace;tag | Release tag for our images | `"develop"` |
 | io_engine.&ZeroWidthSpace;coreList | If not empty, overrides the cpuCount and explicitly sets the list of cores. Example: --set='io_engine.coreList={30,31}' | `[]` |
+| io_engine.&ZeroWidthSpace;coresFromCgroup | Derive the io-engine core list from the pod's cgroup cpuset instead of cpuCount/coreList. See: https://github.com/openebs/mayastor/issues/1458 | `false` |
 | io_engine.&ZeroWidthSpace;cpuCount | The number of cores that each io-engine instance will bind to. | `"2"` |
 | io_engine.&ZeroWidthSpace;envcontext | Pass additional arguments to the Environment Abstraction Layer. Example: --set {product}.envcontext=iova-mode=pa | `""` |
 | io_engine.&ZeroWidthSpace;interruptMode | SPDK interrupt mode for io-engine reactors. When enabled, reactors sleep on epoll/timerfd instead of busy-polling, which dramatically reduces idle CPU usage. NVMe I/O queues are still polled, but on a periodic timer rather than continuously. | <pre>{<br>"enabled":false,<br>"nvmeIoQueuePollPeriod":"100us"<br>}</pre> |
