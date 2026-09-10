@@ -323,7 +323,7 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | io_engine.&ZeroWidthSpace;interruptMode.&ZeroWidthSpace;enabled | Enable interrupt mode by setting ENABLE_INTERRUPT_MODE=true on the io-engine container (equivalent to passing the --enable-interrupt-mode CLI flag). | `false` |
 | io_engine.&ZeroWidthSpace;interruptMode.&ZeroWidthSpace;nvmeIoQueuePollPeriod | NVMe I/O queue poll period (SPDK NVME_IOQ_POLL_PERIOD). A value of "0" disables timed polling (busy poll). Typical values: "100us", "1000us". Higher values reduce CPU further at the cost of latency. | `"100us"` |
 | io_engine.&ZeroWidthSpace;logLevel | Log level for the io-engine service | `"info"` |
-| io_engine.&ZeroWidthSpace;nodeSelector | Node selectors to designate storage nodes for diskpool creation Note that if multi-arch images support 'kubernetes.io/arch: amd64' should be removed. | <pre>{<br>"kubernetes.io/arch":"amd64",<br>"openebs.io/engine":"mayastor"<br>}</pre> |
+| io_engine.&ZeroWidthSpace;nodeSelector | Node selectors to designate storage nodes for diskpool creation The images are built for amd64 and arm64, so no architecture is selected here. | <pre>{<br>"openebs.io/engine":"mayastor"<br>}</pre> |
 | io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;ioTimeout | Timeout for IOs The default here is exaggerated for local disks, but we've observed that in shared virtual environments having a higher timeout value is beneficial. Please adjust this according to your hardware and needs. | `"110s"` |
 | io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;bufCacheSize | The number of shared buffers to reserve for each poll group | `nil` |
 | io_engine.&ZeroWidthSpace;nvme.&ZeroWidthSpace;rdma.&ZeroWidthSpace;dataWrPoolSize | RDMA data WR pool size (RDMA only) | `"4095"` |
@@ -370,7 +370,7 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;basePath | Host path where local minio data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/minio"` |
 | loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of minio's localpv hostpath storage class. | `"Delete"` |
 | loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;volumeBindingMode | VolumeBindingMode of minio's localpv hostpath storage class. | `"WaitForFirstConsumer"` |
-| nodeSelector | Node labels for pod assignment ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ Note that if multi-arch images support 'kubernetes.io/arch: amd64' should be removed and set 'nodeSelector' to empty '{}' as default value. | <pre>{<br>"kubernetes.io/arch":"amd64"<br>}</pre> |
+| nodeSelector | Node labels for pod assignment ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ The images are built for amd64 and arm64, so no architecture is selected here. To confine the pods to one, set e.g. 'kubernetes.io/arch: arm64'. | <pre>{<br><br>}</pre> |
 | obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;enabled | Enable callhome | `true` |
 | obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;logLevel | Log level for callhome | `"info"` |
 | obs.&ZeroWidthSpace;callhome.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |

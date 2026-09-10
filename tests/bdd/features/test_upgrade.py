@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import platform
 
 import common
 import pytest
@@ -20,6 +21,13 @@ logger = logging.getLogger(__name__)
 helm = HelmReleaseClient()
 
 
+# The upgrade starts from the latest released chart, and no release so far ships
+# arm64 images, so there is nothing to upgrade from on an arm64 host. Drop this
+# once a release with arm64 images is out.
+@pytest.mark.skipif(
+    platform.machine() in ("aarch64", "arm64"),
+    reason="no released chart has arm64 images to upgrade from",
+)
 @scenario("upgrade.feature", "Upgrading to the local chart as v-next")
 def test_upgrade_to_vnext():
     """Upgrading to the local chart as v-next."""

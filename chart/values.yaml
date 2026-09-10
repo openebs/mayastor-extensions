@@ -94,10 +94,9 @@ security:
 
 # -- Node labels for pod assignment
 # ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
-# Note that if multi-arch images support 'kubernetes.io/arch: amd64'
-# should be removed and set 'nodeSelector' to empty '{}' as default value.
-nodeSelector:
-  kubernetes.io/arch: amd64
+# The images are built for amd64 and arm64, so no architecture is selected here.
+# To confine the pods to one, set e.g. 'kubernetes.io/arch: arm64'.
+nodeSelector: {}
 
 # -- Pod scheduling priority.
 # Setting this value will apply to all components except the external Chart dependencies.
@@ -656,11 +655,9 @@ io_engine:
   # Example: --set='io_engine.coreList={30,31}'
   coreList: [ ]
   # -- Node selectors to designate storage nodes for diskpool creation
-  # Note that if multi-arch images support 'kubernetes.io/arch: amd64'
-  # should be removed.
+  # The images are built for amd64 and arm64, so no architecture is selected here.
   nodeSelector:
     openebs.io/engine: mayastor
-    kubernetes.io/arch: amd64
   resources:
     limits:
       # -- Cpu limits for the io-engine
