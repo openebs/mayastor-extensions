@@ -7,6 +7,7 @@ use crate::{
         },
         error::{
             DeserializePromtailExtraConfig, Result, SemverParse, SerializeAlloyExtraEnvToJson,
+            SerializeAlloyExtraMountToJson, SerializeAlloyExtraVolumeToJson,
             SerializeBaseInitContainersToJson, SerializeBaseInitCoreContainersToJson,
             SerializeBaseInitHaNodeContainersToJson, SerializeBaseInitRestContainerToJson,
             SerializeCsiNodeInitContainersToJson, SerializeJaegerAgentInitContainerToJson,
@@ -729,8 +730,9 @@ where
     if source_version.ge(&two_dot_o_rc_one) && source_version.lt(&TWO_DOT_THIRTEEN) {
         // The alloy configuration is owned by this chart, and it is not a value which users
         // are expected to customise. It gained a pod discovery selector which scopes each
-        // alloy Pod to the Node it runs on, which would not reach an upgraded release,
-        // because the merge prefers the source's (older) value.
+        // alloy Pod to the Node it runs on, and a write-ahead log for the loki.write
+        // component, neither of which would reach an upgraded release, because the merge
+        // prefers the source's (older) value.
         yq.set_quoted_string_value(
             YamlKey::try_from(".alloy.alloy.configMap.content")?,
             target_values.alloy_config_map_content(),
@@ -757,6 +759,60 @@ where
                 )?;
             }
         }
+
+        // The loki.write component writes its write-ahead log to a sub-directory of alloy's
+        // data directory. The data directory has to be moved to the path which the
+        // write-ahead log's volume is mounted at.
+        yq.set_quoted_string_value(
+            YamlKey::try_from(".alloy.alloy.storagePath")?,
+            target_values.alloy_storage_path(),
+            upgrade_values_file.path(),
+        )?;
+
+        // The volume which backs the write-ahead log, and its mount. These are arrays too,
+        // so the source's empty ones are replaced with the target's.
+        {
+            let alloy_extra_mounts_key = YamlKey::try_from(".alloy.alloy.mounts.extra")?;
+
+            yq.delete_object(alloy_extra_mounts_key.clone(), upgrade_values_file.path())?;
+
+            for mount in target_values.alloy_extra_mounts() {
+                let mount_val =
+                    serde_json::to_string(mount).context(SerializeAlloyExtraMountToJson {
+                        object: mount.clone(),
+                    })?;
+                yq.append_to_array(
+                    alloy_extra_mounts_key.clone(),
+                    mount_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        {
+            let alloy_extra_volumes_key = YamlKey::try_from(".alloy.controller.volumes.extra")?;
+
+            yq.delete_object(alloy_extra_volumes_key.clone(), upgrade_values_file.path())?;
+
+            for volume in target_values.alloy_controller_extra_volumes() {
+                let volume_val =
+                    serde_json::to_string(volume).context(SerializeAlloyExtraVolumeToJson {
+                        object: volume.clone(),
+                    })?;
+                yq.append_to_array(
+                    alloy_extra_volumes_key.clone(),
+                    volume_val,
+                    upgrade_values_file.path(),
+                )?;
+            }
+        }
+
+        // '.alloy.logging_config.walEnabled' is not set here. It is a new value, absent from
+        // every source which this block covers, so the merge already picks up the target's
+        // default, which is what a fresh install of the target gets too.
+        // '.alloy.alloy.stabilityLevel' is not set here either. The chart sets it to the
+        // alloy helm chart's own default, so the source and the target already agree on it,
+        // and a user who has opted into experimental components keeps their value.
     }
 
     // Default options.
