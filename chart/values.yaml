@@ -946,10 +946,22 @@ alloy:
       openebs.io/logging: true
     # -- X-Scope-OrgID to pe populated which pushing logs. Make sure the caller also uses the same.
     tenant_id: openebs
+    # -- Enable WAL for the loki.write component. Classified experimental in Alloy v1.8.1;
+    # -- keep false until validated on a stable Alloy release.
+    # -- To enable WAL: --set alloy.alloy.stabilityLevel=experimental --set alloy.logging_config.walEnabled=true
+    walEnabled: false
   enabled: true
   alloy:
+    # -- Minimum stability level of components to enable. Set to "experimental" when walEnabled is true,
+    # as loki.write WAL is an experimental feature.
+    stabilityLevel: "generally-available"
+    # -- Path inside the container where alloy WAL data is stored.
+    storagePath: /var/lib/alloy/wal
     mounts:
       varlog: true
+      extra:
+        - name: alloy-wal
+          mountPath: /var/lib/alloy/wal
     configMap:
       create: true
       content: |
@@ -961,6 +973,10 @@ alloy:
 
         discovery.kubernetes "{{ $releaseName }}_pods_name" {
           role = "pod"
+          selectors {
+            role  = "pod"
+            field = "spec.nodeName=" + env("NODE_NAME")
+          }
         }
 
         discovery.relabel "{{ $releaseName }}_pods_name" {
@@ -1055,6 +1071,11 @@ alloy:
             url       = "http://{{ .Release.Name }}-loki:3100/loki/api/v1/push"
             tenant_id = "{{ .Values.logging_config.tenant_id }}"
           }
+          {{- if .Values.logging_config.walEnabled }}
+          wal {
+            enabled = true
+          }
+          {{- end }}
           external_labels = {}
         }
 
@@ -1076,6 +1097,19 @@ alloy:
         {{- end -}}
         {{- join "|" $regexParts -}}
         {{- end -}}
+    extraEnv:
+      # -- Expose the node name so the alloy config can scope discovery to this node only.
+      - name: NODE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: spec.nodeName
+  controller:
+    volumes:
+      extra:
+        # -- emptyDir volume for alloy WAL; survives pod restarts within the same pod lifecycle.
+        - name: alloy-wal
+          emptyDir:
+            sizeLimit: 200Mi
 # Eventing which enables or disables eventing-related components.
 eventing:
   enabled: true
