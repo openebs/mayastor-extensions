@@ -4,6 +4,7 @@ on:
     branches:
       - 'release/**'
       - 'develop'
+      - naersk
   workflow_call:
     inputs:
       tag:

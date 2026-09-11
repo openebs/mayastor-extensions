@@ -5,10 +5,10 @@
         "homepage": "",
         "owner": "nix-community",
         "repo": "naersk",
-        "rev": "0e72363d0938b0208d6c646d10649164c43f4d64",
-        "sha256": "1isav7yifl520ifhvswkkicnp2ylhxwnpwdvm4xz2yqrb4258mxs",
+        "rev": "9aa07bb0256d300219b30622d2454e85f7f3667e",
+        "sha256": "0yjdv2r72fjgvk9jhjjlk0d4n6hmz3xsnz38kqj983vxp8ax64mn",
         "type": "tarball",
-        "url": "https://github.com/nix-community/naersk/archive/0e72363d0938b0208d6c646d10649164c43f4d64.tar.gz",
+        "url": "https://github.com/nix-community/naersk/archive/9aa07bb0256d300219b30622d2454e85f7f3667e.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {
