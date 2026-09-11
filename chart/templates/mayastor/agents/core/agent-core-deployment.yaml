@@ -71,6 +71,10 @@ spec:
             - "--max-rebuilds={{ .Values.agents.core.rebuild.maxConcurrent }}"{{ end }}
             {{- if eq ((.Values.agents.core.rebuild).partial).enabled false }}
             - "--disable-partial-rebuild"{{ end }}
+            {{- if ((.Values.agents.core.rebuild).offline).enabled }}
+            - "--offline-rebuild-enabled"{{ end }}
+            {{- if $grace := ((.Values.agents.core.rebuild).offline).gracePeriod }}
+            - "--offline-rebuild-grace-period={{ $grace }}"{{ end }}
             {{- if not (default false .Values.agents.core.volumeHealth) }}
             - "--no-volume-health"{{ end }}
             {{- if eq .Values.agents.core.encryptedPoolsSoftScheduling true }}
