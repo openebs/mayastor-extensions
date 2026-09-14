@@ -90,6 +90,10 @@ pub(crate) struct Cli {
     /// Path to a file containing the JWT bearer token for REST authentication.
     #[clap(long)]
     jwt: Option<PathBuf>,
+
+    /// Crypto options.
+    #[clap(flatten)]
+    crypto: utils::CryptoArgs,
 }
 
 static GRPC_CLIENT: OnceCell<GrpcClient> = OnceCell::new();
@@ -118,6 +122,7 @@ pub(crate) fn node_name() -> &'static str {
 #[tokio::main]
 async fn main() -> Result<(), ExporterError> {
     let args = Cli::parse();
+    args.crypto.init_or_exit();
     utils::print_package_info!();
 
     utils::tracing_telemetry::TracingTelemetry::builder()

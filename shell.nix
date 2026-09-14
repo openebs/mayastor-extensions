@@ -32,6 +32,10 @@ let
     cargo-expand
     cargo-udeps
     clang
+    # aws-lc-rs fips
+    cmake
+    go
+    perl
     commitlint
     coreutils
     cowsay
