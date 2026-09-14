@@ -51,6 +51,7 @@ spec:
             {{ end }}
             {{- include "rest_api_tls_client_args" . | nindent 12 }}
           env:
+            {{- include "fips_env" . | nindent 12 }}
             - name: RUST_LOG
               value: {{ .Values.obs.callhome.logLevel }}
           {{- if .Values.obs.callhome.productName }}
@@ -84,6 +85,7 @@ spec:
               protocol: TCP
               name: stats
           env:
+            {{- include "fips_env" . | nindent 12 }}
             - name: RUST_LOG
               value: {{ .Values.obs.stats.logLevel }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.global.imagePullPolicy }}

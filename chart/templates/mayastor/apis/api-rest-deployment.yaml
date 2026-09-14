@@ -81,6 +81,7 @@ spec:
             - containerPort: 8081
             {{- end }}
           env:
+            {{- include "fips_env" . | nindent 12 }}
             - name: RUST_LOG
               value: {{ .Values.apis.rest.logLevel }}
             {{- if default .Values.base.logging.silenceLevel .Values.apis.rest.logSilenceLevel }}

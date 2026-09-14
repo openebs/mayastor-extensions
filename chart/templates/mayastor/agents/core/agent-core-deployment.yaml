@@ -89,6 +89,7 @@ spec:
           ports:
             - containerPort: 50051
           env:
+            {{- include "fips_env" . | nindent 12 }}
             - name: RUST_LOG
               value: {{ .Values.agents.core.logLevel }}
             {{- if default .Values.base.logging.silenceLevel .Values.agents.core.logSilenceLevel }}
@@ -126,6 +127,7 @@ spec:
           ports:
             - containerPort: 50052
           env:
+            {{- include "fips_env" . | nindent 12 }}
             - name: RUST_LOG
               value: {{ .Values.agents.core.logLevel }}
             {{- if default .Values.base.logging.silenceLevel .Values.agents.core.logSilenceLevel }}

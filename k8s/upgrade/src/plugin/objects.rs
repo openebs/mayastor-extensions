@@ -298,6 +298,7 @@ pub(crate) fn upgrade_configmap(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn upgrade_job(
     namespace: &str,
     upgrade_image: String,
@@ -306,6 +307,7 @@ pub(crate) fn upgrade_job(
     set_file: String,
     image_pull_secrets: Option<Vec<k8s_openapi::api::core::v1::LocalObjectReference>>,
     image_pull_policy: Option<String>,
+    fips: bool,
 ) -> Job {
     let helm_args_set = args.set.join(",");
     let mut job_args: Vec<String> = vec![
@@ -323,6 +325,9 @@ pub(crate) fn upgrade_job(
     }
     if args.reset_then_reuse_values {
         job_args.push("--helm-reset-then-reuse-values".to_string());
+    }
+    if fips {
+        job_args.push("--enable-fips".to_string());
     }
 
     Job {
