@@ -272,6 +272,21 @@ agents:
         # rebuilt using the partial rebuild capability. Otherwise, the replica will be fully rebuilt.
         # A blank value "" means internally derived value will be used.
         waitPeriod: ""
+      offline:
+        # -- Rebuild degraded volumes which are not currently published. Without this, a volume
+        # which loses a replica while it has no application attached stays degraded until it is
+        # published again.
+        enabled: false
+        # -- How long a volume must stay degraded before an offline rebuild is started, so that a
+        # node which is only briefly unavailable does not trigger one.
+        # A blank value "" leaves the core agent's own default of 10m in place.
+        gracePeriod: ""
+        # -- The maximum number of offline rebuilds permitted at any given time, counted in
+        # rebuild jobs like the system-wide rebuild.maxConcurrent. Offline rebuilds also count
+        # towards that system-wide limit, so set this lower than it to reserve the remainder for
+        # volumes which are published and serving I/O. A blank value "" means only the
+        # system-wide limit applies.
+        maxConcurrent: ""
     # The maximum number of concurrent create volume requests.
     maxCreateVolume: 10
     # -- Enable extended volume health information, which helps generate the volume status more accurately.
