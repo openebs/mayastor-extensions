@@ -13,6 +13,7 @@ def upgrade_vnext():
     args = [
         "upgrade",
         "--allow-unstable",
+        "--set=security.fips.enabled=true",
         f"--registry={common.upgrade_registry()}",
         f"--repo-namespace={common.upgrade_namespace()}",
     ]
