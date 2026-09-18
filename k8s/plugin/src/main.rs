@@ -35,6 +35,10 @@ struct CliArgs {
 
     #[clap(global = true, long, hide = true)]
     debug_error: bool,
+
+    /// Crypto options.
+    #[clap(flatten)]
+    crypto: utils::CryptoArgs,
 }
 
 impl CliArgs {
@@ -76,6 +80,7 @@ async fn main() {
     let mut exit_code = 1;
     match CliArgs::args().await {
         Ok(cli_args) => {
+            cli_args.crypto.init_or_exit();
             let _tracer_flusher = cli_args.init_tracing();
             let debug_error = cli_args.debug_error;
             if let Err(error) = cli_args.execute().await {

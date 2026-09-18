@@ -788,3 +788,14 @@ data:
   tls.crt: {{ $cert | b64enc }}
   tls.key: {{ $key | b64enc }}
 {{- end -}}
+
+{{/*
+The FIPS mode environment variable for our components, emitted only when the
+chart asks for it, so that the value is interpreted in one place.
+*/}}
+{{- define "fips_env" -}}
+{{- if .Values.security.fips.enabled }}
+- name: ENABLE_FIPS
+  value: "true"
+{{- end }}
+{{- end -}}

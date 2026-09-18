@@ -55,6 +55,7 @@ spec:
             - "--fmt-style={{ include "logFormat" . }}"
             {{- include "rest_api_tls_client_args" . | nindent 12 }}
           env:
+            {{- include "fips_env" . | nindent 12 }}
             - name: RUST_LOG
               value: {{ .Values.operators.pool.logLevel }}
             {{- if default .Values.base.logging.silenceLevel .Values.operators.pool.logSilenceLevel }}

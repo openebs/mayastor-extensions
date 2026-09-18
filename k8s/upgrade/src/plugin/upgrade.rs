@@ -717,6 +717,7 @@ impl UpgradeResources {
                 Actions::Create => {
                     let upgrade_job_image_tag = get_image_version_tag();
                     let rest_deployment = get_deployment_for_rest(ns, client).await?;
+                    let fips = fips_enabled(&rest_deployment);
                     let img = ImageProperties::try_from(rest_deployment)?;
                     let set_file = create_helm_set_file_args(args, set_file_map).await?;
 
@@ -743,6 +744,7 @@ impl UpgradeResources {
                         set_file.unwrap_or_default(),
                         img.pull_secrets(),
                         img.pull_policy(),
+                        fips,
                     );
                     let dep = self
                         .job
@@ -957,6 +959,21 @@ impl TryFrom<Deployment> for ImageProperties {
             pull_policy: container.image_pull_policy.clone(),
         })
     }
+}
+
+/// Whether the deployed components are running in FIPS mode, which the chart
+/// tells them through this environment variable. The upgrade job is made to
+/// match, rather than being FIPS or not on its own account.
+fn fips_enabled(d: &Deployment) -> bool {
+    d.spec
+        .as_ref()
+        .and_then(|s| s.template.spec.as_ref())
+        .and_then(|s| s.containers.first())
+        .and_then(|c| c.env.as_ref())
+        .is_some_and(|env| {
+            env.iter()
+                .any(|v| v.name == "ENABLE_FIPS" && v.value.as_deref() == Some("true"))
+        })
 }
 
 impl ImageProperties {

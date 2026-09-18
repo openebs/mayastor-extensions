@@ -59,6 +59,7 @@ spec:
         securityContext:
           privileged: true
         env:
+        {{- include "fips_env" . | nindent 8 }}
         - name: RUST_LOG
           value: {{ .Values.csi.node.logLevel }}
         {{- if default .Values.base.logging.silenceLevel .Values.csi.node.logSilenceLevel }}

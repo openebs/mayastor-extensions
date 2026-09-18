@@ -43,6 +43,9 @@ image:
   pullSecrets: [ ]
 
 security:
+  fips:
+    # -- Run the mayastor components in FIPS mode, ensuring only FIPS-compliant cryptography is used
+    enabled: false
   # -- TLS configuration shared across all service endpoints.
   # The CA, issuer, engine, and per-certificate defaults are cluster-scoped infrastructure
   # common to all services (REST, gRPC, …). Individual services may override leaf-cert

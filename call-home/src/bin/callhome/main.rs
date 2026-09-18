@@ -71,6 +71,9 @@ struct CliArgs {
     /// Path to a file containing the JWT bearer token for REST authentication.
     #[clap(long)]
     jwt: Option<PathBuf>,
+    /// Crypto options.
+    #[clap(flatten)]
+    crypto: utils::CryptoArgs,
 }
 impl CliArgs {
     fn args() -> Self {
@@ -100,6 +103,7 @@ async fn main() {
 
 async fn run(logs: Arc<Mutex<VecDeque<LogEntry>>>) -> anyhow::Result<()> {
     let args = CliArgs::args();
+    args.crypto.init_or_exit();
     let version = release_version();
     let endpoint = args.endpoint;
     let aggregator_url = args.aggregator_url;

@@ -36,6 +36,7 @@ FAIL_IF_INSTALLED=
 HOSTED=
 VERSION=
 PULL_POLICY=
+ENABLE_FIPS=
 INS_LOKI="true"
 DEFAULT_REGISTRY="https://openebs.github.io/mayastor-extensions"
 HELM="helm"
@@ -61,6 +62,7 @@ Options:
   --pull-policy <policy>         Set the image pull policy.
   --no-loki                      Don't deploy Loki.
   --upgrade                      Upgrade deployment if already exists.
+  --fips                         Enable FIPS mode for the Mayastor components. Startup fails if the image was not built against a FIPS validated crypto module.
   --helm      <stringArray>      Pass Helm Args directly to the install/upgrade commands.
 
 Examples:
@@ -180,6 +182,9 @@ while [ "$#" -gt 0 ]; do
     --no-loki)
       INS_LOKI="false"
       shift;;
+    --fips)
+      ENABLE_FIPS="true"
+      shift;;
     --helm)
       shift
       test $# -lt 1 && die "Missing helm args"
@@ -228,6 +233,11 @@ if [ -n "$PULL_POLICY" ]; then
   PULL_POLICY_ARG="--set image.pullPolicy=$PULL_POLICY"
 fi
 
+FIPS_ARG=
+if [ -n "$ENABLE_FIPS" ]; then
+  FIPS_ARG="--set security.fips.enabled=$ENABLE_FIPS"
+fi
+
 if [ -z "$DRY_RUN" ] && [ "$($HELM ls -n "$K8S_NAMESPACE" -o yaml | yq "contains([{\"name\": \"$RELEASE_NAME\"}])")" = "true" ]; then
   already_exists_log="Helm release $RELEASE_NAME already exists in namespace $K8S_NAMESPACE"
   if [ -n "$FAIL_IF_INSTALLED" ]; then
@@ -254,7 +264,7 @@ if [ "${HELM_EXISTS:-}" != "true" ] || [ "${HELM_UPGRADE:-}" = "true" ]; then
        --set="obs.callhome.enabled=true,obs.callhome.sendReport=false,localpv-provisioner.analytics.enabled=false" \
        --set="eventing.enabled=true,nats.cluster.enabled=false,nats.cluster.replicas=1" \
        $LOKI_ARGS \
-       $HELM_DRY_RUN $WAIT_ARG $PULL_POLICY_ARG $DEP_UPDATE_ARG $VERSION_ARG ${HELM_ARGS:-}
+       $HELM_DRY_RUN $WAIT_ARG $PULL_POLICY_ARG $DEP_UPDATE_ARG $FIPS_ARG $VERSION_ARG ${HELM_ARGS:-}
   set +x
 fi
 
