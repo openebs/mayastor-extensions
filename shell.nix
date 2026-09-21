@@ -67,6 +67,7 @@ pkgs.mkShellNoCC {
 
   shellHook = ''
     ./scripts/nix/git-submodule-init.sh
+    export TMPDIR=/tmp
     if [ "${toString usePreCommit}" = "1" ]; then
       echo
       pre-commit install

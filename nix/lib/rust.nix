@@ -67,15 +67,38 @@ rec {
   };
   rustBuilderOpts = { rustPlatformDeps }: rustPlatformDeps // {
     preBuild = lib.optionalString (rustPlatformDeps.pkgsTarget.hostPlatform.isWindows) ''
+      # The workspace commits resolver = "1" (see Cargo.toml).
+      # Windows must build under the v2 feature resolver so the FIPS crate's
+      # `cfg(not(target_os = "windows"))` gate is honoured and aws-lc-fips-sys
+      # (MSVC/vcvarsall-only, can't cross-compile) is dropped. Flip it here, in
+      # preBuild, which naersk runs in both the dependency and main build phases
+      # so it lands before cargo resolves features.
+      sed -i -E 's/^resolver = "1"/resolver = "2"/' Cargo.toml
       export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS="-C link-args=''$(echo $NIX_LDFLAGS | tr ' ' '\n' | grep -- '^-L' | tr '\n' ' ')"
       export NIX_LDFLAGS=
       export NIX_LDFLAGS_FOR_BUILD=
     '';
     addPreBuild = "";
     nativeBuildInputs = with pkgs;
-      [ cmake go perl ] ++
-        [ pkg-config protobuf paperclip which git ] ++
-        [ rustPlatformDeps.pkgsTarget.stdenv.cc ];
+      [ pkg-config protobuf paperclip which git ] ++
+        [ rustPlatformDeps.pkgsTarget.stdenv.cc ] ++
+        # cmake/go/perl are only for aws-lc-fips-sys, which we build on every
+        # target except Windows (see the fips crate). The non-FIPS aws-lc-sys
+        # used on Windows builds with cc-rs and shipped pregenerated bindings,
+        # so it needs none of them - just nasm for its assembly.
+        lib.optionals (!rustPlatformDeps.pkgsTarget.hostPlatform.isWindows) [ cmake go perl ] ++
+        lib.optional (rustPlatformDeps.pkgsTarget.hostPlatform.isWindows) pkgs.nasm ++
+        lib.optionals (rustPlatformDeps.pkgsTarget.hostPlatform.isDarwin) (with pkgs; [
+          # aws-lc-fips-sys re-signs libcrypto.dylib on aarch64-darwin with a
+          # bare `codesign -s -` after injecting the FIPS integrity hash, on top
+          # of the ad-hoc signature the linker already applied. nixpkgs' sigtool
+          # codesign aborts on an already-signed file unless -f is passed, where
+          # Apple's overwrites silently - so shim it to always force. Listed
+          # first so it wins on PATH over sigtool's own codesign. x86_64-darwin
+          # never hits this: aws-lc's codesign step is gated to arm64.
+          (writeShellScriptBin "codesign" ''exec ${darwin.sigtool}/bin/codesign -f "$@"'')
+        ]) ++
+        lib.optionals (rustPlatformDeps.pkgsTarget.hostPlatform.isDarwin) (with pkgs.darwin; [ autoSignDarwinBinariesHook sigtool ]);
     dontUseCmakeConfigure = true;
     addNativeBuildInputs = [ ];
     buildInputs = if (rustPlatformDeps.pkgsTarget.hostPlatform.isWindows) then with rustPlatformDeps.pkgsTargetNative.windows; [ mingw_w64_pthreads pthreads ] else [ ];
