@@ -82,6 +82,10 @@ struct CliArgs {
     /// Skip events older than this RFC 3339 timestamp. Only used with --print-events.
     #[arg(long, requires = "print_events")]
     since: Option<String>,
+
+    /// Crypto options.
+    #[clap(flatten)]
+    crypto: utils::CryptoArgs,
 }
 
 impl CliArgs {
@@ -93,6 +97,7 @@ impl CliArgs {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli_args = CliArgs::args();
+    cli_args.crypto.init_or_exit();
 
     if cli_args.print_events {
         use chrono::DateTime;

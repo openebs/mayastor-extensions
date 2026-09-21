@@ -73,8 +73,10 @@ rec {
     '';
     addPreBuild = "";
     nativeBuildInputs = with pkgs;
-      [ pkg-config protobuf paperclip which git ] ++
+      [ cmake go perl ] ++
+        [ pkg-config protobuf paperclip which git ] ++
         [ rustPlatformDeps.pkgsTarget.stdenv.cc ];
+    dontUseCmakeConfigure = true;
     addNativeBuildInputs = [ ];
     buildInputs = if (rustPlatformDeps.pkgsTarget.hostPlatform.isWindows) then with rustPlatformDeps.pkgsTargetNative.windows; [ mingw_w64_pthreads pthreads ] else [ ];
   };

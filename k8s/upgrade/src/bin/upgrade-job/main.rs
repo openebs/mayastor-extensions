@@ -26,6 +26,7 @@ async fn main() -> Result<()> {
         error!(%error, "Failed to upgrade {}", product_train());
         error
     })?;
+    opts.crypto.init_or_exit();
 
     upgrade(&opts).await.map_err(|error| {
         error!(%error, "Failed to upgrade {}", product_train());

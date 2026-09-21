@@ -51,7 +51,7 @@ def _():
 @given("the mayastor helm chart is installed")
 def _():
     """the mayastor helm chart is installed."""
-    helm.install_mayastor(ChartSource.LOCAL, args="--no-loki")
+    helm.install_mayastor(ChartSource.LOCAL, args="--no-loki --fips")
 
 
 @given("a DiskPool CR is created on all nodes")

@@ -53,6 +53,7 @@ spec:
             - "--dir-size-limit={{ .Values.eventing.aggregator.dirSizeLimit }}"
             {{- end }}
           env:
+            {{- include "fips_env" . | nindent 12 }}
             - name: RUST_LOG
               value: {{ .Values.eventing.aggregator.logLevel }}
           imagePullPolicy: {{ default .Values.image.pullPolicy .Values.global.imagePullPolicy }}

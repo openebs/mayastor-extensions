@@ -66,6 +66,9 @@ struct Cli {
     /// Use ANSI colors for the logs.
     #[clap(long, default_value_t = true, action = clap::ArgAction::Set)]
     ansi_colors: bool,
+    /// Crypto options.
+    #[clap(flatten)]
+    crypto: utils::CryptoArgs,
 }
 
 impl Cli {
@@ -108,6 +111,7 @@ fn initialize_exporter(args: &Cli) {
 #[tokio::main]
 async fn main() -> errors::Result<()> {
     let args = Cli::args();
+    args.crypto.init_or_exit();
     utils::print_package_info!();
     init_logging(&args);
     info!(?args, "stats aggregation started");

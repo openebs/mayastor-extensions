@@ -61,6 +61,7 @@ spec:
             - "--enable-orphan-vol-gc={{- .Values.csi.controller.enableDangerousRetainGC | default false }}"
             {{- include "rest_api_tls_client_args" . | nindent 12 }}
           env:
+            {{- include "fips_env" . | nindent 12 }}
             - name: RUST_LOG
               value: {{ .Values.csi.controller.logLevel }}
             {{- if default .Values.base.logging.silenceLevel .Values.csi.controller.logSilenceLevel }}

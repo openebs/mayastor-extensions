@@ -64,6 +64,10 @@ pub(crate) struct CliArgs {
     /// Use helm's --reset-then-reuse-values option instead of using yq to derive the helm values.
     #[arg(long, default_value_t = false)]
     helm_reset_then_reuse_values: bool,
+
+    /// Crypto options.
+    #[clap(flatten)]
+    pub(crate) crypto: utils::CryptoArgs,
 }
 
 impl CliArgs {
