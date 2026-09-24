@@ -111,7 +111,7 @@ pub(crate) async fn init_client(grpc_port: u16) -> Result<GrpcClient, ExporterEr
     let _ = get_node_name()?;
 
     let endpoint = Uri::builder()
-        .scheme("https")
+        .scheme("http")
         .authority(SocketAddr::new(pod_ip, grpc_port).to_string())
         .path_and_query("")
         .build()
