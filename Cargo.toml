@@ -10,6 +10,14 @@ members = [
 ]
 
 exclude = ["./dependencies/control-plane"]
+# The FIPS crate opts rustls/aws-lc-rs onto the FIPS backend on every target
+# except Windows, via a `cfg(not(target_os = "windows"))` dependency. Only
+# Cargo's v2 feature resolver honours that gate; v1 unifies features globally
+# and would drag aws-lc-fips-sys (which needs MSVC/vcvarsall and can't
+# cross-compile) into the Windows build. We keep resolver = "1" here because
+# the Linux/macOS builds don't need v2 (FIPS is on there under either resolver)
+# and v2 slightly de-unifies features. The Windows nix build flips this to "2"
+# in preBuild (see nix/lib/rust.nix) so the FIPS feature is correctly dropped.
 resolver = "1"
 
 [workspace.dependencies]
@@ -25,12 +33,13 @@ futures = "0.3"
 async-trait = "0.1.83"
 async-nats = { version = "0.47.0", default-features = false, features = ["aws-lc-rs", "jetstream"] }
 
-# crypto: these put every transitive user of them onto the FIPS validated
-# backend. The fips crate inherits its own pins from whichever workspace
-# builds it, so keep these in step with the ones in
-# dependencies/control-plane.
-aws-lc-rs = { version = "1.18", default-features = false, features = ["alloc", "ring-io", "ring-sig-verify", "fips"] }
-rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "fips"] }
+# crypto: the fips crate (in the control-plane submodule) is the single place
+# that opts rustls and aws-lc-rs onto the FIPS validated backend, on every
+# target except Windows - where aws-lc-fips-sys cannot be cross-compiled. These
+# pins are what its `workspace = true` resolves against, so keep them in step
+# with the ones in dependencies/control-plane.
+aws-lc-rs = { version = "1.18", default-features = false, features = ["alloc", "ring-io", "ring-sig-verify"] }
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs"] }
 
 # tracing
 tracing = "0.1.40"

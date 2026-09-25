@@ -66,30 +66,30 @@ pub(crate) struct GrpcClient {
 }
 
 /// Number of grpc connect retries without error logging.
-const SILENT_RETRIES: i32 = 3;
+const SILENT_RETRIES: u32 = 3;
 
 impl GrpcClient {
     /// Initialize v1 io engine gRPC client.
     pub(crate) async fn new(context: GrpcContext) -> Result<Self, ExporterError> {
-        let sleep_duration_sec = 10;
-        let mut num_retires = 0;
+        let backoff = std::time::Duration::from_secs(10);
+        let mut num_retries = 0;
         loop {
-            if let Ok(channel) = context.endpoint.connect().await {
-                let pool = PoolClient::new(channel.clone());
-                let stats = StatsClient::new(channel.clone());
-                return Ok(Self {
-                    client: Some(MayaClientV1 { pool, stats }),
-                });
-            } else {
-                if num_retires > SILENT_RETRIES {
-                    error!(
-                        "Grpc connection timeout, retrying after {}s",
-                        sleep_duration_sec
-                    );
+            let result = context.endpoint.connect().await;
+            let error = match result {
+                Ok(channel) => {
+                    let pool = PoolClient::new(channel.clone());
+                    let stats = StatsClient::new(channel.clone());
+                    return Ok(Self {
+                        client: Some(MayaClientV1 { pool, stats }),
+                    });
                 }
-                num_retires += 1;
+                Err(error) => error,
+            };
+            if num_retries > SILENT_RETRIES {
+                error!(?error, "Grpc connection failed, retrying after {backoff:?}");
             }
-            sleep(Duration::from_secs(sleep_duration_sec)).await;
+            num_retries += 1;
+            sleep(backoff).await;
         }
     }
 
@@ -111,7 +111,7 @@ pub(crate) async fn init_client(grpc_port: u16) -> Result<GrpcClient, ExporterEr
     let _ = get_node_name()?;
 
     let endpoint = Uri::builder()
-        .scheme("https")
+        .scheme("http")
         .authority(SocketAddr::new(pod_ip, grpc_port).to_string())
         .path_and_query("")
         .build()

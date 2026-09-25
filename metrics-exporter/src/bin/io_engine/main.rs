@@ -49,8 +49,8 @@ fn get_node_name() -> Result<String, ExporterError> {
 }
 
 #[derive(Parser, Debug)]
-#[clap(name = utils::package_description!(), version = utils::version_info_string!())]
-pub(crate) struct Cli {
+#[clap(about = utils::package_description!(), long_about = utils::package_description!(), version = utils::version_info_string!())]
+struct Cli {
     /// TCP address where prometheus endpoint will listen to
     #[clap(long, short, default_value = "[::]:9502")]
     metrics_endpoint: SocketAddr,
