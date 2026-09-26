@@ -17,7 +17,13 @@ on:
 
 jobs:
   k8s-ci:
-    runs-on: cncf-ubuntu-8-32-x86
+    strategy:
+      fail-fast: false
+      matrix:
+        # The pinned chart is architecture-independent and is pushed once, so
+        # with helm-pins only x86 runs; anything else exercises both.
+        runner: ${{ fromJSON(inputs.helm-pins && '["cncf-ubuntu-8-32-x86"]' || '["cncf-ubuntu-8-32-x86", "cncf-ubuntu-8-32-arm"]') }}
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -127,7 +133,7 @@ jobs:
           name: k8s-dump
           path: dump
       # debugging
-  #      - name: Setup tmate session
-  #        if: ${{ failure() }}
-  #        timeout-minutes: 120
-  #        uses: mxschmitt/action-tmate@v3
+      # - name: Setup tmate session
+      #   if: ${{ failure() }}
+      #   timeout-minutes: 120
+      #   uses: owenthereal/action-upterm@v1
