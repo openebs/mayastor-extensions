@@ -3,6 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-eventing-aggregator
+  namespace: {{ .Release.Namespace }}
   labels:
     app: eventing-aggregator
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}

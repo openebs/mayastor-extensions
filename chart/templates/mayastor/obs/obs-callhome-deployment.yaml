@@ -9,6 +9,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}-obs-callhome
+  namespace: {{ .Release.Namespace }}
   labels:
     app: obs-callhome
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
