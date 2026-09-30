@@ -23,9 +23,9 @@ docker.io/openebs/mayastor-obs-callhome-stats:develop
 docker.io/openebs/mayastor-obs-callhome:develop
 docker.io/openebs/mayastor-operator-diskpool:develop
 docker.io/openebs/mayastor-upgrade-job:develop
+docker.io/openebs/mc:RELEASE.2024-11-21T17-21-54Z
+docker.io/openebs/minio:RELEASE.2024-12-18T13-15-44Z
 docker.io/openebs/provisioner-localpv:4.6.0
-quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
-quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
 quay.io/prometheus-operator/prometheus-config-reloader:v0.81.0
 registry.k8s.io/sig-storage/csi-attacher:v4.8.1
 registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.13.0
