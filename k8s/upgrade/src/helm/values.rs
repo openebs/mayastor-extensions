@@ -724,6 +724,43 @@ where
         }
     }
 
+    // The loki chart's minio dependency chart pulls its container images from the openebs
+    // mirror on docker.io, instead of from quay.io/minio. The source's values carry the minio
+    // chart's older default image repositories, and the merge prefers these over the target's.
+    // They are replaced with the target's, unless the user has customised them, e.g. to pull
+    // from a private registry. The image tags are left as they are, because the mirror has the
+    // images for the minio chart's default image tags.
+    let minio_image_repo_to_replace = "quay.io/minio/minio";
+    if source_values
+        .loki_minio_image_repo()
+        .eq(minio_image_repo_to_replace)
+        && !target_values.loki_minio_image_repo().is_empty()
+        && target_values
+            .loki_minio_image_repo()
+            .ne(minio_image_repo_to_replace)
+    {
+        yq.set_quoted_string_value(
+            YamlKey::try_from(".loki.minio.image.repository")?,
+            target_values.loki_minio_image_repo(),
+            upgrade_values_file.path(),
+        )?;
+    }
+    let minio_mc_image_repo_to_replace = "quay.io/minio/mc";
+    if source_values
+        .loki_minio_mc_image_repo()
+        .eq(minio_mc_image_repo_to_replace)
+        && !target_values.loki_minio_mc_image_repo().is_empty()
+        && target_values
+            .loki_minio_mc_image_repo()
+            .ne(minio_mc_image_repo_to_replace)
+    {
+        yq.set_quoted_string_value(
+            YamlKey::try_from(".loki.minio.mcImage.repository")?,
+            target_values.loki_minio_mc_image_repo(),
+            upgrade_values_file.path(),
+        )?;
+    }
+
     // Default options.
     // Image tag is set because the high_priority file is the user's source options file.
     // The target's image tag needs to be set for PRODUCT upgrade.
