@@ -117,6 +117,9 @@ pub(crate) struct CoreValues {
     /// This contains loki-stack details.
     #[serde(default, rename(deserialize = "loki-stack"))]
     loki_stack: LokiStack,
+    /// This contains the sub-chart values for the grafana/loki helm chart.
+    #[serde(default)]
+    loki: LokiChart,
     /// This contains the sub-chart values for the hostpath provisioner's helm chart.
     #[serde(default, rename(deserialize = "localpv-provisioner"))]
     localpv_provisioner: LocalpvProvisioner,
@@ -470,6 +473,16 @@ impl CoreValues {
     /// Returns the image repository of the etcd container.
     pub(crate) fn pre_upgrade_hook_image_repo(&self) -> &str {
         self.pre_upgrade_hook.image_repository()
+    }
+
+    /// Returns the image repository of the loki chart's minio container.
+    pub(crate) fn loki_minio_image_repo(&self) -> &str {
+        self.loki.minio_image_repo()
+    }
+
+    /// Returns the image repository of the loki chart's minio client (mc) containers.
+    pub(crate) fn loki_minio_mc_image_repo(&self) -> &str {
+        self.loki.minio_mc_image_repo()
     }
 }
 
@@ -1668,6 +1681,47 @@ impl PromtailConfigClient {
         Self {
             url: url.to_string(),
         }
+    }
+}
+
+/// This is used to deserialize the yaml object 'loki', i.e. the helm values of the grafana/loki
+/// helm chart.
+#[derive(Default, Deserialize)]
+#[serde(default)]
+struct LokiChart {
+    minio: LokiMinio,
+}
+
+impl LokiChart {
+    /// This is a getter for the minio container's image repository.
+    fn minio_image_repo(&self) -> &str {
+        self.minio.image_repo()
+    }
+
+    /// This is a getter for the minio client (mc) containers' image repository.
+    fn minio_mc_image_repo(&self) -> &str {
+        self.minio.mc_image_repo()
+    }
+}
+
+/// This is used to deserialize the yaml object 'loki.minio', i.e. the helm values of the loki
+/// chart's minio dependency chart.
+#[derive(Default, Deserialize)]
+#[serde(default, rename_all(deserialize = "camelCase"))]
+struct LokiMinio {
+    image: GenericImage,
+    mc_image: GenericImage,
+}
+
+impl LokiMinio {
+    /// This is a getter for the minio container's image repository.
+    fn image_repo(&self) -> &str {
+        self.image.repository()
+    }
+
+    /// This is a getter for the minio client (mc) containers' image repository.
+    fn mc_image_repo(&self) -> &str {
+        self.mc_image.repository()
     }
 }
 
