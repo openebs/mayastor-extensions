@@ -117,9 +117,11 @@ pub(crate) struct CoreValues {
     /// This contains loki-stack details.
     #[serde(default, rename(deserialize = "loki-stack"))]
     loki_stack: LokiStack,
-    /// This contains the sub-chart values for the grafana/loki helm chart.
-    #[serde(default)]
-    loki: LokiChart,
+    /// This contains the sub-chart values for the grafana/loki helm chart. This, and the minio
+    /// objects nested in it, are Options so that a null value deserializes. Helm keeps a
+    /// user-provided null for a key which the chart doesn't have, e.g. 'loki' in older charts,
+    /// which have 'loki-stack' instead.
+    loki: Option<LokiChart>,
     /// This contains the sub-chart values for the hostpath provisioner's helm chart.
     #[serde(default, rename(deserialize = "localpv-provisioner"))]
     localpv_provisioner: LocalpvProvisioner,
@@ -477,12 +479,18 @@ impl CoreValues {
 
     /// Returns the image repository of the loki chart's minio container.
     pub(crate) fn loki_minio_image_repo(&self) -> &str {
-        self.loki.minio_image_repo()
+        self.loki
+            .as_ref()
+            .map(LokiChart::minio_image_repo)
+            .unwrap_or_default()
     }
 
     /// Returns the image repository of the loki chart's minio client (mc) containers.
     pub(crate) fn loki_minio_mc_image_repo(&self) -> &str {
-        self.loki.minio_mc_image_repo()
+        self.loki
+            .as_ref()
+            .map(LokiChart::minio_mc_image_repo)
+            .unwrap_or_default()
     }
 }
 
@@ -1686,42 +1694,53 @@ impl PromtailConfigClient {
 
 /// This is used to deserialize the yaml object 'loki', i.e. the helm values of the grafana/loki
 /// helm chart.
-#[derive(Default, Deserialize)]
-#[serde(default)]
+#[derive(Deserialize)]
 struct LokiChart {
-    minio: LokiMinio,
+    minio: Option<LokiMinio>,
 }
 
 impl LokiChart {
     /// This is a getter for the minio container's image repository.
     fn minio_image_repo(&self) -> &str {
-        self.minio.image_repo()
+        self.minio
+            .as_ref()
+            .map(LokiMinio::image_repo)
+            .unwrap_or_default()
     }
 
     /// This is a getter for the minio client (mc) containers' image repository.
     fn minio_mc_image_repo(&self) -> &str {
-        self.minio.mc_image_repo()
+        self.minio
+            .as_ref()
+            .map(LokiMinio::mc_image_repo)
+            .unwrap_or_default()
     }
 }
 
 /// This is used to deserialize the yaml object 'loki.minio', i.e. the helm values of the loki
 /// chart's minio dependency chart.
-#[derive(Default, Deserialize)]
-#[serde(default, rename_all(deserialize = "camelCase"))]
+#[derive(Deserialize)]
+#[serde(rename_all(deserialize = "camelCase"))]
 struct LokiMinio {
-    image: GenericImage,
-    mc_image: GenericImage,
+    image: Option<GenericImage>,
+    mc_image: Option<GenericImage>,
 }
 
 impl LokiMinio {
     /// This is a getter for the minio container's image repository.
     fn image_repo(&self) -> &str {
-        self.image.repository()
+        self.image
+            .as_ref()
+            .map(GenericImage::repository)
+            .unwrap_or_default()
     }
 
     /// This is a getter for the minio client (mc) containers' image repository.
     fn mc_image_repo(&self) -> &str {
-        self.mc_image.repository()
+        self.mc_image
+            .as_ref()
+            .map(GenericImage::repository)
+            .unwrap_or_default()
     }
 }
 
