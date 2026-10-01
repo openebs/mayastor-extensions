@@ -112,12 +112,12 @@ annotations:
       image: docker.io/openebs/mayastor-obs-callhome:release-2.12
     - name: mayastor-operator-diskpool
       image: docker.io/openebs/mayastor-operator-diskpool:release-2.12
+    - name: mc
+      image: docker.io/openebs/mc:RELEASE.2024-11-21T17-21-54Z
+    - name: minio
+      image: docker.io/openebs/minio:RELEASE.2024-12-18T13-15-44Z
     - name: provisioner-localpv
       image: docker.io/openebs/provisioner-localpv:4.6.0
-    - name: mc
-      image: quay.io/minio/mc:RELEASE.2024-11-21T17-21-54Z
-    - name: minio
-      image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
     - name: prometheus-config-reloader
       image: quay.io/prometheus-operator/prometheus-config-reloader:v0.81.0
     - name: csi-attacher
