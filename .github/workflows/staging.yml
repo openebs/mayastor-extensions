@@ -48,6 +48,45 @@ jobs:
       namespace: mayastor/dev
     secrets: inherit
 
+  mirror-alpine-images:
+    runs-on: ubuntu-latest
+    needs: preflight-checks
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: ./.github/actions/setup-nix
+        with:
+          preFetchNix: ./dependencies/control-plane/utils/dependencies/scripts/staging/shell.nix
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The staging chart references these third-party init/helper images from
+      # the ghcr dev namespace (their registry/repo is rewritten alongside our
+      # own images), so they must exist there. The source tags are read from the
+      # committed chart/images.txt to stay in sync with chart version bumps.
+      - name: Mirror alpine-bash and alpine-sh to GHCR
+        run: |
+          nix-shell --run '
+            set -euo pipefail
+            for name in alpine-bash alpine-sh; do
+              src=$(grep -m1 "/openebs/${name}:" chart/images.txt)
+              dest="ghcr.io/${{ github.repository_owner }}/mayastor/dev/${src##*/}"
+              echo "Mirroring ${src} to ${dest}..."
+              crane copy --platform all "${src}" "${dest}"
+            done
+          ' ./dependencies/control-plane/utils/dependencies/scripts/staging/shell.nix
+
   build-binaries:
     needs: preflight-checks
     uses: ./.github/workflows/release-binaries.yml
@@ -109,7 +148,7 @@ jobs:
 
   release-staging-chart:
     runs-on: ubuntu-latest
-    needs: [build-images, push-kubectl-to-ghcr]
+    needs: [build-images, mirror-alpine-images, push-kubectl-to-ghcr]
     permissions:
       id-token: write
       contents: read
