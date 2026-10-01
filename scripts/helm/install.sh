@@ -36,8 +36,7 @@ FAIL_IF_INSTALLED=
 HOSTED=
 VERSION=
 PULL_POLICY=
-# disable minio for now as the minio images have been pulled from quay.io and are not available!
-INS_LOKI="false"
+INS_LOKI="true"
 DEFAULT_REGISTRY="https://openebs.github.io/mayastor-extensions"
 HELM="helm"
 KUBECTL="kubectl"
