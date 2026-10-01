@@ -884,6 +884,10 @@ loki:
     persistence:
       storageClass: "mayastor-loki-localpv"
       size: 2Gi
+    image:
+      repository: docker.io/openebs/minio
+    mcImage:
+      repository: docker.io/openebs/mc
   deploymentMode: SingleBinary
   lokiCanary:
     enabled: false
