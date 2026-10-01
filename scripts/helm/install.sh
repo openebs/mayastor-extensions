@@ -118,6 +118,9 @@ loki_args() {
 
   if [ "$minio" = "true" ]; then
     echo -n "$(set_args "loki.minio.enabled=true,loki.minio.replicas=$replicas")"
+    if [ "${MINIO_IMAGE_OVERRIDE:-}" = "true" ]; then
+      echo -n " $(set_args "loki.minio.image.repository=docker.io/openebs/minio,loki.minio.mcImage.repository=docker.io/openebs/mc")"
+    fi
   else
     echo -n "$(set_args "loki.loki.storage.type=filesystem")" \
             "$(set_args "loki.singleBinary.persistence.enabled=true")" \
@@ -227,6 +230,23 @@ if [ -n "$HOSTED" ]; then
   fi
   CHART_SOURCE="$(repo_add "$REGISTRY" "mayastor")/mayastor"
   DEP_UPDATE_ARG=
+
+  # Hosted charts >= 2.9.0 and < 2.12.2 use minio images from quay.io/minio which are no longer
+  # available. Switch these out for the images from the docker.io/openebs mirror.
+  MINIO_IMAGE_OVERRIDE=
+  HOSTED_CHART_VERSION=
+  if [ -n "$VERSION" ] && [ "$(semver validate "$VERSION")" = "valid" ]; then
+    HOSTED_CHART_VERSION="$VERSION"
+  elif [ -z "$DRY_RUN" ]; then
+    HOSTED_CHART_VERSION=$($HELM search repo "$CHART_SOURCE" ${VERSION:+--version "$VERSION"} -o yaml | yq '.[0].version // ""')
+  fi
+  if [ -n "$HOSTED_CHART_VERSION" ] && [ "$(semver validate "$HOSTED_CHART_VERSION")" = "valid" ]; then
+    if [ "$(semver compare "$HOSTED_CHART_VERSION" "2.9.0")" -ge 0 ] && [ "$(semver compare "$HOSTED_CHART_VERSION" "2.12.2")" -lt 0 ]; then
+      MINIO_IMAGE_OVERRIDE="true"
+    fi
+  else
+    echo_stderr "WARNING: Couldn't determine the hosted chart version, skipping minio image override"
+  fi
 fi
 
 if [ -n "$PULL_POLICY" ]; then
