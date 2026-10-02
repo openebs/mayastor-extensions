@@ -48,6 +48,9 @@ sudo -E talosctl cluster create \
   --config-patch-workers "$GENDIR/worker.yaml" \
   qemu
 
+KUBECONFIG=${KUBECONFIG:-$HOME/.kube/config}
+sudo -E chown "$USER" "$KUBECONFIG"
+
 echo "Waiting for nodes to become Ready..."
 kubectl wait --for=condition=Ready nodes --all --timeout=300s
 kubectl get nodes -o wide
