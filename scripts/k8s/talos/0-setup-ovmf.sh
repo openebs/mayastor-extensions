@@ -25,12 +25,19 @@ if $DELETE; then
   exit 0
 fi
 
-OVMF_DIR=$(find /nix/store -maxdepth 1 -iname '*-OVMF-*-fd' | sort -V | tail -1)
-if [ -z "$OVMF_DIR" ]; then
-  echo "Could not find an OVMF package under /nix/store." >&2
+# Match plain OVMF-<version>-fd only.
+# Flavored variants like OVMF-xen-* seem to hang QEMU on boot
+OVMF_CANDIDATES=$(find /nix/store -maxdepth 1 -iname '*-OVMF-[0-9]*-fd' | sort -V)
+if [ -z "$OVMF_CANDIDATES" ]; then
+  echo "Could not find a plain OVMF package under /nix/store." >&2
   echo "Install one, e.g.: nix profile install nixpkgs#OVMF" >&2
   exit 1
 fi
+if [ "$(wc -l <<< "$OVMF_CANDIDATES")" -gt 1 ]; then
+  echo "Warning: multiple OVMF packages found under /nix/store, picking the highest version:" >&2
+  sed 's/^/  /' <<< "$OVMF_CANDIDATES" >&2
+fi
+OVMF_DIR=$(tail -1 <<< "$OVMF_CANDIDATES")
 
 echo "Using OVMF from: $OVMF_DIR"
 sudo -E mkdir -p /usr/share/OVMF
