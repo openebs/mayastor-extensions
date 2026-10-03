@@ -3,6 +3,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: {{ .Release.Name }}-api-rest
+  namespace: {{ .Release.Namespace }}
   labels:
     app: api-rest
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}

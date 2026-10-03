@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ .Release.Name }}-io-engine
+  namespace: {{ .Release.Namespace }}
   labels:
     app: io-engine
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}

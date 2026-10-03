@@ -3,6 +3,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ .Release.Name }}-agent-ha-node
+  namespace: {{ .Release.Namespace }}
   labels:
     app: agent-ha-node
     {{ include "label_prefix" . }}/release: {{ .Release.Name }}
