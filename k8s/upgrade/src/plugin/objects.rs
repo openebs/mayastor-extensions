@@ -226,6 +226,12 @@ pub(crate) fn upgrade_job_cluster_role(
                 ..Default::default()
             },
             PolicyRule {
+                api_groups: Some(vec!["storage.k8s.io"].into_vec()),
+                resources: Some(vec!["csidrivers"].into_vec()),
+                verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
+                ..Default::default()
+            },
+            PolicyRule {
                 api_groups: Some(vec!["scheduling.k8s.io"].into_vec()),
                 resources: Some(vec!["priorityclasses"].into_vec()),
                 verbs: vec!["create", "list", "delete", "get", "patch"].into_vec(),
