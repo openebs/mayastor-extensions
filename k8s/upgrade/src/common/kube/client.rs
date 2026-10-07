@@ -3,8 +3,8 @@ use crate::common::{
     error::{
         ControllerRevisionDoesntHaveHashLabel, ControllerRevisionListEmpty, DaemonSetNotFound,
         FailedToDeleteStatefulSet, FailedToListMetadataPaginated, FailedToListPaginated,
-        GetDaemonSet, InvalidNoOfHelmConfigMaps, InvalidNoOfHelmSecrets, K8sClientGeneration,
-        Result,
+        GetDaemonSet, GetNode, InvalidNoOfHelmConfigMaps, InvalidNoOfHelmSecrets,
+        K8sClientGeneration, Result,
     },
 };
 use k8s_openapi::{
@@ -335,6 +335,13 @@ pub async fn get_daemonset(name: &str, namespace: &str) -> Result<DaemonSet> {
             }
             .build(),
         )
+}
+
+/// GET a Node. Returns None if the Node does not exist.
+pub async fn get_node(name: &str) -> Result<Option<Node>> {
+    nodes_api().await?.get_opt(name).await.context(GetNode {
+        name: name.to_string(),
+    })
 }
 
 /// List Kubernetes resource object with pagination.

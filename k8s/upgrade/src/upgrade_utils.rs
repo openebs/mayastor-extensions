@@ -6,12 +6,15 @@ use crate::common::{
     },
     rest_client::RestClientSet,
 };
-use k8s_openapi::api::{apps::v1::DaemonSet, core::v1::Pod};
+use k8s_openapi::api::{
+    apps::v1::DaemonSet,
+    core::v1::{Node, NodeSelectorRequirement, NodeSelectorTerm, Pod, PodSpec, Taint, Toleration},
+};
 use kube::ResourceExt;
 use openapi::models::{CordonDrainState, Volume, VolumeStatus};
 use snafu::ResultExt;
 use std::{
-    collections::HashSet,
+    collections::{BTreeMap, HashSet},
     fmt::{Display, Formatter},
     time::Duration,
 };
@@ -344,14 +347,9 @@ pub(crate) fn pod_is_ready(pod: &Pod) -> bool {
 /// Describes the Pods which are not Ready, along with the nodes which they run on or are meant to
 /// run on, and their phase. At most 'limit' Pods are described.
 pub(crate) fn describe_not_ready_pods(pods: &[Pod], limit: usize) -> String {
-    let not_ready_pods: Vec<&Pod> = pods.iter().filter(|pod| !pod_is_ready(pod)).collect();
-    if not_ready_pods.is_empty() {
-        return "none".to_string();
-    }
-
-    let mut description = not_ready_pods
+    let not_ready_pods: Vec<String> = pods
         .iter()
-        .take(limit)
+        .filter(|pod| !pod_is_ready(pod))
         .map(|pod| {
             format!(
                 "{} (node: {}, phase: {})",
@@ -363,13 +361,270 @@ pub(crate) fn describe_not_ready_pods(pods: &[Pod], limit: usize) -> String {
                     .unwrap_or("Unknown")
             )
         })
-        .collect::<Vec<String>>()
-        .join(", ");
-    if not_ready_pods.len() > limit {
-        description.push_str(format!(" and {} more", not_ready_pods.len() - limit).as_str());
+        .collect();
+    if not_ready_pods.is_empty() {
+        return "none".to_string();
     }
 
-    description
+    join_with_limit(not_ready_pods.as_slice(), limit)
+}
+
+/// Joins the items with commas. The items after the first 'limit' items are only counted.
+pub(crate) fn join_with_limit(items: &[String], limit: usize) -> String {
+    let mut joined = items
+        .iter()
+        .take(limit)
+        .map(String::as_str)
+        .collect::<Vec<&str>>()
+        .join(", ");
+    if items.len() > limit {
+        joined.push_str(format!(" and {} more", items.len() - limit).as_str());
+    }
+
+    joined
+}
+
+/// Returns true if the object with the UID 'owner_uid' is the controller of the Pod, e.g. the
+/// DaemonSet which created the Pod.
+pub(crate) fn pod_is_controlled_by(pod: &Pod, owner_uid: &str) -> bool {
+    pod.owner_references()
+        .iter()
+        .any(|owner| owner.controller == Some(true) && owner.uid == owner_uid)
+}
+
+/// The reasons for which a DaemonSet doesn't run a Pod on a node.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum NodeSkipReason {
+    /// The node doesn't exist.
+    NodeNotFound,
+    /// The DaemonSet's Pod template sets the name of a different node.
+    NodeName,
+    /// The node doesn't match the node selector or the required node affinity of the DaemonSet's
+    /// Pod template.
+    NodeAffinity,
+    /// The DaemonSet's Pods don't tolerate this NoSchedule or NoExecute taint of the node.
+    UntoleratedTaint(String),
+}
+
+impl Display for NodeSkipReason {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NodeNotFound => f.write_str("the node doesn't exist"),
+            Self::NodeName => f.write_str("the DaemonSet's Pod template is for a different node"),
+            Self::NodeAffinity => {
+                f.write_str("the node doesn't match the DaemonSet's node selector or node affinity")
+            }
+            Self::UntoleratedTaint(taint) => {
+                write!(
+                    f,
+                    "the DaemonSet's Pods don't tolerate the node's taint '{taint}'"
+                )
+            }
+        }
+    }
+}
+
+/// These are the (key, effect) pairs of the tolerations which the DaemonSet controller adds to
+/// the Pods of every DaemonSet. All of them use the Exists operator. This is the same as the
+/// DaemonSet controller's AddOrUpdateDaemonPodTolerations().
+const DAEMONSET_POD_DEFAULT_TOLERATIONS: [(&str, &str); 6] = [
+    ("node.kubernetes.io/not-ready", "NoExecute"),
+    ("node.kubernetes.io/unreachable", "NoExecute"),
+    ("node.kubernetes.io/disk-pressure", "NoSchedule"),
+    ("node.kubernetes.io/memory-pressure", "NoSchedule"),
+    ("node.kubernetes.io/pid-pressure", "NoSchedule"),
+    ("node.kubernetes.io/unschedulable", "NoSchedule"),
+];
+
+/// This is the (key, effect) pair of the toleration which the DaemonSet controller adds to the
+/// Pods of DaemonSets which use the host's network. It uses the Exists operator.
+const DAEMONSET_HOST_NETWORK_POD_DEFAULT_TOLERATION: (&str, &str) =
+    ("node.kubernetes.io/network-unavailable", "NoSchedule");
+
+/// Returns the reason for which the DaemonSet controller doesn't run a Pod of the DaemonSet on the
+/// node, or None if it does. The DaemonSet controller doesn't create a Pod on a node for which
+/// there is a reason, e.g. after the Pod which was on the node is deleted. This is the same as the
+/// 'shouldRun' result of the DaemonSet controller's NodeShouldRunDaemonPod().
+pub(crate) fn daemonset_node_skip_reason(ds: &DaemonSet, node: &Node) -> Option<NodeSkipReason> {
+    let default_pod_spec = PodSpec::default();
+    let pod_spec = ds
+        .spec
+        .as_ref()
+        .and_then(|spec| spec.template.spec.as_ref())
+        .unwrap_or(&default_pod_spec);
+    let node_name = node.metadata.name.as_deref().unwrap_or_default();
+
+    if pod_spec
+        .node_name
+        .as_deref()
+        .is_some_and(|name| !name.is_empty() && name != node_name)
+    {
+        return Some(NodeSkipReason::NodeName);
+    }
+
+    if !node_matches_required_node_affinity(pod_spec, node) {
+        return Some(NodeSkipReason::NodeAffinity);
+    }
+
+    node.spec
+        .as_ref()
+        .and_then(|spec| spec.taints.as_ref())
+        .into_iter()
+        .flatten()
+        .filter(|taint| taint.effect == "NoSchedule" || taint.effect == "NoExecute")
+        .find(|taint| !daemonset_pod_tolerates_taint(pod_spec, taint))
+        .map(|taint| NodeSkipReason::UntoleratedTaint(describe_taint(taint)))
+}
+
+/// Returns true if the node matches the node selector and the required node affinity of the Pod
+/// spec. This is the same as Kubernetes' RequiredNodeAffinity.Match().
+fn node_matches_required_node_affinity(pod_spec: &PodSpec, node: &Node) -> bool {
+    let no_labels = BTreeMap::new();
+    let labels = node.metadata.labels.as_ref().unwrap_or(&no_labels);
+    let node_name = node.metadata.name.as_deref().unwrap_or_default();
+
+    let matches_node_selector = pod_spec
+        .node_selector
+        .iter()
+        .flatten()
+        .all(|(key, value)| labels.get(key) == Some(value));
+    if !matches_node_selector {
+        return false;
+    }
+
+    match pod_spec
+        .affinity
+        .as_ref()
+        .and_then(|affinity| affinity.node_affinity.as_ref())
+        .and_then(|node_affinity| {
+            node_affinity
+                .required_during_scheduling_ignored_during_execution
+                .as_ref()
+        }) {
+        // The node selector terms are ORed.
+        Some(node_selector) => node_selector
+            .node_selector_terms
+            .iter()
+            .any(|term| node_selector_term_matches(term, labels, node_name)),
+        None => true,
+    }
+}
+
+/// Returns true if the node's labels and name match all of the requirements of the node selector
+/// term. A term without requirements, or with an invalid requirement, matches no node.
+fn node_selector_term_matches(
+    term: &NodeSelectorTerm,
+    labels: &BTreeMap<String, String>,
+    node_name: &str,
+) -> bool {
+    let match_expressions = term.match_expressions.as_deref().unwrap_or_default();
+    let match_fields = term.match_fields.as_deref().unwrap_or_default();
+    if match_expressions.is_empty() && match_fields.is_empty() {
+        return false;
+    }
+
+    match_expressions
+        .iter()
+        .all(|requirement| node_label_requirement_matches(requirement, labels))
+        && match_fields
+            .iter()
+            .all(|requirement| node_field_requirement_matches(requirement, node_name))
+}
+
+/// Returns true if the node's labels match the node selector requirement. An invalid requirement
+/// matches no node.
+fn node_label_requirement_matches(
+    requirement: &NodeSelectorRequirement,
+    labels: &BTreeMap<String, String>,
+) -> bool {
+    let values = requirement.values.as_deref().unwrap_or_default();
+    let label = labels.get(requirement.key.as_str());
+    match requirement.operator.as_str() {
+        "In" if !values.is_empty() => label.is_some_and(|label| values.contains(label)),
+        "NotIn" if !values.is_empty() => label.is_none_or(|label| !values.contains(label)),
+        "Exists" if values.is_empty() => label.is_some(),
+        "DoesNotExist" if values.is_empty() => label.is_none(),
+        operator @ ("Gt" | "Lt") => {
+            let ([value], Some(label)) = (values, label) else {
+                return false;
+            };
+            match (label.parse::<i64>(), value.parse::<i64>()) {
+                (Ok(label), Ok(value)) if operator == "Gt" => label > value,
+                (Ok(label), Ok(value)) => label < value,
+                _ => false,
+            }
+        }
+        _ => false,
+    }
+}
+
+/// Returns true if the node's name matches the node selector requirement. 'metadata.name' is the
+/// only field which node selector requirements support. An invalid requirement matches no node.
+fn node_field_requirement_matches(requirement: &NodeSelectorRequirement, node_name: &str) -> bool {
+    let field = match requirement.key.as_str() {
+        "metadata.name" => node_name,
+        _ => "",
+    };
+    match (requirement.operator.as_str(), requirement.values.as_deref()) {
+        ("In", Some([value])) => field == value.as_str(),
+        ("NotIn", Some([value])) => field != value.as_str(),
+        _ => false,
+    }
+}
+
+/// Returns true if the Pods of a DaemonSet with this Pod template spec tolerate the taint. These
+/// Pods have the tolerations of the Pod template, and the ones which the DaemonSet controller adds
+/// to them.
+fn daemonset_pod_tolerates_taint(pod_spec: &PodSpec, taint: &Taint) -> bool {
+    let host_network_toleration = pod_spec
+        .host_network
+        .unwrap_or_default()
+        .then_some(&DAEMONSET_HOST_NETWORK_POD_DEFAULT_TOLERATION);
+    let tolerated_by_default = DAEMONSET_POD_DEFAULT_TOLERATIONS
+        .iter()
+        .chain(host_network_toleration)
+        .any(|(key, effect)| taint.key == *key && taint.effect == *effect);
+
+    tolerated_by_default
+        || pod_spec
+            .tolerations
+            .iter()
+            .flatten()
+            .any(|toleration| toleration_tolerates_taint(toleration, taint))
+}
+
+/// Returns true if the toleration tolerates the taint. This is the same as Kubernetes'
+/// Toleration.ToleratesTaint().
+fn toleration_tolerates_taint(toleration: &Toleration, taint: &Taint) -> bool {
+    let effect = toleration.effect.as_deref().unwrap_or_default();
+    if !effect.is_empty() && effect != taint.effect {
+        return false;
+    }
+
+    let key = toleration.key.as_deref().unwrap_or_default();
+    if !key.is_empty() && key != taint.key {
+        return false;
+    }
+
+    match toleration.operator.as_deref().unwrap_or_default() {
+        "" | "Equal" => {
+            toleration.value.as_deref().unwrap_or_default()
+                == taint.value.as_deref().unwrap_or_default()
+        }
+        "Exists" => true,
+        // The Gt and Lt operators need the alpha TaintTolerationComparisonOperators feature gate.
+        // These operators don't tolerate any taint while it's disabled, which is the default. This
+        // errs on the side of not restarting a Pod which may not be re-created.
+        _ => false,
+    }
+}
+
+/// Describes a taint in the same format as kubectl, i.e. 'key=value:effect'.
+fn describe_taint(taint: &Taint) -> String {
+    match taint.value.as_deref() {
+        Some(value) if !value.is_empty() => format!("{}={value}:{}", taint.key, taint.effect),
+        _ => format!("{}:{}", taint.key, taint.effect),
+    }
 }
 
 /// Cordon storage node.
@@ -501,19 +756,21 @@ pub(crate) async fn list_all_volumes(rest_client: &RestClientSet) -> Result<Vec<
 #[cfg(test)]
 mod tests {
     use super::{
-        describe_not_ready_pods, pod_is_ready, pod_target_node, DaemonSetRollout,
-        RolloutIncompleteReason,
+        daemonset_node_skip_reason, describe_not_ready_pods, pod_is_controlled_by, pod_is_ready,
+        pod_target_node, DaemonSetRollout, NodeSkipReason, RolloutIncompleteReason,
     };
     use k8s_openapi::{
         api::{
-            apps::v1::{DaemonSet, DaemonSetStatus},
+            apps::v1::{DaemonSet, DaemonSetSpec, DaemonSetStatus},
             core::v1::{
-                Affinity, NodeAffinity, NodeSelector, NodeSelectorRequirement, NodeSelectorTerm,
-                Pod, PodCondition, PodSpec, PodStatus,
+                Affinity, Node, NodeAffinity, NodeSelector, NodeSelectorRequirement,
+                NodeSelectorTerm, NodeSpec, Pod, PodCondition, PodSpec, PodStatus, PodTemplateSpec,
+                Taint, Toleration,
             },
         },
-        apimachinery::pkg::apis::meta::v1::ObjectMeta,
+        apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference},
     };
+    use std::collections::BTreeMap;
 
     /// Builds a DaemonSet with a .metadata.generation and an optional .status.
     fn daemonset(generation: i64, status: Option<DaemonSetStatus>) -> DaemonSet {
@@ -813,5 +1070,520 @@ mod tests {
         );
         assert_eq!(describe_not_ready_pods(&pods[..1], 3), "none");
         assert_eq!(describe_not_ready_pods(&[], 3), "none");
+    }
+
+    #[test]
+    fn pods_controlled_by() {
+        let owned_by = |uid: &str, controller: Option<bool>| Pod {
+            metadata: ObjectMeta {
+                owner_references: Some(vec![OwnerReference {
+                    uid: uid.to_string(),
+                    controller,
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        assert!(pod_is_controlled_by(&owned_by("ds-1", Some(true)), "ds-1"));
+        assert!(!pod_is_controlled_by(&owned_by("ds-2", Some(true)), "ds-1"));
+        assert!(!pod_is_controlled_by(
+            &owned_by("ds-1", Some(false)),
+            "ds-1"
+        ));
+        assert!(!pod_is_controlled_by(&owned_by("ds-1", None), "ds-1"));
+        assert!(!pod_is_controlled_by(&Pod::default(), "ds-1"));
+    }
+
+    /// Builds a Node with labels, and taints as (key, value, effect).
+    fn node(name: &str, labels: &[(&str, &str)], taints: &[(&str, Option<&str>, &str)]) -> Node {
+        Node {
+            metadata: ObjectMeta {
+                name: Some(name.to_string()),
+                labels: Some(
+                    labels
+                        .iter()
+                        .map(|(key, value)| (key.to_string(), value.to_string()))
+                        .collect(),
+                ),
+                ..Default::default()
+            },
+            spec: Some(NodeSpec {
+                taints: Some(
+                    taints
+                        .iter()
+                        .map(|(key, value, effect)| Taint {
+                            key: key.to_string(),
+                            value: value.map(ToString::to_string),
+                            effect: effect.to_string(),
+                            ..Default::default()
+                        })
+                        .collect(),
+                ),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
+
+    /// Builds a toleration from its key, operator, value and effect.
+    fn toleration(
+        key: Option<&str>,
+        operator: Option<&str>,
+        value: Option<&str>,
+        effect: Option<&str>,
+    ) -> Toleration {
+        Toleration {
+            key: key.map(ToString::to_string),
+            operator: operator.map(ToString::to_string),
+            value: value.map(ToString::to_string),
+            effect: effect.map(ToString::to_string),
+            ..Default::default()
+        }
+    }
+
+    /// Builds a required node affinity with node selector terms, which are made of the
+    /// (matchExpressions, matchFields) pairs.
+    fn required_node_affinity(
+        terms: Vec<(Vec<NodeSelectorRequirement>, Vec<NodeSelectorRequirement>)>,
+    ) -> Option<Affinity> {
+        Some(Affinity {
+            node_affinity: Some(NodeAffinity {
+                required_during_scheduling_ignored_during_execution: Some(NodeSelector {
+                    node_selector_terms: terms
+                        .into_iter()
+                        .map(|(match_expressions, match_fields)| NodeSelectorTerm {
+                            match_expressions: Some(match_expressions),
+                            match_fields: Some(match_fields),
+                        })
+                        .collect(),
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
+    }
+
+    #[test]
+    fn daemonset_node_skip_reasons() {
+        use NodeSkipReason::*;
+
+        let engine_label = [("openebs.io/engine", "mayastor")];
+        let engine_node_selector = Some(BTreeMap::from([(
+            "openebs.io/engine".to_string(),
+            "mayastor".to_string(),
+        )]));
+        let label_affinity = |requirement: NodeSelectorRequirement| {
+            required_node_affinity(vec![(vec![requirement], vec![])])
+        };
+        let maintenance_taint = [("example.com/maintenance", Some("true"), "NoSchedule")];
+        let untolerated_maintenance_taint = Some(UntoleratedTaint(
+            "example.com/maintenance=true:NoSchedule".to_string(),
+        ));
+        let with_tolerations = |tolerations: Vec<Toleration>| PodSpec {
+            tolerations: Some(tolerations),
+            ..Default::default()
+        };
+
+        let test_cases = [
+            (
+                "no constraints",
+                PodSpec::default(),
+                node("node-1", &[], &[]),
+                None,
+            ),
+            (
+                "node selector matches",
+                PodSpec {
+                    node_selector: engine_node_selector.clone(),
+                    ..Default::default()
+                },
+                node("node-1", &engine_label, &[]),
+                None,
+            ),
+            (
+                "node selector label is absent",
+                PodSpec {
+                    node_selector: engine_node_selector.clone(),
+                    ..Default::default()
+                },
+                node("node-1", &[], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "node selector label has a different value",
+                PodSpec {
+                    node_selector: engine_node_selector.clone(),
+                    ..Default::default()
+                },
+                node("node-1", &[("openebs.io/engine", "none")], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "template is for this node",
+                PodSpec {
+                    node_name: Some("node-1".to_string()),
+                    ..Default::default()
+                },
+                node("node-1", &[], &[]),
+                None,
+            ),
+            (
+                "template is for a different node",
+                PodSpec {
+                    node_name: Some("node-2".to_string()),
+                    ..Default::default()
+                },
+                node("node-1", &[], &[]),
+                Some(NodeName),
+            ),
+            (
+                "In matches",
+                PodSpec {
+                    affinity: label_affinity(requirement("zone", "In", &["a", "b"])),
+                    ..Default::default()
+                },
+                node("node-1", &[("zone", "b")], &[]),
+                None,
+            ),
+            (
+                "In doesn't match",
+                PodSpec {
+                    affinity: label_affinity(requirement("zone", "In", &["a", "b"])),
+                    ..Default::default()
+                },
+                node("node-1", &[("zone", "c")], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "In without values is invalid",
+                PodSpec {
+                    affinity: label_affinity(requirement("zone", "In", &[])),
+                    ..Default::default()
+                },
+                node("node-1", &[("zone", "a")], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "NotIn matches an absent label",
+                PodSpec {
+                    affinity: label_affinity(requirement("zone", "NotIn", &["a"])),
+                    ..Default::default()
+                },
+                node("node-1", &[], &[]),
+                None,
+            ),
+            (
+                "NotIn doesn't match",
+                PodSpec {
+                    affinity: label_affinity(requirement("zone", "NotIn", &["a"])),
+                    ..Default::default()
+                },
+                node("node-1", &[("zone", "a")], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "Exists matches",
+                PodSpec {
+                    affinity: label_affinity(requirement("zone", "Exists", &[])),
+                    ..Default::default()
+                },
+                node("node-1", &[("zone", "a")], &[]),
+                None,
+            ),
+            (
+                "DoesNotExist doesn't match",
+                PodSpec {
+                    affinity: label_affinity(requirement("zone", "DoesNotExist", &[])),
+                    ..Default::default()
+                },
+                node("node-1", &[("zone", "a")], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "Gt matches",
+                PodSpec {
+                    affinity: label_affinity(requirement("cores", "Gt", &["8"])),
+                    ..Default::default()
+                },
+                node("node-1", &[("cores", "16")], &[]),
+                None,
+            ),
+            (
+                "Lt doesn't match",
+                PodSpec {
+                    affinity: label_affinity(requirement("cores", "Lt", &["8"])),
+                    ..Default::default()
+                },
+                node("node-1", &[("cores", "16")], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "Gt with a label which isn't an integer",
+                PodSpec {
+                    affinity: label_affinity(requirement("cores", "Gt", &["8"])),
+                    ..Default::default()
+                },
+                node("node-1", &[("cores", "many")], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "terms are ORed",
+                PodSpec {
+                    affinity: required_node_affinity(vec![
+                        (vec![requirement("zone", "In", &["a"])], vec![]),
+                        (vec![requirement("zone", "In", &["b"])], vec![]),
+                    ]),
+                    ..Default::default()
+                },
+                node("node-1", &[("zone", "b")], &[]),
+                None,
+            ),
+            (
+                "requirements of a term are ANDed",
+                PodSpec {
+                    affinity: required_node_affinity(vec![(
+                        vec![
+                            requirement("zone", "In", &["a"]),
+                            requirement("disk", "Exists", &[]),
+                        ],
+                        vec![requirement("metadata.name", "In", &["node-1"])],
+                    )]),
+                    ..Default::default()
+                },
+                node("node-1", &[("zone", "a")], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "an empty term matches no node",
+                PodSpec {
+                    affinity: required_node_affinity(vec![(vec![], vec![])]),
+                    ..Default::default()
+                },
+                node("node-1", &[], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "no terms match no node",
+                PodSpec {
+                    affinity: required_node_affinity(vec![]),
+                    ..Default::default()
+                },
+                node("node-1", &[], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "node name field matches",
+                PodSpec {
+                    affinity: required_node_affinity(vec![(
+                        vec![],
+                        vec![requirement("metadata.name", "In", &["node-1"])],
+                    )]),
+                    ..Default::default()
+                },
+                node("node-1", &[], &[]),
+                None,
+            ),
+            (
+                "node name field doesn't match",
+                PodSpec {
+                    affinity: required_node_affinity(vec![(
+                        vec![],
+                        vec![requirement("metadata.name", "NotIn", &["node-1"])],
+                    )]),
+                    ..Default::default()
+                },
+                node("node-1", &[], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "node selector and node affinity must both match",
+                PodSpec {
+                    node_selector: engine_node_selector.clone(),
+                    affinity: label_affinity(requirement("zone", "In", &["a"])),
+                    ..Default::default()
+                },
+                node("node-1", &[("zone", "a")], &[]),
+                Some(NodeAffinity),
+            ),
+            (
+                "untolerated NoSchedule taint",
+                PodSpec::default(),
+                node("node-1", &[], &maintenance_taint),
+                untolerated_maintenance_taint.clone(),
+            ),
+            (
+                "untolerated NoExecute taint without a value",
+                PodSpec::default(),
+                node("node-1", &[], &[("example.com/evict", None, "NoExecute")]),
+                Some(UntoleratedTaint("example.com/evict:NoExecute".to_string())),
+            ),
+            (
+                "untolerated PreferNoSchedule taint",
+                PodSpec::default(),
+                node(
+                    "node-1",
+                    &[],
+                    &[("example.com/maintenance", None, "PreferNoSchedule")],
+                ),
+                None,
+            ),
+            (
+                "taint tolerated with Exists",
+                with_tolerations(vec![toleration(
+                    Some("example.com/maintenance"),
+                    Some("Exists"),
+                    None,
+                    None,
+                )]),
+                node("node-1", &[], &maintenance_taint),
+                None,
+            ),
+            (
+                "taint tolerated with Equal",
+                with_tolerations(vec![toleration(
+                    Some("example.com/maintenance"),
+                    Some("Equal"),
+                    Some("true"),
+                    Some("NoSchedule"),
+                )]),
+                node("node-1", &[], &maintenance_taint),
+                None,
+            ),
+            (
+                "taint tolerated without an operator",
+                with_tolerations(vec![toleration(
+                    Some("example.com/maintenance"),
+                    None,
+                    Some("true"),
+                    None,
+                )]),
+                node("node-1", &[], &maintenance_taint),
+                None,
+            ),
+            (
+                "toleration for a different value",
+                with_tolerations(vec![toleration(
+                    Some("example.com/maintenance"),
+                    Some("Equal"),
+                    Some("false"),
+                    None,
+                )]),
+                node("node-1", &[], &maintenance_taint),
+                untolerated_maintenance_taint.clone(),
+            ),
+            (
+                "toleration for a different effect",
+                with_tolerations(vec![toleration(
+                    Some("example.com/maintenance"),
+                    Some("Exists"),
+                    None,
+                    Some("NoExecute"),
+                )]),
+                node("node-1", &[], &maintenance_taint),
+                untolerated_maintenance_taint.clone(),
+            ),
+            (
+                "toleration for a different key",
+                with_tolerations(vec![toleration(
+                    Some("example.com/other"),
+                    Some("Exists"),
+                    None,
+                    None,
+                )]),
+                node("node-1", &[], &maintenance_taint),
+                untolerated_maintenance_taint.clone(),
+            ),
+            (
+                "toleration for every taint",
+                with_tolerations(vec![toleration(None, Some("Exists"), None, None)]),
+                node("node-1", &[], &maintenance_taint),
+                None,
+            ),
+            (
+                "Gt toleration",
+                with_tolerations(vec![toleration(
+                    Some("example.com/level"),
+                    Some("Gt"),
+                    Some("1"),
+                    None,
+                )]),
+                node(
+                    "node-1",
+                    &[],
+                    &[("example.com/level", Some("2"), "NoSchedule")],
+                ),
+                Some(UntoleratedTaint(
+                    "example.com/level=2:NoSchedule".to_string(),
+                )),
+            ),
+            (
+                "taints tolerated by every DaemonSet",
+                PodSpec::default(),
+                node(
+                    "node-1",
+                    &[],
+                    &[
+                        ("node.kubernetes.io/not-ready", None, "NoExecute"),
+                        ("node.kubernetes.io/unreachable", None, "NoExecute"),
+                        ("node.kubernetes.io/disk-pressure", None, "NoSchedule"),
+                        ("node.kubernetes.io/memory-pressure", None, "NoSchedule"),
+                        ("node.kubernetes.io/pid-pressure", None, "NoSchedule"),
+                        ("node.kubernetes.io/unschedulable", None, "NoSchedule"),
+                    ],
+                ),
+                None,
+            ),
+            (
+                "network unavailable with the host's network",
+                PodSpec {
+                    host_network: Some(true),
+                    ..Default::default()
+                },
+                node(
+                    "node-1",
+                    &[],
+                    &[("node.kubernetes.io/network-unavailable", None, "NoSchedule")],
+                ),
+                None,
+            ),
+            (
+                "network unavailable without the host's network",
+                PodSpec::default(),
+                node(
+                    "node-1",
+                    &[],
+                    &[("node.kubernetes.io/network-unavailable", None, "NoSchedule")],
+                ),
+                Some(UntoleratedTaint(
+                    "node.kubernetes.io/network-unavailable:NoSchedule".to_string(),
+                )),
+            ),
+        ];
+
+        for (name, pod_spec, node, expected_reason) in test_cases {
+            let ds = DaemonSet {
+                spec: Some(DaemonSetSpec {
+                    template: PodTemplateSpec {
+                        spec: Some(pod_spec),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+                ..Default::default()
+            };
+            assert_eq!(
+                daemonset_node_skip_reason(&ds, &node),
+                expected_reason,
+                "{name}"
+            );
+        }
+
+        assert_eq!(
+            UntoleratedTaint("example.com/maintenance=true:NoSchedule".to_string()).to_string(),
+            "the DaemonSet's Pods don't tolerate the node's taint \
+            'example.com/maintenance=true:NoSchedule'"
+        );
     }
 }

@@ -4,19 +4,22 @@ use crate::{
             cordon_ana_check, drain_for_upgrade, io_engine_daemonset_name, product_train,
             AGENT_CORE_LABEL, IO_ENGINE_DAEMONSET_OBSERVED_GENERATION_TIMEOUT,
             IO_ENGINE_DAEMONSET_POLL_INTERVAL, IO_ENGINE_DAEMONSET_ROLLOUT_TIMEOUT,
-            IO_ENGINE_LABEL, MAX_NOT_READY_IO_ENGINE_PODS_IN_ERROR,
+            IO_ENGINE_LABEL, MAX_IO_ENGINE_PODS_IN_ERROR,
         },
         error::{
-            DrainStorageNode, EmptyPodSpec, EmptyStorageNodeSpec, GetPod, GetStorageNode,
-            IoEngineGenerationNotObserved, IoEngineRolloutIncomplete, ListStorageNodes, PodDelete,
-            Result, StorageNodeUncordon, TooManyIoEnginePods,
+            DrainStorageNode, EmptyDaemonSetUid, EmptyPodSpec, EmptyStorageNodeSpec, GetPod,
+            GetStorageNode, IoEngineGenerationNotObserved, IoEnginePodsNotRestartable,
+            IoEngineRolloutIncomplete, ListStorageNodes, PodDelete, Result, StorageNodeUncordon,
+            TooManyIoEnginePods,
         },
         kube::client as KubeClient,
         rest_client::RestClientSet,
     },
     upgrade_utils::{
-        all_pods_are_ready, cordon_storage_node, describe_not_ready_pods, list_all_volumes,
-        pod_target_node, rebuild_result, uncordon_storage_node, DaemonSetRollout, RebuildResult,
+        all_pods_are_ready, cordon_storage_node, daemonset_node_skip_reason,
+        describe_not_ready_pods, join_with_limit, list_all_volumes, pod_is_controlled_by,
+        pod_target_node, rebuild_result, uncordon_storage_node, DaemonSetRollout, NodeSkipReason,
+        RebuildResult,
     },
 };
 use constants::DS_CONTROLLER_REVISION_HASH_LABEL_KEY;
@@ -24,7 +27,11 @@ use k8s_openapi::api::{
     apps::v1::DaemonSet,
     core::v1::{Node, Pod},
 };
-use kube::{api::DeleteParams, core::PartialObjectMeta, ResourceExt};
+use kube::{
+    api::{DeleteParams, Preconditions},
+    core::PartialObjectMeta,
+    ResourceExt,
+};
 use openapi::models::CordonDrainState;
 use snafu::ResultExt;
 use std::time::Duration;
@@ -50,29 +57,35 @@ pub async fn upgrade_data_plane(
     )
     .await?;
 
+    // Only the ControllerRevisions and the Pods of this DaemonSet are considered, in case there
+    // are other io-engine DaemonSets in the namespace.
+    let io_engine_ds_uid = io_engine_ds.uid().ok_or(
+        EmptyDaemonSetUid {
+            name: io_engine_ds_name.clone(),
+            namespace: namespace.clone(),
+        }
+        .build(),
+    )?;
+
     let latest_io_engine_ctrl_rev_hash = KubeClient::latest_controller_revision_hash(
         namespace.clone(),
         Some(IO_ENGINE_LABEL.to_string()),
         None,
-        io_engine_ds.uid(),
+        Some(io_engine_ds_uid.clone()),
         DS_CONTROLLER_REVISION_HASH_LABEL_KEY.to_string(),
     )
     .await?;
 
-    let yet_to_upgrade_io_engine_label = format!(
-        "{IO_ENGINE_LABEL},{DS_CONTROLLER_REVISION_HASH_LABEL_KEY}!={latest_io_engine_ctrl_rev_hash}"
-    );
-
-    let yet_to_upgrade_io_engine_pods = KubeClient::list_pods(
-        namespace.clone(),
-        Some(yet_to_upgrade_io_engine_label.clone()),
-        None,
-    )
-    .await?;
+    let io_engine = IoEngineDaemonSet {
+        name: io_engine_ds_name,
+        namespace: namespace.clone(),
+        uid: io_engine_ds_uid,
+        latest_revision_hash: latest_io_engine_ctrl_rev_hash,
+    };
 
     // This makes data-plane upgrade idempotent. The io-engine Pods which the DaemonSet is yet to
     // create are not in the list of Pods, so the DaemonSet's rollout has to be complete as well.
-    if yet_to_upgrade_io_engine_pods.is_empty()
+    if io_engine.list_outdated_pods().await?.is_empty()
         && DaemonSetRollout::from(&io_engine_ds).is_complete()
     {
         info!("Skipping data-plane upgrade: All data-plane Pods are already upgraded");
@@ -102,56 +115,23 @@ pub async fn upgrade_data_plane(
         uncordon_drained_storage_node(storage_node.id.as_str(), &rest_client).await?;
     }
 
-    // This is when the wait for the io-engine DaemonSet to finish rolling out started, while there
-    // are no io-engine Pods left to restart.
-    let mut rollout_wait_start: Option<Instant> = None;
+    // This is when the data-plane upgrade stopped making progress, i.e. when it last found no
+    // io-engine Pods which it could restart, while the io-engine DaemonSet hadn't finished rolling
+    // out.
+    let mut stalled_since: Option<Instant> = None;
     loop {
-        let initial_io_engine_pod_list: Vec<Pod> = KubeClient::list_pods(
-            namespace.clone(),
-            Some(yet_to_upgrade_io_engine_label.clone()),
-            None,
-        )
-        .await?;
+        let initial_io_engine_pod_list: Vec<Pod> = io_engine.list_outdated_pods().await?;
 
-        if initial_io_engine_pod_list.is_empty() {
-            // The io-engine Pods which the DaemonSet is yet to create, and the up-to-date
-            // io-engine Pods which are not available, are not in the list of Pods.
-            let rollout = DaemonSetRollout::from(
-                &KubeClient::get_daemonset(io_engine_ds_name.as_str(), namespace.as_str()).await?,
-            );
-
-            // Infinite loop exit.
-            if rollout.is_complete() {
-                break;
-            }
-
-            let wait_start = *rollout_wait_start.get_or_insert_with(Instant::now);
-            if wait_start.elapsed() >= IO_ENGINE_DAEMONSET_ROLLOUT_TIMEOUT {
-                return IoEngineRolloutIncomplete {
-                    name: io_engine_ds_name,
-                    not_ready_pods: describe_not_ready_io_engine_pods(namespace.as_str()).await,
-                    namespace,
-                    timeout: humantime::format_duration(IO_ENGINE_DAEMONSET_ROLLOUT_TIMEOUT)
-                        .to_string(),
-                    rollout: rollout.to_string(),
-                }
-                .fail();
-            }
-
-            info!(
-                %rollout,
-                "Waiting for the io-engine DaemonSet '{io_engine_ds_name}' to finish rolling out"
-            );
-            sleep(IO_ENGINE_DAEMONSET_POLL_INTERVAL).await;
-            continue;
-        }
-
-        // The io-engine DaemonSet can't finish rolling out while its Pods are being restarted.
-        rollout_wait_start = None;
+        // These describe the io-engine Pods which are not restarted, because the io-engine
+        // DaemonSet would not re-create them.
+        let mut not_restartable_pods: Vec<String> = Vec::new();
+        let mut restarted_pods = false;
 
         for pod in initial_io_engine_pod_list.iter() {
-            // Validate the control plane pod is up and running before we start.
-            verify_control_plane_is_running(namespace.clone()).await?;
+            // The list of Pods may be stale by now, because restarting a Pod takes a while.
+            let Some(pod) = refresh_pod(pod, namespace.as_str()).await? else {
+                continue;
+            };
 
             // Fetch the node name on which the io-engine pod is running
             let node_name = match pod
@@ -169,19 +149,24 @@ pub async fn upgrade_data_plane(
             {
                 Some(node_name) if !node_name.is_empty() => node_name,
                 // The Pod is not scheduled to its node, so there is no io-engine running for it.
-                // Once it is deleted, the DaemonSet re-creates it from the latest Pod template.
                 _ => {
-                    let target_node = pod_target_node(pod).unwrap_or_else(|| "unknown".to_string());
-                    info!(
-                        pod.name = %pod.name_any(),
-                        node.name = %target_node,
-                        "Restarting the data-plane pod which is not scheduled to its node"
-                    );
-                    delete_data_plane_pod(target_node.as_str(), pod, namespace.clone()).await?;
-                    wait_for_pod_to_be_deleted(pod, namespace.as_str()).await?;
+                    restarted_pods |=
+                        restart_unscheduled_data_plane_pod(&pod, namespace.as_str()).await?;
                     continue;
                 }
             };
+
+            // Deleting such a Pod would leave its node without an io-engine.
+            if let Some(description) = io_engine
+                .describe_not_restartable_pod(&pod, node_name)
+                .await?
+            {
+                not_restartable_pods.push(description);
+                continue;
+            }
+
+            // Validate the control plane pod is up and running before we start.
+            verify_control_plane_is_running(namespace.clone()).await?;
 
             info!(
                 pod.name = %pod.name_any(),
@@ -197,30 +182,244 @@ pub async fn upgrade_data_plane(
                 drain_storage_node(node_name, &rest_client).await?;
             }
 
-            // restart the data plane pod
-            delete_data_plane_pod(node_name, pod, namespace.clone()).await?;
+            // Check again, because waiting for rebuilds and draining the node take a while.
+            if let Some(description) = io_engine
+                .describe_not_restartable_pod(&pod, node_name)
+                .await?
+            {
+                uncordon_drained_storage_node(node_name, &rest_client).await?;
+                not_restartable_pods.push(description);
+                continue;
+            }
 
-            // validate the new pod is up and running
-            verify_data_plane_pod_is_running(
+            // restart the data plane pod. The precondition makes sure that a different Pod with
+            // the same name is not deleted.
+            delete_data_plane_pod(
                 node_name,
-                namespace.clone(),
-                latest_io_engine_ctrl_rev_hash.as_str(),
+                &pod,
+                namespace.as_str(),
+                Preconditions {
+                    uid: pod.uid(),
+                    resource_version: None,
+                },
             )
             .await?;
 
+            // validate the new pod is up and running
+            io_engine
+                .verify_data_plane_pod_is_running(node_name)
+                .await?;
+
             // Uncordon the drained node
             uncordon_drained_storage_node(node_name, &rest_client).await?;
+
+            restarted_pods = true;
         }
 
-        info!(
-            "Checking to see if new {} Nodes have been added to the cluster, which require upgrade",
-            product_train()
-        );
+        if restarted_pods {
+            stalled_since = None;
+            info!(
+                "Checking to see if new {} Nodes have been added to the cluster, which require upgrade",
+                product_train()
+            );
+            continue;
+        }
+
+        // The io-engine Pods which the DaemonSet is yet to create, and the up-to-date io-engine
+        // Pods which are not available, are not in the list of Pods.
+        let rollout = DaemonSetRollout::from(&io_engine.get().await?);
+
+        // Infinite loop exit.
+        if initial_io_engine_pod_list.is_empty() && rollout.is_complete() {
+            break;
+        }
+
+        let stall_start = *stalled_since.get_or_insert_with(Instant::now);
+        if stall_start.elapsed() >= IO_ENGINE_DAEMONSET_ROLLOUT_TIMEOUT {
+            let timeout =
+                humantime::format_duration(IO_ENGINE_DAEMONSET_ROLLOUT_TIMEOUT).to_string();
+            if !not_restartable_pods.is_empty() {
+                return IoEnginePodsNotRestartable {
+                    name: io_engine.name.clone(),
+                    namespace: io_engine.namespace.clone(),
+                    timeout,
+                    pods: join_with_limit(
+                        not_restartable_pods.as_slice(),
+                        MAX_IO_ENGINE_PODS_IN_ERROR,
+                    ),
+                }
+                .fail();
+            }
+
+            return IoEngineRolloutIncomplete {
+                name: io_engine.name.clone(),
+                namespace: io_engine.namespace.clone(),
+                timeout,
+                rollout: rollout.to_string(),
+                not_ready_pods: io_engine.describe_not_ready_io_engine_pods().await,
+            }
+            .fail();
+        }
+
+        if not_restartable_pods.is_empty() {
+            info!(
+                %rollout,
+                "Waiting for the io-engine DaemonSet '{}' to finish rolling out",
+                io_engine.name
+            );
+        } else {
+            info!(
+                %rollout,
+                "Waiting to restart io-engine Pods which the io-engine DaemonSet '{}' would not \
+                re-create on their nodes",
+                io_engine.name
+            );
+        }
+        sleep(IO_ENGINE_DAEMONSET_POLL_INTERVAL).await;
     }
 
     info!("Successfully upgraded data-plane!");
 
     Ok(())
+}
+
+/// The io-engine DaemonSet of the helm release which is being upgraded.
+struct IoEngineDaemonSet {
+    name: String,
+    namespace: String,
+    uid: String,
+    /// The hash of the DaemonSet's latest ControllerRevision, i.e. of its latest Pod template.
+    latest_revision_hash: String,
+}
+
+impl IoEngineDaemonSet {
+    /// GETs the DaemonSet.
+    async fn get(&self) -> Result<DaemonSet> {
+        KubeClient::get_daemonset(self.name.as_str(), self.namespace.as_str()).await
+    }
+
+    /// Lists the Pods of the DaemonSet which match the label selector and the field selector.
+    async fn list_pods(
+        &self,
+        label_selector: String,
+        field_selector: Option<String>,
+    ) -> Result<Vec<Pod>> {
+        let mut pods =
+            KubeClient::list_pods(self.namespace.clone(), Some(label_selector), field_selector)
+                .await?;
+        pods.retain(|pod| pod_is_controlled_by(pod, self.uid.as_str()));
+        Ok(pods)
+    }
+
+    /// Lists the Pods of the DaemonSet which are not created from its latest Pod template.
+    async fn list_outdated_pods(&self) -> Result<Vec<Pod>> {
+        self.list_pods(
+            format!(
+                "{IO_ENGINE_LABEL},{DS_CONTROLLER_REVISION_HASH_LABEL_KEY}!={}",
+                self.latest_revision_hash
+            ),
+            None,
+        )
+        .await
+    }
+
+    /// Returns true if any of the Pods of the DaemonSet run on, or are meant to run on, the node.
+    async fn node_has_pods(&self, node_name: &str) -> Result<bool> {
+        Ok(self
+            .list_pods(IO_ENGINE_LABEL.to_string(), None)
+            .await?
+            .iter()
+            .any(|pod| pod_target_node(pod).as_deref() == Some(node_name)))
+    }
+
+    /// Returns the reason for which the DaemonSet doesn't run a Pod on the node, or None if it
+    /// does.
+    async fn node_skip_reason(&self, node_name: &str) -> Result<Option<NodeSkipReason>> {
+        let Some(node) = KubeClient::get_node(node_name).await? else {
+            return Ok(Some(NodeSkipReason::NodeNotFound));
+        };
+
+        Ok(daemonset_node_skip_reason(&self.get().await?, &node))
+    }
+
+    /// Describes the Pod of the DaemonSet if the DaemonSet would not re-create it on its node,
+    /// e.g. because the node has a NoSchedule taint which the DaemonSet's Pods don't tolerate.
+    async fn describe_not_restartable_pod(
+        &self,
+        pod: &Pod,
+        node_name: &str,
+    ) -> Result<Option<String>> {
+        let Some(reason) = self.node_skip_reason(node_name).await? else {
+            return Ok(None);
+        };
+
+        warn!(
+            pod.name = %pod.name_any(),
+            node.name = %node_name,
+            %reason,
+            "Not restarting the data-plane pod, because the io-engine DaemonSet would not re-create it"
+        );
+        Ok(Some(format!(
+            "{} (node: {node_name}, reason: {reason})",
+            pod.name_any()
+        )))
+    }
+
+    /// Describes the Pods of the DaemonSet which are not Ready. This is meant for error messages,
+    /// so a failure to list the Pods is logged instead of being returned.
+    async fn describe_not_ready_io_engine_pods(&self) -> String {
+        match self.list_pods(IO_ENGINE_LABEL.to_string(), None).await {
+            Ok(pods) => describe_not_ready_pods(pods.as_slice(), MAX_IO_ENGINE_PODS_IN_ERROR),
+            Err(error) => {
+                warn!(%error, "Failed to list the io-engine Pods");
+                "unknown".to_string()
+            }
+        }
+    }
+
+    /// Waits for the up-to-date Pod of the DaemonSet on the node to be Ready. This stops waiting
+    /// if the DaemonSet would not create a Pod on the node, and there are no Pods of the DaemonSet
+    /// left on the node, e.g. because the node is removed from the cluster.
+    async fn verify_data_plane_pod_is_running(&self, node_name: &str) -> Result<()> {
+        let duration = Duration::from_secs(5_u64);
+        // Validate the new pod is up and running
+        info!(node.name = %node_name, "Waiting for data-plane Pod to come to Ready state");
+        while !self.data_plane_pod_is_running(node_name).await? {
+            if let Some(reason) = self.node_skip_reason(node_name).await? {
+                if !self.node_has_pods(node_name).await? {
+                    warn!(
+                        node.name = %node_name,
+                        %reason,
+                        "Not waiting for a data-plane Pod on the node, because the io-engine DaemonSet would not create one"
+                    );
+                    return Ok(());
+                }
+            }
+            sleep(duration).await;
+        }
+        Ok(())
+    }
+
+    /// Validate if io-engine DaemonSet Pod is running.
+    async fn data_plane_pod_is_running(&self, node: &str) -> Result<bool> {
+        let node_name_pod_field = format!("spec.nodeName={node}");
+        let pod_label = format!(
+            "{IO_ENGINE_LABEL},{DS_CONTROLLER_REVISION_HASH_LABEL_KEY}={}",
+            self.latest_revision_hash
+        );
+
+        let pod_list: Vec<Pod> = self.list_pods(pod_label, Some(node_name_pod_field)).await?;
+
+        if pod_list.is_empty() {
+            return Ok(false);
+        }
+
+        if pod_list.len() != 1 {
+            return TooManyIoEnginePods { node_name: node }.fail();
+        }
+
+        Ok(all_pods_are_ready(pod_list))
+    }
 }
 
 /// Waits for the DaemonSet controller to observe the latest generation of the io-engine DaemonSet,
@@ -258,44 +457,53 @@ async fn wait_for_io_engine_generation_to_be_observed(
     }
 }
 
-/// Describes the io-engine Pods which are not Ready. This is meant for error messages, so a
-/// failure to list the Pods is logged instead of being returned.
-async fn describe_not_ready_io_engine_pods(namespace: &str) -> String {
-    match KubeClient::list_pods(
-        namespace.to_string(),
-        Some(IO_ENGINE_LABEL.to_string()),
-        None,
-    )
-    .await
-    {
-        Ok(pods) => describe_not_ready_pods(pods.as_slice(), MAX_NOT_READY_IO_ENGINE_PODS_IN_ERROR),
-        Err(error) => {
-            warn!(%error, "Failed to list the io-engine Pods");
-            "unknown".to_string()
-        }
-    }
+/// Returns the latest state of the Pod, or None if the Pod no longer exists. A Pod with the same
+/// name and a different UID is a different Pod.
+async fn refresh_pod(pod: &Pod, namespace: &str) -> Result<Option<Pod>> {
+    let pod_name = pod.name_any();
+    let latest_pod = KubeClient::pods_api(namespace)
+        .await?
+        .get_opt(pod_name.as_str())
+        .await
+        .context(GetPod {
+            pod_name,
+            pod_namespace: namespace.to_string(),
+        })?;
+
+    Ok(latest_pod.filter(|latest_pod| latest_pod.uid() == pod.uid()))
 }
 
-/// Waits for a deleted Pod to be removed from the Kubernetes API.
-async fn wait_for_pod_to_be_deleted(pod: &Pod, namespace: &str) -> Result<()> {
-    let k8s_pods_api = KubeClient::pods_api(namespace).await?;
-    let pod_name = pod.name_any();
-    loop {
-        let current_pod = k8s_pods_api
-            .get_opt(pod_name.as_str())
-            .await
-            .context(GetPod {
-                pod_name: pod_name.clone(),
-                pod_namespace: namespace.to_string(),
-            })?;
-        match current_pod {
-            // A Pod with the same name and a different UID is a different Pod.
-            Some(current_pod) if current_pod.uid() == pod.uid() => {
-                sleep(Duration::from_secs(1_u64)).await
-            }
-            _ => return Ok(()),
-        }
+/// Deletes an io-engine Pod which is not scheduled to its node, so that the DaemonSet re-creates
+/// it from the latest Pod template. There is no io-engine running for such a Pod, so there is no
+/// need to wait for volume rebuilds, or to drain its node. Returns true if the Pod is deleted.
+async fn restart_unscheduled_data_plane_pod(pod: &Pod, namespace: &str) -> Result<bool> {
+    let target_node = pod_target_node(pod).unwrap_or_else(|| "unknown".to_string());
+    if pod.metadata.deletion_timestamp.is_some() {
+        info!(
+            pod.name = %pod.name_any(),
+            node.name = %target_node,
+            "Waiting for the data-plane pod which is not scheduled to its node to be deleted"
+        );
+        return Ok(false);
     }
+
+    info!(
+        pod.name = %pod.name_any(),
+        node.name = %target_node,
+        "Restarting the data-plane pod which is not scheduled to its node"
+    );
+    // The preconditions make sure that the Pod is deleted only if it hasn't changed since it was
+    // fetched, e.g. it hasn't been scheduled to its node since.
+    delete_data_plane_pod(
+        target_node.as_str(),
+        pod,
+        namespace,
+        Preconditions {
+            uid: pod.uid(),
+            resource_version: pod.resource_version(),
+        },
+    )
+    .await
 }
 
 /// Uncordon storage Node by removing drain label.
@@ -345,9 +553,16 @@ async fn uncordon_drained_storage_node(node_id: &str, rest_client: &RestClientSe
     }
 }
 
-/// Issue delete command on dataplane pods.
-async fn delete_data_plane_pod(node_name: &str, pod: &Pod, namespace: String) -> Result<()> {
-    let k8s_pods_api = KubeClient::pods_api(namespace.as_str()).await?;
+/// Issue delete command on dataplane pods. The Pod is deleted only if it matches the
+/// preconditions. Returns false if the Pod no longer exists, or if it doesn't match the
+/// preconditions any more.
+async fn delete_data_plane_pod(
+    node_name: &str,
+    pod: &Pod,
+    namespace: &str,
+    preconditions: Preconditions,
+) -> Result<bool> {
+    let k8s_pods_api = KubeClient::pods_api(namespace).await?;
 
     // Deleting the io-engine pod
     let pod_name = pod.name_any();
@@ -356,32 +571,30 @@ async fn delete_data_plane_pod(node_name: &str, pod: &Pod, namespace: String) ->
         node.name = node_name,
         "Deleting the pod"
     );
-    k8s_pods_api
-        .delete(pod_name.as_str(), &DeleteParams::default())
-        .await
-        .context(PodDelete {
+    let delete_params = DeleteParams {
+        preconditions: Some(preconditions),
+        ..Default::default()
+    };
+    match k8s_pods_api.delete(pod_name.as_str(), &delete_params).await {
+        Ok(_) => {
+            info!(node.name = %node_name, "Pod delete command issued");
+            Ok(true)
+        }
+        // The Pod is not found, or it doesn't match the preconditions.
+        Err(kube::Error::Api(response)) if matches!(response.code, 404 | 409) => {
+            info!(
+                pod.name = %pod_name,
+                node.name = %node_name,
+                reason = %response.message,
+                "The pod was not deleted, because it no longer exists or it has changed"
+            );
+            Ok(false)
+        }
+        Err(error) => Err(error).context(PodDelete {
             name: pod_name,
             node: node_name.to_string(),
-        })?;
-    info!(node.name = %node_name, "Pod delete command issued");
-    Ok(())
-}
-
-/// Wait for all the node drain process to complete.
-async fn verify_data_plane_pod_is_running(
-    node_name: &str,
-    namespace: String,
-    latest_io_engine_ctrl_rev_hash: &str,
-) -> Result<()> {
-    let duration = Duration::from_secs(5_u64);
-    // Validate the new pod is up and running
-    info!(node.name = %node_name, "Waiting for data-plane Pod to come to Ready state");
-    while !data_plane_pod_is_running(node_name, namespace.clone(), latest_io_engine_ctrl_rev_hash)
-        .await?
-    {
-        sleep(duration).await;
+        }),
     }
-    Ok(())
 }
 
 /// Wait for the rebuild to complete if any.
@@ -455,31 +668,6 @@ async fn drain_storage_node(node_id: &str, rest_client: &RestClientSet) -> Resul
             }
         }
     }
-}
-
-/// Validate if io-engine DaemonSet Pod is running.
-async fn data_plane_pod_is_running(
-    node: &str,
-    namespace: String,
-    latest_io_engine_ctrl_rev_hash: &str,
-) -> Result<bool> {
-    let node_name_pod_field = format!("spec.nodeName={node}");
-    let pod_label = format!(
-        "{IO_ENGINE_LABEL},{DS_CONTROLLER_REVISION_HASH_LABEL_KEY}={latest_io_engine_ctrl_rev_hash}",
-    );
-
-    let pod_list: Vec<Pod> =
-        KubeClient::list_pods(namespace, Some(pod_label), Some(node_name_pod_field)).await?;
-
-    if pod_list.is_empty() {
-        return Ok(false);
-    }
-
-    if pod_list.len() != 1 {
-        return TooManyIoEnginePods { node_name: node }.fail();
-    }
-
-    Ok(all_pods_are_ready(pod_list))
 }
 
 async fn verify_control_plane_is_running(namespace: String) -> Result<()> {

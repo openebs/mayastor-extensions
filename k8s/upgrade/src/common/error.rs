@@ -229,6 +229,16 @@ pub enum Error {
     #[snafu(display("Kubernetes DaemonSet '{name}' not found in namespace '{namespace}'"))]
     DaemonSetNotFound { name: String, namespace: String },
 
+    /// Error for when the metadata.uid of a DaemonSet is empty.
+    #[snafu(display(
+        "Failed to get .metadata.uid from DaemonSet '{name}' in namespace '{namespace}'"
+    ))]
+    EmptyDaemonSetUid { name: String, namespace: String },
+
+    /// Error for when a Kubernetes API request for GET-ing a Node fails.
+    #[snafu(display("Failed to GET Kubernetes Node '{name}': {source}"))]
+    GetNode { source: kube::Error, name: String },
+
     /// Error for when a Pod does not have a PodSpec struct member.
     #[snafu(display("Failed get .spec from Pod {name} in Namespace '{namespace}'"))]
     EmptyPodSpec { name: String, namespace: String },
@@ -540,8 +550,8 @@ pub enum Error {
         rollout: String,
     },
 
-    /// Error for when the io-engine DaemonSet does not finish rolling out in time, even though
-    /// there are no io-engine Pods left to restart.
+    /// Error for when the io-engine DaemonSet does not finish rolling out in time, while there are
+    /// no io-engine Pods which the upgrade can restart.
     #[snafu(display(
         "Timed out after {timeout} waiting for the io-engine DaemonSet '{name}' in namespace '{namespace}' to finish rolling out: {rollout}; io-engine Pods which are not Ready: {not_ready_pods}"
     ))]
@@ -551,6 +561,18 @@ pub enum Error {
         timeout: String,
         rollout: String,
         not_ready_pods: String,
+    },
+
+    /// Error for when io-engine Pods which are not up-to-date can't be restarted in time, because
+    /// the io-engine DaemonSet would not re-create them on their nodes.
+    #[snafu(display(
+        "Timed out after {timeout} waiting to restart io-engine Pods which the io-engine DaemonSet '{name}' in namespace '{namespace}' would not re-create on their nodes: {pods}"
+    ))]
+    IoEnginePodsNotRestartable {
+        name: String,
+        namespace: String,
+        timeout: String,
+        pods: String,
     },
 
     /// Error for when the thin-provisioning options are absent, but still tried to fetch it.

@@ -32,14 +32,14 @@ pub(crate) const IO_ENGINE_DAEMONSET_OBSERVED_GENERATION_TIMEOUT: Duration =
     Duration::from_secs(10 * 60);
 
 /// This is how long to wait for the io-engine DaemonSet to finish rolling out, while there are no
-/// io-engine Pods left to restart. This matches the DaemonSet controller's maximum back-off for
-/// re-creating failed Pods.
+/// io-engine Pods which can be restarted. This matches the DaemonSet controller's maximum back-off
+/// for re-creating failed Pods.
 pub(crate) const IO_ENGINE_DAEMONSET_ROLLOUT_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 
-/// This is the maximum number of io-engine Pods which are listed in the error for when the
-/// io-engine DaemonSet does not finish rolling out. This keeps the error short enough to be
+/// This is the maximum number of io-engine Pods which are listed in the errors for when the
+/// io-engine DaemonSet does not finish rolling out. This keeps the errors short enough to be
 /// published as a Kubernetes Event.
-pub(crate) const MAX_NOT_READY_IO_ENGINE_PODS_IN_ERROR: usize = 3;
+pub(crate) const MAX_IO_ENGINE_PODS_IN_ERROR: usize = 3;
 
 /// This is the shared Pod label of the <helm-release>-agent-core Deployment.
 pub const AGENT_CORE_LABEL: &str = "app=agent-core";
