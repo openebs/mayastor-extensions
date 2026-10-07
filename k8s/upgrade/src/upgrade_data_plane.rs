@@ -4,7 +4,8 @@ use crate::{
             cordon_ana_check, drain_for_upgrade, io_engine_daemonset_name, product_train,
             AGENT_CORE_LABEL, IO_ENGINE_DAEMONSET_OBSERVED_GENERATION_TIMEOUT,
             IO_ENGINE_DAEMONSET_POLL_INTERVAL, IO_ENGINE_DAEMONSET_ROLLOUT_TIMEOUT,
-            IO_ENGINE_LABEL, MAX_IO_ENGINE_PODS_IN_ERROR,
+            IO_ENGINE_LABEL, IO_ENGINE_POD_CREATION_TIMEOUT, IO_ENGINE_POD_TERMINATION_TIMEOUT,
+            MAX_IO_ENGINE_PODS_IN_ERROR,
         },
         error::{
             DrainStorageNode, EmptyDaemonSetUid, EmptyPodSpec, EmptyStorageNodeSpec, GetPod,
@@ -18,14 +19,18 @@ use crate::{
     upgrade_utils::{
         all_pods_are_ready, cordon_storage_node, daemonset_node_skip_reason,
         describe_not_ready_pods, join_with_limit, list_all_volumes, pod_is_controlled_by,
-        pod_target_node, rebuild_result, uncordon_storage_node, DaemonSetRollout, NodeSkipReason,
+        pod_is_stuck_terminating, pod_is_terminating, pod_target_node, rebuild_result,
+        stuck_terminating_pod, uncordon_storage_node, DaemonSetRollout, NodeSkipReason,
         RebuildResult,
     },
 };
 use constants::DS_CONTROLLER_REVISION_HASH_LABEL_KEY;
-use k8s_openapi::api::{
-    apps::v1::DaemonSet,
-    core::v1::{Node, Pod},
+use k8s_openapi::{
+    api::{
+        apps::v1::DaemonSet,
+        core::v1::{Node, Pod},
+    },
+    chrono::Utc,
 };
 use kube::{
     api::{DeleteParams, Preconditions},
@@ -36,7 +41,7 @@ use openapi::models::CordonDrainState;
 use snafu::ResultExt;
 use std::time::Duration;
 use tokio::time::{sleep, Instant};
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 use utils::{csi_node_nvme_ana, API_REST_LABEL, ETCD_LABEL};
 
 /// Upgrade data plane by controlled restart of io-engine pods
@@ -85,7 +90,13 @@ pub async fn upgrade_data_plane(
 
     // This makes data-plane upgrade idempotent. The io-engine Pods which the DaemonSet is yet to
     // create are not in the list of Pods, so the DaemonSet's rollout has to be complete as well.
-    if io_engine.list_outdated_pods().await?.is_empty()
+    // The outdated io-engine Pods which are terminating, e.g. stuck on a finalizer, are already
+    // restarted.
+    if io_engine
+        .list_outdated_pods()
+        .await?
+        .iter()
+        .all(pod_is_terminating)
         && DaemonSetRollout::from(&io_engine_ds).is_complete()
     {
         info!("Skipping data-plane upgrade: All data-plane Pods are already upgraded");
@@ -132,6 +143,13 @@ pub async fn upgrade_data_plane(
             let Some(pod) = refresh_pod(pod, namespace.as_str()).await? else {
                 continue;
             };
+
+            // The Pod is already being deleted, e.g. it was restarted earlier, but it is stuck
+            // terminating.
+            if pod_is_terminating(&pod) {
+                io_engine.wait_for_terminating_pod(&pod).await?;
+                continue;
+            }
 
             // Fetch the node name on which the io-engine pod is running
             let node_name = match pod
@@ -229,8 +247,9 @@ pub async fn upgrade_data_plane(
         // Pods which are not available, are not in the list of Pods.
         let rollout = DaemonSetRollout::from(&io_engine.get().await?);
 
-        // Infinite loop exit.
-        if initial_io_engine_pod_list.is_empty() && rollout.is_complete() {
+        // Infinite loop exit. The outdated io-engine Pods which are terminating, e.g. stuck on a
+        // finalizer, are already restarted.
+        if initial_io_engine_pod_list.iter().all(pod_is_terminating) && rollout.is_complete() {
             break;
         }
 
@@ -323,13 +342,12 @@ impl IoEngineDaemonSet {
         .await
     }
 
-    /// Returns true if any of the Pods of the DaemonSet run on, or are meant to run on, the node.
-    async fn node_has_pods(&self, node_name: &str) -> Result<bool> {
-        Ok(self
-            .list_pods(IO_ENGINE_LABEL.to_string(), None)
-            .await?
-            .iter()
-            .any(|pod| pod_target_node(pod).as_deref() == Some(node_name)))
+    /// Lists the Pods of the DaemonSet which run on, or are meant to run on, the node. This
+    /// includes the Pods which are terminating.
+    async fn node_pods(&self, node_name: &str) -> Result<Vec<Pod>> {
+        let mut pods = self.list_pods(IO_ENGINE_LABEL.to_string(), None).await?;
+        pods.retain(|pod| pod_target_node(pod).as_deref() == Some(node_name));
+        Ok(pods)
     }
 
     /// Returns the reason for which the DaemonSet doesn't run a Pod on the node, or None if it
@@ -377,16 +395,63 @@ impl IoEngineDaemonSet {
         }
     }
 
+    /// Waits for the DaemonSet to replace its Pod which is already terminating, if the Pod is
+    /// scheduled to its node. This doesn't wait for a Pod which is stuck terminating, e.g. because
+    /// a finalizer is not removed from it.
+    async fn wait_for_terminating_pod(&self, pod: &Pod) -> Result<()> {
+        let target_node = pod_target_node(pod).unwrap_or_else(|| "unknown".to_string());
+        if pod_is_stuck_terminating(pod, IO_ENGINE_POD_TERMINATION_TIMEOUT, Utc::now()) {
+            warn!(
+                pod.name = %pod.name_any(),
+                node.name = %target_node,
+                finalizers = ?pod.finalizers(),
+                "Skipping the data-plane pod, because it is stuck terminating"
+            );
+            return Ok(());
+        }
+
+        let node_name = pod
+            .spec
+            .as_ref()
+            .and_then(|spec| spec.node_name.as_deref())
+            .filter(|node_name| !node_name.is_empty());
+        match node_name {
+            Some(node_name) => {
+                info!(
+                    pod.name = %pod.name_any(),
+                    node.name = %node_name,
+                    "Waiting for the data-plane pod which is already terminating to be replaced"
+                );
+                self.verify_data_plane_pod_is_running(node_name).await
+            }
+            // There is no io-engine running for a Pod which is not scheduled to its node.
+            None => {
+                info!(
+                    pod.name = %pod.name_any(),
+                    node.name = %target_node,
+                    "Waiting for the data-plane pod which is not scheduled to its node to be deleted"
+                );
+                Ok(())
+            }
+        }
+    }
+
     /// Waits for the up-to-date Pod of the DaemonSet on the node to be Ready. This stops waiting
     /// if the DaemonSet would not create a Pod on the node, and there are no Pods of the DaemonSet
-    /// left on the node, e.g. because the node is removed from the cluster.
+    /// left on the node, e.g. because the node is removed from the cluster. This also stops
+    /// waiting, and logs an error, if the DaemonSet doesn't create a Pod on the node in time, e.g.
+    /// because an admission webhook rejects it, or if a Pod on the node is stuck terminating, so
+    /// that the rest of the io-engine Pods are restarted.
     async fn verify_data_plane_pod_is_running(&self, node_name: &str) -> Result<()> {
-        let duration = Duration::from_secs(5_u64);
+        let (name, namespace) = (self.name.as_str(), self.namespace.as_str());
+        // This is when the DaemonSet was last found to have no Pods on the node.
+        let mut no_pods_since: Option<Instant> = None;
         // Validate the new pod is up and running
         info!(node.name = %node_name, "Waiting for data-plane Pod to come to Ready state");
         while !self.data_plane_pod_is_running(node_name).await? {
-            if let Some(reason) = self.node_skip_reason(node_name).await? {
-                if !self.node_has_pods(node_name).await? {
+            let node_pods = self.node_pods(node_name).await?;
+            if node_pods.is_empty() {
+                if let Some(reason) = self.node_skip_reason(node_name).await? {
                     warn!(
                         node.name = %node_name,
                         %reason,
@@ -394,8 +459,40 @@ impl IoEngineDaemonSet {
                     );
                     return Ok(());
                 }
+
+                let no_pods_start = *no_pods_since.get_or_insert_with(Instant::now);
+                if no_pods_start.elapsed() >= IO_ENGINE_POD_CREATION_TIMEOUT {
+                    error!(
+                        node.name = %node_name,
+                        timeout = %humantime::format_duration(IO_ENGINE_POD_CREATION_TIMEOUT),
+                        "The io-engine DaemonSet '{name}' has not created a data-plane Pod on the \
+                        node, e.g. because an admission webhook rejects it, see the DaemonSet's \
+                        events with 'kubectl -n {namespace} describe daemonset {name}'. Moving on \
+                        to the rest of the data-plane Pods"
+                    );
+                    return Ok(());
+                }
+            } else {
+                no_pods_since = None;
+                if let Some(pod) = stuck_terminating_pod(
+                    node_pods.as_slice(),
+                    self.latest_revision_hash.as_str(),
+                    IO_ENGINE_POD_TERMINATION_TIMEOUT,
+                    Utc::now(),
+                ) {
+                    error!(
+                        pod.name = %pod.name_any(),
+                        node.name = %node_name,
+                        finalizers = ?pod.finalizers(),
+                        timeout = %humantime::format_duration(IO_ENGINE_POD_TERMINATION_TIMEOUT),
+                        "The data-plane pod is stuck terminating, e.g. because a finalizer is not \
+                        removed from it, so the io-engine DaemonSet '{name}' may not create a new \
+                        data-plane Pod on the node. Moving on to the rest of the data-plane Pods"
+                    );
+                    return Ok(());
+                }
             }
-            sleep(duration).await;
+            sleep(IO_ENGINE_DAEMONSET_POLL_INTERVAL).await;
         }
         Ok(())
     }
@@ -408,7 +505,10 @@ impl IoEngineDaemonSet {
             self.latest_revision_hash
         );
 
-        let pod_list: Vec<Pod> = self.list_pods(pod_label, Some(node_name_pod_field)).await?;
+        let mut pod_list: Vec<Pod> = self.list_pods(pod_label, Some(node_name_pod_field)).await?;
+        // A Pod which is terminating is not the node's io-engine any more, even if it is stuck
+        // terminating.
+        pod_list.retain(|pod| !pod_is_terminating(pod));
 
         if pod_list.is_empty() {
             return Ok(false);
@@ -478,15 +578,6 @@ async fn refresh_pod(pod: &Pod, namespace: &str) -> Result<Option<Pod>> {
 /// need to wait for volume rebuilds, or to drain its node. Returns true if the Pod is deleted.
 async fn restart_unscheduled_data_plane_pod(pod: &Pod, namespace: &str) -> Result<bool> {
     let target_node = pod_target_node(pod).unwrap_or_else(|| "unknown".to_string());
-    if pod.metadata.deletion_timestamp.is_some() {
-        info!(
-            pod.name = %pod.name_any(),
-            node.name = %target_node,
-            "Waiting for the data-plane pod which is not scheduled to its node to be deleted"
-        );
-        return Ok(false);
-    }
-
     info!(
         pod.name = %pod.name_any(),
         node.name = %target_node,

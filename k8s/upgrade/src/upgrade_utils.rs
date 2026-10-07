@@ -6,9 +6,15 @@ use crate::common::{
     },
     rest_client::RestClientSet,
 };
-use k8s_openapi::api::{
-    apps::v1::DaemonSet,
-    core::v1::{Node, NodeSelectorRequirement, NodeSelectorTerm, Pod, PodSpec, Taint, Toleration},
+use constants::DS_CONTROLLER_REVISION_HASH_LABEL_KEY;
+use k8s_openapi::{
+    api::{
+        apps::v1::DaemonSet,
+        core::v1::{
+            Node, NodeSelectorRequirement, NodeSelectorTerm, Pod, PodSpec, Taint, Toleration,
+        },
+    },
+    chrono::{DateTime, Utc},
 };
 use kube::ResourceExt;
 use openapi::models::{CordonDrainState, Volume, VolumeStatus};
@@ -344,21 +350,73 @@ pub(crate) fn pod_is_ready(pod: &Pod) -> bool {
         })
 }
 
+/// Returns true if the Pod is being deleted.
+pub(crate) fn pod_is_terminating(pod: &Pod) -> bool {
+    pod.metadata.deletion_timestamp.is_some()
+}
+
+/// Returns true if the Pod is still terminating 'timeout' after its .metadata.deletionTimestamp,
+/// e.g. because a finalizer is not removed from it. The deletionTimestamp already includes the
+/// Pod's termination grace period.
+pub(crate) fn pod_is_stuck_terminating(pod: &Pod, timeout: Duration, now: DateTime<Utc>) -> bool {
+    pod.metadata
+        .deletion_timestamp
+        .as_ref()
+        .is_some_and(|deletion_timestamp| {
+            // This is an error if the deletionTimestamp is yet to come.
+            (now - deletion_timestamp.0)
+                .to_std()
+                .is_ok_and(|overdue| overdue >= timeout)
+        })
+}
+
+/// Returns a Pod of a DaemonSet on a node which is stuck terminating (see
+/// pod_is_stuck_terminating()), unless the DaemonSet has replaced it with a Pod which is created
+/// from its latest Pod template, i.e. with the revision hash 'latest_revision_hash', and which is
+/// not terminating. The DaemonSet may not create a new Pod on the node until the stuck Pod is gone.
+pub(crate) fn stuck_terminating_pod<'a>(
+    node_pods: &'a [Pod],
+    latest_revision_hash: &str,
+    timeout: Duration,
+    now: DateTime<Utc>,
+) -> Option<&'a Pod> {
+    let replaced = node_pods.iter().any(|pod| {
+        !pod_is_terminating(pod)
+            && pod
+                .labels()
+                .get(DS_CONTROLLER_REVISION_HASH_LABEL_KEY)
+                .map(String::as_str)
+                == Some(latest_revision_hash)
+    });
+    if replaced {
+        return None;
+    }
+
+    node_pods
+        .iter()
+        .find(|pod| pod_is_stuck_terminating(pod, timeout, now))
+}
+
 /// Describes the Pods which are not Ready, along with the nodes which they run on or are meant to
-/// run on, and their phase. At most 'limit' Pods are described.
+/// run on, their phase, and whether they are terminating. At most 'limit' Pods are described.
 pub(crate) fn describe_not_ready_pods(pods: &[Pod], limit: usize) -> String {
     let not_ready_pods: Vec<String> = pods
         .iter()
         .filter(|pod| !pod_is_ready(pod))
         .map(|pod| {
             format!(
-                "{} (node: {}, phase: {})",
+                "{} (node: {}, phase: {}{})",
                 pod.name_any(),
                 pod_target_node(pod).as_deref().unwrap_or("unknown"),
                 pod.status
                     .as_ref()
                     .and_then(|status| status.phase.as_deref())
-                    .unwrap_or("Unknown")
+                    .unwrap_or("Unknown"),
+                if pod_is_terminating(pod) {
+                    ", terminating"
+                } else {
+                    ""
+                }
             )
         })
         .collect();
@@ -757,8 +815,10 @@ pub(crate) async fn list_all_volumes(rest_client: &RestClientSet) -> Result<Vec<
 mod tests {
     use super::{
         daemonset_node_skip_reason, describe_not_ready_pods, pod_is_controlled_by, pod_is_ready,
-        pod_target_node, DaemonSetRollout, NodeSkipReason, RolloutIncompleteReason,
+        pod_is_stuck_terminating, pod_is_terminating, pod_target_node, stuck_terminating_pod,
+        DaemonSetRollout, NodeSkipReason, RolloutIncompleteReason,
     };
+    use constants::DS_CONTROLLER_REVISION_HASH_LABEL_KEY;
     use k8s_openapi::{
         api::{
             apps::v1::{DaemonSet, DaemonSetSpec, DaemonSetStatus},
@@ -768,9 +828,11 @@ mod tests {
                 Taint, Toleration,
             },
         },
-        apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference},
+        apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference, Time},
+        chrono::{DateTime, TimeDelta, Utc},
     };
-    use std::collections::BTreeMap;
+    use kube::ResourceExt;
+    use std::{collections::BTreeMap, time::Duration};
 
     /// Builds a DaemonSet with a .metadata.generation and an optional .status.
     fn daemonset(generation: i64, status: Option<DaemonSetStatus>) -> DaemonSet {
@@ -1070,6 +1132,73 @@ mod tests {
         );
         assert_eq!(describe_not_ready_pods(&pods[..1], 3), "none");
         assert_eq!(describe_not_ready_pods(&[], 3), "none");
+
+        let mut terminating = with_status(pod("terminating", Some("node-4"), None), "Failed", None);
+        terminating.metadata.deletion_timestamp = Some(Time(DateTime::default()));
+        assert_eq!(
+            describe_not_ready_pods(&[terminating], 3),
+            "terminating (node: node-4, phase: Failed, terminating)"
+        );
+    }
+
+    /// Builds a Pod of a DaemonSet on a node, created from the Pod template with the revision hash
+    /// 'hash', with an optional .metadata.deletionTimestamp.
+    fn daemonset_pod(name: &str, hash: &str, deletion_timestamp: Option<DateTime<Utc>>) -> Pod {
+        let mut pod = pod(name, Some("node-1"), None);
+        pod.metadata.labels = Some(BTreeMap::from([(
+            DS_CONTROLLER_REVISION_HASH_LABEL_KEY.to_string(),
+            hash.to_string(),
+        )]));
+        pod.metadata.deletion_timestamp = deletion_timestamp.map(Time);
+        pod
+    }
+
+    #[test]
+    fn pods_stuck_terminating() {
+        let now = DateTime::from_timestamp(1_800_000_000, 0).unwrap();
+        let timeout = Duration::from_secs(300);
+        let ago = |seconds: i64| Some(now - TimeDelta::seconds(seconds));
+
+        let running = daemonset_pod("running", "old", None);
+        let in_grace_period = daemonset_pod("in-grace-period", "old", ago(-30));
+        let terminating = daemonset_pod("terminating", "old", ago(299));
+        let stuck = daemonset_pod("stuck", "old", ago(300));
+
+        assert!(!pod_is_terminating(&running));
+        assert!(pod_is_terminating(&in_grace_period));
+        assert!(pod_is_terminating(&stuck));
+
+        assert!(!pod_is_stuck_terminating(&running, timeout, now));
+        assert!(!pod_is_stuck_terminating(&in_grace_period, timeout, now));
+        assert!(!pod_is_stuck_terminating(&terminating, timeout, now));
+        assert!(pod_is_stuck_terminating(&stuck, timeout, now));
+
+        let replacement = daemonset_pod("replacement", "latest", None);
+        let terminating_replacement = daemonset_pod("terminating-replacement", "latest", ago(10));
+
+        let test_cases = [
+            ("no pods", vec![], None),
+            ("stuck", vec![stuck.clone()], Some("stuck")),
+            ("not stuck yet", vec![terminating.clone()], None),
+            ("replaced", vec![stuck.clone(), replacement.clone()], None),
+            (
+                "replacement is terminating",
+                vec![stuck.clone(), terminating_replacement],
+                Some("stuck"),
+            ),
+            ("outdated pod", vec![running, stuck], Some("stuck")),
+            ("up-to-date pod", vec![replacement], None),
+        ];
+
+        for (name, pods, expected_pod) in test_cases {
+            assert_eq!(
+                stuck_terminating_pod(pods.as_slice(), "latest", timeout, now)
+                    .map(|pod| pod.name_any())
+                    .as_deref(),
+                expected_pod,
+                "{name}"
+            );
+        }
     }
 
     #[test]

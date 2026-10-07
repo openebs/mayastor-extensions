@@ -36,6 +36,16 @@ pub(crate) const IO_ENGINE_DAEMONSET_OBSERVED_GENERATION_TIMEOUT: Duration =
 /// for re-creating failed Pods.
 pub(crate) const IO_ENGINE_DAEMONSET_ROLLOUT_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 
+/// This is how long to wait for the io-engine DaemonSet to create an io-engine Pod on a node which
+/// it should run on, after the node's io-engine Pod is restarted. The DaemonSet fails to create the
+/// Pod e.g. when an admission webhook or policy rejects it.
+pub(crate) const IO_ENGINE_POD_CREATION_TIMEOUT: Duration = Duration::from_secs(5 * 60);
+
+/// This is how long an io-engine Pod may stay terminating after its .metadata.deletionTimestamp,
+/// which already includes its termination grace period. A Pod stays terminating e.g. when a
+/// finalizer is not removed from it, and the DaemonSet may not replace it until it is gone.
+pub(crate) const IO_ENGINE_POD_TERMINATION_TIMEOUT: Duration = Duration::from_secs(5 * 60);
+
 /// This is the maximum number of io-engine Pods which are listed in the errors for when the
 /// io-engine DaemonSet does not finish rolling out. This keeps the errors short enough to be
 /// published as a Kubernetes Event.
