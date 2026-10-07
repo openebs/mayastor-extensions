@@ -1,4 +1,5 @@
 use semver::Version;
+use std::time::Duration;
 
 /// This is the name of the project that is being upgraded.
 pub use constants::product_train;
@@ -12,6 +13,33 @@ pub const CORE_CHART_NAME: &str = constants::PRODUCT_NAME;
 
 /// This is the shared Pod label of the <helm-release>-io-engine DaemonSet.
 pub use constants::IO_ENGINE_LABEL;
+
+/// This is the suffix of the name of the <helm-release>-io-engine DaemonSet.
+pub(crate) const IO_ENGINE_DAEMONSET_NAME_SUFFIX: &str = "-io-engine";
+
+/// This is the name of the io-engine DaemonSet of a helm release.
+pub(crate) fn io_engine_daemonset_name(release_name: &str) -> String {
+    format!("{release_name}{IO_ENGINE_DAEMONSET_NAME_SUFFIX}")
+}
+
+/// This is the interval between two consecutive checks of the io-engine DaemonSet's status.
+pub(crate) const IO_ENGINE_DAEMONSET_POLL_INTERVAL: Duration = Duration::from_secs(5);
+
+/// This is how long to wait for the DaemonSet controller to observe the latest spec of the
+/// io-engine DaemonSet. This is longer than the DaemonSet controller's 5 minute expectations
+/// timeout, which may hold back an update to the DaemonSet's .status.observedGeneration.
+pub(crate) const IO_ENGINE_DAEMONSET_OBSERVED_GENERATION_TIMEOUT: Duration =
+    Duration::from_secs(10 * 60);
+
+/// This is how long to wait for the io-engine DaemonSet to finish rolling out, while there are no
+/// io-engine Pods left to restart. This matches the DaemonSet controller's maximum back-off for
+/// re-creating failed Pods.
+pub(crate) const IO_ENGINE_DAEMONSET_ROLLOUT_TIMEOUT: Duration = Duration::from_secs(15 * 60);
+
+/// This is the maximum number of io-engine Pods which are listed in the error for when the
+/// io-engine DaemonSet does not finish rolling out. This keeps the error short enough to be
+/// published as a Kubernetes Event.
+pub(crate) const MAX_NOT_READY_IO_ENGINE_PODS_IN_ERROR: usize = 3;
 
 /// This is the shared Pod label of the <helm-release>-agent-core Deployment.
 pub const AGENT_CORE_LABEL: &str = "app=agent-core";

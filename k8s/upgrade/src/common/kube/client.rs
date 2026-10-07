@@ -1,14 +1,15 @@
 use crate::common::{
     constants::KUBE_API_PAGE_SIZE,
     error::{
-        ControllerRevisionDoesntHaveHashLabel, ControllerRevisionListEmpty,
+        ControllerRevisionDoesntHaveHashLabel, ControllerRevisionListEmpty, DaemonSetNotFound,
         FailedToDeleteStatefulSet, FailedToListMetadataPaginated, FailedToListPaginated,
-        InvalidNoOfHelmConfigMaps, InvalidNoOfHelmSecrets, K8sClientGeneration, Result,
+        GetDaemonSet, InvalidNoOfHelmConfigMaps, InvalidNoOfHelmSecrets, K8sClientGeneration,
+        Result,
     },
 };
 use k8s_openapi::{
     api::{
-        apps::v1::{ControllerRevision, StatefulSet},
+        apps::v1::{ControllerRevision, DaemonSet, StatefulSet},
         core::v1::{ConfigMap, Namespace, Node, Pod, Secret},
     },
     apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition,
@@ -43,6 +44,11 @@ pub async fn crds_api() -> Result<Api<CustomResourceDefinition>> {
 
 /// Generate the StatefulSet api client.
 pub async fn sts_api(namespace: &str) -> Result<Api<StatefulSet>> {
+    Ok(Api::namespaced(client().await?, namespace))
+}
+
+/// Generate the DaemonSet api client.
+pub async fn daemonsets_api(namespace: &str) -> Result<Api<DaemonSet>> {
     Ok(Api::namespaced(client().await?, namespace))
 }
 
@@ -173,10 +179,12 @@ pub async fn list_controller_revisions(
 }
 
 /// Returns the controller-revision-hash of the latest revision of a resource's ControllerRevisions.
+/// If an owner UID is given, then only the ControllerRevisions owned by that object are considered.
 pub async fn latest_controller_revision_hash(
     namespace: String,
     label_selector: Option<String>,
     field_selector: Option<String>,
+    owner_uid: Option<String>,
     hash_label_key: String,
 ) -> Result<String> {
     let mut ctrl_revs = list_controller_revisions(
@@ -185,13 +193,22 @@ pub async fn latest_controller_revision_hash(
         field_selector.clone(),
     )
     .await?;
+    if let Some(ref uid) = owner_uid {
+        ctrl_revs.retain(|ctrl_rev| {
+            ctrl_rev
+                .owner_references()
+                .iter()
+                .any(|owner| owner.uid.eq(uid))
+        });
+    }
     // Fail if ControllerRevisions list is empty.
     ensure!(
         !ctrl_revs.is_empty(),
         ControllerRevisionListEmpty {
             namespace: namespace.clone(),
             label_selector: label_selector.unwrap_or_default(),
-            field_selector: field_selector.unwrap_or_default()
+            field_selector: field_selector.unwrap_or_default(),
+            owner_uid: owner_uid.unwrap_or_default(),
         }
     );
 
@@ -299,6 +316,25 @@ pub async fn get_helm_release_configmap(
     ensure!(cms.len() == 1, wrong_no_of_cms.clone());
 
     cms.into_iter().next().ok_or(wrong_no_of_cms.build())
+}
+
+/// GET a DaemonSet in a namespace. This fails if the DaemonSet does not exist.
+pub async fn get_daemonset(name: &str, namespace: &str) -> Result<DaemonSet> {
+    daemonsets_api(namespace)
+        .await?
+        .get_opt(name)
+        .await
+        .context(GetDaemonSet {
+            name: name.to_string(),
+            namespace: namespace.to_string(),
+        })?
+        .ok_or(
+            DaemonSetNotFound {
+                name: name.to_string(),
+                namespace: namespace.to_string(),
+            }
+            .build(),
+        )
 }
 
 /// List Kubernetes resource object with pagination.

@@ -1,14 +1,10 @@
 use crate::opts::CliArgs;
-use constants::DS_CONTROLLER_REVISION_HASH_LABEL_KEY;
 use semver::Version;
 use tracing::error;
 use upgrade::{
     common::{
-        constants::{
-            product_train, CORE_CHART_NAME, IO_ENGINE_LABEL, PARTIAL_REBUILD_DISABLE_EXTENTS,
-        },
+        constants::{product_train, CORE_CHART_NAME, PARTIAL_REBUILD_DISABLE_EXTENTS},
         error::{PartialRebuildNotAllowed, Result},
-        kube::client as KubeClient,
     },
     events::event_recorder::{EventAction, EventRecorder},
     helm::upgrade::{HelmUpgradeRunner, HelmUpgraderBuilder},
@@ -103,26 +99,6 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
     if !opts.skip_data_plane_restart() {
         partial_rebuild_check(&source_version, final_values.partial_rebuild_is_enabled())?;
 
-        let latest_io_engine_ctrl_rev_hash = KubeClient::latest_controller_revision_hash(
-            opts.namespace(),
-            Some(IO_ENGINE_LABEL.to_string()),
-            None,
-            DS_CONTROLLER_REVISION_HASH_LABEL_KEY.to_string(),
-        )
-        .await?;
-
-        let yet_to_upgrade_io_engine_label = format!(
-            "{IO_ENGINE_LABEL},{DS_CONTROLLER_REVISION_HASH_LABEL_KEY}!={}",
-            latest_io_engine_ctrl_rev_hash.as_str()
-        );
-
-        let yet_to_upgrade_io_engine_pods = KubeClient::list_pods(
-            opts.namespace(),
-            Some(yet_to_upgrade_io_engine_label.clone()),
-            None,
-        )
-        .await?;
-
         event
             .publish_normal(
                 format!("Upgrading {} data-plane", product_train()),
@@ -132,11 +108,9 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
 
         if let Err(error) = upgrade_data_plane(
             opts.namespace(),
+            opts.release_name(),
             opts.rest_endpoint(),
-            latest_io_engine_ctrl_rev_hash,
             final_values.ha_is_enabled(),
-            yet_to_upgrade_io_engine_label,
-            yet_to_upgrade_io_engine_pods,
         )
         .await
         {

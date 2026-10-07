@@ -215,13 +215,23 @@ pub enum Error {
         pod_namespace: String,
     },
 
+    /// Error for when a Kubernetes API request for GET-ing a DaemonSet fails.
+    #[snafu(display(
+        "Failed to GET Kubernetes DaemonSet '{name}' in namespace '{namespace}': {source}",
+    ))]
+    GetDaemonSet {
+        source: kube::Error,
+        name: String,
+        namespace: String,
+    },
+
+    /// Error for when a Kubernetes DaemonSet does not exist.
+    #[snafu(display("Kubernetes DaemonSet '{name}' not found in namespace '{namespace}'"))]
+    DaemonSetNotFound { name: String, namespace: String },
+
     /// Error for when a Pod does not have a PodSpec struct member.
     #[snafu(display("Failed get .spec from Pod {name} in Namespace '{namespace}'"))]
     EmptyPodSpec { name: String, namespace: String },
-
-    /// Error for when the spec.nodeName of a Pod is empty.
-    #[snafu(display("Failed get .spec.nodeName from Pod {name} in Namespace '{namespace}'",))]
-    EmptyPodNodeName { name: String, namespace: String },
 
     /// Error for when the metadata.uid of a Pod is empty.
     #[snafu(display("Failed to get .metadata.uid from Pod {name} in Namespace '{namespace}'",))]
@@ -518,6 +528,31 @@ pub enum Error {
     #[snafu(display("Too many io-engine Pods in Node '{node_name}'"))]
     TooManyIoEnginePods { node_name: String },
 
+    /// Error for when the DaemonSet controller does not observe the latest spec of the io-engine
+    /// DaemonSet in time.
+    #[snafu(display(
+        "Timed out after {timeout} waiting for the DaemonSet controller to observe the latest spec of the io-engine DaemonSet '{name}' in namespace '{namespace}': {rollout}"
+    ))]
+    IoEngineGenerationNotObserved {
+        name: String,
+        namespace: String,
+        timeout: String,
+        rollout: String,
+    },
+
+    /// Error for when the io-engine DaemonSet does not finish rolling out in time, even though
+    /// there are no io-engine Pods left to restart.
+    #[snafu(display(
+        "Timed out after {timeout} waiting for the io-engine DaemonSet '{name}' in namespace '{namespace}' to finish rolling out: {rollout}; io-engine Pods which are not Ready: {not_ready_pods}"
+    ))]
+    IoEngineRolloutIncomplete {
+        name: String,
+        namespace: String,
+        timeout: String,
+        rollout: String,
+        not_ready_pods: String,
+    },
+
     /// Error for when the thin-provisioning options are absent, but still tried to fetch it.
     #[snafu(display("The agents.core.capacity yaml object is absent amongst the helm values"))]
     ThinProvisioningOptionsAbsent,
@@ -650,12 +685,13 @@ pub enum Error {
 
     /// Error for when the list of ControllerRevisions for a controller's resource is empty.
     #[snafu(display(
-        "No ControllerRevisions found in namespace '{namespace}' with label selector '{label_selector}' and field selector '{field_selector}'"
+        "No ControllerRevisions found in namespace '{namespace}' with label selector '{label_selector}', field selector '{field_selector}' and owner UID '{owner_uid}'"
     ))]
     ControllerRevisionListEmpty {
         namespace: String,
         label_selector: String,
         field_selector: String,
+        owner_uid: String,
     },
 
     /// Error for when a ControllerRevision doesn't have a label key containing the controller
