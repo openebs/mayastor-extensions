@@ -466,9 +466,9 @@ impl IoEngineDaemonSet {
                         node.name = %node_name,
                         timeout = %humantime::format_duration(IO_ENGINE_POD_CREATION_TIMEOUT),
                         "The io-engine DaemonSet '{name}' has not created a data-plane Pod on the \
-                        node, e.g. because an admission webhook rejects it, see the DaemonSet's \
-                        events with 'kubectl -n {namespace} describe daemonset {name}'. Moving on \
-                        to the rest of the data-plane Pods"
+                        node, e.g. because an admission webhook or policy rejects it, see the \
+                        DaemonSet's events with 'kubectl -n {namespace} describe daemonset \
+                        {name}'. Moving on to the rest of the data-plane Pods"
                     );
                     return Ok(());
                 }
@@ -485,9 +485,10 @@ impl IoEngineDaemonSet {
                         node.name = %node_name,
                         finalizers = ?pod.finalizers(),
                         timeout = %humantime::format_duration(IO_ENGINE_POD_TERMINATION_TIMEOUT),
-                        "The data-plane pod is stuck terminating, e.g. because a finalizer is not \
-                        removed from it, so the io-engine DaemonSet '{name}' may not create a new \
-                        data-plane Pod on the node. Moving on to the rest of the data-plane Pods"
+                        "The data-plane pod is stuck terminating, e.g. because of a finalizer, or \
+                        because its node is unreachable, so the io-engine DaemonSet '{name}' may \
+                        not create a new data-plane Pod on the node. Moving on to the rest of the \
+                        data-plane Pods"
                     );
                     return Ok(());
                 }

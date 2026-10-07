@@ -43,7 +43,8 @@ pub(crate) const IO_ENGINE_POD_CREATION_TIMEOUT: Duration = Duration::from_secs(
 
 /// This is how long an io-engine Pod may stay terminating after its .metadata.deletionTimestamp,
 /// which already includes its termination grace period. A Pod stays terminating e.g. when a
-/// finalizer is not removed from it, and the DaemonSet may not replace it until it is gone.
+/// finalizer is not removed from it, or when its node is unreachable, and the DaemonSet may not
+/// replace it until it is gone.
 pub(crate) const IO_ENGINE_POD_TERMINATION_TIMEOUT: Duration = Duration::from_secs(5 * 60);
 
 /// This is the maximum number of io-engine Pods which are listed in the errors for when the
