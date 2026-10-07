@@ -34,9 +34,9 @@ image:
     #       release/pre-release container image tags.
     #       The below tag values will be picked for images by default.
     #       If not specified, 'tag' option provided above will be picked.
-    controlPlane: "471bdd76d47d"
+    controlPlane: "80f7d112fc61"
     dataPlane: "94c2e7ba32c2"
-    extensions: "0b4f26146d02"
+    extensions: "647bd7f5fb22"
   # -- ImagePullPolicy for our images
   pullPolicy: IfNotPresent
   # -- docker-secrets required to pull images if the container registry from image.registry is protected
