@@ -149,12 +149,15 @@ mod tests {
             status: None,
             spec: Some(NodeSpec::new_all(
                 format!("http://{id}:10124"),
+                None,
                 id,
                 None::<std::collections::HashMap<String, String>>,
                 cordon_drain,
                 None::<String>,
                 None::<String>,
                 None::<bool>,
+                None,
+                None,
             )),
             meta: None,
             state: Some(NodeState::new_all(
