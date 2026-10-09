@@ -494,6 +494,10 @@ csi:
     registrarTag: v2.13.0
     # -- csi-resizer image release tag
     resizerTag: v1.13.2
+  driver:
+    # -- Create the CSIDriver object for io.openebs.csi-mayastor. Tools such as CDI rely on it
+    # to detect CSI storage. An existing CSIDriver not owned by this release is left untouched.
+    create: true
   controller:
     # -- Log level for the csi controller
     logLevel: info
