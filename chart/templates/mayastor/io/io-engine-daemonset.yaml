@@ -125,7 +125,7 @@ spec:
         - "--grpc-ip=$(MY_POD_IP)"
         - "--grpc-port={{ default 10124 .Values.io_engine.port }}"
         - "-N$(MY_NODE_NAME)"
-        - "-Rhttps://{{ .Release.Name }}-agent-core:50051"
+        - "-Rhttp://{{ .Release.Name }}-agent-core:50051"
         - "-y/var/local/{{ .Release.Name }}/io-engine/config.yaml"
         - "-l{{ include "cpuFlag" . }}"
         - "-p={{ include "etcdUrl" . }}"{{ if .Values.io_engine.target.nvmf.ptpl }}
