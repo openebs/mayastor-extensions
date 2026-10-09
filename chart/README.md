@@ -275,6 +275,7 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;snapshotControllerTag | csi-snapshot-controller image release tag | `"v8.2.0"` |
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;snapshotterTag | csi-snapshotter image release tag | `"v8.2.0"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;kubeletDir | The kubeletDir directory for the csi-node plugin | `"/var/lib/kubelet"` |
+| csi.&ZeroWidthSpace;node.&ZeroWidthSpace;volumes.&ZeroWidthSpace;extra | Additional volumes to mount into the csi-node DaemonSet. | `[]` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nvme.&ZeroWidthSpace;ctrl_loss_tmo | The ctrl_loss_tmo (controller loss timeout) in seconds | `"1980"` |
 | csi.&ZeroWidthSpace;node.&ZeroWidthSpace;nvme.&ZeroWidthSpace;tcpFallback | Fallback to nvme-tcp if nvme-rdma is enabled for Mayastor but rdma is not available on a particular csi-node | `true` |

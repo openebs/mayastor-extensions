@@ -563,6 +563,9 @@ csi:
       xfs: ""
     restClient:
       enabled: true
+    volumes:
+      # -- Additional volumes to mount into the csi-node DaemonSet.
+      extra: [ ]
     # -- Set tolerations, overrides global
     tolerations: [ ]
     # -- Set nodeSelector, overrides global
