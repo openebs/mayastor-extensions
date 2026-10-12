@@ -312,7 +312,8 @@ impl HelmUpgrader for CoreHelmUpgrader {
     async fn dry_run(self: Box<Self>) -> Result<HelmUpgradeRunner> {
         // Running 'helm upgrade --dry-run'.
         let mut dry_run_extra_args = self.helm_upgrade_extra_args.clone();
-        dry_run_extra_args.push("--dry-run".to_string());
+        // Server-side, so that the chart's 'lookup' calls see the cluster as a real upgrade would.
+        dry_run_extra_args.push("--dry-run=server".to_string());
         info!("Running helm upgrade dry-run...");
         self.client
             .upgrade(

@@ -1,0 +1,24 @@
+{{- if .Values.csi.driver.create }}
+{{- $driverName := "io.openebs.csi-mayastor" }}
+{{- /* Skip a CSIDriver that exists but isn't owned by this release, e.g. one created by hand. */}}
+{{- $existing := lookup "storage.k8s.io/v1" "CSIDriver" "" $driverName }}
+{{- $ownerName := dig "metadata" "annotations" "meta.helm.sh/release-name" "" $existing }}
+{{- $ownerNamespace := dig "metadata" "annotations" "meta.helm.sh/release-namespace" "" $existing }}
+{{- $ownedByRelease := and (eq $ownerName .Release.Name) (eq $ownerNamespace .Release.Namespace) }}
+{{- if or (not $existing) $ownedByRelease }}
+apiVersion: storage.k8s.io/v1
+kind: CSIDriver
+metadata:
+  name: {{ $driverName }}
+  labels:
+    {{ include "label_prefix" . }}/release: {{ .Release.Name }}
+    {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
+spec:
+  attachRequired: true
+  volumeLifecycleModes:
+    - Persistent
+  podInfoOnMount: false
+  storageCapacity: false
+  fsGroupPolicy: ReadWriteOnceWithFSType
+{{- end }}
+{{- end }}

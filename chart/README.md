@@ -265,6 +265,7 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;memory | Memory requests for csi controller | `"64Mi"` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;snapshotController.&ZeroWidthSpace;enabled | Run the csi-snapshot-controller container. Disable this if the cluster already runs one. | `true` |
 | csi.&ZeroWidthSpace;controller.&ZeroWidthSpace;tolerations | Set tolerations, overrides global | `[]` |
+| csi.&ZeroWidthSpace;driver.&ZeroWidthSpace;create | Create the CSIDriver object for io.openebs.csi-mayastor. Tools such as CDI rely on it to detect CSI storage. An existing CSIDriver not owned by this release is left untouched. | `true` |
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;attacherTag | csi-attacher image release tag | `"v4.8.1"` |
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;provisionerTag | csi-provisioner image release tag | `"v5.2.0"` |
 | csi.&ZeroWidthSpace;image.&ZeroWidthSpace;pullPolicy | imagePullPolicy for all CSI Sidecar images | `"IfNotPresent"` |
