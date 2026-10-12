@@ -2,7 +2,7 @@
 # avoid dependency on docker tool chain. Though the maturity of OCI
 # builder in nixpkgs is questionable which is why we postpone this step.
 
-{ pkgs, dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, jq, runCommand, sourcer, img_tag ? "", img_org ? "", img_prefix }:
+{ pkgs, dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, jq, runCommand, sourcer, img_tag ? "", img_org ? "", img_release ? "", img_prefix }:
 let
   repo-org = if img_org != "" then img_org else "${builtins.readFile (pkgs.runCommand "repo_org" {
     buildInputs = with pkgs; [ git ];
@@ -15,8 +15,11 @@ let
   helm_chart = sourcer.whitelistSource ../../.. [ "chart" "scripts/helm" "scripts/utils" ];
   license_src = sourcer.whitelistSource ../../.. [ "LICENSE" ];
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
+  vendor = "OpenEBS";
+  maintainer = "OpenEBS Authors <https://github.com/openebs/community>";
+  release = if img_release != "" then img_release else "1";
   tag = if img_tag != "" then img_tag else extensions.version;
-  build-extensions-image = { pname, buildType, package, extraCommands ? '''', fakeRootCommands ? '''', copyToRoot ? [ ], config ? { } }:
+  build-extensions-image = { pname, buildType, package, description, summary ? description, extraCommands ? '''', fakeRootCommands ? '''', copyToRoot ? [ ], config ? { } }:
     dockerTools.buildLayeredImage {
       inherit fakeRootCommands tag;
       enableFakechroot = fakeRootCommands != "";
@@ -29,6 +32,11 @@ let
       contents = [ package pkgs.cacert ] ++ copyToRoot;
       config = {
         Entrypoint = [ package.binary ];
+        Labels = {
+          inherit vendor maintainer summary description release;
+          name = "${img_prefix}-${pname}${image_suffix.${buildType}}";
+          version = tag;
+        };
       } // config;
     };
   build-exporter-image = { buildType }: {
@@ -36,6 +44,7 @@ let
       inherit buildType;
       package = extensions.${buildType}.metrics.exporter.io-engine;
       pname = package.pname;
+      description = "Mayastor metrics exporter - collects io-engine metrics over gRPC and serves them in Prometheus format.";
       config = {
         ExposedPorts = {
           "9052/tcp" = { };
@@ -84,6 +93,7 @@ let
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.upgrade.${name};
+      description = "Mayastor upgrade job - performs in-cluster Helm upgrades of the Mayastor release.";
       copyToRoot = [ kubernetes-helm-wrapped busybox tagged_helm_chart yq-go ];
       fakeRootCommands = ''
         chmod -R 0777 /chart
@@ -98,11 +108,13 @@ let
       inherit buildType;
       package = extensions.${buildType}.eventing.${name};
       pname = package.pname;
+      description = "Mayastor eventing aggregator - consumes events from NATS and exports them to Loki or local files.";
     };
   build-obs-callhome-image = { buildType }:
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.obs.callhome;
+      description = "Mayastor call-home agent - collects and encrypts anonymised usage telemetry for reporting.";
       copyToRoot = [ ./../../../call-home/assets busybox gnupg ];
       extraCommands = ''
         mkdir -m 0777 encryption_dir
@@ -118,6 +130,7 @@ let
       inherit buildType;
       package = extensions.${buildType}.obs.stats;
       pname = package.pname;
+      description = "Mayastor call-home stats - serves aggregated call-home statistics over HTTP.";
       config = {
         ExposedPorts = {
           "9090/tcp" = { };
