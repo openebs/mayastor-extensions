@@ -13,11 +13,12 @@ let
     ./git-org-name.sh ${sourcer.git-src} --case lower --remote origin > $out
   '')}";
   helm_chart = sourcer.whitelistSource ../../.. [ "chart" "scripts/helm" "scripts/utils" ];
+  license_src = sourcer.whitelistSource ../../.. [ "LICENSE" ];
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
   tag = if img_tag != "" then img_tag else extensions.version;
   build-extensions-image = { pname, buildType, package, extraCommands ? '''', fakeRootCommands ? '''', copyToRoot ? [ ], config ? { } }:
     dockerTools.buildLayeredImage {
-      inherit extraCommands fakeRootCommands tag;
+      inherit fakeRootCommands tag;
       enableFakechroot = fakeRootCommands != "";
       created = "now";
       # Keep the image under the 40-layer ceiling that container registries
@@ -25,6 +26,10 @@ let
       # nixpkgs default of 100. Store paths that do not get their own layer
       # are merged into the last one.
       maxLayers = 38;
+      extraCommands = ''
+        mkdir -p licenses
+        cp --no-preserve=mode ${license_src}/LICENSE licenses/LICENSE
+      '' + extraCommands;
       name = "${repo-org}/${img_prefix}-${pname}${image_suffix.${buildType}}";
       contents = [ package pkgs.cacert ] ++ copyToRoot;
       config = {
