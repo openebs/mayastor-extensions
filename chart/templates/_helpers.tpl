@@ -801,25 +801,34 @@ chart asks for it, so that the value is interpreted in one place.
 {{- end -}}
 
 {{/*
+Returns the global ipFamily setting, trimmed and lowercased.
+Fails on anything other than "ipv4", "ipv6" or "both".
+*/}}
+{{- define "ip_family" -}}
+{{- $ipFamily := .Values.ipFamily | toString | trim | lower -}}
+{{- if not (has $ipFamily (list "ipv4" "ipv6" "both")) -}}
+{{- fail (printf "invalid ipFamily value %q -- valid values: ipv4, ipv6, both" (toString .Values.ipFamily)) -}}
+{{- end -}}
+{{- $ipFamily -}}
+{{- end -}}
+
+{{/*
 Generates ipFamilyPolicy and ipFamilies for Service specs based on the global ipFamily setting.
-Valid values: "ipv4", "ipv6", "both"
+For "both", ipFamilies is omitted so that the cluster assigns the families it supports;
+listing IPv6 explicitly is rejected on clusters without IPv6, even with PreferDualStack.
 */}}
 {{- define "service_ip_family" -}}
-{{- if eq .Values.ipFamily "ipv4" }}
+{{- $ipFamily := include "ip_family" . -}}
+{{- if eq $ipFamily "ipv4" }}
 ipFamilyPolicy: SingleStack
 ipFamilies:
   - IPv4
-{{- else if eq .Values.ipFamily "ipv6" }}
+{{- else if eq $ipFamily "ipv6" }}
 ipFamilyPolicy: SingleStack
 ipFamilies:
-  - IPv6
-{{- else if eq .Values.ipFamily "both" }}
-ipFamilyPolicy: PreferDualStack
-ipFamilies:
-  - IPv4
   - IPv6
 {{- else }}
-{{- fail (printf "invalid ipFamily value %q -- valid values: ipv4, ipv6, both" .Values.ipFamily) -}}
+ipFamilyPolicy: PreferDualStack
 {{- end -}}
 {{- end -}}
 
@@ -828,7 +837,7 @@ Returns the bind address based on ipFamily, formatted for use in a "host:port" s
 ipv4 → "0.0.0.0", ipv6 or both → "[::]" (brackets per RFC 3986, required by parsers like Rust's SocketAddr).
 */}}
 {{- define "bind_address" -}}
-{{- if eq .Values.ipFamily "ipv4" -}}
+{{- if eq (include "ip_family" .) "ipv4" -}}
 0.0.0.0
 {{- else -}}
 [::]
