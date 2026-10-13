@@ -368,6 +368,36 @@ Node node-1-14048 labelled successfully. Current labels: {}
 </details>
 
 <details>
+<summary> Pool Drain Operations </summary>
+
+1. Pool Draining
+```
+❯ kubectl mayastor drain pool pool-1
+Pool pool-1 drain requested. Current phase: Queued
+```
+The drain runs in the background, moving all replicas of the pool onto other pools. Track its progress with `get drain pool <pool-id>`.
+Re-issuing the drain on a pool is possible only if the drain is in `Queued` or `PartiallyDrained` state.
+
+2. Pool Draining with policy options
+```
+❯ kubectl mayastor drain pool pool-1-kworker1 --snapshot-policy accept-loss --unsafe-rebuild-otherwise-evict 300
+Pool pool-1-kworker1 drain requested. Current phase: Queued
+```
+- `--snapshot-policy`: what to do with the snapshots left on the pool once all replicas are evacuated, `ignore` (default) or `accept-loss`.
+- `--unsafe-rebuild-otherwise-evict <SECONDS>`: seconds to wait before force-evicting a replica which cannot be placed elsewhere; `0` attempts the placement only once.
+  Force-evicting a replica reduces the redundancy of its volume. When not set, replicas are never force-evicted.
+
+3. Cancel Pool Drain (via uncordon)
+```
+❯ kubectl mayastor uncordon pool pool-1-kworker1 --drain
+or
+❯ kubectl mayastor uncordon pool pool-1-kworker1 --all
+Pool pool-1-kworker1 successfully uncordoned
+```
+A plain `uncordon pool` (all constraints) also cancels an ongoing drain. The pool reverts to the user's own cordon, if one was set before the drain began.
+</details>
+
+<details>
 <summary> Scale Resources operations </summary>
 
 1. Scale Volume by ID
