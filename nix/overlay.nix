@@ -4,7 +4,6 @@
 , img_tag ? ""
 , tag ? ""
 , img_org ? ""
-, img_release ? ""
 , product_prefix ? ""
 , rustFlags ? ""
 }:
@@ -14,7 +13,7 @@ let
 in
 self: super: {
   sourcer = super.callPackage ./lib/sourcer.nix { };
-  images = super.callPackage ./pkgs/images { inherit img_tag img_org img_release img_prefix; };
+  images = super.callPackage ./pkgs/images { inherit img_tag img_org img_prefix; };
   extensions = super.callPackage ./pkgs/extensions { inherit allInOne incremental static tag rustFlags; };
   paperclip = super.callPackage ./../dependencies/control-plane/nix/pkgs/paperclip { };
   utils = super.callPackage ./pkgs/utils { inherit incremental; };

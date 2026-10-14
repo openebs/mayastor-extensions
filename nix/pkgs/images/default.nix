@@ -2,7 +2,7 @@
 # avoid dependency on docker tool chain. Though the maturity of OCI
 # builder in nixpkgs is questionable which is why we postpone this step.
 
-{ pkgs, dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, jq, runCommand, sourcer, img_tag ? "", img_org ? "", img_release ? "", img_prefix }:
+{ pkgs, dockerTools, lib, extensions, busybox, gnupg, kubernetes-helm-wrapped, semver-tool, yq-go, jq, runCommand, sourcer, img_tag ? "", img_org ? "", img_prefix }:
 let
   repo-org = if img_org != "" then img_org else "${builtins.readFile (pkgs.runCommand "repo_org" {
     buildInputs = with pkgs; [ git ];
@@ -16,8 +16,11 @@ let
   license_src = sourcer.whitelistSource ../../.. [ "LICENSE" ];
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
   vendor = "OpenEBS";
-  maintainer = "OpenEBS Authors <https://github.com/openebs/community>";
-  release = if img_release != "" then img_release else "1";
+  maintainer = "OpenEBS Authors (https://github.com/openebs/community)";
+  # `release` identifies a build of a given `version`. Nothing here
+  # distinguishes one rebuild of a version from another, so it is fixed rather
+  # than threaded through from a build argument nothing would ever set.
+  release = "1";
   tag = if img_tag != "" then img_tag else extensions.version;
   build-extensions-image = { pname, buildType, package, description, summary ? description, extraCommands ? '''', fakeRootCommands ? '''', copyToRoot ? [ ], config ? { } }:
     dockerTools.buildLayeredImage {
