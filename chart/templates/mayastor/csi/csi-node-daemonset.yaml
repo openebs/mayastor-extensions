@@ -177,4 +177,7 @@ spec:
         hostPath:
           path: {{ .Values.csi.node.kubeletDir }}
           type: Directory
+      {{- with .Values.csi.node.volumes.extra }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       {{- include "rest_api_tls_client_volume" (dict "ctx" . "secretName" (include "rest_api_tls_csi_node_client_secret_name" .)) | nindent 6 }}
