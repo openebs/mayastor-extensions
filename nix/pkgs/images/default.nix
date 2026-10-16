@@ -13,17 +13,33 @@ let
     ./git-org-name.sh ${sourcer.git-src} --case lower --remote origin > $out
   '')}";
   helm_chart = sourcer.whitelistSource ../../.. [ "chart" "scripts/helm" "scripts/utils" ];
+  license_src = sourcer.whitelistSource ../../.. [ "LICENSE" ];
   image_suffix = { "release" = ""; "debug" = "-debug"; "coverage" = "-coverage"; };
+  vendor = "OpenEBS";
+  maintainer = "OpenEBS Authors (https://github.com/openebs/community)";
+  # `release` identifies a build of a given `version`. Nothing here
+  # distinguishes one rebuild of a version from another, so it is fixed rather
+  # than threaded through from a build argument nothing would ever set.
+  release = "1";
   tag = if img_tag != "" then img_tag else extensions.version;
-  build-extensions-image = { pname, buildType, package, extraCommands ? '''', fakeRootCommands ? '''', copyToRoot ? [ ], config ? { } }:
+  build-extensions-image = { pname, buildType, package, description, summary ? description, extraCommands ? '''', fakeRootCommands ? '''', copyToRoot ? [ ], config ? { } }:
     dockerTools.buildLayeredImage {
-      inherit extraCommands fakeRootCommands tag;
+      inherit fakeRootCommands tag;
       enableFakechroot = fakeRootCommands != "";
       created = "now";
+      extraCommands = ''
+        mkdir -p licenses
+        cp --no-preserve=mode ${license_src}/LICENSE licenses/LICENSE
+      '' + extraCommands;
       name = "${repo-org}/${img_prefix}-${pname}${image_suffix.${buildType}}";
       contents = [ package pkgs.cacert ] ++ copyToRoot;
       config = {
         Entrypoint = [ package.binary ];
+        Labels = {
+          inherit vendor maintainer summary description release;
+          name = "${img_prefix}-${pname}${image_suffix.${buildType}}";
+          version = tag;
+        };
       } // config;
     };
   build-exporter-image = { buildType }: {
@@ -31,6 +47,7 @@ let
       inherit buildType;
       package = extensions.${buildType}.metrics.exporter.io-engine;
       pname = package.pname;
+      description = "Mayastor metrics exporter - collects io-engine metrics over gRPC and serves them in Prometheus format.";
       config = {
         ExposedPorts = {
           "9052/tcp" = { };
@@ -79,6 +96,7 @@ let
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.upgrade.${name};
+      description = "Mayastor upgrade job - performs in-cluster Helm upgrades of the Mayastor release.";
       copyToRoot = [ kubernetes-helm-wrapped busybox tagged_helm_chart yq-go ];
       fakeRootCommands = ''
         chmod -R 0777 /chart
@@ -93,11 +111,13 @@ let
       inherit buildType;
       package = extensions.${buildType}.eventing.${name};
       pname = package.pname;
+      description = "Mayastor eventing aggregator - consumes events from NATS and exports them to Loki or local files.";
     };
   build-obs-callhome-image = { buildType }:
     build-extensions-image rec{
       inherit buildType;
       package = extensions.${buildType}.obs.callhome;
+      description = "Mayastor call-home agent - collects and encrypts anonymised usage telemetry for reporting.";
       copyToRoot = [ ./../../../call-home/assets busybox gnupg ];
       extraCommands = ''
         mkdir -m 0777 encryption_dir
@@ -113,6 +133,7 @@ let
       inherit buildType;
       package = extensions.${buildType}.obs.stats;
       pname = package.pname;
+      description = "Mayastor call-home stats - serves aggregated call-home statistics over HTTP.";
       config = {
         ExposedPorts = {
           "9090/tcp" = { };
