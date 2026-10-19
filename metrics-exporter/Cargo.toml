@@ -13,6 +13,7 @@ path = "src/bin/io_engine/main.rs"
 [dependencies]
 rpc = { path = "../dependencies/control-plane/rpc" }
 utils = { path = "../dependencies/control-plane/utils/utils-lib" }
+grpc-tls = { path = "../dependencies/control-plane/utils/dependencies/grpc-tls" }
 
 actix-web = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
