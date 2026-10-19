@@ -61,6 +61,7 @@ spec:
             - "--create-volume-limit={{ .Values.csi.controller.maxCreateVolume }}"
             - "--enable-orphan-vol-gc={{- .Values.csi.controller.enableDangerousRetainGC | default false }}"
             {{- include "rest_api_tls_client_args" . | nindent 12 }}
+            {{- include "grpc_tls_args" . | nindent 12 }}
           env:
             {{- include "fips_env" . | nindent 12 }}
             - name: RUST_LOG
@@ -73,6 +74,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
             {{- include "rest_api_tls_client_volume_mount" . | nindent 12 }}
+            {{- include "grpc_tls_volume_mount" . | nindent 12 }}
         - name: csi-provisioner
           image: "{{ default .Values.csi.image.registry .Values.global.imageRegistry }}/{{ .Values.csi.image.repo }}/csi-provisioner:{{ .Values.csi.image.provisionerTag }}"
           args:
@@ -147,3 +149,4 @@ spec:
         - name: socket-dir
           emptyDir:
         {{- include "rest_api_tls_client_volume" (dict "ctx" . "secretName" (include "rest_api_tls_csi_controller_client_secret_name" .)) | nindent 8 }}
+        {{- include "grpc_tls_volume" . | nindent 8 }}

@@ -55,7 +55,7 @@ spec:
             - "--cache-period={{ .Values.base.cache_poll_period }}"{{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ include "jaeger_url" . }}"{{ end }}
             - "--grpc-server-addr={{ include "bind_address" . }}:50051"
-            {{- include "grpc_auto_tls_arg" . | nindent 12 }}
+            {{- include "grpc_tls_args" . | nindent 12 }}
             - "--pool-commitment={{ .Values.agents.core.capacity.thin.poolCommitment }}"
             - "--snapshot-commitment={{ .Values.agents.core.capacity.thin.snapshotCommitment }}"
             - "--volume-commitment-initial={{ .Values.agents.core.capacity.thin.volumeCommitmentInitial }}"
@@ -105,6 +105,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+          {{- if include "grpc_tls_file_mode" . }}
+          volumeMounts:
+            {{- include "grpc_tls_volume_mount" . | nindent 12 }}
+          {{- end }}
         - name: agent-ha-cluster
           resources:
             limits:
@@ -118,7 +122,7 @@ spec:
           args:
             - "-g={{ include "bind_address" . }}:50052"
             - "--store=http://{{ include "etcdUrl" . }}"
-            {{- include "grpc_auto_tls_arg" . | nindent 12 }}
+            {{- include "grpc_tls_args" . | nindent 12 }}
             - "--core-grpc={{ include "grpc_scheme" . }}://{{ .Release.Name }}-agent-core:50051"{{ if .Values.base.jaeger.enabled }}
             - "--jaeger={{ include "jaeger_url" . }}"{{ end }}{{ if .Values.eventing.enabled }}
             - "--events-url=nats://{{ .Release.Name }}-nats:4222"
@@ -143,3 +147,11 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+          {{- if include "grpc_tls_file_mode" . }}
+          volumeMounts:
+            {{- include "grpc_tls_volume_mount" . | nindent 12 }}
+          {{- end }}
+      {{- if include "grpc_tls_file_mode" . }}
+      volumes:
+        {{- include "grpc_tls_volume" . | nindent 8 }}
+      {{- end }}

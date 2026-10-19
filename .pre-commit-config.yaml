@@ -43,5 +43,7 @@ repos:
         description: Auto generate the helm docs README.
         language: system
         entry: bash -c 'nix-shell --pure --run "./scripts/helm/generate-readme.sh" ./scripts/helm/shell.nix'
-        types: [file]
+        files: ^chart/
+        pass_filenames: false
+        require_serial: true
 
