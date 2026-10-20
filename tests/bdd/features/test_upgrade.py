@@ -108,7 +108,7 @@ def eventually_the_installed_chart_should_be_upgraded_to_the_kubectl_mayastor_pl
         return log
 
     @retry(
-        stop_max_attempt_number=60,
+        stop_max_attempt_number=30,
         wait_fixed=2000,
     )
     def helm_upgrade_succeeded():

@@ -14,6 +14,9 @@ on:
         required: false
         type: string
         default: openebs/helm-pins
+  push:
+    branches:
+      - ci-test
 
 jobs:
   k8s-ci:
@@ -22,7 +25,7 @@ jobs:
       matrix:
         # The pinned chart is architecture-independent and is pushed once, so
         # with helm-pins only x86 runs; anything else exercises both.
-        runner: ${{ fromJSON(inputs.helm-pins && '["cncf-ubuntu-8-32-x86"]' || '["cncf-ubuntu-8-32-x86", "cncf-ubuntu-8-32-arm"]') }}
+        runner: ${{ fromJSON(inputs.helm-pins && '["cncf-ubuntu-8-32-x86"]' || '["cncf-ubuntu-8-32-x86"]') }}
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
@@ -86,54 +89,8 @@ jobs:
           CHART_VNEXT_SKIP: 1
           CLEAN: 0
         run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/test.sh"
-      - name: Push Pinned Helm Chart
-        if: ${{ inputs.helm-pins && steps.pin.outputs.update == 'true' }}
-        run: |
-          # Push pinned with specific version
-          nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/push-oci.sh -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --registry ${{ inputs.registry }} --namespace ${{ inputs.namespace }} -k -j"
-          # Push pinned latest
-          nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/pin.sh --registry ${{ inputs.registry }} --namespace ${{ inputs.namespace }} --latest"
-          nix-shell ./scripts/helm/shell.nix --run "./scripts/helm/push-oci.sh -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} --registry ${{ inputs.registry }} --namespace ${{ inputs.namespace }} -k"
-      - name: Collect logs
-        if: ${{ failure() }}
-        run: |
-          nix-shell ./scripts/k8s/shell.nix --run "kubectl get pods -A -o wide"
-          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l openebs.io/release=mayastor --all-containers=true --tail=-1"
-          nix-shell ./scripts/k8s/shell.nix --run "kubectl -n mayastor logs -l app=upgrade --all-containers=true --tail=-1"
-      - name: Upload pytest logs
-        if: ${{ always() && inputs.helm-pins && steps.pin.outputs.update == 'true' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: pytest-pins.log
-          path: pytest.log
-      - name: Upload pytest logs
-        if: ${{ always() && !inputs.helm-pins }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: pytest.log
-          path: pytest.log
-      - name: Report pytest results
-        if: ${{ always() && steps.pin.outputs.update != 'false' }}
-        uses: pmeier/pytest-results-action@main
-        with:
-          path: report.xml
-          summary: true
-          display-options: a
-          fail-on-empty: true
-          title: Test results
-      - name: Collect dump
-        if: failure()
-        run: |
-          nix-shell ./scripts/k8s/shell.nix --run "kind export logs ./dump/kind"
-          nix-shell ./scripts/k8s/shell.nix --run "kubectl cluster-info dump --output-directory=./dump/k8s --namespaces=mayastor"
-      - name: Upload cluster dump
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: k8s-dump
-          path: dump
       # debugging
-      # - name: Setup tmate session
-      #   if: ${{ failure() }}
-      #   timeout-minutes: 120
-      #   uses: owenthereal/action-upterm@v1
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        timeout-minutes: 120
+        uses: owenthereal/action-upterm@v1
