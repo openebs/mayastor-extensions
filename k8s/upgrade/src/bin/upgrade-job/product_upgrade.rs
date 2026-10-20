@@ -130,9 +130,17 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
             )
             .await?;
 
+        let rest_client = match opts.rest_client() {
+            Ok(rest_client) => rest_client,
+            Err(error) => {
+                event.publish_fatal(&error, EventAction::Failed).await;
+                return Err(error);
+            }
+        };
+
         if let Err(error) = upgrade_data_plane(
             opts.namespace(),
-            opts.rest_endpoint(),
+            rest_client,
             latest_io_engine_ctrl_rev_hash,
             final_values.ha_is_enabled(),
             yet_to_upgrade_io_engine_label,

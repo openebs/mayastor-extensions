@@ -50,6 +50,13 @@ pub enum Error {
         rest_endpoint: Url,
     },
 
+    /// Error for when REST API client TLS/JWT material cannot be read.
+    #[snafu(display(
+        "Failed to read {} REST API client security (TLS/JWT) files: {source}",
+        product_train(),
+    ))]
+    RestClientSecurity { source: std::io::Error },
+
     /// Error for when a Helm command fails.
     #[snafu(display(
         "Failed to run Helm command,\ncommand: {command},\nargs: {args:?},\ncommand_error: {source}",
