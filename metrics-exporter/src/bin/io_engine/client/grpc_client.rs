@@ -6,10 +6,50 @@ use crate::client::{
     pool_stat::{PoolIoStat, PoolIoStats},
     replica_stat::{ReplicaIoStat, ReplicaIoStats},
 };
-use std::{net::SocketAddr, time::Duration};
+use std::{net::SocketAddr, path::PathBuf, time::Duration};
 use tokio::time::sleep;
 use tonic::transport::{Channel, Uri};
 use tracing::error;
+
+/// The TLS policy for the gRPC connection to the local io-engine.
+///
+/// The io-engine advertises its transport via the control-plane, but this
+/// sidecar always dials the io-engine on the same pod, so the mode is taken
+/// from this exporter's own flags rather than from registration.
+#[derive(Debug, Clone)]
+pub(crate) enum GrpcTls {
+    /// Plaintext, no TLS.
+    None,
+    /// Auto-TLS: encryption without certificate verification, matching the
+    /// io-engine's `--grpc-auto-tls`.
+    Auto,
+    /// File-backed TLS, verifying the io-engine against the configured CA.
+    Files(grpc_tls::TlsConfig),
+}
+
+impl GrpcTls {
+    /// Build the policy from the exporter's gRPC TLS CLI arguments.
+    ///
+    /// `--grpc-auto-tls` takes precedence; otherwise file-backed TLS is used
+    /// when any certificate file is given, and plaintext when none is.
+    pub(crate) fn from_args(
+        auto_tls: bool,
+        ca_file: Option<PathBuf>,
+        cert_file: Option<PathBuf>,
+        key_file: Option<PathBuf>,
+    ) -> Result<Self, ExporterError> {
+        if auto_tls {
+            return Ok(Self::Auto);
+        }
+        let tls = grpc_tls::TlsConfig::new(ca_file, cert_file, key_file)
+            .map_err(|error| ExporterError::GrpcClientError(error.to_string()))?;
+        Ok(if tls.enabled() {
+            Self::Files(tls)
+        } else {
+            Self::None
+        })
+    }
+}
 
 /// Timeout for gRPC connection.
 #[derive(Debug, Clone)]
@@ -37,14 +77,35 @@ impl Timeouts {
 #[derive(Debug, Clone)]
 pub(crate) struct GrpcContext {
     endpoint: tonic::transport::Endpoint,
+    tls: GrpcTls,
 }
 
 impl GrpcContext {
-    pub fn new(endpoint: Uri, timeouts: Timeouts) -> Self {
+    pub fn new(endpoint: Uri, timeouts: Timeouts, tls: GrpcTls) -> Self {
         let endpoint = tonic::transport::Endpoint::from(endpoint)
             .connect_timeout(timeouts.connect())
             .timeout(timeouts.request());
-        Self { endpoint }
+        Self { endpoint, tls }
+    }
+
+    /// Establish a channel to the io-engine using the configured TLS policy.
+    ///
+    /// For both TLS modes the endpoint keeps its `http` scheme: the handshake
+    /// is driven by a custom connector, so tonic's own TLS logic is bypassed.
+    async fn connect(&self) -> Result<Channel, ExporterError> {
+        match &self.tls {
+            GrpcTls::None => self
+                .endpoint
+                .connect()
+                .await
+                .map_err(|error| ExporterError::GrpcClientError(error.to_string())),
+            GrpcTls::Auto => grpc_tls::auto_tls_connect(&self.endpoint)
+                .await
+                .map_err(|error| ExporterError::GrpcClientError(error.to_string())),
+            GrpcTls::Files(tls) => grpc_tls::file_tls_connect(&self.endpoint, tls)
+                .await
+                .map_err(|error| ExporterError::GrpcClientError(error.to_string())),
+        }
     }
 }
 
@@ -74,7 +135,7 @@ impl GrpcClient {
         let backoff = std::time::Duration::from_secs(10);
         let mut num_retries = 0;
         loop {
-            let result = context.endpoint.connect().await;
+            let result = context.connect().await;
             let error = match result {
                 Ok(channel) => {
                     let pool = PoolClient::new(channel.clone());
@@ -105,18 +166,20 @@ impl GrpcClient {
 }
 
 /// Initialize mayastor grpc client.
-pub(crate) async fn init_client(grpc_port: u16) -> Result<GrpcClient, ExporterError> {
+pub(crate) async fn init_client(grpc_port: u16, tls: GrpcTls) -> Result<GrpcClient, ExporterError> {
     let timeout = Timeouts::new(Duration::from_secs(1), Duration::from_secs(5));
     let pod_ip = get_pod_ip()?;
     let _ = get_node_name()?;
 
+    // The endpoint keeps the `http` scheme even under TLS: the TLS handshake is
+    // performed by a custom connector, so tonic must not apply its own.
     let endpoint = Uri::builder()
         .scheme("http")
         .authority(SocketAddr::new(pod_ip, grpc_port).to_string())
         .path_and_query("")
         .build()
         .map_err(|error| ExporterError::InvalidURI(error.to_string()))?;
-    let ctx = GrpcContext::new(endpoint, timeout);
+    let ctx = GrpcContext::new(endpoint, timeout, tls);
     let client = GrpcClient::new(ctx).await?;
     Ok(client)
 }
