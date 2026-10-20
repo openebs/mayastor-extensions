@@ -12,10 +12,13 @@ pub(crate) mod validators;
 #[command(about = format!("Upgrades {}", product_train()), long_about = None)]
 pub(crate) struct CliArgs {
     /// This is the URL for the storage REST API server.
+    /// If not set, it is derived from the release name and the TLS mode discovered from the
+    /// api-rest pods.
     #[arg(short = 'e', long)]
-    rest_endpoint: String,
+    rest_endpoint: Option<String>,
 
     /// Path to the TLS CA certificate bundle used to validate REST server certificates.
+    /// If not set, TLS settings are discovered from the api-rest pods.
     #[arg(long)]
     tls_ca_file: Option<PathBuf>,
 
@@ -87,15 +90,20 @@ pub(crate) struct CliArgs {
 }
 
 impl CliArgs {
-    /// This builds the storage REST API client with the configured TLS/JWT settings.
-    pub(crate) fn rest_client(&self) -> Result<RestClientSet> {
-        RestClientSet::new(
+    /// This builds the storage REST API client, discovering the current api-rest TLS/JWT
+    /// configuration from the cluster. Must be called at the point of use, as the configuration
+    /// may change across the helm upgrade.
+    pub(crate) async fn rest_client(&self) -> Result<RestClientSet> {
+        RestClientSet::discover(
+            &self.namespace,
+            &self.release_name,
             self.rest_endpoint.clone(),
             &self.jwt,
             self.tls_ca_file.as_ref(),
             self.tls_cert_file.as_ref(),
             self.tls_key_file.as_ref(),
         )
+        .await
     }
 
     /// This returns the Kubernetes Namespace for the Helm chart release.

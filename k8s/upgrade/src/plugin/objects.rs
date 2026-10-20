@@ -317,8 +317,9 @@ pub(crate) fn upgrade_job(
     fips: bool,
 ) -> Job {
     let helm_args_set = args.set.join(",");
+    // The REST endpoint and its TLS/JWT settings are discovered by the job itself, as they
+    // may change as part of the upgrade (e.g. when enabling TLS).
     let mut job_args: Vec<String> = vec![
-        format!("--rest-endpoint=http://{release_name}-api-rest:8081"),
         format!("--namespace={namespace}"),
         format!("--release-name={release_name}"),
         format!("--helm-args-set={helm_args_set}"),

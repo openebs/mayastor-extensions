@@ -130,7 +130,9 @@ async fn upgrade_product(opts: &CliArgs, event: &mut EventRecorder) -> Result<()
             )
             .await?;
 
-        let rest_client = match opts.rest_client() {
+        // The api-rest TLS configuration may have changed as part of the helm upgrade, so
+        // the REST client is (re)built here, after the control-plane has been upgraded.
+        let rest_client = match opts.rest_client().await {
             Ok(rest_client) => rest_client,
             Err(error) => {
                 event.publish_fatal(&error, EventAction::Failed).await;

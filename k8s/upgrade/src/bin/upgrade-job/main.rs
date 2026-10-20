@@ -51,7 +51,7 @@ pub(crate) async fn parse_cli_args() -> Result<CliArgs> {
     let opts = CliArgs::parse();
 
     validate_namespace(opts.namespace()).await?;
-    validate_rest_endpoint(opts.rest_client()?).await?;
+    validate_rest_endpoint(opts.rest_client().await?).await?;
 
     validate_helmv3_in_path()?;
     validate_helm_release(opts.release_name(), opts.namespace())?;

@@ -16,6 +16,7 @@ openapi = { path = "../../dependencies/control-plane/openapi", default-features 
 utils = { path = "../../dependencies/control-plane/utils/utils-lib" }
 constants = { path = "../../constants" }
 kube-proxy = { path = "../../dependencies/control-plane/k8s/proxy" }
+kube-forward = { path = "../../dependencies/control-plane/k8s/forward" }
 console-logger = { path = "../../console-logger" }
 
 kube = { workspace = true, features = ["derive", "runtime"] }
