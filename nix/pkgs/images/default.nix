@@ -20,6 +20,11 @@ let
       inherit extraCommands fakeRootCommands tag;
       enableFakechroot = fakeRootCommands != "";
       created = "now";
+      # Keep the image under the 40-layer ceiling that container registries
+      # and certification tooling enforce; the layering otherwise runs to the
+      # nixpkgs default of 100. Store paths that do not get their own layer
+      # are merged into the last one.
+      maxLayers = 38;
       name = "${repo-org}/${img_prefix}-${pname}${image_suffix.${buildType}}";
       contents = [ package pkgs.cacert ] ++ copyToRoot;
       config = {
