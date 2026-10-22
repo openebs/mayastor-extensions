@@ -146,6 +146,47 @@ With mutual TLS, also supply a secret for each client:
 
 Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 
+## StorageClass Annotations
+
+Each StorageClass the chart creates takes an `annotations` map, for clusters
+whose admission webhook or policy engine requires annotations on a StorageClass:
+
+```yaml
+storageClass:
+  annotations: {}
+etcd:
+  localpvScConfig:
+    annotations: {}
+loki:
+  localpvScConfig:
+    loki:
+      annotations: {}
+    minio:
+      annotations: {}
+```
+
+With `--set`, escape the dots in the annotation key. Slashes need no escaping,
+and the key goes in the path, not the value:
+
+```console
+helm install ... \
+  --set 'storageClass.annotations.example\.io/team=platform' \
+  --set 'storageClass.annotations.example\.io/tier=gold'
+```
+
+Use a values file for any value containing `{`, `}` or `,`. Helm's `--set`
+parses braces as a list literal, so a JSON value is silently rewritten rather
+than rejected:
+
+```yaml
+storageClass:
+  annotations:
+    example.io/modes: '{"Block":["ReadWriteMany","ReadWriteOnce"]}'
+```
+
+Values are quoted when rendered, since Kubernetes requires annotations to be
+strings.
+
 ## Chart Dependencies
 
 {{ template "chart.requirementsTable" . }}
