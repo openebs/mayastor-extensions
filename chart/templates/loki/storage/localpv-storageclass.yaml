@@ -10,6 +10,9 @@ metadata:
         value: {{ tpl ( .Values.loki.localpvScConfig.loki.basePath | quote ) . }}
     openebs.io/cas-type: local
     {{- range $key, $value := .Values.loki.localpvScConfig.loki.annotations }}
+    {{- if has $key (list "cas.openebs.io/config" "openebs.io/cas-type") }}
+    {{- fail (printf "loki.localpvScConfig.loki.annotations may not override the %s annotation; use basePath instead" $key) }}
+    {{- end }}
     {{ $key }}: {{ $value | quote }}
     {{- end }}
   name: {{ tpl .Values.loki.localpvScConfig.loki.name . | required "StorageClass name for loki localpv storage cannot be empty" }}
@@ -30,6 +33,9 @@ metadata:
         value: {{ tpl ( .Values.loki.localpvScConfig.minio.basePath | quote ) . }}
     openebs.io/cas-type: local
     {{- range $key, $value := .Values.loki.localpvScConfig.minio.annotations }}
+    {{- if has $key (list "cas.openebs.io/config" "openebs.io/cas-type") }}
+    {{- fail (printf "loki.localpvScConfig.minio.annotations may not override the %s annotation; use basePath instead" $key) }}
+    {{- end }}
     {{ $key }}: {{ $value | quote }}
     {{- end }}
   name: {{ tpl .Values.loki.localpvScConfig.minio.name . | required "StorageClass name for loki localpv storage cannot be empty" }}

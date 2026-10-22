@@ -186,7 +186,10 @@ storageClass:
 ```
 
 Values are quoted when rendered, since Kubernetes requires annotations to be
-strings.
+strings. The localpv StorageClasses reserve `cas.openebs.io/config` and
+`openebs.io/cas-type`, which carry their provisioner configuration; setting
+either through `annotations` fails the render rather than overwriting it. Use
+the matching `basePath` value instead.
 
 ## Chart Dependencies
 
