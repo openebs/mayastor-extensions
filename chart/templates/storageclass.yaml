@@ -4,9 +4,13 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: {{ $scName }}
+  {{- $annotations := deepCopy (.Values.storageClass.annotations | default dict) }}
   {{- if .Values.storageClass.default }}
+  {{- $_ := set $annotations "storageclass.kubernetes.io/is-default-class" "true" }}
+  {{- end }}
+  {{- with $annotations }}
   annotations:
-    storageclass.kubernetes.io/is-default-class: "true"
+    {{- toYaml . | nindent 4 }}
   {{- end }}
 allowVolumeExpansion: {{ .Values.storageClass.allowVolumeExpansion }}
 parameters:
