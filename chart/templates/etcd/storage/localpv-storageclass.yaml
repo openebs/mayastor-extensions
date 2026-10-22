@@ -9,8 +9,8 @@ metadata:
       - name: BasePath
         value: {{ tpl (.Values.etcd.localpvScConfig.basePath | quote) . }}
     openebs.io/cas-type: local
-    {{- with .Values.etcd.localpvScConfig.annotations }}
-    {{- toYaml . | nindent 4 }}
+    {{- range $key, $value := .Values.etcd.localpvScConfig.annotations }}
+    {{ $key }}: {{ $value | quote }}
     {{- end }}
   name: {{ (tpl (.Values.etcd.localpvScConfig.name) .) | required (print "StorageClass name for etcd localpv storage cannot be empty") }}
 provisioner: openebs.io/local

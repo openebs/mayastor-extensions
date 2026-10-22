@@ -10,7 +10,9 @@ metadata:
   {{- end }}
   {{- with $annotations }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
   {{- end }}
 allowVolumeExpansion: {{ .Values.storageClass.allowVolumeExpansion }}
 parameters:

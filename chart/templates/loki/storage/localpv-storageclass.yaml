@@ -9,8 +9,8 @@ metadata:
       - name: BasePath
         value: {{ tpl ( .Values.loki.localpvScConfig.loki.basePath | quote ) . }}
     openebs.io/cas-type: local
-    {{- with .Values.loki.localpvScConfig.loki.annotations }}
-    {{- toYaml . | nindent 4 }}
+    {{- range $key, $value := .Values.loki.localpvScConfig.loki.annotations }}
+    {{ $key }}: {{ $value | quote }}
     {{- end }}
   name: {{ tpl .Values.loki.localpvScConfig.loki.name . | required "StorageClass name for loki localpv storage cannot be empty" }}
 provisioner: openebs.io/local
@@ -29,8 +29,8 @@ metadata:
       - name: BasePath
         value: {{ tpl ( .Values.loki.localpvScConfig.minio.basePath | quote ) . }}
     openebs.io/cas-type: local
-    {{- with .Values.loki.localpvScConfig.minio.annotations }}
-    {{- toYaml . | nindent 4 }}
+    {{- range $key, $value := .Values.loki.localpvScConfig.minio.annotations }}
+    {{ $key }}: {{ $value | quote }}
     {{- end }}
   name: {{ tpl .Values.loki.localpvScConfig.minio.name . | required "StorageClass name for loki localpv storage cannot be empty" }}
 provisioner: openebs.io/local
