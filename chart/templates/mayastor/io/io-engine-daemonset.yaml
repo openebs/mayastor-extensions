@@ -127,10 +127,10 @@ spec:
         - "--grpc-port={{ default 10124 .Values.io_engine.port }}"
         - "-N$(MY_NODE_NAME)"
         - "-R{{ include "grpc_scheme" . }}://{{ .Release.Name }}-agent-core:50051"
-        - "-y/var/local/{{ .Release.Name }}/io-engine/config.yaml"
+        - "-y{{ include "io_engine_container_config_path" . }}/config.yaml"
         - "-l{{ include "cpuFlag" . }}"
         - "-p={{ include "etcdUrl" . }}"{{ if .Values.io_engine.target.nvmf.ptpl }}
-        - "--ptpl-dir=/var/local/{{ .Release.Name }}/io-engine/ptpl/"{{ end }}
+        - "--ptpl-dir={{ include "io_engine_container_config_path" . }}/ptpl/"{{ end }}
         - "--api-versions={{ .Values.io_engine.api }}"{{ if .Values.io_engine.target.nvmf.rdma.enabled }}
         - "--enable-rdma"{{ end }}{{ if .Values.io_engine.target.nvmf.iface }}
         - "-T={{ .Values.io_engine.target.nvmf.iface }}"{{ end }}{{ if .Values.io_engine.envcontext }}
@@ -156,7 +156,7 @@ spec:
         - name: dshm
           mountPath: /dev/shm
         - name: configlocation
-          mountPath: /var/local/{{ .Release.Name }}/io-engine/
+          mountPath: {{ include "io_engine_container_config_path" . }}/
         - name: hugepages-2mi
           mountPath: /dev/hugepages-2mi
         - name: kubelet-dir
@@ -239,7 +239,7 @@ spec:
       {{- end }}
       - name: configlocation
         hostPath:
-          path: /var/local/{{ .Release.Name }}/io-engine/
+          path: {{ include "io_engine_host_config_path" . }}/
           type: DirectoryOrCreate
       {{- include "grpc_tls_volume" . | nindent 6 }}
       {{- include "rest_api_tls_client_volume" (dict "ctx" . "secretName" (include "rest_api_tls_metrics_exporter_client_secret_name" .)) | nindent 6 }}

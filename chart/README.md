@@ -324,6 +324,7 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | image.&ZeroWidthSpace;registry | Image registry to pull our product images | `"docker.io"` |
 | image.&ZeroWidthSpace;repo | Image registry's namespace | `"openebs"` |
 | image.&ZeroWidthSpace;tag | Release tag for our images | `"develop"` |
+| io_engine.&ZeroWidthSpace;configPath | Absolute host directory backing the io-engine config directory, which holds config.yaml and the ptpl state. It is created if absent; point it at durable storage if ptpl is enabled, as that state is meant to survive a power loss. | `"/var/local/{{ .Release.Name }}/io-engine"` |
 | io_engine.&ZeroWidthSpace;coreList | If not empty, overrides the cpuCount and explicitly sets the list of cores. Example: --set='io_engine.coreList={30,31}' | `[]` |
 | io_engine.&ZeroWidthSpace;cpuCount | The number of cores that each io-engine instance will bind to. | `"2"` |
 | io_engine.&ZeroWidthSpace;envcontext | Pass additional arguments to the Environment Abstraction Layer. Example: --set {product}.envcontext=iova-mode=pa | `""` |

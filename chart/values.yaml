@@ -593,6 +593,11 @@ csi:
     port: 10199
 
 io_engine:
+  # -- Absolute host directory backing the io-engine config directory, which
+  # holds config.yaml and the ptpl state. It is created if absent; point it at
+  # durable storage if ptpl is enabled, as that state is meant to survive a
+  # power loss.
+  configPath: "/var/local/{{ .Release.Name }}/io-engine"
   # -- Log level for the io-engine service
   logLevel: info
   api: "v1"
