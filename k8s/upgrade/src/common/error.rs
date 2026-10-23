@@ -50,6 +50,20 @@ pub enum Error {
         rest_endpoint: Url,
     },
 
+    /// Error for when REST API client TLS/JWT material cannot be read.
+    #[snafu(display(
+        "Failed to read {} REST API client security (TLS/JWT) files: {source}",
+        product_train(),
+    ))]
+    RestClientSecurity { source: std::io::Error },
+
+    /// Error for when REST API client TLS/JWT settings cannot be discovered from the cluster.
+    #[snafu(display(
+        "Failed to discover {} REST API client security (TLS/JWT) from the api-rest pods: {source}",
+        product_train(),
+    ))]
+    RestClientSecurityDiscovery { source: kube_forward::Error },
+
     /// Error for when a Helm command fails.
     #[snafu(display(
         "Failed to run Helm command,\ncommand: {command},\nargs: {args:?},\ncommand_error: {source}",
@@ -240,6 +254,12 @@ pub enum Error {
         source: kube::Error,
         name: String,
         node: String,
+    },
+
+    /// Error for when listing storage nodes, waiting for rest to become ready.
+    #[snafu(display("Failed to wait for rest via list Nodes:: {source}"))]
+    WaitForRest {
+        source: openapi::tower::client::Error<openapi::models::RestJsonError>,
     },
 
     /// Error for when listing storage nodes fails.
@@ -692,6 +712,15 @@ pub enum Error {
 
     #[snafu(display("Failed to list resource in a paginated manner: {source}"))]
     FailedToListPaginated { source: kube::Error },
+
+    #[snafu(display(
+        "Failed to list Deployments with label '{label_selector}' in namespace '{namespace}': {source}"
+    ))]
+    ListDeployments {
+        source: kube::Error,
+        namespace: String,
+        label_selector: String,
+    },
 
     #[snafu(display("Failed to list resource metadata in a paginated manner: {source}"))]
     FailedToListMetadataPaginated { source: kube::Error },

@@ -1,6 +1,6 @@
 use clap::Parser;
 use std::path::PathBuf;
-use upgrade::common::constants::product_train;
+use upgrade::common::{constants::product_train, error::Result, rest_client::RestClientSet};
 use utils::{package_description, tracing_telemetry::FmtStyle, version_info_string};
 
 /// Validate input whose validation depends on other inputs.
@@ -12,8 +12,27 @@ pub(crate) mod validators;
 #[command(about = format!("Upgrades {}", product_train()), long_about = None)]
 pub(crate) struct CliArgs {
     /// This is the URL for the storage REST API server.
+    /// If not set, it is derived from the release name and the TLS mode discovered from the
+    /// api-rest pods.
     #[arg(short = 'e', long)]
-    rest_endpoint: String,
+    rest_endpoint: Option<String>,
+
+    /// Path to the TLS CA certificate bundle used to validate REST server certificates.
+    /// If not set, TLS settings are discovered from the api-rest pods.
+    #[arg(long)]
+    tls_ca_file: Option<PathBuf>,
+
+    /// Path to the client TLS certificate chain file (PEM) for mTLS.
+    #[arg(long, requires = "tls_key_file")]
+    tls_cert_file: Option<PathBuf>,
+
+    /// Path to the client TLS private key file (PEM) for mTLS.
+    #[arg(long, requires = "tls_cert_file")]
+    tls_key_file: Option<PathBuf>,
+
+    /// Path to a file containing the JWT bearer token for REST authentication.
+    #[arg(long)]
+    jwt: Option<PathBuf>,
 
     /// This is the Kubernetes Namespace for the Helm release.
     #[arg(short, long)]
@@ -71,9 +90,20 @@ pub(crate) struct CliArgs {
 }
 
 impl CliArgs {
-    /// This returns the URL to the storage REST API.
-    pub(crate) fn rest_endpoint(&self) -> String {
-        self.rest_endpoint.clone()
+    /// This builds the storage REST API client, discovering the current api-rest TLS/JWT
+    /// configuration from the cluster. Must be called at the point of use, as the configuration
+    /// may change across the helm upgrade.
+    pub(crate) async fn rest_client(&self) -> Result<RestClientSet> {
+        RestClientSet::discover(
+            &self.namespace,
+            &self.release_name,
+            self.rest_endpoint.clone(),
+            &self.jwt,
+            self.tls_ca_file.as_ref(),
+            self.tls_cert_file.as_ref(),
+            self.tls_key_file.as_ref(),
+        )
+        .await
     }
 
     /// This returns the Kubernetes Namespace for the Helm chart release.

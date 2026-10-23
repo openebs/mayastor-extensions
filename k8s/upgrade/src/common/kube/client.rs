@@ -3,12 +3,13 @@ use crate::common::{
     error::{
         ControllerRevisionDoesntHaveHashLabel, ControllerRevisionListEmpty,
         FailedToDeleteStatefulSet, FailedToListMetadataPaginated, FailedToListPaginated,
-        InvalidNoOfHelmConfigMaps, InvalidNoOfHelmSecrets, K8sClientGeneration, Result,
+        InvalidNoOfHelmConfigMaps, InvalidNoOfHelmSecrets, K8sClientGeneration, ListDeployments,
+        Result,
     },
 };
 use k8s_openapi::{
     api::{
-        apps::v1::{ControllerRevision, StatefulSet},
+        apps::v1::{ControllerRevision, Deployment, StatefulSet},
         core::v1::{ConfigMap, Namespace, Node, Pod, Secret},
     },
     apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition,
@@ -20,6 +21,7 @@ use kube::{
 };
 use serde::de::DeserializeOwned;
 use snafu::{ensure, ResultExt};
+use std::time::Duration;
 
 /// Generate a new kube::Client.
 pub async fn client() -> Result<Client> {
@@ -64,6 +66,45 @@ pub async fn secrets_api(namespace: &str) -> Result<Api<Secret>> {
 /// Generate the Configmap api client.
 pub async fn configmaps_api(namespace: &str) -> Result<Api<ConfigMap>> {
     Ok(Api::namespaced(client().await?, namespace))
+}
+
+/// Generate the Deployment api client.
+pub async fn deployments_api(namespace: &str) -> Result<Api<Deployment>> {
+    Ok(Api::namespaced(client().await?, namespace))
+}
+
+/// Wait until all Deployments matching the label selector have completed their rollout, i.e.
+/// the latest pod template has been observed and all replicas are updated and available, with
+/// no pods left over from a previous template.
+pub async fn wait_for_deployments_rollout(namespace: &str, label_selector: &str) -> Result<()> {
+    let api = deployments_api(namespace).await?;
+    let list_params = ListParams::default().labels(label_selector);
+    loop {
+        let deployments = api.list(&list_params).await.context(ListDeployments {
+            namespace: namespace.to_string(),
+            label_selector: label_selector.to_string(),
+        })?;
+        if deployments.items.iter().all(deployment_rolled_out) {
+            return Ok(());
+        }
+        tokio::time::sleep(Duration::from_secs(3)).await;
+    }
+}
+
+/// Equivalent to `kubectl rollout status` completion for a Deployment.
+fn deployment_rolled_out(deployment: &Deployment) -> bool {
+    let Some(status) = deployment.status.as_ref() else {
+        return false;
+    };
+    let replicas = deployment
+        .spec
+        .as_ref()
+        .and_then(|spec| spec.replicas)
+        .unwrap_or(1);
+    status.observed_generation == deployment.metadata.generation
+        && status.updated_replicas.unwrap_or(0) == replicas
+        && status.replicas.unwrap_or(0) == replicas
+        && status.available_replicas.unwrap_or(0) == replicas
 }
 
 async fn delete_sts(

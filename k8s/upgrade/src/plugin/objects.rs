@@ -131,7 +131,8 @@ pub(crate) fn upgrade_job_cluster_role(
             PolicyRule {
                 api_groups: Some(vec!["events.k8s.io"].into_vec()),
                 resources: Some(vec!["events"].into_vec()),
-                verbs: vec!["create"].into_vec(),
+                // The kube Recorder de-duplicates events by patching the existing event's series.
+                verbs: vec!["create", "patch"].into_vec(),
                 ..Default::default()
             },
             PolicyRule {
@@ -316,8 +317,9 @@ pub(crate) fn upgrade_job(
     fips: bool,
 ) -> Job {
     let helm_args_set = args.set.join(",");
+    // The REST endpoint and its TLS/JWT settings are discovered by the job itself, as they
+    // may change as part of the upgrade (e.g. when enabling TLS).
     let mut job_args: Vec<String> = vec![
-        format!("--rest-endpoint=http://{release_name}-api-rest:8081"),
         format!("--namespace={namespace}"),
         format!("--release-name={release_name}"),
         format!("--helm-args-set={helm_args_set}"),
