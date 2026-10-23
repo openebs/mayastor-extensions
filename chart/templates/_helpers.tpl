@@ -926,3 +926,38 @@ ipv4 → "0.0.0.0", ipv6 or both → "[::]" (brackets per RFC 3986, required by 
 [::]
 {{- end -}}
 {{- end -}}
+
+{{/*
+  Returns the given path with any trailing slash trimmed, failing the render
+  unless it is absolute -- which also catches an empty value, since a relative
+  or empty host path is either rejected by the API server or resolves somewhere
+  unintended. Takes a list of the path and the values key it came from, so the
+  message names the key:
+
+    {{ include "absolute_path_or_fail" (list $path "io_engine.configPath") }}
+*/}}
+{{- define "absolute_path_or_fail" -}}
+{{- $path := trimSuffix "/" (index . 0) -}}
+{{- $key := index . 1 -}}
+{{- if not (hasPrefix "/" $path) -}}
+{{- fail (printf "%s must be an absolute path, got %q" $key (index . 0)) -}}
+{{- end -}}
+{{- $path -}}
+{{- end -}}
+
+{{/*
+  Host directory backing the io-engine config directory. Falls back to the
+  default when unset, so that an upgrade which reuses the previous release's
+  values -- and therefore carries no value for this key -- still renders.
+*/}}
+{{- define "io_engine_host_config_path" -}}
+{{- $default := printf "/var/local/%s/io-engine" .Release.Name -}}
+{{- $path := tpl (default $default .Values.io_engine.configPath) . -}}
+{{- include "absolute_path_or_fail" (list $path "io_engine.configPath") -}}
+{{- end -}}
+
+{{/*
+  Where that directory is mounted inside the io-engine container. Fixed: the
+  container's own view does not need to vary with the host layout.
+*/}}
+{{- define "io_engine_container_config_path" -}}/var/local/io-engine{{- end -}}
