@@ -1,5 +1,5 @@
 use crate::{
-    client::grpc_client::{init_client, GrpcClient},
+    client::grpc_client::{init_client, GrpcClient, GrpcTls},
     error::ExporterError,
     node_status::NodeStatusClient,
     serve::metric_route,
@@ -58,6 +58,26 @@ struct Cli {
     /// Port for the io-engine gRPC server running on the same pod.
     #[clap(long, default_value_t = 10124)]
     grpc_port: u16,
+
+    /// Path to the CA certificate file used to verify the io-engine gRPC server.
+    #[clap(long)]
+    grpc_tls_ca_file: Option<PathBuf>,
+
+    /// Path to the client TLS certificate chain file (PEM) for io-engine gRPC mTLS.
+    #[clap(long, requires = "grpc_tls_key_file")]
+    grpc_tls_cert_file: Option<PathBuf>,
+
+    /// Path to the client TLS private key file (PEM) for io-engine gRPC mTLS.
+    #[clap(long, requires = "grpc_tls_cert_file")]
+    grpc_tls_key_file: Option<PathBuf>,
+
+    /// Use auto-TLS (encryption without certificate verification) for the
+    /// io-engine gRPC connection, matching the io-engine's `--grpc-auto-tls`.
+    #[clap(
+        long,
+        conflicts_with_all = ["grpc_tls_ca_file", "grpc_tls_cert_file", "grpc_tls_key_file"]
+    )]
+    grpc_auto_tls: bool,
 
     /// Formatting style to be used while logging.
     #[clap(default_value = FmtStyle::Pretty.as_ref(), short, long)]
@@ -132,7 +152,13 @@ async fn main() -> Result<(), ExporterError> {
         .init("metrics-exporter-io_engine");
 
     initialize_cache().await;
-    let client = init_client(args.grpc_port).await?;
+    let grpc_tls = GrpcTls::from_args(
+        args.grpc_auto_tls,
+        args.grpc_tls_ca_file.clone(),
+        args.grpc_tls_cert_file.clone(),
+        args.grpc_tls_key_file.clone(),
+    )?;
+    let client = init_client(args.grpc_port, grpc_tls).await?;
     // Initialize io engine gRPC client.
     GRPC_CLIENT
         .set(client)

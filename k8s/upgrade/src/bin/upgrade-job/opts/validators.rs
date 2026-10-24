@@ -225,9 +225,7 @@ pub(crate) async fn validate_namespace(ns: String) -> Result<()> {
 }
 
 /// This checks if the storage API is reachable and usable.
-pub(crate) async fn validate_rest_endpoint(rest_endpoint: String) -> Result<()> {
-    let rest_client = RestClientSet::new_with_url(rest_endpoint)?;
-
+pub(crate) async fn validate_rest_endpoint(rest_client: RestClientSet) -> Result<()> {
     rest_client
         .nodes_api()
         .get_nodes(None)

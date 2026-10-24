@@ -22,16 +22,13 @@ async fn main() -> Result<()> {
     print_package_info!();
     init_logging();
 
-    let opts = parse_cli_args().await.map_err(|error| {
+    let opts = parse_cli_args().await.inspect_err(|error| {
         error!(%error, "Failed to upgrade {}", product_train());
-        error
     })?;
-    opts.crypto.init_or_exit();
 
-    upgrade(&opts).await.map_err(|error| {
+    upgrade(&opts).await.inspect_err(|error| {
         error!(%error, "Failed to upgrade {}", product_train());
         flush_traces();
-        error
     })
 }
 
@@ -40,6 +37,7 @@ fn init_logging() {
     let tags = default_tracing_tags(raw_version_str(), env!("CARGO_PKG_VERSION"));
 
     let opts = CliArgs::parse();
+    opts.crypto.init_or_exit();
     TracingTelemetry::builder()
         .with_tracing_tags(tags)
         .with_style(opts.fmt_style())
@@ -53,7 +51,7 @@ pub(crate) async fn parse_cli_args() -> Result<CliArgs> {
     let opts = CliArgs::parse();
 
     validate_namespace(opts.namespace()).await?;
-    validate_rest_endpoint(opts.rest_endpoint()).await?;
+    validate_rest_endpoint(opts.rest_client().await?).await?;
 
     validate_helmv3_in_path()?;
     validate_helm_release(opts.release_name(), opts.namespace())?;
