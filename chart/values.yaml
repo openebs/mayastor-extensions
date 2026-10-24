@@ -34,9 +34,9 @@ image:
     #       release/pre-release container image tags.
     #       The below tag values will be picked for images by default.
     #       If not specified, 'tag' option provided above will be picked.
-    controlPlane: "ba93331c87ae"
-    dataPlane: "036bc22a21f0"
-    extensions: "f8cee66390a9"
+    controlPlane: "540c307de83f"
+    dataPlane: "1e796a58e1e5"
+    extensions: "43ca2b85ca75"
   # -- ImagePullPolicy for our images
   pullPolicy: IfNotPresent
   # -- docker-secrets required to pull images if the container registry from image.registry is protected
@@ -126,7 +126,7 @@ earlyEvictionTolerations:
 # -- Tolerations to be applied to all components except external Chart dependencies.
 # If any component has tolerations set, then it would override this value.
 # For external components like etcd, jaeger and loki, tolerations can only be set at component level.
-tolerations: [ ]
+tolerations: []
 # -- IP family for services and bind addresses. Valid values: "ipv4", "ipv6", "both".
 ipFamily: "both"
 
