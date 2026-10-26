@@ -22,7 +22,7 @@ let
   # than threaded through from a build argument nothing would ever set.
   release = "1";
   tag = if img_tag != "" then img_tag else extensions.version;
-  build-extensions-image = { pname, buildType, package, description, summary ? description, extraCommands ? '''', fakeRootCommands ? '''', copyToRoot ? [ ], config ? { } }:
+  build-extensions-image = { pname, buildType, package, description, summary ? description, extraCommands ? '''', fakeRootCommands ? '''', copyToRoot ? [ ], config ? { }, user ? null }:
     dockerTools.buildLayeredImage {
       inherit fakeRootCommands tag;
       enableFakechroot = fakeRootCommands != "";
@@ -45,11 +45,13 @@ let
           name = "${img_prefix}-${pname}${image_suffix.${buildType}}";
           version = tag;
         };
+      } // lib.optionalAttrs (user != null) {
+        User = user;
       } // config;
     };
-  build-exporter-image = { buildType }: {
+  build-exporter-image = { buildType, user ? null }: {
     io-engine = build-extensions-image rec {
-      inherit buildType;
+      inherit buildType user;
       package = extensions.${buildType}.metrics.exporter.io-engine;
       pname = package.pname;
       description = "Mayastor metrics exporter - collects io-engine metrics over gRPC and serves them in Prometheus format.";
@@ -111,16 +113,16 @@ let
         Env = [ "CORE_CHART_DIR=/chart" ];
       };
     };
-  build-events-image = { buildType, name }:
+  build-events-image = { buildType, name, user ? null }:
     build-extensions-image rec{
-      inherit buildType;
+      inherit buildType user;
       package = extensions.${buildType}.eventing.${name};
       pname = package.pname;
       description = "Mayastor eventing aggregator - consumes events from NATS and exports them to Loki or local files.";
     };
-  build-obs-callhome-image = { buildType }:
+  build-obs-callhome-image = { buildType, user ? null }:
     build-extensions-image rec{
-      inherit buildType;
+      inherit buildType user;
       package = extensions.${buildType}.obs.callhome;
       description = "Mayastor call-home agent - collects and encrypts anonymised usage telemetry for reporting.";
       copyToRoot = [ ./../../../call-home/assets busybox gnupg ];
@@ -133,9 +135,9 @@ let
       };
     };
 
-  build-obs-callhome-stats-image = { buildType }:
+  build-obs-callhome-stats-image = { buildType, user ? null }:
     build-extensions-image rec{
-      inherit buildType;
+      inherit buildType user;
       package = extensions.${buildType}.obs.stats;
       pname = package.pname;
       description = "Mayastor call-home stats - serves aggregated call-home statistics over HTTP.";
@@ -151,6 +153,7 @@ let
   build-exporter-images = { buildType }: {
     exporter = build-exporter-image {
       inherit buildType;
+      user = "65534:65534";
     };
   };
   build-upgrade-images = { buildType }: {
@@ -163,16 +166,19 @@ let
     aggregator = build-events-image {
       inherit buildType;
       name = "aggregator";
+      user = "65534:65534";
     };
   };
   build-obs-images = { buildType }: {
     callhome = build-obs-callhome-image {
       inherit buildType;
+      user = "65534:65534";
     };
   };
   build-stats-images = { buildType }: {
     aggregator = build-obs-callhome-stats-image {
       inherit buildType;
+      user = "65534:65534";
     };
   };
 in
