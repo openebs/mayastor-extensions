@@ -263,4 +263,19 @@ impl GrpcClient {
         }?;
         Ok(ReplicaIoStats { replica_stats })
     }
+
+    /// Gets SMART data of all the pools on the io engine.
+    pub(crate) async fn list_pools_smart(
+        &self,
+    ) -> Result<Vec<rpc::v1::pool::PoolSmart>, ExporterError> {
+        match self
+            .client_v1()?
+            .pool
+            .list_pools_smart(rpc::v1::pool::ListPoolsSmartOptions::default())
+            .await
+        {
+            Ok(response) => Ok(response.into_inner().pools),
+            Err(error) => Err(ExporterError::GrpcResponseError(error.to_string())),
+        }
+    }
 }

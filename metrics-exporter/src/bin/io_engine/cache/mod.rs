@@ -2,10 +2,11 @@ mod nexus_stat;
 mod pool;
 mod pool_stat;
 mod replica_stat;
+mod smart;
 
 use crate::client::{
     grpc_client::GrpcClient, nexus_stat::NexusIoStats, pool::Pools, pool_stat::PoolIoStats,
-    replica_stat::ReplicaIoStats,
+    replica_stat::ReplicaIoStats, smart::PoolsSmart,
 };
 use once_cell::sync::OnceCell;
 use std::sync::Mutex;
@@ -36,6 +37,8 @@ pub(crate) struct Data {
     nexus_stats: NexusIoStats,
     /// Contains Replica IOStats data.
     replica_stats: ReplicaIoStats,
+    /// Contains Pool SMART data.
+    pools_smart: PoolsSmart,
 }
 
 impl Cache {
@@ -84,6 +87,16 @@ impl Cache {
         &self.data.replica_stats
     }
 
+    /// Get a reference to PoolsSmart.
+    pub(crate) fn pools_smart(&self) -> &PoolsSmart {
+        &self.data.pools_smart
+    }
+
+    /// Get mutable reference to PoolsSmart.
+    pub(crate) fn pools_smart_mut(&mut self) -> &mut PoolsSmart {
+        &mut self.data.pools_smart
+    }
+
     /// Get mutable reference to ReplicaIOStats.
     pub(crate) fn replica_iostat_mut(&mut self) -> &mut ReplicaIoStats {
         &mut self.data.replica_stats
@@ -108,6 +121,7 @@ impl Data {
             replica_stats: ReplicaIoStats {
                 replica_stats: vec![],
             },
+            pools_smart: PoolsSmart::default(),
         }
     }
 }
@@ -118,4 +132,5 @@ pub(crate) async fn store_resource_data(client: &GrpcClient) {
     let _ = pool_stat::store_pool_stats_data(client).await;
     let _ = nexus_stat::store_nexus_stats_data(client).await;
     let _ = replica_stat::store_replica_stats_data(client).await;
+    let _ = smart::store_pools_smart_data(client).await;
 }
