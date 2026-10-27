@@ -22,6 +22,7 @@ const EVENTS_CONTAINER: &str = "eventing-aggregator";
 const EVENTS_LABEL_SELECTOR: &str = "app=eventing-aggregator";
 const MBUS_EVENT_TYPE: &str = "mbus_event";
 const DEFAULT_LIMIT: usize = 1000;
+const DEFAULT_TENANT_ID: &str = "openebs";
 const EVENTS_VOLUME_DIR: &str = "/var/events";
 const NATS_STREAM: &str = "events-stream";
 
@@ -88,9 +89,10 @@ pub struct EventsArgs {
     #[arg(long, default_value_t = DEFAULT_LIMIT)]
     limit: usize,
 
-    /// Loki tenant ID / X-Scope-OrgID header (loki source only).
-    #[arg(long, default_value = "openebs")]
-    tenant_id: String,
+    /// Loki tenant ID / X-Scope-OrgID header (loki source only).{n}
+    /// Defaults to the product's default value.
+    #[arg(long)]
+    pub tenant_id: Option<String>,
 
     /// Read events from a local NDJSON file (e.g. extracted from a system dump archive){n}
     /// instead of querying a live cluster. All other filters work normally.
@@ -334,7 +336,9 @@ impl EventsArgs {
             namespace.to_string(),
             self.since,
             timeout,
-            self.tenant_id.clone(),
+            self.tenant_id
+                .clone()
+                .unwrap_or_else(|| DEFAULT_TENANT_ID.to_string()),
             true,
         )
         .await;
