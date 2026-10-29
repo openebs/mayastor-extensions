@@ -593,6 +593,13 @@ csi:
     port: 10199
 
 io_engine:
+  # -- Absolute path of the io-engine config directory, which holds config.yaml
+  # and the ptpl state. It is used both as the host directory and as the mount
+  # path inside the io-engine container, so an absolute path under it resolves
+  # to the same file on either side. It is created if absent; point it at
+  # durable storage if ptpl is enabled, as that state is meant to survive a
+  # power loss.
+  configPath: "/var/local/{{ .Release.Name }}/io-engine"
   # -- Log level for the io-engine service
   logLevel: info
   api: "v1"
