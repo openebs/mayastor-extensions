@@ -26,6 +26,11 @@ spec:
         {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
         {{ include "label_prefix" . }}/logging: "true"
     spec:
+      # Neither this workload nor its init containers call the Kubernetes API,
+      # so no token is projected. Left on the namespace's default
+      # ServiceAccount deliberately: the chart's own ServiceAccount carries
+      # cluster-scoped permissions this workload does not need.
+      automountServiceAccountToken: false
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:

@@ -28,6 +28,11 @@ spec:
         openebs.io/rest-tls: {{ include "rest_api_tls_annotation" . }}
       {{- end }}
     spec:
+      # Neither this workload nor its init containers call the Kubernetes API,
+      # so no token is projected. Left on the namespace's default
+      # ServiceAccount deliberately: the chart's own ServiceAccount carries
+      # cluster-scoped permissions this workload does not need.
+      automountServiceAccountToken: false
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
       initContainers:
