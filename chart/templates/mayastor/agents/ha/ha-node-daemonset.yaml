@@ -26,6 +26,8 @@ spec:
         {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
         {{ include "label_prefix" . }}/logging: "true"
     spec:
+      # Neither this workload nor its init containers call the Kubernetes API so no token is projected.
+      automountServiceAccountToken: false
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
