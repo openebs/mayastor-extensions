@@ -610,7 +610,13 @@ io_engine:
       # configured from RNIC.
       rdma:
         enabled: false
-      # -- NVMF target interface (ip, mac, name or subnet)
+      # -- NVMF target interface, given as `name:<interface>` or
+      # `subnet:<cidr>` -- for example `name:eth0` or `subnet:10.0.0.0/24`. A
+      # value carrying no prefix is matched as an interface name, so an
+      # unprefixed CIDR matches nothing and io-engine fails to start with
+      # `Network interface matching '<value>' not found`.
+      # The same value is used by every io-engine pod, so it has to resolve on
+      # every node.
       # If RDMA is enabled, please set iface to an RDMA
       # capable netdev name from host network. Example, if an rdma device mlx5_0 is
       # available on a netdev eth0 on RNIC, as can be seen from `rdma link` command output,
