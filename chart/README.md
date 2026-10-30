@@ -147,6 +147,50 @@ With mutual TLS, also supply a secret for each client:
 
 Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 
+## StorageClass Annotations
+
+Each StorageClass the chart creates takes an `annotations` map, for clusters
+whose admission webhook or policy engine requires annotations on a StorageClass:
+
+```yaml
+storageClass:
+  annotations: {}
+etcd:
+  localpvScConfig:
+    annotations: {}
+loki:
+  localpvScConfig:
+    loki:
+      annotations: {}
+    minio:
+      annotations: {}
+```
+
+With `--set`, escape the dots in the annotation key. Slashes need no escaping,
+and the key goes in the path, not the value:
+
+```console
+helm install ... \
+  --set 'storageClass.annotations.example\.io/team=platform' \
+  --set 'storageClass.annotations.example\.io/tier=gold'
+```
+
+Use a values file for any value containing `{`, `}` or `,`. Helm's `--set`
+parses braces as a list literal, so a JSON value is silently rewritten rather
+than rejected:
+
+```yaml
+storageClass:
+  annotations:
+    example.io/modes: '{"Block":["ReadWriteMany","ReadWriteOnce"]}'
+```
+
+Values are quoted when rendered, since Kubernetes requires annotations to be
+strings. The localpv StorageClasses reserve `cas.openebs.io/config` and
+`openebs.io/cas-type`, which carry their provisioner configuration; setting
+either through `annotations` fails the render rather than overwriting it. Use
+the matching `basePath` value instead.
+
 ## Chart Dependencies
 
 | Repository | Name | Version |
@@ -293,6 +337,7 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | etcd.&ZeroWidthSpace;enabled | Disable when using an external etcd cluster. | `true` |
 | etcd.&ZeroWidthSpace;externalUrl | Url of the external etcd cluster. Note, etcd.enable must be set to false. | `""` |
 | etcd.&ZeroWidthSpace;extraEnvVars[0] | Raise alarms when backend size exceeds the given quota. | <pre>{<br>"name":"ETCD_QUOTA_BACKEND_BYTES",<br>"value":"8589934592"<br>}</pre> |
+| etcd.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;annotations | Additional annotations for etcd's localpv hostpath storage class. | <pre>{<br><br>}</pre> |
 | etcd.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;basePath | Host path where local etcd data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/etcd"` |
 | etcd.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of etcd's localpv hostpath storage class. | `"Delete"` |
 | etcd.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;volumeBindingMode | VolumeBindingMode of etcd's localpv hostpath storage class. | `"WaitForFirstConsumer"` |
@@ -324,6 +369,7 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | image.&ZeroWidthSpace;registry | Image registry to pull our product images | `"docker.io"` |
 | image.&ZeroWidthSpace;repo | Image registry's namespace | `"openebs"` |
 | image.&ZeroWidthSpace;tag | Release tag for our images | `"develop"` |
+| io_engine.&ZeroWidthSpace;configPath | Absolute path of the io-engine config directory, which holds config.yaml and the ptpl state. It is used both as the host directory and as the mount path inside the io-engine container, so an absolute path under it resolves to the same file on either side. It is created if absent; point it at durable storage if ptpl is enabled, as that state is meant to survive a power loss. | `"/var/local/{{ .Release.Name }}/io-engine"` |
 | io_engine.&ZeroWidthSpace;coreList | If not empty, overrides the cpuCount and explicitly sets the list of cores. Example: --set='io_engine.coreList={30,31}' | `[]` |
 | io_engine.&ZeroWidthSpace;cpuCount | The number of cores that each io-engine instance will bind to. | `"2"` |
 | io_engine.&ZeroWidthSpace;envcontext | Pass additional arguments to the Environment Abstraction Layer. Example: --set {product}.envcontext=iova-mode=pa | `""` |
@@ -373,9 +419,11 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | localpv-provisioner.&ZeroWidthSpace;enabled | Enables the openebs dynamic-localpv-provisioner. If disabled, modify etcd and loki storage class accordingly. | `true` |
 | localpv-provisioner.&ZeroWidthSpace;hostpathClass.&ZeroWidthSpace;enabled | Enable default hostpath localpv StorageClass. | `false` |
 | localpv-provisioner.&ZeroWidthSpace;localpv.&ZeroWidthSpace;priorityClassName | Set the PriorityClass for the LocalPV Hostpath provisioner Deployment. | `"{{ .Release.Name }}-cluster-critical"` |
+| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;loki.&ZeroWidthSpace;annotations | Additional annotations for loki's localpv hostpath storage class. | <pre>{<br><br>}</pre> |
 | loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;loki.&ZeroWidthSpace;basePath | Host path where local loki data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/loki"` |
 | loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;loki.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of loki's localpv hostpath storage class. | `"Delete"` |
 | loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;loki.&ZeroWidthSpace;volumeBindingMode | VolumeBindingMode of loki's localpv hostpath storage class. | `"WaitForFirstConsumer"` |
+| loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;annotations | Additional annotations for minio's localpv hostpath storage class. | <pre>{<br><br>}</pre> |
 | loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;basePath | Host path where local minio data is stored in. | `"/var/local/{{ .Release.Name }}/localpv-hostpath/minio"` |
 | loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;reclaimPolicy | ReclaimPolicy of minio's localpv hostpath storage class. | `"Delete"` |
 | loki.&ZeroWidthSpace;localpvScConfig.&ZeroWidthSpace;minio.&ZeroWidthSpace;volumeBindingMode | VolumeBindingMode of minio's localpv hostpath storage class. | `"WaitForFirstConsumer"` |
@@ -430,5 +478,6 @@ Each Secret must contain `tls.crt`, `tls.key`, and `ca.crt` keys.
 | security.&ZeroWidthSpace;tls.&ZeroWidthSpace;grpc.&ZeroWidthSpace;existingSecret | Pre-existing TLS Secret for gRPC, used when tls.autoGenerated.enabled is false. Must contain tls.crt, tls.key, and ca.crt. | `""` |
 | security.&ZeroWidthSpace;tls.&ZeroWidthSpace;mutualAuth | Default: enable mutual TLS (clients verify the server and present their own certificate). Can be overridden per service (e.g. apis.rest.security.tls.mutualAuth). Has no effect when engine=pod, which uses server-only transient TLS. | `false` |
 | storageClass.&ZeroWidthSpace;allowVolumeExpansion | Enable volume expansion for the default StorageClass. | `true` |
+| storageClass.&ZeroWidthSpace;annotations | Additional annotations for the default StorageClass. Some clusters run an admission webhook that requires annotations on every StorageClass. | <pre>{<br><br>}</pre> |
 | tolerations | Tolerations to be applied to all components except external Chart dependencies. If any component has tolerations set, then it would override this value. For external components like etcd, jaeger and loki, tolerations can only be set at component level. | `[]` |
 

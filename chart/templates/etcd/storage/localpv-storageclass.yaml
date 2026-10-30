@@ -9,6 +9,12 @@ metadata:
       - name: BasePath
         value: {{ tpl (.Values.etcd.localpvScConfig.basePath | quote) . }}
     openebs.io/cas-type: local
+    {{- range $key, $value := .Values.etcd.localpvScConfig.annotations }}
+    {{- if has $key (list "cas.openebs.io/config" "openebs.io/cas-type") }}
+    {{- fail (printf "etcd.localpvScConfig.annotations may not override the %s annotation; use basePath instead" $key) }}
+    {{- end }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
   name: {{ (tpl (.Values.etcd.localpvScConfig.name) .) | required (print "StorageClass name for etcd localpv storage cannot be empty") }}
 provisioner: openebs.io/local
 reclaimPolicy: {{ .Values.etcd.localpvScConfig.reclaimPolicy }}

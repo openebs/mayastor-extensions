@@ -926,3 +926,35 @@ ipv4 → "0.0.0.0", ipv6 or both → "[::]" (brackets per RFC 3986, required by 
 [::]
 {{- end -}}
 {{- end -}}
+
+{{/*
+  Returns the given path with any trailing slash trimmed, failing the render
+  unless it is absolute -- which also catches an empty value, since a relative
+  or empty host path is either rejected by the API server or resolves somewhere
+  unintended. Takes a list of the path and the values key it came from, so the
+  message names the key:
+
+    {{ include "absolute_path_or_fail" (list $path "io_engine.configPath") }}
+*/}}
+{{- define "absolute_path_or_fail" -}}
+{{- $path := trimSuffix "/" (index . 0) -}}
+{{- $key := index . 1 -}}
+{{- if not (hasPrefix "/" $path) -}}
+{{- fail (printf "%s must be an absolute path, got %q" $key (index . 0)) -}}
+{{- end -}}
+{{- $path -}}
+{{- end -}}
+
+{{/*
+  The io-engine config directory, which holds config.yaml and the ptpl state.
+  The same path is used for the host directory and for the mount inside the
+  io-engine container, so that an absolute path under it -- a file-backed pool,
+  say -- resolves to the same file on either side. Falls back to the default
+  when unset, so that an upgrade which reuses the previous release's values --
+  and therefore carries no value for this key -- still renders.
+*/}}
+{{- define "io_engine_host_config_path" -}}
+{{- $default := printf "/var/local/%s/io-engine" .Release.Name -}}
+{{- $path := tpl (default $default .Values.io_engine.configPath) . -}}
+{{- include "absolute_path_or_fail" (list $path "io_engine.configPath") -}}
+{{- end -}}

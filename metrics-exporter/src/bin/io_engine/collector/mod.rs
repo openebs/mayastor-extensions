@@ -8,6 +8,7 @@ pub(crate) mod node_status;
 pub(crate) mod pool;
 pub(crate) mod pool_stat;
 pub(crate) mod replica_stat;
+pub(crate) mod smart;
 
 /// Initializes a GaugeVec metric for diskpool with the provided metric name, description and
 /// descriptors.

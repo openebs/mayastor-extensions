@@ -6,6 +6,7 @@ use crate::{
         pool::{PoolAlertCollector, PoolCapacityCollector, PoolStatusCollector},
         pool_stat::PoolIoStatsCollector,
         replica_stat::ReplicaIoStatsCollector,
+        smart::SmartCollector,
     },
     grpc_client, node_name, node_status_client,
 };
@@ -38,6 +39,7 @@ pub(crate) async fn metrics_handler() -> impl Responder {
     let nexus_iostat_collector = NexusIoStatsCollector::default();
     let replica_iostat_collector = ReplicaIoStatsCollector::default();
     let node_status_collector = NodeStatusCollector::new(node);
+    let smart_collector = SmartCollector::default();
     // Create a new registry for prometheus.
     let registry = Registry::default();
     // Register all collectors to the registry.
@@ -61,6 +63,9 @@ pub(crate) async fn metrics_handler() -> impl Responder {
     }
     if let Err(error) = Registry::register(&registry, Box::new(node_status_collector)) {
         warn!(%error, "Node status collector already registered");
+    }
+    if let Err(error) = Registry::register(&registry, Box::new(smart_collector)) {
+        warn!(%error, "Smart collector already registered");
     }
 
     let mut buffer = Vec::new();

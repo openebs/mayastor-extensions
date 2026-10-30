@@ -591,6 +591,13 @@ csi:
     port: 10199
 
 io_engine:
+  # -- Absolute path of the io-engine config directory, which holds config.yaml
+  # and the ptpl state. It is used both as the host directory and as the mount
+  # path inside the io-engine container, so an absolute path under it resolves
+  # to the same file on either side. It is created if absent; point it at
+  # durable storage if ptpl is enabled, as that state is meant to survive a
+  # power loss.
+  configPath: "/var/local/{{ .Release.Name }}/io-engine"
   # -- Log level for the io-engine service
   logLevel: info
   api: "v1"
@@ -761,6 +768,8 @@ etcd:
     reclaimPolicy: Delete
     # -- VolumeBindingMode of etcd's localpv hostpath storage class.
     volumeBindingMode: WaitForFirstConsumer
+    # -- Additional annotations for etcd's localpv hostpath storage class.
+    annotations: {}
   # Pod labels; okay to remove the openebs logging label if required
   podLabels:
     app: etcd
@@ -870,6 +879,8 @@ loki:
       reclaimPolicy: Delete
       # -- VolumeBindingMode of loki's localpv hostpath storage class.
       volumeBindingMode: WaitForFirstConsumer
+      # -- Additional annotations for loki's localpv hostpath storage class.
+      annotations: {}
     minio:
       # Name of minio's localpv hostpath storage class.
       name: "mayastor-minio-localpv"
@@ -879,6 +890,8 @@ loki:
       reclaimPolicy: Delete
       # -- VolumeBindingMode of minio's localpv hostpath storage class.
       volumeBindingMode: WaitForFirstConsumer
+      # -- Additional annotations for minio's localpv hostpath storage class.
+      annotations: {}
   loki:
     serviceLabels:
       app: loki
@@ -1272,6 +1285,9 @@ storageClass:
   default: false
   # -- Enable volume expansion for the default StorageClass.
   allowVolumeExpansion: true
+  # -- Additional annotations for the default StorageClass. Some clusters run an
+  # admission webhook that requires annotations on every StorageClass.
+  annotations: {}
   parameters:
     protocol: nvmf
     repl: 1
