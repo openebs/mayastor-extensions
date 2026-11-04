@@ -161,6 +161,8 @@ spec:
           mountPath: /dev/hugepages-2mi
         - name: kubelet-dir
           mountPath: /var/lib/kubelet
+          mountPropagation: HostToContainer
+          readOnly: true
         {{- include "grpc_tls_volume_mount" . | nindent 8 }}
         {{- if .Values.io_engine.resources.requests.hugepages1Gi }}
         - name: hugepages-1gi
