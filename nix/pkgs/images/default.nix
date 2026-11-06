@@ -22,7 +22,10 @@ let
   # than threaded through from a build argument nothing would ever set.
   release = "1";
   tag = if img_tag != "" then img_tag else extensions.version;
-  build-extensions-image = { pname, buildType, package, description, summary ? description, extraCommands ? '''', fakeRootCommands ? '''', copyToRoot ? [ ], config ? { } }:
+  # Images run as an unprivileged uid unless an image opts out with
+  # `user = null`, which leaves User unset and so runs as root.
+  nonroot-user = "65534:65534";
+  build-extensions-image = { pname, buildType, package, description, summary ? description, extraCommands ? '''', fakeRootCommands ? '''', copyToRoot ? [ ], config ? { }, user ? nonroot-user }:
     dockerTools.buildLayeredImage {
       inherit fakeRootCommands tag;
       enableFakechroot = fakeRootCommands != "";
@@ -45,6 +48,8 @@ let
           name = "${img_prefix}-${pname}${image_suffix.${buildType}}";
           version = tag;
         };
+      } // lib.optionalAttrs (user != null) {
+        User = user;
       } // config;
     };
   build-exporter-image = { buildType }: {
@@ -103,6 +108,14 @@ let
       package = extensions.${buildType}.upgrade.${name};
       description = "Mayastor upgrade job - performs in-cluster Helm upgrades of the Mayastor release.";
       copyToRoot = [ kubernetes-helm-wrapped busybox tagged_helm_chart yq-go ];
+      # The job rewrites chart values through `yq -i`, which writes to a temp
+      # file before moving it into place. Go resolves that to /tmp, which the
+      # image would not otherwise have and an unprivileged uid cannot create
+      # at /.
+      extraCommands = ''
+        mkdir -p tmp
+        chmod 1777 tmp
+      '';
       fakeRootCommands = ''
         chmod -R 0777 /chart
       '';
