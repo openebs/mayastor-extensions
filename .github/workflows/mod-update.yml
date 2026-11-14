@@ -21,6 +21,10 @@ jobs:
         run: |
           ./scripts/git/set-submodule-branches.sh -u
 
+      # Submodule crates are path dependencies, so their Cargo.toml changes may need Cargo.lock updates
+      - name: Update Cargo.lock
+        run: nix-shell nix/shells/rust.nix --run "cargo metadata --format-version 1 >/dev/null"
+
       - id: set-target
         run: |
           version=$(nix-shell -p yq-go --run "yq '.appVersion' chart/Chart.yaml")
