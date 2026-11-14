@@ -1,9 +1,6 @@
 { norust ? false, devrustup ? true, rust-profile ? "stable" }:
 let
-  sources = import ./nix/sources.nix;
-  pkgs = import sources.nixpkgs {
-    overlays = [ (_: _: { inherit sources; }) (import ./nix/overlay.nix { }) (import sources.rust-overlay) ];
-  };
+  pkgs = import ./nix/pkgs.nix;
   lib = pkgs.lib;
 in
 let
@@ -11,14 +8,9 @@ let
     "You have requested an environment without rust, you should provide it!";
   devrustup_moth =
     "You have requested an environment for rustup, you should provide it!";
-  channel = import ./nix/lib/rust.nix { inherit pkgs; };
-  rust_chan = channel.default_src;
-  rust = rust_chan.${rust-profile}.overrideAttrs (oldAttrs: {
-    # don't propagate any build inputs - this allows us to set cc in stdenv below
-    propagatedBuildInputs = [ ];
-    depsHostHostPropagated = [ pkgs.clang ];
-    depsTargetTargetPropagated = [ ];
-  });
+  rust-shell = import ./nix/shells/rust.nix { inherit pkgs rust-profile; cc = pkgs.clang; };
+  build-shell = import ./nix/shells/build.nix { inherit pkgs; };
+  rust = rust-shell.rust;
   usePreCommit = builtins.getEnv "IN_NIX_SHELL" == "impure" && builtins.getEnv "CI" != "1";
   pre-commit = pkgs.runCommand "pre-commit" { } ''
     mkdir -p $out/bin
@@ -31,32 +23,20 @@ let
     cacert
     cargo-expand
     cargo-udeps
-    clang
-    # aws-lc-rs fips
-    cmake
-    go
-    perl
     commitlint
     coreutils
     cowsay
-    git
     jq
-    llvmPackages.libclang
     niv
     nixpkgs-fmt
-    paperclip
-    pkg-config
     utillinux
   ] ++ pkgs.lib.optional (usePreCommit) pre-commit;
 in
 pkgs.mkShellNoCC {
   name = "extensions-shell";
-  buildInputs = buildInputs ++ pkgs.lib.optional (!norust) rust
-    ++ k8sShellAttrs.buildInputs ++ helmShellAttrs.buildInputs ++ bddShellAttrs.buildInputs
-    ++ pkgs.lib.optional (pkgs.system == "aarch64-darwin") pkgs.darwin.apple_sdk.frameworks.Security;
-
-  PROTOC = "${pkgs.protobuf}/bin/protoc";
-  PROTOC_INCLUDE = "${pkgs.protobuf}/include";
+  inputsFrom = [ build-shell ] ++ pkgs.lib.optional (!norust) rust-shell;
+  buildInputs = buildInputs
+    ++ k8sShellAttrs.buildInputs ++ helmShellAttrs.buildInputs ++ bddShellAttrs.buildInputs;
 
   # using the nix rust toolchain
   USE_NIX_RUST = "${toString (!norust)}";
@@ -89,7 +69,5 @@ pkgs.mkShellNoCC {
 
     rust_version="${rust.version}" rustup_channel="${lib.strings.concatMapStringsSep "-" (x: x) (lib.lists.drop 1 (lib.strings.splitString "-" rust.version))}" \
     dev_rustup="${toString (devrustup)}" devrustup_moth="${devrustup_moth}" . "$CTRL_SRC"/scripts/rust/env-setup.sh
-    unset CC
-    unset AR
   '';
 }

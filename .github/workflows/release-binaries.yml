@@ -53,7 +53,7 @@ jobs:
             git fetch -f origin ${{ github.ref }}:${{ github.ref }}
           fi
 
-      - uses: ./.github/actions/setup-nix
+      - uses: ./dependencies/control-plane/utils/dependencies/.github/actions/setup-nix
       - run: |
           TAG_ARG=""
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then

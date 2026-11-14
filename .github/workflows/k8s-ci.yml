@@ -29,9 +29,9 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-      - uses: ./.github/actions/setup-nix
+      - uses: ./dependencies/control-plane/utils/dependencies/.github/actions/setup-nix
         with:
-          preFetchNix: ./scripts/k8s/shell.nix,./scripts/helm/shell.nix,./scripts/python/shell.nix
+          pre-fetch-nix: ./scripts/k8s/shell.nix,./scripts/helm/shell.nix,./scripts/python/shell.nix
       - name: Login to Docker Hub
         env:
           has_username: ${{ secrets.DOCKERHUB_USERNAME != '' }}
@@ -53,8 +53,7 @@ jobs:
         run: nix-shell ./scripts/python/shell.nix --run "./scripts/python/upgrade-test-helper.sh --build --chart-tag --chart ./chart"
       - name: BootStrap k8s cluster
         run: |
-          sudo debconf-communicate <<< "set man-db/auto-update false" || true
-          sudo dpkg-reconfigure man-db || true
+          sudo ./dependencies/control-plane/utils/dependencies/scripts/prereq.sh --nvme-tcp --hugepages 1800
           nix-shell ./scripts/k8s/shell.nix --run "./scripts/k8s/deployer.sh start --label"
       - name: Load images to kind cluster
         if: ${{ !inputs.helm-pins }}

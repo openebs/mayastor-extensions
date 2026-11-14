@@ -8,9 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup-nix
         with:
-          preFetchNix: ./scripts/helm/shell.nix
+          submodules: recursive
+      - uses: ./dependencies/control-plane/utils/dependencies/.github/actions/setup-nix
+        with:
+          pre-fetch-nix: ./scripts/helm/shell.nix
       - name: Check if the chart is publishable
         run: |
           branch="${{ github.ref_name }}"
@@ -42,19 +44,19 @@ jobs:
           branch: "prepare-${{ github.ref_name }}"
           token: ${{ secrets.CI_BOT_1_RAISE_PRS }}
       - name: Approve Pull Request by CI Bot
-        if: ${{ steps.cpr.outputs.pull-request-number }}
+        if: ${{ steps.cpr.outputs.pull-request-operation == 'created' }}
         run: |
           gh pr review ${{ steps.cpr.outputs.pull-request-number }} --approve
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Approve Pull Request by CI User 2
-        if: ${{ steps.cpr.outputs.pull-request-number }}
+        if: ${{ steps.cpr.outputs.pull-request-operation == 'created' }}
         run: |
           gh pr review ${{ steps.cpr.outputs.pull-request-number }} --approve
         env:
           GH_TOKEN: ${{ secrets.CI_BOT_2_RAISE_PRS }}
       - name: Queue Pull Request
-        if: ${{ steps.cpr.outputs.pull-request-number }}
+        if: ${{ steps.cpr.outputs.pull-request-operation == 'created' }}
         run: |
           gh pr comment ${{ steps.cpr.outputs.pull-request-number }} --body "@mergify queue"
         env:
