@@ -21,10 +21,10 @@ jobs:
         with:
           fetch-depth: 0
           submodules: 'recursive'
-      - uses: ./.github/actions/setup-nix
+      - uses: ./dependencies/control-plane/utils/dependencies/.github/actions/setup-nix
         with:
-          preFetchNix: ./shell.nix
-          rustCache: true
+          pre-fetch-nix: ./shell.nix
+          rust-cache: true
       - name: Build the binaries
         run: nix-shell --run "cargo build --bins"
       - name: Build the tests

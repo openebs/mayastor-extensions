@@ -16,7 +16,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-      - uses: ./.github/actions/setup-nix
+      - uses: ./dependencies/control-plane/utils/dependencies/.github/actions/setup-nix
       - name: Update submodules
         run: |
           ./scripts/git/set-submodule-branches.sh -u

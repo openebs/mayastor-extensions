@@ -19,9 +19,9 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 0
 
-      - uses: ./.github/actions/setup-nix
+      - uses: ./dependencies/control-plane/utils/dependencies/.github/actions/setup-nix
         with:
-          preFetchNix: shell.nix,./chart/shell.nix
+          pre-fetch-nix: shell.nix,./chart/shell.nix
 
       - name: Helm dependency update
         working-directory: chart
@@ -63,9 +63,9 @@ jobs:
           submodules: 'recursive'
           fetch-depth: 0
 
-      - uses: ./.github/actions/setup-nix
+      - uses: ./dependencies/control-plane/utils/dependencies/.github/actions/setup-nix
         with:
-          preFetchNix: ./scripts/helm/shell.nix
+          pre-fetch-nix: ./scripts/helm/shell.nix
 
       - id: set-matrix
         run: |
