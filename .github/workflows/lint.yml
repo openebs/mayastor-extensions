@@ -15,10 +15,10 @@ jobs:
         with:
           submodules: 'recursive'
           fetch-depth: 0
-      - uses: ./.github/actions/setup-nix
+      - uses: ./dependencies/control-plane/utils/dependencies/.github/actions/setup-nix
         with:
-          preFetchNix: ./shell.nix
-          rustCache: true
+          pre-fetch-nix: ./shell.nix
+          rust-cache: true
       - name: Lint rust code
         run: |
           nix-shell --run "./dependencies/control-plane/scripts/rust/generate-openapi-bindings.sh"
