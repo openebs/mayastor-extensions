@@ -8,7 +8,7 @@ repository:
   name: mayastor
 chart:
   name: mayastor
-  version: 2.13.0-main-unstable-2026-11-17-19-27-01
+  version: 2.13.0-main-unstable-2026-11-18-04-59-27
   values: "-- generate from values file --"
   valuesExample: "-- generate from values file --"
 prerequisites:
