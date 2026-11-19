@@ -402,7 +402,7 @@ the matching `basePath` value instead.
 | io_engine.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
 | io_engine.&ZeroWidthSpace;pstorRetries | Number of retries for pstor persistence before the volume target self shutdowns | `300` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for the io-engine | `""` |
-| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;hugepages1Gi | Hugepage memory in 1GiB chunks | `nil` |
+| io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;hugepages1Gi | Hugepage memory in 1GiB chunks. Not read by the io-engine DaemonSet: both the 1GiB limit and the 1GiB request are rendered from `requests.hugepages1Gi`, so setting this key alone has no effect. Set `requests.hugepages1Gi` instead. To be corrected in the next major release. | `nil` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;hugepages2Mi | Hugepage memory in 2MiB chunks | `"2Gi"` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;memory | Memory limits for the io-engine | `"1Gi"` |
 | io_engine.&ZeroWidthSpace;resources.&ZeroWidthSpace;requests.&ZeroWidthSpace;cpu | Cpu requests for the io-engine | `""` |
