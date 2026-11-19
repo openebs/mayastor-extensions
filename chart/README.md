@@ -350,9 +350,10 @@ the matching `basePath` value instead.
 | etcd.&ZeroWidthSpace;podAntiAffinityPreset | Pod anti-affinity preset Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity | `"hard"` |
 | etcd.&ZeroWidthSpace;removeMemberOnContainerTermination | Use a PreStop hook to remove the etcd members from the etcd cluster on container termination Ignored if lifecycleHooks is set or replicaCount=1 | `false` |
 | etcd.&ZeroWidthSpace;replicaCount | Number of replicas of etcd | `3` |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;dirSizeLimit | Maximum total size of event files including rotated history. Used when loki.enabled is false. | `"100Mi"` |
+| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;dirSizeLimit | Maximum total size of event files including rotated history. Used when the aggregator is not in Loki mode. | `"100Mi"` |
 | eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;enabled | Enable the eventing-aggregator deployment. Requires eventing.enabled to be true. | `true` |
 | eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;logLevel | Log level for eventing-aggregator | `"info"` |
+| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;lokiMode | Whether the eventing-aggregator runs in Loki mode (events logged to stdout and collected by Loki) or in file mode (events persisted to a local emptyDir, see dirSizeLimit). "auto" follows loki.enabled. Set "true" when a loki is deployed outside this chart (e.g. the openebs umbrella chart's loki, with loki.enabled=false here), or "false" to force file mode. | `"auto"` |
 | eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
 | eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;priorityClassName | Set PriorityClass, overrides global | `""` |
 | eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;resources.&ZeroWidthSpace;limits.&ZeroWidthSpace;cpu | Cpu limits for eventing-aggregator | `"100m"` |

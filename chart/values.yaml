@@ -1171,7 +1171,12 @@ eventing:
     enabled: true
     # -- Log level for eventing-aggregator
     logLevel: "info"
-    # -- Maximum total size of event files including rotated history. Used when loki.enabled is false.
+    # -- Whether the eventing-aggregator runs in Loki mode (events logged to stdout and collected by Loki)
+    # or in file mode (events persisted to a local emptyDir, see dirSizeLimit).
+    # "auto" follows loki.enabled. Set "true" when a loki is deployed outside this chart (e.g. the openebs
+    # umbrella chart's loki, with loki.enabled=false here), or "false" to force file mode.
+    lokiMode: "auto"
+    # -- Maximum total size of event files including rotated history. Used when the aggregator is not in Loki mode.
     dirSizeLimit: "100Mi"
     resources:
       limits:
