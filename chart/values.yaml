@@ -712,7 +712,10 @@ io_engine:
       memory: "1Gi"
       # -- Hugepage memory in 2MiB chunks
       hugepages2Mi: "2Gi"
-      # -- Hugepage memory in 1GiB chunks
+      # -- Hugepage memory in 1GiB chunks.
+      # Not read by the io-engine DaemonSet: both the 1GiB limit and the 1GiB request are
+      # rendered from `requests.hugepages1Gi`, so setting this key alone has no effect.
+      # Set `requests.hugepages1Gi` instead. To be corrected in the next major release.
       hugepages1Gi:
     requests:
       # -- Cpu requests for the io-engine
