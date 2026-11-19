@@ -352,7 +352,7 @@ the matching `basePath` value instead.
 | etcd.&ZeroWidthSpace;podAntiAffinityPreset | Pod anti-affinity preset Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity | `"hard"` |
 | etcd.&ZeroWidthSpace;removeMemberOnContainerTermination | Use a PreStop hook to remove the etcd members from the etcd cluster on container termination Ignored if lifecycleHooks is set or replicaCount=1 | `false` |
 | etcd.&ZeroWidthSpace;replicaCount | Number of replicas of etcd | `3` |
-| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;dirSizeLimit | Maximum total size of event files including rotated history. Used when loki.enabled is false. | `"100Mi"` |
+| eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;dirSizeLimit | Maximum total size of event files including rotated history. Used when the aggregator is not in Loki mode. | `"100Mi"` |
 | eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;enabled | Enable the eventing-aggregator deployment. Requires eventing.enabled to be true. | `true` |
 | eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;logLevel | Log level for eventing-aggregator | `"info"` |
 | eventing.&ZeroWidthSpace;aggregator.&ZeroWidthSpace;nodeSelector | Set nodeSelector, overrides global | <pre>{<br><br>}</pre> |
