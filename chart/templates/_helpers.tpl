@@ -437,6 +437,23 @@ Get the Events Jetstream Replica Count
 {{- end -}}
 
 {{/*
+Resolves whether the eventing-aggregator runs in Loki mode, i.e. events are logged to stdout for a
+Loki (this chart's or an external one) to collect, instead of being persisted to a local directory.
+Returns "true" or "false".
+  eventing.aggregator.lokiMode: "auto" (default) follows loki.enabled, "true"/"false" force the mode.
+*/}}
+{{- define "eventing_aggregator_loki_enabled" -}}
+    {{- $mode := .Values.eventing.aggregator.lokiMode | toString | lower -}}
+    {{- if eq $mode "auto" -}}
+        {{- ternary "true" "false" (.Values.loki.enabled | default false) -}}
+    {{- else if or (eq $mode "true") (eq $mode "false") -}}
+        {{- $mode -}}
+    {{- else -}}
+        {{- fail (printf "eventing.aggregator.lokiMode must be one of \"auto\", \"true\" or \"false\", got %q" $mode) -}}
+    {{- end -}}
+{{- end -}}
+
+{{/*
 Returns matched if the Etcd StatefulSet is of v8.6.0
 Usage:
   {{- if include "etcd_is_8.6.0" . }}

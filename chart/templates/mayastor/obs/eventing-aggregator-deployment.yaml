@@ -1,4 +1,5 @@
 {{- if and .Values.eventing.enabled .Values.eventing.aggregator.enabled }}
+{{- $lokiEnabled := eq (include "eventing_aggregator_loki_enabled" .) "true" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -46,10 +47,10 @@ spec:
           args:
             - "--nats-url=nats://{{ .Release.Name }}-nats:4222"
             - "--jetstream-enabled={{ .Values.nats.nats.jetstream.enabled }}"
-            - "--loki-enabled={{ .Values.loki.enabled }}"
+            - "--loki-enabled={{ $lokiEnabled }}"
             - "--subject-filter=events.>"
             - "--events-replicas={{ include "events_replicas" . }}"
-            {{- if not .Values.loki.enabled }}
+            {{- if not $lokiEnabled }}
             - "--events-dir=/var/events"
             - "--dir-size-limit={{ .Values.eventing.aggregator.dirSizeLimit }}"
             {{- end }}
@@ -65,12 +66,12 @@ spec:
             requests:
               cpu: {{ .Values.eventing.aggregator.resources.requests.cpu | quote }}
               memory: {{ .Values.eventing.aggregator.resources.requests.memory | quote }}
-          {{- if not .Values.loki.enabled }}
+          {{- if not $lokiEnabled }}
           volumeMounts:
             - name: events-store
               mountPath: /var/events
           {{- end }}
-      {{- if not .Values.loki.enabled }}
+      {{- if not $lokiEnabled }}
       volumes:
         - name: events-store
           emptyDir:
