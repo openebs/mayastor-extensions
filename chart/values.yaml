@@ -336,6 +336,16 @@ agents:
     # The value is also configurable via Diskpool CR, which takes precedence over this setting. This is an advanced configuration, please refer documentation to
     # understand the usage and implications of this.
     poolClusterSize: ""
+    poolDrain:
+      # -- Maximum number of pools that can be in the `Draining` state concurrently.
+      # Once this many pools are draining, newer drain requests stay in the `Queued` state.
+      # Pools are moved to `Draining` in FIFO order, sorted by drain requested timestamp.
+      # A blank value "" leaves the core agent's own default of 3 in place.
+      maxConcurrent: ""
+      # -- Maximum number of replicas which can be moved concurrently out of a single pool during the drain process.
+      # A blank value "" leaves the core agent's own default of 2 in place.
+      replicaMoveLimit: ""
+
   ha:
     enabled: true
     node:
