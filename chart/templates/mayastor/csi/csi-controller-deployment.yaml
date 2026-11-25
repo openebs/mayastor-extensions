@@ -21,9 +21,7 @@ spec:
         {{ include "label_prefix" . }}/version: {{ .Chart.Version }}
         {{ include "label_prefix" . }}/logging: "true"
     spec:
-      hostNetwork: true
       serviceAccountName: {{ .Release.Name }}-service-account
-      dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
         {{- include "base_pull_secrets" . }}
       initContainers:
