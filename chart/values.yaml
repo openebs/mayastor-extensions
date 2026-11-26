@@ -146,8 +146,8 @@ base:
   initContainers:
     enabled: true
     image:
-      name: alpine-sh
-      tag: 4.6.0
+      name: ubi-bash
+      tag: 4.7.0
       pullPolicy: IfNotPresent
       # -- Image registry for init containers
       registry: ""
@@ -160,19 +160,19 @@ base:
     defaultResources: {}
     containers:
       - name: agent-core-grpc-probe
-        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50051; do date; echo "Waiting for agent-core-grpc services..."; sleep 1; done;' ]
+        command: [ 'bash', '-c', 'trap "exit 1" TERM; until timeout 5 bash -c "exec 3<>/dev/tcp/{{ .Release.Name }}-agent-core/50051"; do date; echo "Waiting for agent-core-grpc services..."; sleep 1; done;' ]
       - name: etcd-probe
-        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ include "etcdUrl" . }} {{ .Values.etcd.service.ports.client }}; do date; echo "Waiting for etcd..."; sleep 1; done;' ]
+        command: [ 'bash', '-c', 'trap "exit 1" TERM; until timeout 5 bash -c "exec 3<>/dev/tcp/{{ regexReplaceAll ":[0-9]+$" (include "etcdUrl" .) "" }}/{{ .Values.etcd.service.ports.client }}"; do date; echo "Waiting for etcd..."; sleep 1; done;' ]
   initHaNodeContainers:
     enabled: true
     containers:
       - name: agent-cluster-grpc-probe
-        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-agent-core 50052; do date; echo "Waiting for agent-cluster-grpc services..."; sleep 1; done;' ]
+        command: [ 'bash', '-c', 'trap "exit 1" TERM; until timeout 5 bash -c "exec 3<>/dev/tcp/{{ .Release.Name }}-agent-core/50052"; do date; echo "Waiting for agent-cluster-grpc services..."; sleep 1; done;' ]
   initCoreContainers:
     enabled: true
     containers:
       - name: etcd-probe
-        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ include "etcdUrl" . }} {{ .Values.etcd.service.ports.client }}; do date; echo "Waiting for etcd..."; sleep 1; done;' ]
+        command: [ 'bash', '-c', 'trap "exit 1" TERM; until timeout 5 bash -c "exec 3<>/dev/tcp/{{ regexReplaceAll ":[0-9]+$" (include "etcdUrl" .) "" }}/{{ .Values.etcd.service.ports.client }}"; do date; echo "Waiting for etcd..."; sleep 1; done;' ]
   metrics:
     # -- Enable the metrics exporter
     enabled: true
@@ -192,20 +192,24 @@ base:
     agent:
       name: jaeger-agent
       port: 6831
+      # No template renders this init container; the jaeger wait is done against
+      # the collector. Kept in step with the collector probe. Note 6831 is UDP:
+      # a connectionless /dev/udp write cannot tell a listening port from a
+      # closed one, so this would only catch a name that does not resolve.
       initContainer:
         - name: jaeger-probe
-          command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 -u {{.Values.base.jaeger.agent.name}} {{.Values.base.jaeger.agent.port}}; do date; echo "Waiting for jaeger..."; sleep 1; done;' ]
+          command: [ 'bash', '-c', 'trap "exit 1" TERM; until timeout 5 bash -c "exec 3<>/dev/udp/{{.Values.base.jaeger.agent.name}}/{{.Values.base.jaeger.agent.port}}"; do date; echo "Waiting for jaeger..."; sleep 1; done;' ]
     collector:
       name: jaeger-collector
       port: 4317
       initContainer:
         - name: jaeger-probe
-          command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 -u {{.Values.base.jaeger.collector.name}} {{.Values.base.jaeger.collector.port}}; do date; echo "Waiting for jaeger..."; sleep 1; done;' ]
+          command: [ 'bash', '-c', 'trap "exit 1" TERM; until timeout 5 bash -c "exec 3<>/dev/tcp/{{.Values.base.jaeger.collector.name}}/{{.Values.base.jaeger.collector.port}}"; do date; echo "Waiting for jaeger..."; sleep 1; done;' ]
   initRestContainer:
     enabled: true
     initContainer:
       - name: api-rest-probe
-        command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-api-rest {{ if .Values.security.tls.enabled }}8080{{ else }}8081{{ end }}; do date; echo "Waiting for REST API endpoint to become available"; sleep 1; done;' ]
+        command: [ 'bash', '-c', 'trap "exit 1" TERM; until timeout 5 bash -c "exec 3<>/dev/tcp/{{ .Release.Name }}-api-rest/{{ if .Values.security.tls.enabled }}8080{{ else }}8081{{ end }}"; do date; echo "Waiting for REST API endpoint to become available"; sleep 1; done;' ]
 
 operators:
   pool:
@@ -1205,7 +1209,7 @@ eventing:
       enabled: true
       containers:
         - name: nats-probe
-          command: [ 'sh', '-c', 'trap "exit 1" TERM; until nc -vzw 5 {{ .Release.Name }}-nats 4222; do date; echo "Waiting for NATS..."; sleep 1; done;' ]
+          command: [ 'bash', '-c', 'trap "exit 1" TERM; until timeout 5 bash -c "exec 3<>/dev/tcp/{{ .Release.Name }}-nats/4222"; do date; echo "Waiting for NATS..."; sleep 1; done;' ]
 
 # Configuration for the nats message-bus. This is an eventing component, and is enabled when
 # 'eventing.enabled' is set to 'true'.
