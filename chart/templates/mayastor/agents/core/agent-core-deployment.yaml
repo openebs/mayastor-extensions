@@ -86,6 +86,10 @@ spec:
             - "--allow-non-persistent-devlink"{{- end }}
             {{- with .Values.agents.core.poolClusterSize }}
             - "--pool-cluster-size={{ . }}"{{- end }}
+            {{- if (.Values.agents.core.poolDrain).maxConcurrent }}
+            - "--max-concurrent-pool-drain={{ .Values.agents.core.poolDrain.maxConcurrent }}"{{ end }}
+            {{- if (.Values.agents.core.poolDrain).replicaMoveLimit }}
+            - "--pool-replica-move-limit={{ .Values.agents.core.poolDrain.replicaMoveLimit }}"{{ end }}
 
           ports:
             - containerPort: 50051
