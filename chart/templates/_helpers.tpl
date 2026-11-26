@@ -419,8 +419,8 @@ Renders init containers. If unset it sets the container image.
 {{- $global := .Values.global }}
 {{- $registry := $global.imageRegistry | default $image.registry | default $values_image.registry }}
 {{- $namespace := $image.namespace | default $values_image.repo }}
-{{- $name := $image.name | default "alpine-sh" }}
-{{- $tag := $image.tag | default "4.1.0" }}
+{{- $name := $image.name | default "ubi-bash" }}
+{{- $tag := $image.tag | default "4.7.0" }}
 {{- printf "%s/%s/%s:%s" $registry $namespace $name $tag }}
 {{- end -}}
 
