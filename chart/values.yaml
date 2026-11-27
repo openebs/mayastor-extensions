@@ -1182,7 +1182,7 @@ eventing:
     enabled: true
     # -- Log level for eventing-aggregator
     logLevel: "info"
-    # -- Maximum total size of event files including rotated history. Used when loki.enabled is false.
+    # -- Maximum total size of event files including rotated history. Used when the aggregator is not in Loki mode.
     dirSizeLimit: "100Mi"
     resources:
       limits:
